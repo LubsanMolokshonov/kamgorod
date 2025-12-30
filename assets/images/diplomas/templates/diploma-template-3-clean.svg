@@ -1,0 +1,69 @@
+<svg width="600" height="848" viewBox="0 0 600 848" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#dbeafe;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#e0f2fe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f0f9ff;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="radial1" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#7dd3fc;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="848" fill="url(#grad3)"/>
+  <circle cx="300" cy="424" r="350" fill="url(#radial1)"/>
+
+  <!-- Decorative border -->
+  <rect x="25" y="25" width="550" height="798" fill="none" stroke="#0ea5e9" stroke-width="3" rx="15"/>
+  <rect x="35" y="35" width="530" height="778" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="10,5"/>
+
+  <!-- Top ribbon -->
+  <path d="M 150 80 L 450 80 L 470 120 L 450 160 L 150 160 L 130 120 Z" fill="#0ea5e9"/>
+  <text x="300" y="130" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle">ДИПЛОМ</text>
+
+  <!-- Medal/Rosette -->
+  <circle cx="300" cy="250" r="60" fill="#0ea5e9" opacity="0.2"/>
+  <circle cx="300" cy="250" r="45" fill="#0ea5e9"/>
+  <circle cx="300" cy="250" r="35" fill="#38bdf8"/>
+  <!-- removed: place number -->
+
+  <!-- Ribbons from medal -->
+  <path d="M 280 285 L 265 380 L 285 370 L 295 385 Z" fill="#0284c7"/>
+  <path d="M 320 285 L 335 380 L 315 370 L 305 385 Z" fill="#0284c7"/>
+
+  <!-- Certificate title -->
+  <text x="300" y="340" font-family="Arial, sans-serif" font-size="18" fill="#075985" text-anchor="middle">подтверждает, что</text>
+
+  <!-- Name -->
+  <rect x="90" y="360" width="420" height="50" fill="white" stroke="#0ea5e9" stroke-width="2" rx="25"/>
+  <text x="300" y="393" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#0c4a6e" text-anchor="middle">Сидоров Сидор Сидорович</text>
+
+  <!-- Achievement text -->
+  <text x="300" y="450" font-family="Arial, sans-serif" font-size="16" fill="#075985" text-anchor="middle">занял(а) 2 место в</text>
+
+  <!-- Competition name -->
+  <text x="300" y="490" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#0c4a6e" text-anchor="middle">Межрегиональный конкурс</text>
+  <text x="300" y="520" font-family="Arial, sans-serif" font-size="18" fill="#075985" text-anchor="middle" style="font-style: italic;">«Юные таланты»</text>
+
+  <!-- Details box -->
+  <rect x="70" y="560" width="460" height="170" fill="white" fill-opacity="0.7" stroke="#38bdf8" stroke-width="2" rx="10"/>
+
+  <text x="90" y="585" font-family="Arial, sans-serif" font-size="12" fill="#075985">Учреждение: Название учреждения</text>
+  <text x="90" y="605" font-family="Arial, sans-serif" font-size="12" fill="#075985">Населенный пункт: Населенный пункт</text>
+
+  <!-- removed: Номинация: -->
+  <text x="90" y="657" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#0c4a6e">Художественное творчество</text>
+
+  <!-- removed: Работа: -->
+  <!-- removed: quoted text -->
+
+  <!-- Signatures -->
+  <line x1="90" y1="760" x2="260" y2="760" stroke="#0ea5e9" stroke-width="1"/>
+  <text x="90" y="778" font-family="Arial, sans-serif" font-size="12" fill="#075985">23 декабря 2025 г.</text>
+
+  <line x1="340" y1="760" x2="510" y2="760" stroke="#0ea5e9" stroke-width="1"/>
+  <text x="340" y="778" font-family="Arial, sans-serif" font-size="12" fill="#075985">Подпись организатора</text>
+</svg>

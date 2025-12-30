@@ -1,0 +1,17 @@
+<svg width="150" height="212" viewBox="0 0 150 212" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef3c7"/>
+      <stop offset="100%" style="stop-color:#fde68a"/>
+    </linearGradient>
+  </defs>
+  <rect width="150" height="212" fill="url(#g2)"/>
+  <rect x="8" y="8" width="134" height="196" fill="none" stroke="#f59e0b" stroke-width="2"/>
+  <path d="M 75 15 L 80 22 L 88 24 L 80 28 L 82 35 L 75 31 L 68 35 L 70 28 L 62 24 L 70 22 Z" fill="#f59e0b"/>
+  <text x="75" y="55" font-family="Georgia" font-size="12" font-weight="bold" fill="#92400e" text-anchor="middle">ДИПЛОМ</text>
+  <circle cx="75" cy="75" r="12" fill="#fbbf24" stroke="#f59e0b" stroke-width="2"/>
+  <text x="75" y="81" font-family="Arial" font-size="12" fill="#92400e" text-anchor="middle">★</text>
+  <rect x="25" y="100" width="100" height="14" fill="#fffbeb" stroke="#fbbf24" stroke-width="1" rx="3"/>
+  <rect x="60" y="155" width="30" height="15" fill="#f59e0b" rx="3"/>
+  <text x="75" y="165" font-family="Arial" font-size="8" fill="white" text-anchor="middle">I МЕСТО</text>
+</svg>

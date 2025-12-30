@@ -1,0 +1,68 @@
+<svg width="600" height="848" viewBox="0 0 600 848" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f3e8ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e9d5ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="848" fill="url(#grad4)"/>
+
+  <!-- Ornamental corners -->
+  <path d="M 0 0 L 100 0 L 100 10 L 10 10 L 10 100 L 0 100 Z" fill="#9333ea"/>
+  <path d="M 600 0 L 500 0 L 500 10 L 590 10 L 590 100 L 600 100 Z" fill="#9333ea"/>
+  <path d="M 0 848 L 100 848 L 100 838 L 10 838 L 10 748 L 0 748 Z" fill="#9333ea"/>
+  <path d="M 600 848 L 500 848 L 500 838 L 590 838 L 590 748 L 600 748 Z" fill="#9333ea"/>
+
+  <!-- Main border -->
+  <rect x="40" y="40" width="520" height="768" fill="none" stroke="#a855f7" stroke-width="2"/>
+  <rect x="50" y="50" width="500" height="748" fill="white" opacity="0.85"/>
+
+  <!-- Header decoration -->
+  <rect x="150" y="70" width="300" height="4" fill="#9333ea"/>
+  <circle cx="300" cy="72" r="15" fill="#9333ea"/>
+  <text x="300" y="79" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white" text-anchor="middle">★</text>
+
+  <!-- Title -->
+  <text x="300" y="130" font-family="Georgia, serif" font-size="44" font-weight="bold" fill="#581c87" text-anchor="middle">ДИПЛОМ</text>
+  <text x="300" y="165" font-family="Georgia, serif" font-size="22" fill="#7e22ce" text-anchor="middle">Участника</text>
+
+  <!-- Decorative line -->
+  <line x1="120" y1="190" x2="480" y2="190" stroke="#c084fc" stroke-width="2"/>
+
+  <!-- Award shield -->
+  <path d="M 300 220 L 350 240 L 345 300 L 300 320 L 255 300 L 250 240 Z" fill="#a855f7" opacity="0.3" stroke="#9333ea" stroke-width="2"/>
+  <text x="300" y="280" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#581c87" text-anchor="middle">3</text>
+
+  <!-- Certificate text -->
+  <text x="300" y="370" font-family="Georgia, serif" font-size="18" fill="#6b21a8" text-anchor="middle">Настоящий диплом выдан</text>
+
+  <!-- Name -->
+  <rect x="100" y="390" width="400" height="55" fill="#faf5ff" stroke="#a855f7" stroke-width="2" rx="10"/>
+  <text x="300" y="425" font-family="Georgia, serif" font-size="21" font-weight="bold" fill="#581c87" text-anchor="middle">Александров А.А.</text>
+
+  <!-- Text -->
+  <text x="300" y="480" font-family="Georgia, serif" font-size="16" fill="#6b21a8" text-anchor="middle">за участие и достижение</text>
+  <text x="300" y="505" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#7e22ce" text-anchor="middle">3 места</text>
+  <text x="300" y="530" font-family="Georgia, serif" font-size="16" fill="#6b21a8" text-anchor="middle">в конкурсе</text>
+
+  <!-- Competition -->
+  <rect x="80" y="550" width="440" height="70" fill="white" stroke="#c084fc" stroke-width="2" rx="8"/>
+  <text x="300" y="580" font-family="Georgia, serif" font-size="19" font-weight="bold" fill="#581c87" text-anchor="middle">Всероссийский творческий конкурс</text>
+  <text x="300" y="607" font-family="Georgia, serif" font-size="16" fill="#7e22ce" text-anchor="middle">«Звезда будущего»</text>
+
+  <!-- Additional info -->
+  <text x="90" y="650" font-family="Arial, sans-serif" font-size="12" fill="#6b21a8">Учреждение: Название учреждения</text>
+  <text x="90" y="670" font-family="Arial, sans-serif" font-size="12" fill="#6b21a8">Населенный пункт: Населенный пункт</text>
+  <text x="90" y="695" font-family="Arial, sans-serif" font-size="14" fill="#6b21a8">Номинация: Музыкальное искусство</text>
+  <text x="90" y="720" font-family="Arial, sans-serif" font-size="14" fill="#6b21a8">Работа: «Музыкальная композиция»</text>
+
+  <!-- Footer -->
+  <rect x="100" y="740" width="400" height="2" fill="#c084fc"/>
+
+  <!-- Signatures -->
+  <text x="100" y="770" font-family="Arial, sans-serif" font-size="12" fill="#7e22ce">Дата: 23.12.2025</text>
+  <text x="400" y="770" font-family="Arial, sans-serif" font-size="12" fill="#7e22ce" text-anchor="end">Директор ___________</text>
+</svg>

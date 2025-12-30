@@ -1,0 +1,66 @@
+<svg width="600" height="848" viewBox="0 0 600 848" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef3c7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fde68a;stop-opacity:1" />
+    </linearGradient>
+    <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#fbbf24" opacity="0.2"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="848" fill="url(#grad2)"/>
+  <rect width="600" height="848" fill="url(#dots)"/>
+
+  <!-- Ornamental border -->
+  <rect x="30" y="30" width="540" height="788" fill="none" stroke="#f59e0b" stroke-width="4"/>
+  <rect x="40" y="40" width="520" height="768" fill="none" stroke="#fbbf24" stroke-width="2"/>
+  <rect x="45" y="45" width="510" height="758" fill="white" opacity="0.9"/>
+
+  <!-- Top decoration -->
+  <path d="M 300 60 L 320 90 L 350 95 L 320 110 L 325 140 L 300 125 L 275 140 L 280 110 L 250 95 L 280 90 Z" fill="#f59e0b"/>
+
+  <!-- Title -->
+  <text x="300" y="180" font-family="Georgia, serif" font-size="48" font-weight="bold" fill="#92400e" text-anchor="middle">ДИПЛОМ</text>
+  <rect x="200" y="195" width="200" height="3" fill="#f59e0b"/>
+
+  <!-- Subtitle -->
+  <text x="300" y="230" font-family="Georgia, serif" font-size="20" fill="#78350f" text-anchor="middle">ПОБЕДИТЕЛЯ</text>
+
+  <!-- Award -->
+  <circle cx="300" cy="300" r="50" fill="#fbbf24" stroke="#f59e0b" stroke-width="4"/>
+  <text x="300" y="320" font-family="Arial, sans-serif" font-size="48" fill="#92400e" text-anchor="middle">★</text>
+
+  <!-- Certificate text -->
+  <text x="300" y="390" font-family="Georgia, serif" font-size="18" fill="#78350f" text-anchor="middle">Награждается</text>
+
+  <!-- Name area -->
+  <rect x="100" y="410" width="400" height="55" fill="#fffbeb" stroke="#fbbf24" stroke-width="2" rx="8"/>
+  <text x="300" y="445" font-family="Georgia, serif" font-size="22" font-weight="bold" fill="#92400e" text-anchor="middle">Петров Петр Петрович</text>
+
+  <!-- Achievement -->
+  <text x="300" y="510" font-family="Georgia, serif" font-size="16" fill="#78350f" text-anchor="middle" style="font-style: italic;">за высокие достижения в конкурсе</text>
+
+  <!-- Competition details -->
+  <text x="300" y="555" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#92400e" text-anchor="middle">Международный конкурс</text>
+  <text x="300" y="585" font-family="Georgia, serif" font-size="18" fill="#78350f" text-anchor="middle">«Творческий проект»</text>
+
+  <!-- Placement badge -->
+  <rect x="240" y="620" width="120" height="60" fill="#f59e0b" rx="10"/>
+  <text x="300" y="650" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white" text-anchor="middle">I</text>
+  <text x="300" y="672" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle">МЕСТО</text>
+
+  <!-- Bottom info -->
+  <text x="80" y="710" font-family="Arial, sans-serif" font-size="12" fill="#78350f">Учреждение: Название учреждения</text>
+  <text x="80" y="730" font-family="Arial, sans-serif" font-size="12" fill="#78350f">Населенный пункт: Населенный пункт</text>
+  <text x="80" y="755" font-family="Arial, sans-serif" font-size="14" fill="#78350f">Номинация: Декоративно-прикладное творчество</text>
+
+  <!-- Signatures -->
+  <line x1="80" y1="790" x2="250" y2="790" stroke="#d97706" stroke-width="1"/>
+  <text x="80" y="805" font-family="Arial, sans-serif" font-size="11" fill="#78350f">Дата выдачи</text>
+
+  <line x1="350" y1="790" x2="520" y2="790" stroke="#d97706" stroke-width="1"/>
+  <text x="350" y="805" font-family="Arial, sans-serif" font-size="11" fill="#78350f">Руководитель</text>
+</svg>

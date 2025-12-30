@@ -1,0 +1,14 @@
+# Protect diploma files from direct access
+# Only allow access through download-diploma.php endpoint
+
+# Deny all direct access
+<Files *>
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Allow access only from PHP scripts
+<FilesMatch "\.(pdf)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>

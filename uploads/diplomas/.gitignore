@@ -1,0 +1,6 @@
+# Ignore all PDF files in this directory
+*.pdf
+
+# Keep the directory structure in git
+!.gitignore
+!.htaccess

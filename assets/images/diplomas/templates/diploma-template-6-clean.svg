@@ -1,0 +1,90 @@
+<svg width="600" height="848" viewBox="0 0 600 848" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="grad6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ecfdf5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d1fae5;stop-opacity:1" />
+    </linearGradient>
+    <pattern id="pattern6" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="1.5" fill="#10b981" opacity="0.15"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="848" fill="url(#grad6)"/>
+  <rect width="600" height="848" fill="url(#pattern6)"/>
+
+  <!-- Main frame -->
+  <rect x="25" y="25" width="550" height="798" fill="none" stroke="#059669" stroke-width="4" rx="20"/>
+  <rect x="40" y="40" width="520" height="768" fill="white" opacity="0.85" rx="15"/>
+
+  <!-- Corner decorations -->
+  <circle cx="60" cy="60" r="12" fill="#10b981"/>
+  <circle cx="540" cy="60" r="12" fill="#10b981"/>
+  <circle cx="60" cy="788" r="12" fill="#10b981"/>
+  <circle cx="540" cy="788" r="12" fill="#10b981"/>
+
+  <!-- Laurel wreath top -->
+  <path d="M 200 90 Q 220 70 240 90 T 280 90 T 320 90 T 360 90 T 400 90" stroke="#059669" stroke-width="3" fill="none"/>
+  <circle cx="200" cy="90" r="5" fill="#10b981"/>
+  <circle cx="240" cy="85" r="5" fill="#10b981"/>
+  <circle cx="280" cy="85" r="5" fill="#10b981"/>
+  <circle cx="320" cy="85" r="5" fill="#10b981"/>
+  <circle cx="360" cy="85" r="5" fill="#10b981"/>
+  <circle cx="400" cy="90" r="5" fill="#10b981"/>
+
+  <!-- Title -->
+  <text x="300" y="150" font-family="Georgia, serif" font-size="46" font-weight="bold" fill="#064e3b" text-anchor="middle">ДИПЛОМ</text>
+  <text x="300" y="185" font-family="Georgia, serif" font-size="20" fill="#047857" text-anchor="middle">Участника конкурса</text>
+
+  <!-- Decorative separator -->
+  <line x1="150" y1="210" x2="450" y2="210" stroke="#34d399" stroke-width="2"/>
+  <circle cx="300" cy="210" r="8" fill="#10b981"/>
+
+  <!-- Trophy/Cup icon -->
+  <path d="M 260 240 L 260 260 L 250 280 L 270 300 L 330 300 L 350 280 L 340 260 L 340 240 Z" fill="#10b981" opacity="0.3" stroke="#059669" stroke-width="2"/>
+  <rect x="270" y="300" width="60" height="15" fill="#059669"/>
+  <rect x="285" y="315" width="30" height="20" fill="#059669"/>
+  <text x="300" y="272" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#047857" text-anchor="middle">★</text>
+
+  <!-- Certificate text -->
+  <text x="300" y="370" font-family="Georgia, serif" font-size="18" fill="#065f46" text-anchor="middle">Данный диплом подтверждает, что</text>
+
+  <!-- Name -->
+  <rect x="90" y="390" width="420" height="55" fill="#f0fdf4" stroke="#10b981" stroke-width="2.5" rx="10"/>
+  <text x="300" y="426" font-family="Georgia, serif" font-size="22" font-weight="bold" fill="#064e3b" text-anchor="middle">Федорова Анна Сергеевна</text>
+
+  <!-- Achievement -->
+  <text x="300" y="480" font-family="Georgia, serif" font-size="17" fill="#065f46" text-anchor="middle">принял(а) участие в</text>
+
+  <!-- Competition -->
+  <text x="300" y="520" font-family="Georgia, serif" font-size="21" font-weight="bold" fill="#064e3b" text-anchor="middle">Межрегиональный конкурс</text>
+  <text x="300" y="550" font-family="Georgia, serif" font-size="18" fill="#047857" text-anchor="middle" style="font-style: italic;">«Экология и творчество»</text>
+
+  <!-- Info box -->
+  <rect x="70" y="580" width="460" height="160" fill="white" stroke="#6ee7b7" stroke-width="2" rx="10"/>
+
+  <text x="90" y="605" font-family="Arial, sans-serif" font-size="12" fill="#065f46">Учреждение: Название учреждения</text>
+  <text x="90" y="625" font-family="Arial, sans-serif" font-size="12" fill="#065f46">Населенный пункт: Населенный пункт</text>
+
+  <!-- removed: Номинация: -->
+  <text x="90" y="672" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="#064e3b">Экологический проект</text>
+
+  <!-- removed: Название работы: -->
+  <!-- removed: quoted text -->
+
+  <!-- Place indicator -->
+  <rect x="350" y="635" width="160" height="90" fill="#10b981" rx="8"/>
+  <text x="430" y="670" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle">Место в конкурсе:</text>
+  <text x="430" y="705" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle">УЧАСТНИК</text>
+
+  <!-- Footer -->
+  <line x1="80" y1="755" x2="250" y2="755" stroke="#059669" stroke-width="1.5"/>
+  <text x="80" y="773" font-family="Arial, sans-serif" font-size="12" fill="#065f46">Дата: 23.12.2025 г.</text>
+
+  <line x1="350" y1="755" x2="520" y2="755" stroke="#059669" stroke-width="1.5"/>
+  <text x="350" y="773" font-family="Arial, sans-serif" font-size="12" fill="#065f46">Организатор конкурса</text>
+
+  <!-- Bottom decoration -->
+  <path d="M 200 808 Q 220 820 240 808 T 280 808 T 320 808 T 360 808 T 400 808" stroke="#059669" stroke-width="3" fill="none"/>
+</svg>

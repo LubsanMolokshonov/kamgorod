@@ -1,0 +1,17 @@
+<svg width="150" height="212" viewBox="0 0 150 212" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#dbeafe"/>
+      <stop offset="100%" style="stop-color:#bfdbfe"/>
+    </linearGradient>
+  </defs>
+  <rect width="150" height="212" fill="url(#g3)"/>
+  <rect x="6" y="6" width="138" height="200" fill="none" stroke="#0ea5e9" stroke-width="2" rx="4"/>
+  <path d="M 37 20 L 113 20 L 118 30 L 113 40 L 37 40 L 32 30 Z" fill="#0ea5e9"/>
+  <text x="75" y="33" font-family="Arial" font-size="9" font-weight="bold" fill="white" text-anchor="middle">ДИПЛОМ</text>
+  <circle cx="75" cy="62" r="15" fill="#0ea5e9"/>
+  <circle cx="75" cy="62" r="11" fill="#38bdf8"/>
+  <text x="75" y="67" font-family="Arial" font-size="10" font-weight="bold" fill="white" text-anchor="middle">2</text>
+  <rect x="22" y="90" width="106" height="12" fill="white" stroke="#0ea5e9" stroke-width="1" rx="6"/>
+  <rect x="18" y="140" width="114" height="35" fill="white" stroke="#38bdf8" stroke-width="1" rx="3"/>
+</svg>

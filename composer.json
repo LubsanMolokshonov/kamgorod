@@ -1,0 +1,16 @@
+{
+    "name": "pedagogy/competition-platform",
+    "description": "Pedagogical Competition Platform with Yookassa Payment Integration",
+    "type": "project",
+    "require": {
+        "php": "^8.0",
+        "yoomoney/yookassa-sdk-php": "^2.0",
+        "mpdf/mpdf": "^8.0",
+        "phpmailer/phpmailer": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "classes/"
+        }
+    }
+}
