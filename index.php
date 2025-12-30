@@ -83,19 +83,16 @@ include __DIR__ . '/includes/header.php';
 
         <div class="hero-images">
             <div class="hero-image-circle hero-img-1">
-                <img src="/assets/images/teachers/teacher-1.svg" alt="Педагог">
+                <img src="/assets/images/teachers/1.png" alt="Педагог">
             </div>
             <div class="hero-image-circle hero-img-2">
-                <img src="/assets/images/teachers/teacher-2.svg" alt="Педагог">
+                <img src="/assets/images/teachers/2.png" alt="Педагог">
             </div>
             <div class="hero-image-circle hero-img-3">
-                <img src="/assets/images/teachers/teacher-3.svg" alt="Педагог">
+                <img src="/assets/images/teachers/3.png" alt="Педагог">
             </div>
             <div class="hero-image-circle hero-img-4">
-                <img src="/assets/images/teachers/teacher-4.svg" alt="Педагог">
-            </div>
-            <div class="hero-image-circle hero-img-5">
-                <img src="/assets/images/teachers/teacher-5.svg" alt="Педагог">
+                <img src="/assets/images/teachers/4.png" alt="Педагог">
             </div>
 
             <!-- Decorative icons -->
