@@ -10,7 +10,7 @@ initSession();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $pageTitle ?? 'Педагогический портал'; ?></title>
     <meta name="description" content="<?php echo $pageDescription ?? 'Всероссийские конкурсы для педагогов и школьников'; ?>">
-    <link rel="stylesheet" href="/assets/css/main.css">
+    <link rel="stylesheet" href="/assets/css/main.css?v=<?php echo time(); ?>">
     <?php if (isset($additionalCSS)): ?>
         <?php foreach ($additionalCSS as $css): ?>
             <link rel="stylesheet" href="<?php echo $css; ?>">
