@@ -8,6 +8,9 @@ RewriteEngine On
 # RewriteCond %{HTTPS} off
 # RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
+# Clean URLs for audience landing pages
+RewriteRule ^(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)$ pages/audience.php?slug=$1 [L,QSA]
+
 # Clean URLs for competition detail pages
 RewriteRule ^competition/([a-z0-9-]+)$ pages/competition-detail.php?slug=$1 [L,QSA]
 

@@ -30,6 +30,10 @@ if (!$competition) {
 // Get nomination options
 $nominations = $competitionObj->getNominationOptions($competition['id']);
 
+// Get audience segmentation for this competition
+$audienceTypes = $competitionObj->getAudienceTypes($competition['id']);
+$specializations = $competitionObj->getSpecializations($competition['id']);
+
 // Page metadata
 $pageTitle = htmlspecialchars($competition['title']) . ' | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr($competition['description'], 0, 150));
@@ -600,6 +604,52 @@ include __DIR__ . '/../includes/header.php';
     }
 }
 
+/* Audience and Specialization Tags */
+.audience-tags-wrapper,
+.specialization-tags-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+}
+
+.audience-tag {
+    display: inline-block;
+    background: var(--gradient-primary);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(135, 66, 238, 0.2);
+}
+
+.audience-tag:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(135, 66, 238, 0.35);
+    opacity: 0.9;
+}
+
+.specialization-tag {
+    display: inline-block;
+    background: white;
+    color: var(--primary-purple);
+    padding: 10px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 2px solid var(--primary-purple);
+    transition: all 0.3s ease;
+}
+
+.specialization-tag:hover {
+    background: var(--light-purple);
+    transform: translateY(-2px);
+}
+
 /* Responsive */
 @media (max-width: 960px) {
     .hero-title {
@@ -779,6 +829,43 @@ include __DIR__ . '/../includes/header.php';
         <div class="container">
             <h2 class="section-title">Для кого этот конкурс</h2>
             <p class="section-subtitle"><?php echo nl2br(htmlspecialchars($competition['target_participants'])); ?></p>
+        </div>
+    </section>
+    <?php endif; ?>
+
+    <!-- Audience Segmentation Tags -->
+    <?php if (!empty($audienceTypes) || !empty($specializations)): ?>
+    <section class="features-section" style="background: white; padding: 60px 0;">
+        <div class="container">
+            <?php if (!empty($audienceTypes)): ?>
+            <div style="margin-bottom: <?php echo !empty($specializations) ? '40px' : '0'; ?>;">
+                <h3 style="font-size: 20px; font-weight: 600; color: var(--text-dark); margin-bottom: 16px; text-align: center;">
+                    Типы учреждений
+                </h3>
+                <div class="audience-tags-wrapper">
+                    <?php foreach ($audienceTypes as $type): ?>
+                    <a href="/<?php echo htmlspecialchars($type['slug']); ?>" class="audience-tag">
+                        <?php echo htmlspecialchars($type['name']); ?>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($specializations)): ?>
+            <div>
+                <h3 style="font-size: 20px; font-weight: 600; color: var(--text-dark); margin-bottom: 16px; text-align: center;">
+                    Специализации
+                </h3>
+                <div class="specialization-tags-wrapper">
+                    <?php foreach ($specializations as $spec): ?>
+                    <span class="specialization-tag">
+                        <?php echo htmlspecialchars($spec['name']); ?>
+                    </span>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     </section>
     <?php endif; ?>

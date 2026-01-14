@@ -8,14 +8,16 @@ session_start();
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/classes/Database.php';
 require_once __DIR__ . '/classes/Competition.php';
+require_once __DIR__ . '/classes/AudienceType.php';
 require_once __DIR__ . '/includes/session.php';
 
 // Page metadata
 $pageTitle = 'Конкурсы для педагогов и школьников 2024-2025 | ' . SITE_NAME;
 $pageDescription = 'Всероссийские и международные конкурсы для учителей, педагогов и школьников. Получите диплом участника после оплаты!';
 
-// Get category filter from URL
+// Get filters from URL
 $category = $_GET['category'] ?? 'all';
+$audienceFilter = $_GET['audience'] ?? '';
 
 // Validate category
 $validCategories = array_keys(COMPETITION_CATEGORIES);
@@ -23,9 +25,20 @@ if ($category !== 'all' && !in_array($category, $validCategories)) {
     $category = 'all';
 }
 
-// Get competitions
+// Get audience types for selection
+$audienceTypeObj = new AudienceType($db);
+$audienceTypes = $audienceTypeObj->getAll();
+
+// Get competitions with filters
 $competitionObj = new Competition($db);
-$competitions = $competitionObj->getActiveCompetitions($category);
+if (!empty($audienceFilter)) {
+    $competitions = $competitionObj->getFilteredCompetitions([
+        'audience_type' => $audienceFilter,
+        'category' => $category
+    ]);
+} else {
+    $competitions = $competitionObj->getActiveCompetitions($category);
+}
 
 // Include header
 include __DIR__ . '/includes/header.php';
@@ -105,8 +118,59 @@ include __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- Category Filter -->
+<!-- Секция выбора аудитории -->
+<div class="container">
+    <div class="text-center mb-40">
+        <h2>Выберите вашу аудиторию</h2>
+        <p>Найдите конкурсы, специально подобранные для вашей сферы деятельности</p>
+    </div>
+
+    <div class="audience-cards-grid">
+        <?php foreach ($audienceTypes as $type): ?>
+        <a href="/<?php echo $type['slug']; ?>" class="audience-card">
+            <h3><?php echo htmlspecialchars($type['name']); ?></h3>
+            <p><?php echo htmlspecialchars($type['description']); ?></p>
+            <span class="audience-card-arrow">→</span>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</div>
+
+<!-- Расширенная фильтрация -->
 <div class="container" id="competitions">
+    <div class="filters-panel">
+        <div class="filter-group">
+            <label>Тип учреждения:</label>
+            <select id="audienceFilter" class="filter-select">
+                <option value="">Все</option>
+                <?php foreach ($audienceTypes as $type): ?>
+                <option value="<?php echo $type['slug']; ?>"
+                        <?php echo $audienceFilter === $type['slug'] ? 'selected' : ''; ?>>
+                    <?php echo htmlspecialchars($type['name']); ?>
+                </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Категория конкурса:</label>
+            <select id="categoryFilter" class="filter-select">
+                <option value="all">Все конкурсы</option>
+                <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
+                <option value="<?php echo $cat; ?>"
+                        <?php echo $category === $cat ? 'selected' : ''; ?>>
+                    <?php echo htmlspecialchars($label); ?>
+                </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <button id="applyFilters" class="btn btn-primary">Применить фильтры</button>
+    </div>
+</div>
+
+<!-- Category Filter (старый) -->
+<div class="container">
     <div class="category-filter">
         <button class="filter-btn <?php echo $category === 'all' ? 'active' : ''; ?>" data-category="all" onclick="window.location.href='?category=all'">
             Все конкурсы
@@ -327,6 +391,28 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
+
+<script>
+// Обработка расширенных фильтров
+document.addEventListener('DOMContentLoaded', function() {
+    const applyFiltersBtn = document.getElementById('applyFilters');
+
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', function() {
+            const audience = document.getElementById('audienceFilter').value;
+            const category = document.getElementById('categoryFilter').value;
+
+            let url = '/index.php?';
+            const params = [];
+
+            if (audience) params.push('audience=' + audience);
+            if (category && category !== 'all') params.push('category=' + category);
+
+            window.location.href = params.length > 0 ? url + params.join('&') : '/index.php';
+        });
+    }
+});
+</script>
 
 <?php
 // Include footer

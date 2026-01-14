@@ -1346,3 +1346,386 @@ main {
         font-size: 18px;
     }
 }
+
+/* ==============================================
+   AUDIENCE SEGMENTATION STYLES
+   ============================================== */
+
+/* Audience Dropdown в header */
+.audience-dropdown {
+    position: relative;
+    margin-right: 20px;
+}
+
+.audience-dropdown-btn {
+    background: var(--primary-purple);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all var(--transition-speed);
+    box-shadow: 0 4px 12px rgba(135, 66, 238, 0.3);
+}
+
+.audience-dropdown-btn:hover {
+    background: var(--dark-purple);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(135, 66, 238, 0.4);
+}
+
+.audience-dropdown-btn svg {
+    transition: transform var(--transition-speed);
+}
+
+.audience-dropdown-btn:hover svg {
+    transform: translateY(2px);
+}
+
+.audience-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    min-width: 320px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.audience-dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.audience-dropdown-menu .dropdown-item {
+    display: block;
+    padding: 14px 20px;
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: background 0.2s;
+    font-size: 15px;
+}
+
+.audience-dropdown-menu .dropdown-item:hover {
+    background: var(--bg-light);
+    color: var(--primary-purple);
+}
+
+.audience-dropdown-menu .dropdown-divider {
+    height: 1px;
+    background: #e0e0e0;
+    margin: 4px 0;
+}
+
+/* Audience Cards Grid (главная страница) */
+.audience-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 60px;
+}
+
+.audience-card {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: var(--border-radius-card);
+    padding: 32px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.audience-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.audience-card:hover::before {
+    transform: scaleX(1);
+}
+
+.audience-card:hover {
+    border-color: var(--primary-purple);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 32px rgba(135, 66, 238, 0.2);
+}
+
+.audience-card h3 {
+    font-size: 20px;
+    margin-bottom: 12px;
+    color: var(--text-dark);
+}
+
+.audience-card p {
+    font-size: 14px;
+    color: var(--text-medium);
+    margin-bottom: 16px;
+    line-height: 1.6;
+}
+
+.audience-card-arrow {
+    position: absolute;
+    bottom: 24px;
+    right: 32px;
+    font-size: 28px;
+    color: var(--primary-purple);
+    transition: transform 0.3s;
+}
+
+.audience-card:hover .audience-card-arrow {
+    transform: translateX(8px);
+}
+
+/* Audience Hero на посадочной странице */
+.audience-hero {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 80px 0;
+    text-align: center;
+    margin-bottom: 60px;
+    position: relative;
+    overflow: hidden;
+}
+
+.audience-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 500px;
+    height: 500px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+.audience-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -50%;
+    left: -20%;
+    width: 600px;
+    height: 600px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+}
+
+.audience-hero h1 {
+    font-size: 42px;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+    color: white;
+}
+
+.audience-hero p {
+    font-size: 18px;
+    opacity: 0.95;
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Specialization Tabs */
+.specialization-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 32px;
+    padding: 24px;
+    background: var(--bg-light);
+    border-radius: 16px;
+}
+
+.tab-btn {
+    padding: 12px 24px;
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 30px;
+    text-decoration: none;
+    color: var(--text-dark);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.tab-btn:hover {
+    border-color: var(--primary-purple);
+    color: var(--primary-purple);
+    transform: translateY(-2px);
+}
+
+.tab-btn.active {
+    background: var(--primary-purple);
+    border-color: var(--primary-purple);
+    color: white;
+    box-shadow: 0 4px 12px rgba(135, 66, 238, 0.3);
+}
+
+/* Filters Panel (расширенная фильтрация) */
+.filters-panel {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 40px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow-card);
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 220px;
+}
+
+.filter-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--text-dark);
+    font-size: 14px;
+}
+
+.filter-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 14px;
+    background: white;
+    color: var(--text-dark);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.filter-select:hover {
+    border-color: var(--primary-purple);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-purple);
+    box-shadow: 0 0 0 3px rgba(135, 66, 238, 0.1);
+}
+
+/* Audience & Specialization Tags */
+.competition-audience,
+.competition-specializations {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.competition-audience h3,
+.competition-specializations h3 {
+    font-size: 20px;
+    margin-bottom: 16px;
+    color: var(--text-dark);
+}
+
+.audience-tags,
+.specialization-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.audience-tag {
+    display: inline-block;
+    padding: 10px 20px;
+    background: var(--gradient-primary);
+    color: white;
+    border-radius: 24px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(135, 66, 238, 0.2);
+}
+
+.audience-tag:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(135, 66, 238, 0.3);
+}
+
+.specialization-tag {
+    display: inline-block;
+    padding: 10px 20px;
+    background: var(--bg-light);
+    color: var(--text-dark);
+    border: 2px solid #e0e0e0;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .audience-dropdown {
+        margin-right: 0;
+        margin-bottom: 16px;
+    }
+
+    .audience-dropdown-menu {
+        min-width: 280px;
+    }
+
+    .audience-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .audience-hero {
+        padding: 60px 0;
+    }
+
+    .audience-hero h1 {
+        font-size: 32px;
+    }
+
+    .audience-hero p {
+        font-size: 16px;
+    }
+
+    .filters-panel {
+        flex-direction: column;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .specialization-tabs {
+        flex-direction: column;
+    }
+
+    .tab-btn {
+        width: 100%;
+        text-align: center;
+    }
+}

@@ -25,6 +25,35 @@ initSession();
                     <?php echo SITE_NAME ?? 'Педпортал'; ?>
                 </a>
 
+                <?php
+                // Получить типы аудитории для dropdown
+                if (!isset($audienceTypes)) {
+                    require_once __DIR__ . '/../classes/AudienceType.php';
+                    $audienceTypeObj = new AudienceType($db);
+                    $audienceTypes = $audienceTypeObj->getAll();
+                }
+                ?>
+
+                <!-- Dropdown меню для выбора аудитории -->
+                <div class="audience-dropdown">
+                    <button class="audience-dropdown-btn" id="audienceDropdownBtn">
+                        <span>Для кого конкурсы?</span>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 6L8 10L12 6H4Z"/>
+                        </svg>
+                    </button>
+
+                    <div class="audience-dropdown-menu" id="audienceDropdownMenu">
+                        <a href="/index.php" class="dropdown-item">Все конкурсы</a>
+                        <div class="dropdown-divider"></div>
+                        <?php foreach ($audienceTypes as $type): ?>
+                        <a href="/<?php echo $type['slug']; ?>" class="dropdown-item">
+                            <?php echo htmlspecialchars($type['name']); ?>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
                 <nav class="main-nav" id="mainNav">
                     <a href="/index.php">Конкурсы</a>
                     <a href="/pages/about.php">О портале</a>
@@ -59,5 +88,27 @@ initSession();
             </div>
         </div>
     </header>
+
+    <script>
+    // Dropdown для аудитории
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropdownBtn = document.getElementById('audienceDropdownBtn');
+        const dropdownMenu = document.getElementById('audienceDropdownMenu');
+
+        if (dropdownBtn && dropdownMenu) {
+            dropdownBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                dropdownMenu.classList.toggle('show');
+            });
+
+            // Закрыть при клике вне dropdown
+            document.addEventListener('click', function(e) {
+                if (!dropdownBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                    dropdownMenu.classList.remove('show');
+                }
+            });
+        }
+    });
+    </script>
 
     <main>

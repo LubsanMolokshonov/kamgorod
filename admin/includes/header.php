@@ -45,6 +45,11 @@ $currentAdmin = Admin::verifySession();
                     <span>Шаблоны дипломов</span>
                 </a>
 
+                <a href="/admin/audience-types/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/audience-types/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">🎯</span>
+                    <span>Типы аудитории</span>
+                </a>
+
                 <a href="/admin/orders/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/orders/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">📦</span>
                     <span>Заказы</span>

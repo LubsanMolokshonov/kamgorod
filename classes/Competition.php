@@ -208,4 +208,173 @@ class Competition {
         $categories = COMPETITION_CATEGORIES;
         return $categories[$category] ?? $category;
     }
+
+    /**
+     * Привязать конкурс к типам аудитории
+     *
+     * @param int $competitionId ID конкурса
+     * @param array $audienceTypeIds Массив ID типов аудитории
+     * @return void
+     */
+    public function setAudienceTypes($competitionId, $audienceTypeIds) {
+        // Удалить существующие связи
+        $this->db->delete('competition_audience_types', 'competition_id = ?', [$competitionId]);
+
+        // Добавить новые связи
+        foreach ($audienceTypeIds as $typeId) {
+            $this->db->insert('competition_audience_types', [
+                'competition_id' => $competitionId,
+                'audience_type_id' => $typeId
+            ]);
+        }
+    }
+
+    /**
+     * Привязать конкурс к специализациям
+     *
+     * @param int $competitionId ID конкурса
+     * @param array $specializationIds Массив ID специализаций
+     * @return void
+     */
+    public function setSpecializations($competitionId, $specializationIds) {
+        // Удалить существующие связи
+        $this->db->delete('competition_specializations', 'competition_id = ?', [$competitionId]);
+
+        // Добавить новые связи
+        foreach ($specializationIds as $specId) {
+            $this->db->insert('competition_specializations', [
+                'competition_id' => $competitionId,
+                'specialization_id' => $specId
+            ]);
+        }
+    }
+
+    /**
+     * Получить типы аудитории для конкурса
+     *
+     * @param int $competitionId ID конкурса
+     * @return array Массив типов аудитории
+     */
+    public function getAudienceTypes($competitionId) {
+        return $this->db->query(
+            "SELECT at.* FROM audience_types at
+             JOIN competition_audience_types cat ON at.id = cat.audience_type_id
+             WHERE cat.competition_id = ? AND at.is_active = 1
+             ORDER BY at.display_order ASC",
+            [$competitionId]
+        );
+    }
+
+    /**
+     * Получить специализации для конкурса
+     *
+     * @param int $competitionId ID конкурса
+     * @return array Массив специализаций
+     */
+    public function getSpecializations($competitionId) {
+        return $this->db->query(
+            "SELECT s.*, at.name as audience_type_name, at.slug as audience_type_slug
+             FROM audience_specializations s
+             JOIN competition_specializations cs ON s.id = cs.specialization_id
+             JOIN audience_types at ON s.audience_type_id = at.id
+             WHERE cs.competition_id = ? AND s.is_active = 1
+             ORDER BY s.display_order ASC",
+            [$competitionId]
+        );
+    }
+
+    /**
+     * Получить конкурсы по типу аудитории
+     *
+     * @param string $audienceTypeSlug Slug типа аудитории
+     * @param string $category Категория конкурса (по умолчанию 'all')
+     * @return array Массив конкурсов
+     */
+    public function getByAudienceType($audienceTypeSlug, $category = 'all') {
+        $sql = "SELECT DISTINCT c.* FROM competitions c
+                JOIN competition_audience_types cat ON c.id = cat.competition_id
+                JOIN audience_types at ON cat.audience_type_id = at.id
+                WHERE c.is_active = 1 AND at.slug = ? AND at.is_active = 1";
+
+        $params = [$audienceTypeSlug];
+
+        if ($category !== 'all') {
+            $sql .= " AND c.category = ?";
+            $params[] = $category;
+        }
+
+        $sql .= " ORDER BY c.display_order ASC, c.created_at DESC";
+
+        return $this->db->query($sql, $params);
+    }
+
+    /**
+     * Получить конкурсы по специализации
+     *
+     * @param string $specializationSlug Slug специализации
+     * @param string $category Категория конкурса (по умолчанию 'all')
+     * @return array Массив конкурсов
+     */
+    public function getBySpecialization($specializationSlug, $category = 'all') {
+        $sql = "SELECT DISTINCT c.* FROM competitions c
+                JOIN competition_specializations cs ON c.id = cs.competition_id
+                JOIN audience_specializations s ON cs.specialization_id = s.id
+                WHERE c.is_active = 1 AND s.slug = ? AND s.is_active = 1";
+
+        $params = [$specializationSlug];
+
+        if ($category !== 'all') {
+            $sql .= " AND c.category = ?";
+            $params[] = $category;
+        }
+
+        $sql .= " ORDER BY c.display_order ASC, c.created_at DESC";
+
+        return $this->db->query($sql, $params);
+    }
+
+    /**
+     * Расширенная фильтрация конкурсов
+     *
+     * @param array $filters Массив фильтров (audience_type, specialization, category)
+     * @return array Массив конкурсов
+     */
+    public function getFilteredCompetitions($filters = []) {
+        $sql = "SELECT DISTINCT c.* FROM competitions c";
+        $joins = [];
+        $wheres = ["c.is_active = 1"];
+        $params = [];
+
+        // Фильтр по типу аудитории
+        if (!empty($filters['audience_type'])) {
+            $joins[] = "LEFT JOIN competition_audience_types cat ON c.id = cat.competition_id";
+            $joins[] = "LEFT JOIN audience_types at ON cat.audience_type_id = at.id";
+            $wheres[] = "at.slug = ?";
+            $params[] = $filters['audience_type'];
+        }
+
+        // Фильтр по специализации
+        if (!empty($filters['specialization'])) {
+            $joins[] = "LEFT JOIN competition_specializations cs ON c.id = cs.competition_id";
+            $joins[] = "LEFT JOIN audience_specializations s ON cs.specialization_id = s.id";
+            $wheres[] = "s.slug = ?";
+            $params[] = $filters['specialization'];
+        }
+
+        // Фильтр по категории
+        if (!empty($filters['category']) && $filters['category'] !== 'all') {
+            $wheres[] = "c.category = ?";
+            $params[] = $filters['category'];
+        }
+
+        // Собрать SQL запрос
+        if (!empty($joins)) {
+            $sql .= " " . implode(" ", array_unique($joins));
+        }
+
+        $sql .= " WHERE " . implode(" AND ", $wheres);
+        $sql .= " ORDER BY c.display_order ASC, c.created_at DESC";
+
+        return $this->db->query($sql, $params);
+    }
 }
