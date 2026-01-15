@@ -63,7 +63,7 @@ body {
 }
 
 .container {
-    max-width: 1320px;
+    max-width: 1440px;
     margin: 0 auto;
     padding: 0 20px;
 }
@@ -326,7 +326,7 @@ main {
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
-    max-width: 1320px;
+    max-width: 1440px;
     height: 100%;
     background: linear-gradient(135deg, #1E3A5F 0%, #2C4373 25%, #3B5998 50%, #4A6FA5 75%, #5E81C4 100%);
     border-radius: 0 0 60px 60px;
@@ -553,12 +553,129 @@ main {
     border-color: transparent;
 }
 
+/* ==============================================
+   COMPETITIONS LAYOUT WITH SIDEBAR
+   ============================================== */
+
+/* Scroll offset for anchor links (account for fixed header) */
+#competitions {
+    scroll-margin-top: 100px;
+}
+
+.competitions-layout {
+    display: flex;
+    gap: 32px;
+    margin-top: 40px;
+    align-items: flex-start;
+}
+
+/* Sidebar Filters */
+.sidebar-filters {
+    width: 280px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 100px;
+    height: fit-content;
+    background: white;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: var(--shadow-card);
+}
+
+.sidebar-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.sidebar-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.sidebar-section h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-dark);
+}
+
+/* Filter Checkboxes */
+.filter-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-dark);
+    transition: color var(--transition-speed);
+}
+
+.filter-checkbox input[type="checkbox"],
+.filter-checkbox input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary-purple);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.filter-checkbox:hover {
+    color: var(--primary-purple);
+}
+
+.filter-checkbox .checkbox-label {
+    line-height: 1.4;
+}
+
+/* Content Area */
+.content-area {
+    flex: 1;
+    min-width: 0;
+}
+
 /* Competition Grid */
 .competitions-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 32px;
-    margin-bottom: 60px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+/* Competitions Count */
+.competitions-count {
+    font-size: 16px;
+    color: var(--text-medium);
+    margin-bottom: 20px;
+}
+
+.competitions-count strong {
+    color: var(--primary-purple);
+    font-weight: 600;
+}
+
+/* Load More Button */
+.load-more-container {
+    text-align: center;
+    margin: 40px 0 60px;
+}
+
+.btn-load-more {
+    padding: 16px 48px;
+    font-size: 16px;
+    min-width: 280px;
+}
+
+.btn-load-more:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
 .competition-card {
@@ -704,6 +821,14 @@ main {
 }
 
 /* Responsive Design */
+
+/* Tablet landscape - 2 columns */
+@media (max-width: 1200px) {
+    .competitions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 960px) {
     h1 {
         font-size: 40px;
@@ -742,8 +867,18 @@ main {
         box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
     }
 
+    /* Sidebar layout - stack vertically on tablet */
+    .competitions-layout {
+        flex-direction: column;
+    }
+
+    .sidebar-filters {
+        width: 100%;
+        position: static;
+    }
+
     .competitions-grid {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
         gap: 24px;
     }
 
@@ -884,6 +1019,30 @@ main {
 
     .competition-card {
         padding: 24px;
+    }
+
+    /* Sidebar mobile styles */
+    .sidebar-filters {
+        padding: 20px;
+        border-radius: 20px;
+    }
+
+    .sidebar-section {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+    }
+
+    .sidebar-section h4 {
+        font-size: 15px;
+        margin-bottom: 12px;
+    }
+
+    .filter-checkboxes {
+        gap: 10px;
+    }
+
+    .filter-checkbox {
+        font-size: 13px;
     }
 
     .category-filter {

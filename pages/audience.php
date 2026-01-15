@@ -58,71 +58,141 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </section>
 
-<div class="container">
-    <!-- Специализации (tabs) -->
-    <?php if (!empty($specializations)): ?>
-    <div class="specialization-tabs">
-        <a href="?slug=<?php echo $audienceSlug; ?>&category=<?php echo $category; ?>"
-           class="tab-btn <?php echo empty($specialization) ? 'active' : ''; ?>">
-            Все специализации
-        </a>
-        <?php foreach ($specializations as $spec): ?>
-        <a href="?slug=<?php echo $audienceSlug; ?>&category=<?php echo $category; ?>&specialization=<?php echo $spec['slug']; ?>"
-           class="tab-btn <?php echo $specialization === $spec['slug'] ? 'active' : ''; ?>">
-            <?php echo htmlspecialchars($spec['name']); ?>
-        </a>
-        <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
-
-    <!-- Категории конкурсов -->
-    <div class="category-filter">
-        <button class="filter-btn <?php echo $category === 'all' ? 'active' : ''; ?>"
-                onclick="window.location.href='?slug=<?php echo $audienceSlug; ?>&category=all<?php echo $specialization ? '&specialization=' . $specialization : ''; ?>'">
-            Все конкурсы
-        </button>
-        <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
-        <button class="filter-btn <?php echo $category === $cat ? 'active' : ''; ?>"
-                onclick="window.location.href='?slug=<?php echo $audienceSlug; ?>&category=<?php echo $cat; ?><?php echo $specialization ? '&specialization=' . $specialization : ''; ?>'">
-            <?php echo htmlspecialchars($label); ?>
-        </button>
-        <?php endforeach; ?>
-    </div>
-</div>
-
-<!-- Список конкурсов -->
-<div class="container">
-    <?php if (empty($competitions)): ?>
-        <div class="text-center mb-40">
-            <h2>Конкурсы не найдены</h2>
-            <p>В данной категории пока нет конкурсов для выбранной аудитории. Попробуйте выбрать другую категорию или специализацию.</p>
-        </div>
-    <?php else: ?>
-        <div class="competitions-grid">
-            <?php foreach ($competitions as $competition): ?>
-                <div class="competition-card">
-                    <span class="competition-category">
-                        <?php echo htmlspecialchars(Competition::getCategoryLabel($competition['category'])); ?>
-                    </span>
-
-                    <h3><?php echo htmlspecialchars($competition['title']); ?></h3>
-
-                    <p><?php echo htmlspecialchars(mb_substr($competition['description'], 0, 150) . '...'); ?></p>
-
-                    <div class="competition-price">
-                        <?php echo number_format($competition['price'], 0, ',', ' '); ?> ₽
-                        <span>/ участие</span>
-                    </div>
-
-                    <a href="/pages/competition-detail.php?slug=<?php echo htmlspecialchars($competition['slug']); ?>"
-                       class="btn btn-primary btn-block">
-                        Принять участие
-                    </a>
+<!-- Competitions Section with Sidebar -->
+<div class="container" id="competitions">
+    <div class="competitions-layout">
+        <!-- Сайдбар с фильтрами -->
+        <aside class="sidebar-filters">
+            <?php if (!empty($specializations)): ?>
+            <div class="sidebar-section">
+                <h4>Специализация</h4>
+                <div class="filter-checkboxes">
+                    <label class="filter-checkbox">
+                        <input type="radio" name="specialization" value="" <?php echo empty($specialization) ? 'checked' : ''; ?>>
+                        <span class="checkbox-label">Все специализации</span>
+                    </label>
+                    <?php foreach ($specializations as $spec): ?>
+                    <label class="filter-checkbox">
+                        <input type="radio" name="specialization" value="<?php echo $spec['slug']; ?>" <?php echo $specialization === $spec['slug'] ? 'checked' : ''; ?>>
+                        <span class="checkbox-label"><?php echo htmlspecialchars($spec['name']); ?></span>
+                    </label>
+                    <?php endforeach; ?>
                 </div>
-            <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
+            <div class="sidebar-section">
+                <h4>Категория конкурса</h4>
+                <div class="filter-checkboxes">
+                    <label class="filter-checkbox">
+                        <input type="checkbox" name="category" value="all" <?php echo $category === 'all' ? 'checked' : ''; ?>>
+                        <span class="checkbox-label">Все конкурсы</span>
+                    </label>
+                    <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
+                    <label class="filter-checkbox">
+                        <input type="checkbox" name="category" value="<?php echo $cat; ?>" <?php echo $category === $cat ? 'checked' : ''; ?>>
+                        <span class="checkbox-label"><?php echo htmlspecialchars($label); ?></span>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Контент с карточками -->
+        <div class="content-area">
+            <?php if (empty($competitions)): ?>
+                <div class="text-center mb-40">
+                    <h2>Конкурсы не найдены</h2>
+                    <p>В данной категории пока нет конкурсов для выбранной аудитории. Попробуйте выбрать другую категорию или специализацию.</p>
+                </div>
+            <?php else: ?>
+                <div class="competitions-grid">
+                    <?php foreach ($competitions as $competition): ?>
+                        <div class="competition-card">
+                            <span class="competition-category">
+                                <?php echo htmlspecialchars(Competition::getCategoryLabel($competition['category'])); ?>
+                            </span>
+
+                            <h3><?php echo htmlspecialchars($competition['title']); ?></h3>
+
+                            <p><?php echo htmlspecialchars(mb_substr($competition['description'], 0, 150) . '...'); ?></p>
+
+                            <div class="competition-price">
+                                <?php echo number_format($competition['price'], 0, ',', ' '); ?> ₽
+                                <span>/ участие</span>
+                            </div>
+
+                            <a href="/pages/competition-detail.php?slug=<?php echo htmlspecialchars($competition['slug']); ?>"
+                               class="btn btn-primary btn-block">
+                                Принять участие
+                            </a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
-    <?php endif; ?>
+    </div>
 </div>
+
+<script>
+// Обработка фильтров - автоматическое применение при выборе
+document.addEventListener('DOMContentLoaded', function() {
+    const categoryCheckboxes = document.querySelectorAll('input[name="category"]');
+    const allCheckbox = document.querySelector('input[name="category"][value="all"]');
+    const specializationRadios = document.querySelectorAll('input[name="specialization"]');
+    const audienceSlug = '<?php echo $audienceSlug; ?>';
+
+    // Функция применения фильтров
+    function applyFilters() {
+        const selectedSpec = document.querySelector('input[name="specialization"]:checked');
+        const checkedCategories = Array.from(categoryCheckboxes)
+            .filter(cb => cb.checked && cb.value !== 'all')
+            .map(cb => cb.value);
+
+        let url = '?slug=' + audienceSlug;
+
+        if (checkedCategories.length === 1) {
+            url += '&category=' + checkedCategories[0];
+        } else {
+            url += '&category=all';
+        }
+
+        if (selectedSpec && selectedSpec.value) {
+            url += '&specialization=' + selectedSpec.value;
+        }
+
+        url += '#competitions';
+        window.location.href = url;
+    }
+
+    // Автоприменение при выборе категории
+    categoryCheckboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            if (this.value === 'all' && this.checked) {
+                categoryCheckboxes.forEach(function(cb) {
+                    if (cb.value !== 'all') cb.checked = false;
+                });
+            } else if (this.value !== 'all' && this.checked) {
+                if (allCheckbox) allCheckbox.checked = false;
+            }
+
+            const anyChecked = Array.from(categoryCheckboxes).some(cb => cb.checked);
+            if (!anyChecked && allCheckbox) {
+                allCheckbox.checked = true;
+            }
+
+            // Автоматически применить фильтры
+            applyFilters();
+        });
+    });
+
+    // Автоприменение при выборе специализации
+    specializationRadios.forEach(function(radio) {
+        radio.addEventListener('change', applyFilters);
+    });
+});
+</script>
 
 <!-- Info Section -->
 <div class="container mt-40 mb-40">
