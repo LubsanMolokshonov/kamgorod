@@ -22,7 +22,7 @@ initSession();
         <div class="container">
             <div class="header-container">
                 <a href="/index.php" class="logo">
-                    <?php echo SITE_NAME ?? 'Педпортал'; ?>
+                    <img src="/logo.png" alt="<?php echo SITE_NAME ?? 'Педагогический портал'; ?>" class="logo-image">
                 </a>
 
                 <?php
