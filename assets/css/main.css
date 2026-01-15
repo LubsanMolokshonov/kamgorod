@@ -2003,3 +2003,371 @@ main {
         text-align: center;
     }
 }
+
+/* ==============================================
+   MOBILE FILTERS (Ozon Style)
+   ============================================== */
+
+/* По умолчанию скрываем мобильные фильтры */
+.mobile-filters {
+    display: none;
+}
+
+/* Стили для мобильной строки фильтров */
+@media (max-width: 960px) {
+    /* Показываем мобильные фильтры */
+    .mobile-filters {
+        display: block;
+        margin-bottom: 20px;
+        margin-left: -16px;
+        margin-right: -16px;
+        padding: 0 16px;
+    }
+
+    .mobile-filters-scroll {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 4px 0;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .mobile-filters-scroll::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Скрываем десктопный сайдбар */
+    .sidebar-filters {
+        display: none !important;
+    }
+
+    /* Чипы фильтров (Ozon style) */
+    .filter-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background: white;
+        border: 1.5px solid #e0e0e0;
+        border-radius: 18px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-dark);
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: all 0.2s;
+    }
+
+    .filter-chip:active {
+        background: var(--bg-light);
+    }
+
+    /* Активный чип (выбран фильтр) */
+    .filter-chip.active {
+        background: var(--primary-purple);
+        border-color: var(--primary-purple);
+        color: white;
+    }
+
+    .filter-chip.active .filter-chip-text {
+        color: white;
+    }
+
+    /* Иконка-кнопка (сортировка) */
+    .filter-chip-icon {
+        padding: 8px 10px;
+        background: var(--primary-purple);
+        border-color: var(--primary-purple);
+        color: white;
+    }
+
+    .filter-chip-icon svg {
+        color: white;
+    }
+
+    .filter-chip-text {
+        color: inherit;
+    }
+
+    /* Крестик для сброса */
+    .filter-chip-clear {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 2px;
+        margin-right: -4px;
+        padding: 2px;
+        border-radius: 50%;
+        transition: background 0.2s;
+    }
+
+    .filter-chip-clear svg {
+        color: white;
+        opacity: 0.8;
+    }
+
+    .filter-chip-clear:hover svg {
+        opacity: 1;
+    }
+
+    .filter-chip svg {
+        flex-shrink: 0;
+    }
+}
+
+/* Попап фильтра (снизу экрана) */
+.filter-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: none;
+}
+
+.filter-popup.show {
+    display: block;
+}
+
+.filter-popup-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.filter-popup.show .filter-popup-overlay {
+    opacity: 1;
+}
+
+.filter-popup-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 20px 20px 0 0;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-out;
+}
+
+.filter-popup.show .filter-popup-content {
+    transform: translateY(0);
+}
+
+.filter-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.filter-popup-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.filter-popup-cancel {
+    background: none;
+    border: none;
+    color: var(--primary-purple);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.filter-popup-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 20px;
+}
+
+.filter-popup-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--text-dark);
+}
+
+.filter-popup-option:last-child {
+    border-bottom: none;
+}
+
+.filter-popup-option input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary-purple);
+    flex-shrink: 0;
+}
+
+.filter-popup-option span {
+    flex: 1;
+}
+
+.filter-popup-option:active {
+    background: var(--bg-light);
+    margin: 0 -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.filter-popup-footer {
+    padding: 16px 20px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #e0e0e0;
+}
+
+.filter-popup-footer .btn {
+    padding: 16px;
+    font-size: 16px;
+}
+
+/* Блокируем скролл body когда попап открыт */
+body.popup-open {
+    overflow: hidden;
+}
+
+/* ==============================================
+   CRITERIA SECTION - NEW DESIGN
+   ============================================== */
+
+.criteria-section-new {
+    background: #E8F0F8;
+    border-radius: 40px;
+    padding: 60px 80px;
+    margin-bottom: 60px;
+}
+
+.criteria-section-new h2 {
+    text-align: center;
+    margin-bottom: 40px;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.criteria-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.criteria-card {
+    background: white;
+    border-radius: 20px;
+    padding: 28px 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(30, 58, 95, 0.08);
+}
+
+.criteria-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(30, 58, 95, 0.15);
+}
+
+.criteria-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 16px;
+    background: var(--gradient-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.criteria-icon svg {
+    width: 28px;
+    height: 28px;
+    color: white;
+}
+
+.criteria-card h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-dark);
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* Criteria Section Responsive */
+@media (max-width: 1200px) {
+    .criteria-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 960px) {
+    .criteria-section-new {
+        padding: 50px 40px;
+    }
+
+    .criteria-section-new h2 {
+        font-size: 32px;
+    }
+
+    .criteria-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+}
+
+@media (max-width: 640px) {
+    .criteria-section-new {
+        padding: 40px 24px;
+        border-radius: 30px;
+    }
+
+    .criteria-section-new h2 {
+        font-size: 26px;
+        margin-bottom: 30px;
+    }
+
+    .criteria-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .criteria-card {
+        padding: 20px 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        text-align: left;
+    }
+
+    .criteria-icon {
+        width: 50px;
+        height: 50px;
+        margin: 0;
+        flex-shrink: 0;
+    }
+
+    .criteria-icon svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .criteria-card h4 {
+        font-size: 14px;
+    }
+}

@@ -110,22 +110,17 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <!-- Decorative icons -->
-            <div class="hero-icon hero-icon-star">⭐</div>
-            <div class="hero-icon hero-icon-message">💬</div>
-            <div class="hero-icon hero-icon-phone">📞</div>
-            <div class="hero-icon hero-icon-game">🎮</div>
-            <div class="hero-icon hero-icon-chat">💭</div>
+            <div class="hero-icon hero-icon-star">🏆</div>
+            <div class="hero-icon hero-icon-message">📚</div>
+            <div class="hero-icon hero-icon-phone">🎓</div>
+            <div class="hero-icon hero-icon-game">📜</div>
+            <div class="hero-icon hero-icon-chat">✏️</div>
         </div>
     </div>
 </section>
 
 <!-- Секция выбора аудитории -->
-<div class="container">
-    <div class="text-center mb-40">
-        <h2>Выберите вашу аудиторию</h2>
-        <p>Найдите конкурсы, специально подобранные для вашей сферы деятельности</p>
-    </div>
-
+<div class="container mt-40">
     <div class="audience-cards-grid">
         <?php foreach ($audienceTypes as $type): ?>
         <a href="/<?php echo $type['slug']; ?>" class="audience-card">
@@ -139,6 +134,129 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Competitions Section with Sidebar -->
 <div class="container" id="competitions">
+    <!-- Мобильные фильтры (чипы) -->
+    <div class="mobile-filters">
+        <div class="mobile-filters-scroll">
+            <!-- Кнопка сортировки/фильтра -->
+            <button class="filter-chip filter-chip-icon" data-filter="sort">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <!-- Тип учреждения -->
+            <button class="filter-chip <?php echo !empty($audienceFilter) ? 'active' : ''; ?>" data-filter="audience">
+                <span class="filter-chip-text">Тип учреждения</span>
+                <?php if (!empty($audienceFilter)): ?>
+                <span class="filter-chip-clear" data-clear="audience">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <?php endif; ?>
+            </button>
+            <!-- Специализация -->
+            <button class="filter-chip <?php echo !empty($specializationFilter) ? 'active' : ''; ?>" data-filter="specialization" id="specializationChip" style="<?php echo empty($audienceFilter) ? 'display:none;' : ''; ?>">
+                <span class="filter-chip-text">Специализация</span>
+                <?php if (!empty($specializationFilter)): ?>
+                <span class="filter-chip-clear" data-clear="specialization">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <?php endif; ?>
+            </button>
+            <!-- Категория -->
+            <button class="filter-chip <?php echo $category !== 'all' ? 'active' : ''; ?>" data-filter="category">
+                <span class="filter-chip-text">Категория</span>
+                <?php if ($category !== 'all'): ?>
+                <span class="filter-chip-clear" data-clear="category">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <?php endif; ?>
+            </button>
+        </div>
+    </div>
+
+    <!-- Попап фильтра "Тип учреждения" -->
+    <div class="filter-popup" id="audiencePopup">
+        <div class="filter-popup-overlay"></div>
+        <div class="filter-popup-content">
+            <div class="filter-popup-header">
+                <span class="filter-popup-title">Тип учреждения</span>
+                <button class="filter-popup-cancel">Отмена</button>
+            </div>
+            <div class="filter-popup-body">
+                <label class="filter-popup-option">
+                    <input type="radio" name="mobile_audience" value="" <?php echo empty($audienceFilter) ? 'checked' : ''; ?>>
+                    <span>Все</span>
+                </label>
+                <?php foreach ($audienceTypes as $type): ?>
+                <label class="filter-popup-option">
+                    <input type="radio" name="mobile_audience" value="<?php echo $type['slug']; ?>" <?php echo $audienceFilter === $type['slug'] ? 'checked' : ''; ?>>
+                    <span><?php echo htmlspecialchars($type['name']); ?></span>
+                </label>
+                <?php endforeach; ?>
+            </div>
+            <div class="filter-popup-footer">
+                <button class="filter-popup-apply btn btn-primary btn-block">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Попап фильтра "Специализация" -->
+    <div class="filter-popup" id="specializationPopup">
+        <div class="filter-popup-overlay"></div>
+        <div class="filter-popup-content">
+            <div class="filter-popup-header">
+                <span class="filter-popup-title">Специализация</span>
+                <button class="filter-popup-cancel">Отмена</button>
+            </div>
+            <div class="filter-popup-body" id="mobileSpecializationList">
+                <label class="filter-popup-option">
+                    <input type="radio" name="mobile_specialization" value="" <?php echo empty($specializationFilter) ? 'checked' : ''; ?>>
+                    <span>Все специализации</span>
+                </label>
+                <?php foreach ($specializations as $spec): ?>
+                <label class="filter-popup-option">
+                    <input type="radio" name="mobile_specialization" value="<?php echo $spec['slug']; ?>" <?php echo $specializationFilter === $spec['slug'] ? 'checked' : ''; ?>>
+                    <span><?php echo htmlspecialchars($spec['name']); ?></span>
+                </label>
+                <?php endforeach; ?>
+            </div>
+            <div class="filter-popup-footer">
+                <button class="filter-popup-apply btn btn-primary btn-block">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Попап фильтра "Категория" -->
+    <div class="filter-popup" id="categoryPopup">
+        <div class="filter-popup-overlay"></div>
+        <div class="filter-popup-content">
+            <div class="filter-popup-header">
+                <span class="filter-popup-title">Категория конкурса</span>
+                <button class="filter-popup-cancel">Отмена</button>
+            </div>
+            <div class="filter-popup-body">
+                <label class="filter-popup-option">
+                    <input type="radio" name="mobile_category" value="all" <?php echo $category === 'all' ? 'checked' : ''; ?>>
+                    <span>Все конкурсы</span>
+                </label>
+                <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
+                <label class="filter-popup-option">
+                    <input type="radio" name="mobile_category" value="<?php echo $cat; ?>" <?php echo $category === $cat ? 'checked' : ''; ?>>
+                    <span><?php echo htmlspecialchars($label); ?></span>
+                </label>
+                <?php endforeach; ?>
+            </div>
+            <div class="filter-popup-footer">
+                <button class="filter-popup-apply btn btn-primary btn-block">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
     <div class="competitions-layout">
         <!-- Сайдбар с фильтрами -->
         <aside class="sidebar-filters">
@@ -273,18 +391,100 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Criteria Section -->
 <div class="container mb-40">
-    <div class="criteria-section">
+    <div class="criteria-section-new">
         <h2>Критерии оценки конкурсных работ</h2>
-        <div class="criteria-list">
-            <ul>
-                <li>целесообразность материала;</li>
-                <li>оригинальность материала;</li>
-                <li>полнота и информативность материала;</li>
-                <li>научная и фактическая достоверность материала;</li>
-                <li>стиль и доходчивость изложения, логичность структуры материала;</li>
-                <li>качество оформления и наглядность материала;</li>
-                <li>возможность широкого практического использования материала.</li>
-            </ul>
+        <div class="criteria-grid">
+            <!-- 1. Целесообразность -->
+            <div class="criteria-card">
+                <div class="criteria-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="6"/>
+                        <circle cx="12" cy="12" r="2"/>
+                    </svg>
+                </div>
+                <h4>Целесообразность материала</h4>
+            </div>
+
+            <!-- 2. Оригинальность -->
+            <div class="criteria-card">
+                <div class="criteria-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 18h6"/>
+                        <path d="M10 22h4"/>
+                        <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/>
+                    </svg>
+                </div>
+                <h4>Оригинальность материала</h4>
+            </div>
+
+            <!-- 3. Полнота и информативность -->
+            <div class="criteria-card">
+                <div class="criteria-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                        <line x1="8" y1="7" x2="16" y2="7"/>
+                        <line x1="8" y1="11" x2="14" y2="11"/>
+                    </svg>
+                </div>
+                <h4>Полнота и информативность</h4>
+            </div>
+
+            <!-- 4. Научная достоверность -->
+            <div class="criteria-card">
+                <div class="criteria-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 3h6v2H9z"/>
+                        <path d="M10 5v4"/>
+                        <path d="M14 5v4"/>
+                        <circle cx="12" cy="14" r="5"/>
+                        <path d="M12 12v2"/>
+                        <path d="M12 16h.01"/>
+                    </svg>
+                </div>
+                <h4>Научная достоверность</h4>
+            </div>
+
+            <!-- 5. Стиль изложения -->
+            <div class="criteria-card">
+                <div class="criteria-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                        <path d="M2 2l7.586 7.586"/>
+                        <circle cx="11" cy="11" r="2"/>
+                    </svg>
+                </div>
+                <h4>Стиль и логичность изложения</h4>
+            </div>
+
+            <!-- 6. Качество оформления -->
+            <div class="criteria-card">
+                <div class="criteria-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="13.5" cy="6.5" r="2.5"/>
+                        <circle cx="6" cy="12" r="2.5"/>
+                        <circle cx="18" cy="12" r="2.5"/>
+                        <circle cx="8.5" cy="18.5" r="2.5"/>
+                        <circle cx="15.5" cy="18.5" r="2.5"/>
+                    </svg>
+                </div>
+                <h4>Качество оформления</h4>
+            </div>
+
+            <!-- 7. Практическое использование -->
+            <div class="criteria-card">
+                <div class="criteria-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+                        <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+                        <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+                        <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+                    </svg>
+                </div>
+                <h4>Практическое применение</h4>
+            </div>
         </div>
     </div>
 </div>
@@ -532,6 +732,196 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обработчик для существующих radio специализаций (при загрузке страницы с уже выбранной аудиторией)
     document.querySelectorAll('input[name="specialization"]').forEach(function(specRadio) {
         specRadio.addEventListener('change', applyFilters);
+    });
+
+    // ========================================
+    // МОБИЛЬНЫЕ ФИЛЬТРЫ (Ozon Style)
+    // ========================================
+
+    const filterChips = document.querySelectorAll('.filter-chip');
+    const filterPopups = document.querySelectorAll('.filter-popup');
+    const specializationChip = document.getElementById('specializationChip');
+    const mobileSpecializationList = document.getElementById('mobileSpecializationList');
+
+    // Функция открытия попапа
+    function openPopup(popupId) {
+        const popup = document.getElementById(popupId);
+        if (popup) {
+            popup.classList.add('show');
+            document.body.classList.add('popup-open');
+            setTimeout(() => {
+                popup.querySelector('.filter-popup-content').style.transform = 'translateY(0)';
+            }, 10);
+        }
+    }
+
+    // Функция закрытия попапа
+    function closePopup(popup) {
+        popup.classList.remove('show');
+        document.body.classList.remove('popup-open');
+    }
+
+    // Функция сброса конкретного фильтра
+    function clearFilter(filterType) {
+        // Получаем текущие параметры URL
+        const urlParams = new URLSearchParams(window.location.search);
+
+        if (filterType === 'audience') {
+            urlParams.delete('audience');
+            urlParams.delete('specialization'); // При сбросе типа учреждения сбрасываем и специализацию
+        } else if (filterType === 'specialization') {
+            urlParams.delete('specialization');
+        } else if (filterType === 'category') {
+            urlParams.delete('category');
+        }
+
+        // Переходим на страницу с обновленными параметрами
+        let url = '/index.php';
+        const paramsString = urlParams.toString();
+        if (paramsString) {
+            url += '?' + paramsString;
+        }
+        url += '#competitions';
+        window.location.href = url;
+    }
+
+    // Обработчик клика на крестики сброса
+    document.querySelectorAll('.filter-chip-clear').forEach(function(clearBtn) {
+        clearBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Не открывать попап
+            const filterType = this.dataset.clear;
+            clearFilter(filterType);
+        });
+    });
+
+    // Функция применения мобильных фильтров
+    function applyMobileFilters() {
+        const selectedAudience = document.querySelector('input[name="mobile_audience"]:checked');
+        const selectedSpec = document.querySelector('input[name="mobile_specialization"]:checked');
+        const selectedCategory = document.querySelector('input[name="mobile_category"]:checked');
+
+        let url = '/index.php';
+        const params = [];
+
+        if (selectedAudience && selectedAudience.value) {
+            params.push('audience=' + selectedAudience.value);
+        }
+        if (selectedSpec && selectedSpec.value) {
+            params.push('specialization=' + selectedSpec.value);
+        }
+        if (selectedCategory && selectedCategory.value && selectedCategory.value !== 'all') {
+            params.push('category=' + selectedCategory.value);
+        }
+
+        if (params.length > 0) {
+            url += '?' + params.join('&');
+        }
+        url += '#competitions';
+
+        window.location.href = url;
+    }
+
+    // Обработчик клика на чипы
+    filterChips.forEach(function(chip) {
+        chip.addEventListener('click', function() {
+            const filterType = this.dataset.filter;
+            let popupId = '';
+
+            if (filterType === 'audience') {
+                popupId = 'audiencePopup';
+            } else if (filterType === 'specialization') {
+                popupId = 'specializationPopup';
+            } else if (filterType === 'category') {
+                popupId = 'categoryPopup';
+            }
+
+            if (popupId) {
+                openPopup(popupId);
+            }
+        });
+    });
+
+    // Обработчик закрытия попапов
+    filterPopups.forEach(function(popup) {
+        // Закрытие по клику на оверлей
+        const overlay = popup.querySelector('.filter-popup-overlay');
+        if (overlay) {
+            overlay.addEventListener('click', function() {
+                closePopup(popup);
+            });
+        }
+
+        // Закрытие по кнопке "Отмена"
+        const cancelBtn = popup.querySelector('.filter-popup-cancel');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                closePopup(popup);
+            });
+        }
+
+        // Кнопка "Закрыть" - применяет фильтры
+        const applyBtn = popup.querySelector('.filter-popup-apply');
+        if (applyBtn) {
+            applyBtn.addEventListener('click', function() {
+                closePopup(popup);
+                applyMobileFilters();
+            });
+        }
+    });
+
+    // Обработчик выбора типа учреждения в мобильном попапе
+    document.querySelectorAll('input[name="mobile_audience"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            const audienceSlug = this.value;
+
+            if (!audienceSlug) {
+                // Скрыть чип специализации
+                if (specializationChip) {
+                    specializationChip.style.display = 'none';
+                }
+                return;
+            }
+
+            // Загрузить специализации через AJAX
+            fetch('/ajax/get-specializations.php?audience=' + encodeURIComponent(audienceSlug))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.specializations.length > 0) {
+                        // Показать чип специализации
+                        if (specializationChip) {
+                            specializationChip.style.display = 'flex';
+                        }
+
+                        // Обновить список специализаций в попапе
+                        if (mobileSpecializationList) {
+                            let html = '<label class="filter-popup-option">' +
+                                '<input type="radio" name="mobile_specialization" value="" checked>' +
+                                '<span>Все специализации</span>' +
+                                '</label>';
+
+                            data.specializations.forEach(function(spec) {
+                                html += '<label class="filter-popup-option">' +
+                                    '<input type="radio" name="mobile_specialization" value="' + spec.slug + '">' +
+                                    '<span>' + spec.name + '</span>' +
+                                    '</label>';
+                            });
+
+                            mobileSpecializationList.innerHTML = html;
+                        }
+                    } else {
+                        // Скрыть чип специализации
+                        if (specializationChip) {
+                            specializationChip.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки специализаций:', error);
+                    if (specializationChip) {
+                        specializationChip.style.display = 'none';
+                    }
+                });
+        });
     });
 
     // Загрузка больше конкурсов
