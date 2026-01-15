@@ -128,7 +128,7 @@
 
 .card-header {
     padding: 20px 24px;
-    background: linear-gradient(135deg, var(--primary-purple) 0%, #6b46c1 100%);
+    background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);
     color: white;
     display: flex;
     justify-content: space-between;

@@ -25,6 +25,11 @@ initSession();
                     <img src="/logo.png" alt="<?php echo SITE_NAME ?? 'Педагогический портал'; ?>" class="logo-image">
                 </a>
 
+                <div class="header-smi-badge">
+                    <span>Свидетельство о регистрации СМИ:</span>
+                    <span>Эл. №ФС 77-74524 от 24.12.2018</span>
+                </div>
+
                 <?php
                 // Получить типы аудитории для dropdown
                 if (!isset($audienceTypes)) {

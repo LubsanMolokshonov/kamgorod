@@ -51,7 +51,7 @@ include __DIR__ . '/../includes/header.php';
 
 /* Hero Section */
 .competition-hero {
-    background: linear-gradient(135deg, rgba(77, 61, 214, 0.85) 0%, rgba(124, 78, 228, 0.85) 25%, rgba(184, 78, 235, 0.85) 50%, rgba(79, 180, 232, 0.85) 75%, rgba(61, 217, 214, 0.85) 100%),
+    background: linear-gradient(135deg, rgba(30, 58, 95, 0.9) 0%, rgba(44, 67, 115, 0.9) 25%, rgba(59, 89, 152, 0.9) 50%, rgba(74, 111, 165, 0.9) 75%, rgba(94, 129, 196, 0.9) 100%),
                 url('/assets/images/backgrounds/events-hero-bg.jpeg') center center / cover no-repeat;
     padding: 140px 0 80px;
     color: white;
@@ -297,7 +297,7 @@ include __DIR__ . '/../includes/header.php';
     right: 0;
     width: 400px;
     height: 400px;
-    background: radial-gradient(circle, rgba(135,66,238,0.05) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(30,58,95,0.05) 0%, transparent 70%);
     border-radius: 50%;
 }
 
@@ -362,7 +362,7 @@ include __DIR__ . '/../includes/header.php';
     padding: 60px;
     text-align: center;
     color: white;
-    box-shadow: 0 20px 60px rgba(135,66,238,0.3);
+    box-shadow: 0 20px 60px rgba(30,58,95,0.3);
     position: relative;
     overflow: hidden;
 }
@@ -475,7 +475,7 @@ include __DIR__ . '/../includes/header.php';
     justify-content: center;
     font-size: 28px;
     font-weight: 700;
-    box-shadow: 0 8px 24px rgba(135,66,238,0.3);
+    box-shadow: 0 8px 24px rgba(30,58,95,0.3);
 }
 
 .step-content h3 {
@@ -492,7 +492,7 @@ include __DIR__ . '/../includes/header.php';
 
 /* FAQ Section */
 .faq-section {
-    background: #E8E4F3;
+    background: #E8F0F8;
     border-radius: 40px;
     padding: 60px 80px;
     margin-bottom: 60px;
@@ -513,7 +513,7 @@ include __DIR__ . '/../includes/header.php';
 }
 
 .faq-item {
-    background: #F5F3F9;
+    background: #F5F8FC;
     border-radius: 24px;
     padding: 28px 32px;
     cursor: pointer;
@@ -521,7 +521,7 @@ include __DIR__ . '/../includes/header.php';
 }
 
 .faq-item:hover {
-    background: #EFEDF5;
+    background: #EDF2F7;
 }
 
 .faq-question {
@@ -565,7 +565,7 @@ include __DIR__ . '/../includes/header.php';
     display: none;
     padding-top: 16px;
     margin-top: 16px;
-    border-top: 1px solid rgba(135, 66, 238, 0.1);
+    border-top: 1px solid rgba(30, 58, 95, 0.1);
 }
 
 .faq-item.active .faq-answer {
@@ -624,12 +624,12 @@ include __DIR__ . '/../includes/header.php';
     font-weight: 600;
     text-decoration: none;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(135, 66, 238, 0.2);
+    box-shadow: 0 2px 8px rgba(30, 58, 95, 0.2);
 }
 
 .audience-tag:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(135, 66, 238, 0.35);
+    box-shadow: 0 4px 16px rgba(30, 58, 95, 0.35);
     opacity: 0.9;
 }
 

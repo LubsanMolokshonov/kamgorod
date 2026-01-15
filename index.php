@@ -56,39 +56,14 @@ include __DIR__ . '/includes/header.php';
 
             <div class="hero-features">
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="32" height="32" viewBox="0 0 32 32" fill="white" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="6" y="8" width="20" height="18" rx="2" stroke="white" stroke-width="2" fill="none"/>
-                            <path d="M6 12 L26 12" stroke="white" stroke-width="2"/>
-                            <circle cx="16" cy="18" r="3" stroke="white" stroke-width="2" fill="none"/>
-                        </svg>
-                    </div>
                     <div class="feature-text">
                         <h3>Свидетельство о регистрации СМИ: Эл. №ФС 77-74524 от 24.12.2018</h3>
                     </div>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="32" height="32" viewBox="0 0 32 32" fill="white" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="16" cy="16" r="12" stroke="white" stroke-width="2" fill="none"/>
-                            <path d="M16 8 L16 16 L22 16" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </div>
                     <div class="feature-text">
                         <h3>Ускоренное рассмотрение конкурсных работ за 2 дня</h3>
-                    </div>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="32" height="32" viewBox="0 0 32 32" fill="white" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M8 4 L24 4 L24 28 L16 24 L8 28 Z" stroke="white" stroke-width="2" fill="none" stroke-linejoin="round"/>
-                            <path d="M12 12 L20 12 M12 16 L20 16" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </div>
-                    <div class="feature-text">
-                        <h3>Бесплатная публикация<br>в журнале</h3>
                     </div>
                 </div>
             </div>

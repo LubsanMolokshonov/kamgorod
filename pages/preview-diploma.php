@@ -98,7 +98,7 @@ $pageTitle = 'Предпросмотр диплома | ' . SITE_NAME;
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -224,13 +224,13 @@ $pageTitle = 'Предпросмотр диплома | ' . SITE_NAME;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);
             color: white;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 16px rgba(30, 58, 95, 0.4);
         }
 
         .btn-secondary {
@@ -245,7 +245,7 @@ $pageTitle = 'Предпросмотр диплома | ' . SITE_NAME;
         .recipient-type {
             display: inline-block;
             padding: 6px 12px;
-            background: <?php echo $recipientType === 'supervisor' ? '#8b5cf6' : '#10b981'; ?>;
+            background: <?php echo $recipientType === 'supervisor' ? '#1E3A5F' : '#10b981'; ?>;
             color: white;
             border-radius: 6px;
             font-size: 12px;
@@ -423,7 +423,7 @@ $pageTitle = 'Предпросмотр диплома | ' . SITE_NAME;
             <?php if ($recipientType === 'participant' && $registration['has_supervisor']): ?>
             <a href="/pages/preview-diploma.php?registration_id=<?php echo $registration['id']; ?>&type=supervisor"
                class="btn btn-primary"
-               style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+               style="background: linear-gradient(135deg, #1E3A5F 0%, #152C4A 100%);">
                 👁️ Предпросмотр диплома руководителя
             </a>
             <?php endif; ?>

@@ -75,7 +75,7 @@
 
 .form-group input:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: #1E3A5F;
 }
 
 .btn-block {
@@ -94,7 +94,7 @@
 }
 
 .login-info {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);
     padding: 48px;
     border-radius: 16px;
     color: white;

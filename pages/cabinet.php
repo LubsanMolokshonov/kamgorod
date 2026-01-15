@@ -189,7 +189,7 @@ include __DIR__ . '/../includes/header.php';
                                         <a href="/ajax/download-diploma.php?registration_id=<?php echo $reg['id']; ?>&type=supervisor"
                                            class="btn btn-success btn-download"
                                            target="_blank"
-                                           style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                                           style="background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);">
                                             📥 Диплом руководителя
                                         </a>
                                     <?php endif; ?>

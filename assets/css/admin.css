@@ -17,7 +17,7 @@
 /* Sidebar */
 .admin-sidebar {
     width: 260px;
-    background: linear-gradient(180deg, var(--primary-purple) 0%, var(--dark-purple) 100%);
+    background: linear-gradient(180deg, #1E3A5F 0%, #152C4A 100%);
     color: white;
     position: fixed;
     height: 100vh;
@@ -243,8 +243,8 @@
 }
 
 .badge-purple {
-    background: var(--light-purple);
-    color: var(--dark-purple);
+    background: #D4E4F7;
+    color: #1E3A5F;
 }
 
 /* Buttons */

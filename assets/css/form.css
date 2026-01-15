@@ -158,12 +158,12 @@ main:has(.diploma-form-wrapper) {
 
 .template-item:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 16px rgba(67,61,136,0.15);
+    box-shadow: 0 8px 16px rgba(30,58,95,0.15);
 }
 
 .template-item.selected {
     border-color: var(--primary-purple);
-    box-shadow: 0 0 0 4px rgba(135,66,238,0.2);
+    box-shadow: 0 0 0 4px rgba(30,58,95,0.2);
 }
 
 .template-thumbnail {
@@ -256,7 +256,7 @@ main:has(.diploma-form-wrapper) {
 .form-control:focus {
     outline: none;
     border-color: var(--primary-purple);
-    box-shadow: 0 0 0 4px rgba(135,66,238,0.1);
+    box-shadow: 0 0 0 4px rgba(30,58,95,0.1);
 }
 
 .form-control.error {

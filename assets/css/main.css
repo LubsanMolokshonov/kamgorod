@@ -1,22 +1,48 @@
 /**
- * Main Stylesheet - Purple Gradient Theme
- * Design inspired by prof.sferum.ru
+ * Main Stylesheet - Blue Theme (based on logo colors)
+ * FGOS-Praktikum Design
  */
 
 /* CSS Variables */
 :root {
-    --primary-purple: #8742ee;
-    --dark-purple: #712dd4;
-    --light-purple: #dac2ff;
-    --purple-card: #a26bf5;
-    --text-dark: #3a3643;
-    --text-medium: #5f5973;
-    --bg-light: #f9f7fc;
+    /* Primary - dark blue (from logo text) */
+    --primary-purple: #1E3A5F;
+    --dark-purple: #152C4A;
+    --light-purple: #D4E4F7;
+    --purple-card: #3B5998;
+
+    /* Accent - red (from logo book) */
+    --accent: #C62828;
+    --accent-light: #EF5350;
+    --accent-dark: #8E1C1C;
+
+    /* Secondary - blue (from logo book) */
+    --secondary: #3B5998;
+    --secondary-light: #5E81C4;
+    --secondary-dark: #2C4373;
+
+    /* Highlight - yellow (from logo pencil) */
+    --highlight: #F4C430;
+    --highlight-dark: #D4A420;
+
+    /* Text */
+    --text-dark: #1E3A5F;
+    --text-medium: #4A5568;
+    --text-light: #718096;
+
+    /* Backgrounds */
+    --bg-light: #F5F7FA;
     --bg-white: #ffffff;
-    --gradient-primary: linear-gradient(0.75turn, rgba(221,66,238,1) 0%, rgba(53,73,255,1) 100%);
+    --bg-cream: #FDF6E3;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);
+    --gradient-accent: linear-gradient(135deg, #C62828 0%, #EF5350 100%);
+    --gradient-hero: linear-gradient(135deg, #1E3A5F 0%, #3B5998 50%, #4A6FA5 100%);
+
     --border-radius-card: 32px;
     --border-radius-button: 30px;
-    --shadow-card: 6px 6px 10px rgba(67,61,136,0.1);
+    --shadow-card: 6px 6px 10px rgba(30,58,95,0.1);
     --transition-speed: 0.2s;
 }
 
@@ -115,6 +141,35 @@ a:hover {
 .logo:hover .logo-image {
     transform: scale(1.02);
     opacity: 1;
+}
+
+/* Header SMI Badge */
+.header-smi-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 16px;
+    border: 2px solid var(--primary-purple);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--primary-purple);
+    line-height: 1.4;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.header-smi-badge span:first-child {
+    font-weight: 400;
+}
+
+.header-smi-badge span:last-child {
+    font-weight: 600;
+}
+
+@media (max-width: 1100px) {
+    .header-smi-badge {
+        display: none;
+    }
 }
 
 .main-nav {
@@ -273,7 +328,7 @@ main {
     width: 100%;
     max-width: 1320px;
     height: 100%;
-    background: linear-gradient(135deg, rgba(77, 61, 214, 1) 0%, rgba(124, 78, 228, 1) 25%, rgba(184, 78, 235, 1) 50%, rgba(79, 180, 232, 1) 75%, rgba(61, 217, 214, 1) 100%);
+    background: linear-gradient(135deg, #1E3A5F 0%, #2C4373 25%, #3B5998 50%, #4A6FA5 75%, #5E81C4 100%);
     border-radius: 0 0 60px 60px;
     z-index: 0;
 }
@@ -329,15 +384,15 @@ main {
 .feature-card {
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 25px 20px;
+    border-radius: 16px;
+    padding: 15px 18px;
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
     transition: transform 0.3s ease, background 0.3s ease;
-    min-height: 160px;
+    min-height: auto;
 }
 
 .feature-card:hover {
@@ -391,7 +446,7 @@ main {
     height: 200px;
     top: 80px;
     left: -50px;
-    background: linear-gradient(135deg, #6B4EFF, #8B6EFF);
+    background: linear-gradient(135deg, #1E3A5F, #3B5998);
     z-index: 2;
 }
 
@@ -400,7 +455,7 @@ main {
     height: 300px;
     top: 280px;
     left: 20px;
-    background: linear-gradient(135deg, #4DCCFF, #6DDCFF);
+    background: linear-gradient(135deg, #3B5998, #5E81C4);
     z-index: 1;
 }
 
@@ -409,7 +464,7 @@ main {
     height: 260px;
     top: 10px;
     right: -20px;
-    background: linear-gradient(135deg, #FF8A4D, #FFAA6D);
+    background: linear-gradient(135deg, #C62828, #EF5350);
     z-index: 4;
 }
 
@@ -418,7 +473,7 @@ main {
     height: 240px;
     top: 320px;
     right: 60px;
-    background: linear-gradient(135deg, #B84DFF, #D86DFF);
+    background: linear-gradient(135deg, #F4C430, #FFD54F);
     z-index: 3;
 }
 
@@ -580,7 +635,7 @@ main {
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(135,66,238,0.3);
+    box-shadow: 0 8px 16px rgba(30,58,95,0.3);
     opacity: 1;
 }
 
@@ -684,7 +739,7 @@ main {
         bottom: 20px;
         right: 20px;
         z-index: 9998;
-        box-shadow: 0 4px 12px rgba(135, 66, 238, 0.3);
+        box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
     }
 
     .competitions-grid {
@@ -979,6 +1034,24 @@ main {
         padding: 0 16px;
     }
 
+    /* Header mobile - убираем отступы */
+    .header .container {
+        padding: 0;
+    }
+
+    /* Логотип на мобильных - 50% ширины и 200px */
+    .logo {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    .logo-image {
+        width: 200px;
+        height: 50px;
+        object-fit: cover;
+        object-position: center;
+    }
+
     h1 {
         font-size: 32px;
     }
@@ -995,8 +1068,38 @@ main {
         padding: 40px 0;
     }
 
-    .logo-image {
-        height: 36px;
+    /* Hero на всю ширину экрана */
+    .hero-landing::before {
+        left: 0;
+        transform: none;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0 0 40px 40px;
+    }
+
+    .hero-landing .container {
+        flex-direction: column;
+        padding: 0 16px;
+    }
+
+    /* Контент занимает всю ширину */
+    .hero-content {
+        flex: 1 1 100% !important;
+        max-width: 100% !important;
+        text-align: center;
+    }
+
+    .hero-title {
+        font-size: 28px;
+    }
+
+    .hero-subtitle {
+        font-size: 15px;
+    }
+
+    /* Скрываем картинки учителей на мобильных */
+    .hero-images {
+        display: none;
     }
 }
 
@@ -1068,7 +1171,7 @@ main {
 
 /* FAQ Section */
 .faq-section {
-    background: #E8E4F3;
+    background: #E8F0F8;
     border-radius: 40px;
     padding: 60px 80px;
     margin-bottom: 60px;
@@ -1089,7 +1192,7 @@ main {
 }
 
 .faq-item {
-    background: #F5F3F9;
+    background: #F5F8FC;
     border-radius: 24px;
     padding: 28px 32px;
     cursor: pointer;
@@ -1097,7 +1200,7 @@ main {
 }
 
 .faq-item:hover {
-    background: #EFEDF5;
+    background: #EDF2F7;
 }
 
 .faq-question {
@@ -1141,7 +1244,7 @@ main {
     display: none;
     padding-top: 16px;
     margin-top: 16px;
-    border-top: 1px solid rgba(135, 66, 238, 0.1);
+    border-top: 1px solid rgba(30, 58, 95, 0.1);
 }
 
 .faq-item.active .faq-answer {
@@ -1265,7 +1368,7 @@ main {
     align-items: center;
     justify-content: space-between;
     padding: 24px 32px;
-    border-bottom: 1px solid rgba(135, 66, 238, 0.1);
+    border-bottom: 1px solid rgba(30, 58, 95, 0.1);
 }
 
 .modal-header h2 {
@@ -1288,7 +1391,7 @@ main {
 }
 
 .modal-close:hover {
-    background: rgba(135, 66, 238, 0.1);
+    background: rgba(30, 58, 95, 0.1);
     color: var(--primary-purple);
 }
 
@@ -1382,13 +1485,13 @@ main {
     font-size: 14px;
     font-weight: 500;
     transition: all var(--transition-speed);
-    box-shadow: 0 4px 12px rgba(135, 66, 238, 0.3);
+    box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
 }
 
 .audience-dropdown-btn:hover {
     background: var(--dark-purple);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(135, 66, 238, 0.4);
+    box-shadow: 0 6px 16px rgba(30, 58, 95, 0.4);
 }
 
 .audience-dropdown-btn svg {
@@ -1480,7 +1583,7 @@ main {
 .audience-card:hover {
     border-color: var(--primary-purple);
     transform: translateY(-8px);
-    box-shadow: 0 12px 32px rgba(135, 66, 238, 0.2);
+    box-shadow: 0 12px 32px rgba(30, 58, 95, 0.2);
 }
 
 .audience-card h3 {
@@ -1593,7 +1696,7 @@ main {
     background: var(--primary-purple);
     border-color: var(--primary-purple);
     color: white;
-    box-shadow: 0 4px 12px rgba(135, 66, 238, 0.3);
+    box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
 }
 
 /* Filters Panel (расширенная фильтрация) */
@@ -1642,7 +1745,7 @@ main {
 .filter-select:focus {
     outline: none;
     border-color: var(--primary-purple);
-    box-shadow: 0 0 0 3px rgba(135, 66, 238, 0.1);
+    box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
 }
 
 /* Audience & Specialization Tags */
@@ -1678,12 +1781,12 @@ main {
     font-size: 14px;
     font-weight: 500;
     transition: all 0.3s;
-    box-shadow: 0 2px 8px rgba(135, 66, 238, 0.2);
+    box-shadow: 0 2px 8px rgba(30, 58, 95, 0.2);
 }
 
 .audience-tag:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(135, 66, 238, 0.3);
+    box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
 }
 
 .specialization-tag {
