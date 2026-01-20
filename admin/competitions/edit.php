@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'description' => trim($_POST['description'] ?? ''),
         'category' => $_POST['category'] ?? 'methodology',
         'target_participants' => trim($_POST['target_participants'] ?? ''),
+        'target_participants_genitive' => trim($_POST['target_participants_genitive'] ?? ''),
         'nomination_options' => trim($_POST['nomination_options'] ?? ''),
         'award_structure' => trim($_POST['award_structure'] ?? ''),
         'academic_year' => trim($_POST['academic_year'] ?? ''),
@@ -207,12 +208,21 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
             <div class="form-group" style="grid-column: 1 / -1;">
-                <label for="target_participants" class="form-label">Целевая аудитория (текст)</label>
+                <label for="target_participants" class="form-label">Целевая аудитория (именительный падеж)</label>
                 <textarea id="target_participants"
                           name="target_participants"
                           class="form-textarea"
-                          rows="3"><?php echo htmlspecialchars($competition['target_participants']); ?></textarea>
-                <p class="form-help">Текстовое описание для кого конкурс</p>
+                          rows="2"><?php echo htmlspecialchars($competition['target_participants']); ?></textarea>
+                <p class="form-help">Например: Воспитатели дошкольных образовательных учреждений</p>
+            </div>
+
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label for="target_participants_genitive" class="form-label">Целевая аудитория (родительный падеж)</label>
+                <textarea id="target_participants_genitive"
+                          name="target_participants_genitive"
+                          class="form-textarea"
+                          rows="2"><?php echo htmlspecialchars($competition['target_participants_genitive'] ?? ''); ?></textarea>
+                <p class="form-help">Для фразы "Конкурс для...". Например: воспитателей дошкольных образовательных учреждений</p>
             </div>
 
             <div class="form-group" style="grid-column: 1 / -1;">

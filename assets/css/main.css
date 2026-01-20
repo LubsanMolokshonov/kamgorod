@@ -820,6 +820,30 @@ main {
     font-size: 14px;
 }
 
+.footer-requisites {
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.requisites-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.requisites-column {
+    color: rgba(255,255,255,0.7);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.requisites-column strong {
+    color: rgba(255,255,255,0.9);
+    font-weight: 600;
+}
+
 /* Responsive Design */
 
 /* Tablet landscape - 2 columns */

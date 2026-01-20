@@ -35,6 +35,7 @@ CREATE TABLE competitions (
     slug VARCHAR(255) UNIQUE NOT NULL,
     description TEXT,
     target_participants TEXT,
+    target_participants_genitive TEXT,
     award_structure TEXT,
     academic_year VARCHAR(20),
     category ENUM('methodology', 'extracurricular', 'student_projects', 'creative') NOT NULL,

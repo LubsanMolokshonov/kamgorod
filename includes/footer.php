@@ -31,10 +31,31 @@
                 <div class="footer-column">
                     <h4>Контакты</h4>
                     <p>
-                        Email: <?php echo SMTP_FROM_EMAIL ?? 'info@example.com'; ?><br>
-                        Телефон: +7 (XXX) XXX-XX-XX<br>
+                        Email: <a href="mailto:info@fgos.pro">info@fgos.pro</a><br>
                         Работаем ежедневно с 9:00 до 21:00
                     </p>
+                </div>
+            </div>
+
+            <div class="footer-requisites">
+                <div class="requisites-content">
+                    <div class="requisites-column">
+                        <strong>ООО «Едурегионлаб»</strong><br>
+                        ИНН 5904368615 / КПП 773101001<br>
+                        121205, Россия, г. Москва, вн.тер.г. Муниципальный округ Можайский,<br>
+                        тер. Инновационного центра Сколково, б-р Большой, д. 42, стр. 1
+                    </div>
+                    <div class="requisites-column">
+                        <strong>Банковские реквизиты:</strong><br>
+                        р/с 40702810049770043643<br>
+                        Волго-Вятский банк ПАО Сбербанк<br>
+                        БИК 042202603 / к/с 30101810900000000603
+                    </div>
+                    <div class="requisites-column">
+                        <strong>Лицензия:</strong><br>
+                        № Л035-01212-59/00203856<br>
+                        от 17.12.2021 г.
+                    </div>
                 </div>
             </div>
 

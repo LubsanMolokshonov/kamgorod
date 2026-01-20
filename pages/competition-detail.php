@@ -38,6 +38,11 @@ $specializations = $competitionObj->getSpecializations($competition['id']);
 $pageTitle = htmlspecialchars($competition['title']) . ' | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr($competition['description'], 0, 150));
 
+// Calculate deadline: today + 2 days
+$deadline = new DateTime();
+$deadline->modify('+2 days');
+$deadline_formatted = 'Прием документов до ' . $deadline->format('d.m.Y');
+
 // Include header
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -50,46 +55,39 @@ include __DIR__ . '/../includes/header.php';
 }
 
 /* Hero Section */
-.competition-hero {
-    background: linear-gradient(135deg, rgba(30, 58, 95, 0.9) 0%, rgba(44, 67, 115, 0.9) 25%, rgba(59, 89, 152, 0.9) 50%, rgba(74, 111, 165, 0.9) 75%, rgba(94, 129, 196, 0.9) 100%),
-                url('/assets/images/backgrounds/events-hero-bg.jpeg') center center / cover no-repeat;
-    padding: 140px 0 80px;
-    color: white;
+.hero-landing {
+    padding: 100px 0 80px;
+    margin-top: 80px;
     position: relative;
     overflow: hidden;
+}
+
+.hero-landing::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 1440px;
+    height: 100%;
+    background: linear-gradient(135deg, #1E3A5F 0%, #2C4373 25%, #3B5998 50%, #4A6FA5 75%, #5E81C4 100%);
     border-radius: 0 0 60px 60px;
+    z-index: 0;
 }
 
-.competition-hero::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-    border-radius: 50%;
-    animation: float 6s ease-in-out infinite;
-}
-
-.competition-hero::after {
-    content: '';
-    position: absolute;
-    bottom: -30%;
-    left: -10%;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
-    border-radius: 50%;
-    animation: float 8s ease-in-out infinite reverse;
+.hero-landing .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    padding: 0 80px;
 }
 
 .hero-content {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    max-width: 900px;
-    margin: 0 auto;
+    flex: 0 0 50%;
+    color: white;
 }
 
 .hero-category {
@@ -106,20 +104,25 @@ include __DIR__ . '/../includes/header.php';
 }
 
 .hero-title {
-    font-size: 56px;
+    font-size: 52px;
     font-weight: 700;
-    margin-bottom: 24px;
+    margin-bottom: 30px;
     color: white;
     line-height: 1.2;
-    animation: slideUp 0.8s ease-out;
+}
+
+.hero-subtitle {
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.95);
+    margin-bottom: 30px;
 }
 
 .hero-meta {
     display: flex;
-    justify-content: center;
-    gap: 32px;
+    justify-content: flex-start;
+    gap: 24px;
     flex-wrap: wrap;
-    margin-top: 24px;
+    margin-bottom: 30px;
     font-size: 16px;
     opacity: 0.95;
 }
@@ -153,6 +156,70 @@ include __DIR__ . '/../includes/header.php';
     transform: translateY(-4px) scale(1.05);
     box-shadow: 0 12px 32px rgba(0,0,0,0.3);
     opacity: 1;
+}
+
+/* Hero Diploma Section */
+.hero-diploma {
+    flex: 0 0 45%;
+    position: relative;
+    height: 600px;
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-diploma-image {
+    position: relative;
+    z-index: 3;
+    max-width: 400px;
+    width: 100%;
+    transition: transform 0.3s ease;
+}
+
+.hero-diploma-image svg {
+    width: 100%;
+    height: auto;
+    border-radius: 16px;
+    border: 8px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.hero-diploma-image:hover {
+    transform: scale(1.05);
+}
+
+/* Floating Decorative Icons */
+.hero-icon {
+    position: absolute;
+    font-size: 40px;
+    z-index: 5;
+    animation: float 3s ease-in-out infinite;
+}
+
+.hero-icon-star {
+    top: 30px;
+    right: 250px;
+}
+
+.hero-icon-message {
+    top: 180px;
+    right: 500px;
+}
+
+.hero-icon-phone {
+    top: 400px;
+    right: 600px;
+}
+
+.hero-icon-game {
+    top: 300px;
+    right: 100px;
+}
+
+.hero-icon-chat {
+    top: 500px;
+    right: 380px;
 }
 
 /* Features Grid */
@@ -229,6 +296,257 @@ include __DIR__ . '/../includes/header.php';
     font-size: 15px;
     color: var(--text-medium);
     line-height: 1.6;
+}
+
+/* Modernized About Section */
+.about-section-modern {
+    padding: 60px 0;
+    background: white;
+}
+
+.about-section-modern .section-title {
+    text-align: center;
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 48px;
+}
+
+/* Двухколоночный layout */
+.about-content-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 480px;
+    gap: 48px;
+    align-items: start;
+}
+
+/* Левая колонка - Описание */
+.about-description {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.description-text {
+    font-size: 17px;
+    line-height: 1.7;
+    color: var(--text-medium);
+    padding-right: 20px;
+}
+
+/* Кнопка Положение конкурса */
+.btn-regulations {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    background: white;
+    border: 2px solid var(--primary-purple);
+    color: var(--primary-purple);
+    border-radius: 30px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    align-self: flex-start;
+}
+
+.btn-regulations:hover {
+    background: var(--primary-purple);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(30, 58, 95, 0.2);
+}
+
+.btn-regulations .btn-icon {
+    flex-shrink: 0;
+}
+
+/* Правая колонка - Карточки информации */
+.about-info-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Карточка информации */
+.info-card {
+    background: white;
+    border: 2px solid var(--light-purple);
+    border-radius: 20px;
+    padding: 20px 24px;
+    transition: all 0.3s ease;
+}
+
+.info-card:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 20px rgba(30, 58, 95, 0.1);
+    border-color: var(--primary-purple);
+}
+
+/* Highlight карточка (для цены) */
+.info-card-highlight {
+    background: linear-gradient(135deg, #F5F7FA 0%, #E8EDF2 100%);
+    border-color: var(--primary-purple);
+    border-width: 2px;
+}
+
+/* Хедер карточки */
+.info-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.info-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.info-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+/* Контент карточки */
+.info-card-content {
+    padding-left: 52px;
+}
+
+/* Список номинаций */
+.nominations-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nominations-list li {
+    font-size: 15px;
+    color: var(--text-medium);
+    padding: 6px 0;
+    padding-left: 20px;
+    position: relative;
+}
+
+.nominations-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--primary-purple);
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.nominations-list li.more-nominations {
+    color: var(--primary-purple);
+    font-style: italic;
+    font-weight: 500;
+}
+
+/* Текст наград */
+.award-text {
+    font-size: 15px;
+    color: var(--text-medium);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Учебный год */
+.year-text {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+/* Отображение цены */
+.price-display {
+    margin-bottom: 8px;
+}
+
+.price-amount {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary-purple);
+    display: block;
+}
+
+.price-note {
+    font-size: 13px;
+    color: var(--text-light);
+    margin: 0;
+    font-style: italic;
+}
+
+/* Респонсивность - Планшеты */
+@media (max-width: 960px) {
+    .about-content-wrapper {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .about-description {
+        order: 1;
+    }
+
+    .about-info-cards {
+        order: 2;
+    }
+
+    .description-text {
+        padding-right: 0;
+    }
+}
+
+/* Респонсивность - Мобильные */
+@media (max-width: 640px) {
+    .about-section-modern {
+        padding: 40px 0;
+    }
+
+    .about-section-modern .section-title {
+        font-size: 32px;
+        margin-bottom: 32px;
+    }
+
+    .description-text {
+        font-size: 16px;
+    }
+
+    .info-card {
+        padding: 16px 20px;
+    }
+
+    .info-card-content {
+        padding-left: 0;
+        margin-top: 12px;
+    }
+
+    .info-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .info-card-title {
+        font-size: 16px;
+    }
+
+    .price-amount {
+        font-size: 28px;
+    }
+
+    .btn-regulations {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 /* Nominations Section */
@@ -652,8 +970,32 @@ include __DIR__ . '/../includes/header.php';
 
 /* Responsive */
 @media (max-width: 960px) {
+    .hero-landing .container {
+        padding: 0 40px;
+    }
+
     .hero-title {
         font-size: 42px;
+    }
+
+    .hero-diploma-image {
+        max-width: 350px;
+    }
+
+    .hero-icon {
+        font-size: 35px;
+    }
+
+    .hero-icon-star {
+        right: 200px;
+    }
+
+    .hero-icon-message {
+        right: 400px;
+    }
+
+    .hero-icon-phone {
+        right: 500px;
     }
 
     .section-title {
@@ -680,13 +1022,46 @@ include __DIR__ . '/../includes/header.php';
 }
 
 @media (max-width: 640px) {
-    .competition-hero {
-        padding: 120px 0 60px;
+    .hero-landing {
+        padding: 80px 0 60px;
+    }
+
+    .hero-landing::before {
         border-radius: 0 0 40px 40px;
     }
 
+    .hero-landing .container {
+        flex-direction: column;
+        padding: 0 24px;
+    }
+
+    .hero-content {
+        flex: 1;
+        width: 100%;
+        text-align: center;
+    }
+
+    .hero-diploma {
+        flex: 1;
+        width: 100%;
+        height: auto;
+        margin-top: 40px;
+    }
+
+    .hero-diploma-image {
+        max-width: 300px;
+    }
+
+    .hero-meta {
+        justify-content: center;
+    }
+
+    .hero-icon {
+        display: none;
+    }
+
     .hero-title {
-        font-size: 32px;
+        font-size: 28px;
     }
 
     .section-title {
@@ -748,24 +1123,22 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="landing-page">
     <!-- Hero Section -->
-    <section class="competition-hero">
+    <section class="hero-landing">
         <div class="container">
             <div class="hero-content">
                 <div class="hero-category">
-                    <?php echo htmlspecialchars(Competition::getCategoryLabel($competition['category'])); ?>
+                    Конкурс для <?php echo htmlspecialchars($competition['target_participants_genitive'] ?? $competition['target_participants']); ?>
                 </div>
                 <h1 class="hero-title"><?php echo htmlspecialchars($competition['title']); ?></h1>
 
                 <div class="hero-meta">
-                    <?php if (!empty($competition['academic_year'])): ?>
-                        <div class="hero-meta-item">
-                            <svg fill="currentColor" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"/></svg>
-                            <span><?php echo htmlspecialchars($competition['academic_year']); ?></span>
-                        </div>
-                    <?php endif; ?>
                     <div class="hero-meta-item">
                         <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
                         <span>Дистанционный формат</span>
+                    </div>
+                    <div class="hero-meta-item">
+                        <svg fill="currentColor" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"/></svg>
+                        <span><?php echo $deadline_formatted; ?></span>
                     </div>
                     <div class="hero-meta-item">
                         <svg fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
@@ -777,98 +1150,273 @@ include __DIR__ . '/../includes/header.php';
                     Принять участие
                 </a>
             </div>
+
+            <div class="hero-diploma">
+                <div class="hero-diploma-image">
+                    <svg width="600" height="848" viewBox="0 0 600 848" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Background with gradient -->
+                        <defs>
+                            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#e8f4f8;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#d4e4ff;stop-opacity:1" />
+                            </linearGradient>
+                            <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Background -->
+                        <rect width="600" height="848" fill="url(#grad1)"/>
+
+                        <!-- Border -->
+                        <rect x="20" y="20" width="560" height="808" fill="none" stroke="#3b82f6" stroke-width="3"/>
+                        <rect x="30" y="30" width="540" height="788" fill="none" stroke="#3b82f6" stroke-width="1"/>
+
+                        <!-- Decorative corners -->
+                        <circle cx="50" cy="50" r="8" fill="#3b82f6"/>
+                        <circle cx="550" cy="50" r="8" fill="#3b82f6"/>
+                        <circle cx="50" cy="798" r="8" fill="#3b82f6"/>
+                        <circle cx="550" cy="798" r="8" fill="#3b82f6"/>
+
+                        <!-- Header -->
+                        <rect x="50" y="60" width="500" height="80" fill="url(#headerGrad)" rx="10"/>
+                        <text x="300" y="105" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle">ДИПЛОМ</text>
+                        <text x="300" y="130" font-family="Arial, sans-serif" font-size="16" fill="white" text-anchor="middle">УЧАСТНИКА</text>
+
+                        <!-- Award icon -->
+                        <circle cx="300" cy="220" r="40" fill="#fbbf24" stroke="#f59e0b" stroke-width="3"/>
+                        <text x="300" y="235" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle">★</text>
+
+                        <!-- Content area -->
+                        <text x="300" y="300" font-family="Arial, sans-serif" font-size="18" fill="#374151" text-anchor="middle">Настоящий диплом выдан</text>
+
+                        <!-- Name placeholder -->
+                        <rect x="100" y="320" width="400" height="50" fill="white" stroke="#3b82f6" stroke-width="2" rx="5"/>
+                        <text x="300" y="352" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#1f2937" text-anchor="middle">Иванов Иван Иванович</text>
+
+                        <!-- Achievement text -->
+                        <text x="300" y="410" font-family="Arial, sans-serif" font-size="16" fill="#374151" text-anchor="middle">за участие в конкурсе</text>
+
+                        <!-- Competition name -->
+                        <rect x="80" y="430" width="440" height="80" fill="white" stroke="#3b82f6" stroke-width="2" rx="5"/>
+                        <text x="300" y="460" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#1f2937" text-anchor="middle">Всероссийский конкурс</text>
+                        <text x="300" y="490" font-family="Arial, sans-serif" font-size="16" fill="#4b5563" text-anchor="middle">«Математика для малышей: современные подходы»</text>
+
+                        <!-- Details -->
+                        <text x="80" y="540" font-family="Arial, sans-serif" font-size="12" fill="#374151">Учреждение: Название учреждения</text>
+                        <text x="80" y="560" font-family="Arial, sans-serif" font-size="12" fill="#374151">Населенный пункт: Населенный пункт</text>
+
+                        <text x="80" y="590" font-family="Arial, sans-serif" font-size="14" fill="#374151">Номинация:</text>
+                        <text x="80" y="615" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1f2937">Творческая работа</text>
+
+                        <text x="80" y="645" font-family="Arial, sans-serif" font-size="14" fill="#374151">Название работы:</text>
+                        <text x="80" y="670" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1f2937">«Название творческой работы»</text>
+
+                        <text x="80" y="700" font-family="Arial, sans-serif" font-size="14" fill="#374151">Место:</text>
+                        <text x="80" y="725" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#3b82f6">1 место</text>
+
+                        <!-- Footer -->
+                        <line x1="80" y1="750" x2="280" y2="750" stroke="#9ca3af" stroke-width="1"/>
+                        <text x="80" y="770" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">Дата</text>
+
+                        <line x1="320" y1="750" x2="520" y2="750" stroke="#9ca3af" stroke-width="1"/>
+                        <text x="320" y="770" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">Директор</text>
+                    </svg>
+                </div>
+
+                <!-- Decorative floating icons -->
+                <div class="hero-icon hero-icon-star">🏆</div>
+                <div class="hero-icon hero-icon-message">📚</div>
+                <div class="hero-icon hero-icon-phone">🎓</div>
+                <div class="hero-icon hero-icon-game">📜</div>
+                <div class="hero-icon hero-icon-chat">✏️</div>
+            </div>
         </div>
     </section>
 
-    <!-- About Section -->
+    <!-- About Section - Modernized -->
     <?php if (!empty($competition['description'])): ?>
-    <section class="features-section">
+    <section class="about-section-modern">
         <div class="container">
             <h2 class="section-title">О конкурсе</h2>
-            <p class="section-subtitle"><?php echo nl2br(htmlspecialchars($competition['description'])); ?></p>
 
-            <div style="text-align: center; margin-bottom: 40px;">
-                <button class="btn btn-outline" style="padding: 14px 32px; font-size: 15px; font-weight: 600;"
-                        onclick="openRegulationsModal('<?php echo htmlspecialchars($competition['id']); ?>', '<?php echo htmlspecialchars($competition['title']); ?>')">
-                    Положение конкурса
-                </button>
-            </div>
-
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg fill="white" viewBox="0 0 20 20"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/></svg>
+            <div class="about-content-wrapper">
+                <!-- Левая колонка: Описание -->
+                <div class="about-description">
+                    <!-- SEO-описание -->
+                    <?php if (!empty($competition['seo_description'])): ?>
+                    <div class="description-text">
+                        <?php
+                        $paragraphs = explode("\n\n", $competition['seo_description']);
+                        foreach ($paragraphs as $paragraph):
+                            if (empty(trim($paragraph))) continue;
+                        ?>
+                        <p style="margin-bottom: 16px; line-height: 1.7;"><?php echo nl2br(htmlspecialchars($paragraph)); ?></p>
+                        <?php endforeach; ?>
                     </div>
-                    <h3>Профессиональное развитие</h3>
-                    <p>Повысьте свою квалификацию и получите признание в педагогическом сообществе</p>
+                    <?php endif; ?>
+
+                    <!-- Кнопка положение конкурса -->
+                    <button class="btn-regulations"
+                            onclick="openRegulationsModal('<?php echo htmlspecialchars($competition['id']); ?>', '<?php echo htmlspecialchars($competition['title']); ?>')">
+                        <svg class="btn-icon" fill="currentColor" viewBox="0 0 20 20" width="20" height="20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                        </svg>
+                        Положение конкурса
+                    </button>
                 </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg fill="white" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd"/></svg>
-                    </div>
-                    <h3>Мгновенные дипломы</h3>
-                    <p>Получите диплом в электронном виде сразу после оплаты участия</p>
-                </div>
+                <!-- Правая колонка: Ключевая информация -->
+                <div class="about-info-cards">
 
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg fill="white" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                    <!-- Номинации -->
+                    <?php if (!empty($nominations)): ?>
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <div class="info-icon" style="background: linear-gradient(135deg, #3B5998 0%, #5E81C4 100%);">
+                                <svg fill="white" viewBox="0 0 20 20" width="24" height="24">
+                                    <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/>
+                                </svg>
+                            </div>
+                            <h3 class="info-card-title">Номинации</h3>
+                        </div>
+                        <div class="info-card-content">
+                            <ul class="nominations-list">
+                                <?php
+                                $displayCount = min(count($nominations), 4);
+                                for ($i = 0; $i < $displayCount; $i++):
+                                ?>
+                                    <li><?php echo htmlspecialchars($nominations[$i]); ?></li>
+                                <?php endfor; ?>
+                                <?php if (count($nominations) > 4): ?>
+                                    <li class="more-nominations">и еще <?php echo count($nominations) - 4; ?>...</li>
+                                <?php endif; ?>
+                            </ul>
+                        </div>
                     </div>
-                    <h3>Удобный формат</h3>
-                    <p>Участвуйте дистанционно в любое удобное для вас время</p>
+                    <?php endif; ?>
+
+                    <!-- Структура наград -->
+                    <?php if (!empty($competition['award_structure'])): ?>
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <div class="info-icon" style="background: linear-gradient(135deg, #F4C430 0%, #D4A420 100%);">
+                                <svg fill="white" viewBox="0 0 20 20" width="24" height="24">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                            </div>
+                            <h3 class="info-card-title">Награды</h3>
+                        </div>
+                        <div class="info-card-content">
+                            <p class="award-text"><?php echo nl2br(htmlspecialchars($competition['award_structure'])); ?></p>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Учебный год -->
+                    <?php if (!empty($competition['academic_year'])): ?>
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <div class="info-icon" style="background: linear-gradient(135deg, #C62828 0%, #EF5350 100%);">
+                                <svg fill="white" viewBox="0 0 20 20" width="24" height="24">
+                                    <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <h3 class="info-card-title">Учебный год</h3>
+                        </div>
+                        <div class="info-card-content">
+                            <p class="year-text"><?php echo htmlspecialchars($competition['academic_year']); ?></p>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Цена участия -->
+                    <div class="info-card info-card-highlight">
+                        <div class="info-card-header">
+                            <div class="info-icon" style="background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);">
+                                <svg fill="white" viewBox="0 0 20 20" width="24" height="24">
+                                    <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <h3 class="info-card-title">Стоимость участия</h3>
+                        </div>
+                        <div class="info-card-content">
+                            <div class="price-display">
+                                <span class="price-amount"><?php echo number_format($competition['price'], 0, ',', ' '); ?> ₽</span>
+                            </div>
+                            <p class="price-note">При оплате 2 конкурсов — третий бесплатно!</p>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
     </section>
     <?php endif; ?>
 
-    <!-- Target Audience -->
-    <?php if (!empty($competition['target_participants'])): ?>
-    <section class="features-section" style="background: var(--bg-light);">
+    <!-- Goals Section - Цели конкурса -->
+    <?php if (!empty($competition['goals'])): ?>
+    <section class="features-section" style="background: var(--bg-light); padding: 60px 0;">
         <div class="container">
-            <h2 class="section-title">Для кого этот конкурс</h2>
-            <p class="section-subtitle"><?php echo nl2br(htmlspecialchars($competition['target_participants'])); ?></p>
+            <h2 class="section-title">Цели конкурса</h2>
+            <p class="section-subtitle">Конкурс направлен на достижение следующих целей</p>
+
+            <div class="features-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+                <?php
+                $goals = explode("\n", $competition['goals']);
+                $goalIcons = ['🎯', '🌟', '📈', '🏆', '💡'];
+                foreach ($goals as $index => $goal):
+                    if (empty(trim($goal))) continue;
+                    $icon = $goalIcons[$index % count($goalIcons)];
+                ?>
+                <div class="feature-card">
+                    <div class="feature-icon" style="font-size: 32px; background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%); border-radius: 16px;">
+                        <?php echo $icon; ?>
+                    </div>
+                    <p style="font-size: 16px; line-height: 1.6; color: var(--text-dark); margin: 0;">
+                        <?php echo htmlspecialchars($goal); ?>
+                    </p>
+                </div>
+                <?php endforeach; ?>
+            </div>
         </div>
     </section>
     <?php endif; ?>
 
-    <!-- Audience Segmentation Tags -->
-    <?php if (!empty($audienceTypes) || !empty($specializations)): ?>
+    <!-- Objectives Section - Задачи конкурса -->
+    <?php if (!empty($competition['objectives'])): ?>
     <section class="features-section" style="background: white; padding: 60px 0;">
         <div class="container">
-            <?php if (!empty($audienceTypes)): ?>
-            <div style="margin-bottom: <?php echo !empty($specializations) ? '40px' : '0'; ?>;">
-                <h3 style="font-size: 20px; font-weight: 600; color: var(--text-dark); margin-bottom: 16px; text-align: center;">
-                    Типы учреждений
-                </h3>
-                <div class="audience-tags-wrapper">
-                    <?php foreach ($audienceTypes as $type): ?>
-                    <a href="/<?php echo htmlspecialchars($type['slug']); ?>" class="audience-tag">
-                        <?php echo htmlspecialchars($type['name']); ?>
-                    </a>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <?php endif; ?>
+            <h2 class="section-title">Задачи конкурса</h2>
+            <p class="section-subtitle">Для достижения поставленных целей решаются следующие задачи</p>
 
-            <?php if (!empty($specializations)): ?>
-            <div>
-                <h3 style="font-size: 20px; font-weight: 600; color: var(--text-dark); margin-bottom: 16px; text-align: center;">
-                    Специализации
-                </h3>
-                <div class="specialization-tags-wrapper">
-                    <?php foreach ($specializations as $spec): ?>
-                    <span class="specialization-tag">
-                        <?php echo htmlspecialchars($spec['name']); ?>
-                    </span>
+            <div style="max-width: 900px; margin: 0 auto;">
+                <div style="display: grid; gap: 16px;">
+                    <?php
+                    $objectives = explode("\n", $competition['objectives']);
+                    foreach ($objectives as $index => $objective):
+                        if (empty(trim($objective))) continue;
+                    ?>
+                    <div style="display: flex; gap: 16px; align-items: flex-start; padding: 20px; background: #F5F8FC; border-radius: 16px; border-left: 4px solid var(--primary-purple); transition: all 0.3s ease;">
+                        <div style="flex-shrink: 0; width: 32px; height: 32px; background: var(--gradient-primary); color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px;">
+                            <?php echo $index + 1; ?>
+                        </div>
+                        <p style="font-size: 16px; line-height: 1.6; color: var(--text-dark); margin: 0; flex: 1;">
+                            <?php echo htmlspecialchars($objective); ?>
+                        </p>
+                    </div>
                     <?php endforeach; ?>
                 </div>
             </div>
-            <?php endif; ?>
         </div>
     </section>
     <?php endif; ?>
+
+    <!-- SEO Description Section - Перенесено в секцию "О конкурсе" -->
+
+    <!-- Target Audience и Audience Segmentation - УДАЛЕНО -->
 
     <!-- Nominations Section -->
     <?php if (!empty($nominations)): ?>
@@ -889,69 +1437,121 @@ include __DIR__ . '/../includes/header.php';
     </section>
     <?php endif; ?>
 
-    <!-- Awards Section -->
-    <?php if (!empty($competition['award_structure'])): ?>
-    <section class="awards-section">
-        <div class="container">
-            <h2 class="section-title">Награждение</h2>
-            <p class="section-subtitle"><?php echo nl2br(htmlspecialchars($competition['award_structure'])); ?></p>
+    <!-- Awards Section - УДАЛЕНО -->
 
-            <div class="awards-grid">
-                <div class="award-card">
-                    <div class="award-icon">🥇</div>
-                    <h3>Диплом победителя</h3>
-                    <p>I степень</p>
-                </div>
-                <div class="award-card silver">
-                    <div class="award-icon">🥈</div>
-                    <h3>Диплом призера</h3>
-                    <p>II степень</p>
-                </div>
-                <div class="award-card bronze">
-                    <div class="award-icon">🥉</div>
-                    <h3>Диплом призера</h3>
-                    <p>III степень</p>
-                </div>
-            </div>
+    <!-- Price CTA Section - УДАЛЕНО -->
 
-            <p class="section-subtitle" style="margin-top: 40px; font-size: 15px;">
-                <strong>Важно:</strong> Дипломы выдаются в электронном виде в формате PDF сразу после оплаты участия. Вы сможете скачать диплом в личном кабинете.
-            </p>
-        </div>
-    </section>
-    <?php endif; ?>
-
-    <!-- Price CTA Section -->
-    <section class="price-cta-section">
-        <div class="container">
-            <div class="price-cta-container">
-                <div class="price-cta-content">
-                    <p class="price-label">Стоимость участия</p>
-                    <div class="price-amount"><?php echo number_format($competition['price'], 0, ',', ' '); ?> ₽</div>
-                    <p class="price-note">При оплате 2 конкурсов — третий бесплатно!</p>
-
-                    <a href="/pages/registration.php?competition_id=<?php echo $competition['id']; ?>" class="btn-cta-large">
-                        Принять участие
-                    </a>
-
-                    <div class="price-features">
-                        <div class="price-feature">
-                            <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            <span>Мгновенный диплом</span>
-                        </div>
-                        <div class="price-feature">
-                            <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            <span>Безопасная оплата</span>
-                        </div>
-                        <div class="price-feature">
-                            <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            <span>Поддержка 24/7</span>
-                        </div>
+    <!-- Criteria Section -->
+    <div class="container" style="margin-bottom: 40px;">
+        <div class="criteria-section-new">
+            <h2>Критерии оценки конкурсных работ</h2>
+            <div class="criteria-grid">
+                <!-- 1. Целесообразность -->
+                <div class="criteria-card">
+                    <div class="criteria-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <circle cx="12" cy="12" r="6"/>
+                            <circle cx="12" cy="12" r="2"/>
+                        </svg>
                     </div>
+                    <h4>Целесообразность материала</h4>
+                </div>
+
+                <!-- 2. Оригинальность -->
+                <div class="criteria-card">
+                    <div class="criteria-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 18h6"/>
+                            <path d="M10 22h4"/>
+                            <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/>
+                        </svg>
+                    </div>
+                    <h4>Оригинальность материала</h4>
+                </div>
+
+                <!-- 3. Полнота и информативность -->
+                <div class="criteria-card">
+                    <div class="criteria-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                            <line x1="8" y1="7" x2="16" y2="7"/>
+                            <line x1="8" y1="11" x2="14" y2="11"/>
+                        </svg>
+                    </div>
+                    <h4>Полнота и информативность</h4>
+                </div>
+
+                <!-- 4. Научная достоверность -->
+                <div class="criteria-card">
+                    <div class="criteria-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 3h6v2H9z"/>
+                            <path d="M10 5v4"/>
+                            <path d="M14 5v4"/>
+                            <circle cx="12" cy="14" r="5"/>
+                            <path d="M12 12v2"/>
+                            <path d="M12 16h.01"/>
+                        </svg>
+                    </div>
+                    <h4>Научная достоверность</h4>
+                </div>
+
+                <!-- 5. Стиль изложения -->
+                <div class="criteria-card">
+                    <div class="criteria-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                            <path d="M2 2l7.586 7.586"/>
+                            <circle cx="11" cy="11" r="2"/>
+                        </svg>
+                    </div>
+                    <h4>Стиль и логичность изложения</h4>
+                </div>
+
+                <!-- 6. Качество оформления -->
+                <div class="criteria-card">
+                    <div class="criteria-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="13.5" cy="6.5" r="2.5"/>
+                            <circle cx="6" cy="12" r="2.5"/>
+                            <circle cx="18" cy="12" r="2.5"/>
+                            <circle cx="8.5" cy="18.5" r="2.5"/>
+                            <circle cx="15.5" cy="18.5" r="2.5"/>
+                        </svg>
+                    </div>
+                    <h4>Качество оформления</h4>
+                </div>
+
+                <!-- 7. Практическое использование -->
+                <div class="criteria-card">
+                    <div class="criteria-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+                            <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+                            <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+                            <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+                        </svg>
+                    </div>
+                    <h4>Практическое применение</h4>
+                </div>
+
+                <!-- 8. Соответствие ФГОС -->
+                <div class="criteria-card">
+                    <div class="criteria-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <path d="M9 15l2 2 4-4"/>
+                        </svg>
+                    </div>
+                    <h4>Соответствие ФГОС</h4>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
     <!-- Steps Section -->
     <section class="steps-section">

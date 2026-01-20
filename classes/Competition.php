@@ -58,6 +58,7 @@ class Competition {
             'slug' => $data['slug'] ?? $this->generateSlug($data['title']),
             'description' => $data['description'] ?? '',
             'target_participants' => $data['target_participants'] ?? '',
+            'target_participants_genitive' => $data['target_participants_genitive'] ?? '',
             'award_structure' => $data['award_structure'] ?? '',
             'academic_year' => $data['academic_year'] ?? '',
             'category' => $data['category'],
@@ -80,7 +81,7 @@ class Competition {
         $updateData = [];
 
         $allowedFields = [
-            'title', 'slug', 'description', 'target_participants', 'award_structure',
+            'title', 'slug', 'description', 'target_participants', 'target_participants_genitive', 'award_structure',
             'academic_year', 'category', 'nomination_options', 'price', 'is_active', 'display_order'
         ];
 
