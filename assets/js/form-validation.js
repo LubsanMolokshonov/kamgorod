@@ -38,7 +38,7 @@ $(document).ready(function() {
                 }
             },
             error: function() {
-                console.log('Email validation failed');
+                // Email validation failed silently
             }
         });
     });

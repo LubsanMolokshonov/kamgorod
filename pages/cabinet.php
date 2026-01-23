@@ -29,19 +29,6 @@ if (!isset($_SESSION['user_email'])) {
     exit;
 }
 
-// DEBUG: Check all registrations for this user
-$debugStmt = $db->prepare("
-    SELECT r.id, r.status, c.title
-    FROM registrations r
-    JOIN competitions c ON r.competition_id = c.id
-    JOIN users u ON r.user_id = u.id
-    WHERE u.email = ?
-");
-$debugStmt->execute([$_SESSION['user_email']]);
-$allUserRegs = $debugStmt->fetchAll(PDO::FETCH_ASSOC);
-error_log("Cabinet - User email: " . $_SESSION['user_email']);
-error_log("Cabinet - All user registrations: " . json_encode($allUserRegs));
-
 // Get user's paid registrations
 $stmt = $db->prepare("
     SELECT
@@ -67,7 +54,6 @@ $stmt = $db->prepare("
 ");
 $stmt->execute([$_SESSION['user_email']]);
 $registrations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-error_log("Cabinet - Paid registrations count: " . count($registrations));
 
 // Page metadata
 $pageTitle = 'Личный кабинет | ' . SITE_NAME;
@@ -87,26 +73,6 @@ include __DIR__ . '/../includes/header.php';
                 <span class="email-icon">📧</span>
                 <?php echo htmlspecialchars($_SESSION['user_email']); ?>
             </p>
-        </div>
-
-        <!-- DEBUG INFO (temporary) -->
-        <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-            <h3 style="margin: 0 0 12px 0; color: #856404;">Debug Info:</h3>
-            <p style="margin: 4px 0; font-size: 14px;">
-                <strong>User Email:</strong> <?php echo htmlspecialchars($_SESSION['user_email']); ?>
-            </p>
-            <p style="margin: 4px 0; font-size: 14px;">
-                <strong>Total Registrations (all statuses):</strong> <?php echo count($allUserRegs); ?>
-            </p>
-            <p style="margin: 4px 0; font-size: 14px;">
-                <strong>Paid Registrations:</strong> <?php echo count($registrations); ?>
-            </p>
-            <?php if (!empty($allUserRegs)): ?>
-                <details style="margin-top: 8px;">
-                    <summary style="cursor: pointer; font-weight: bold;">View All Registrations</summary>
-                    <pre style="background: white; padding: 8px; margin-top: 8px; border-radius: 4px; overflow: auto;"><?php echo json_encode($allUserRegs, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE); ?></pre>
-                </details>
-            <?php endif; ?>
         </div>
 
         <?php if (empty($registrations)): ?>

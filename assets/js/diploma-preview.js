@@ -6,16 +6,11 @@
 $(document).ready(function() {
     let selectedTemplateId = null;
 
-    console.log('Diploma preview script loaded');
-
     // Initialize first template as selected
     const firstTemplate = $('.diploma-gallery-item.active').first();
     if (firstTemplate.length) {
         selectedTemplateId = firstTemplate.data('template-id');
         $('#selectedTemplateId').val(selectedTemplateId);
-        console.log('Initial template selected:', selectedTemplateId);
-    } else {
-        console.warn('No active template found');
     }
 
     // Tab Switching
@@ -111,7 +106,6 @@ $(document).ready(function() {
                 if (response.success) {
                     previewImg.attr('src', response.preview_url);
                 } else {
-                    console.warn('Preview generation failed:', response.message);
                     // Fallback to template image
                     const templatePath = '/assets/images/diplomas/templates/diploma-template-' + selectedTemplateId + '.svg';
                     previewImg.attr('src', templatePath + '?t=' + new Date().getTime());
