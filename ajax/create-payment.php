@@ -49,6 +49,62 @@ try {
         throw new Exception('Корзина пуста или содержит недействительные позиции');
     }
 
+    // LOCAL DEVELOPMENT BYPASS: Skip payment for local environment
+    if (APP_ENV === 'local') {
+        // Get user info from the first registration
+        $userId = null;
+        if (!empty($_SESSION['cart'])) {
+            $firstRegId = $_SESSION['cart'][0];
+            $stmt = $db->prepare("
+                SELECT u.id, u.email
+                FROM registrations r
+                JOIN users u ON r.user_id = u.id
+                WHERE r.id = ?
+            ");
+            $stmt->execute([$firstRegId]);
+            $userResult = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($userResult) {
+                $userId = $userResult['id'];
+                $_SESSION['user_email'] = $userResult['email'];
+                $_SESSION['user_id'] = $userId;
+            }
+        }
+
+        // Mark all cart items as paid
+        foreach ($_SESSION['cart'] as $registrationId) {
+            $stmt = $db->prepare("UPDATE registrations SET status = 'paid' WHERE id = ?");
+            $stmt->execute([$registrationId]);
+        }
+
+        // Generate auto-login token and set cookie (30 days)
+        if ($userId) {
+            $sessionToken = $userObj->generateSessionToken($userId);
+
+            setcookie(
+                'session_token',
+                $sessionToken,
+                time() + (30 * 24 * 60 * 60),
+                '/',
+                '',
+                isset($_SERVER['HTTPS']),
+                true
+            );
+        }
+
+        // Clear the cart
+        $_SESSION['cart'] = [];
+
+        // Return success with redirect to cabinet
+        echo json_encode([
+            'success' => true,
+            'message' => 'Переход в личный кабинет...',
+            'redirect_url' => '/pages/cabinet.php?payment=success'
+        ]);
+        exit;
+    }
+
+    // PRODUCTION: Use YooKassa payment integration
     // Get user info from the first registration
     $userId = null;
     $userEmail = null;

@@ -38,6 +38,7 @@ define('DB_CHARSET', 'utf8mb4');
 // Site Configuration
 define('SITE_URL', $_ENV['SITE_URL'] ?? 'http://localhost');
 define('SITE_NAME', $_ENV['SITE_NAME'] ?? 'Педагогический портал');
+define('APP_ENV', $_ENV['APP_ENV'] ?? 'local');
 define('BASE_PATH', dirname(__DIR__));
 
 // Yookassa Configuration
