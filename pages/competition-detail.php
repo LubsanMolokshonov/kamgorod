@@ -1244,11 +1244,14 @@ include __DIR__ . '/../includes/header.php';
             <div class="about-content-wrapper">
                 <!-- Левая колонка: Описание -->
                 <div class="about-description">
-                    <!-- SEO-описание -->
-                    <?php if (!empty($competition['seo_description'])): ?>
+                    <!-- SEO-описание или обычное описание -->
+                    <?php
+                    $displayDescription = !empty($competition['seo_description']) ? $competition['seo_description'] : $competition['description'];
+                    if (!empty($displayDescription)):
+                    ?>
                     <div class="description-text">
                         <?php
-                        $paragraphs = explode("\n\n", $competition['seo_description']);
+                        $paragraphs = explode("\n\n", $displayDescription);
                         foreach ($paragraphs as $paragraph):
                             if (empty(trim($paragraph))) continue;
                         ?>
