@@ -146,25 +146,7 @@ include __DIR__ . '/../includes/header.php';
                                        target="_blank">
                                         📥 Скачать диплом
                                     </a>
-
-                                    <!-- Supervisor diploma (if exists) -->
-                                    <?php
-                                    $hasSupervisor = !empty($reg['supervisor_name']);
-                                    if ($hasSupervisor):
-                                    ?>
-                                        <a href="/ajax/download-diploma.php?registration_id=<?php echo $reg['id']; ?>&type=supervisor"
-                                           class="btn btn-success btn-download"
-                                           target="_blank"
-                                           style="background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);">
-                                            📥 Диплом руководителя
-                                        </a>
-                                    <?php endif; ?>
                                 <?php endif; ?>
-
-                                <button onclick="openDiplomaPreview(<?php echo $reg['id']; ?>, 'participant')"
-                                        class="btn btn-secondary btn-preview">
-                                    👁️ Предпросмотр
-                                </button>
                             </div>
                         </div>
                     <?php endforeach; ?>
