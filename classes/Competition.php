@@ -131,6 +131,7 @@ class Competition {
 
     /**
      * Get nomination options for a competition
+     * Supports both JSON format and legacy newline-separated format
      */
     public function getNominationOptions($competitionId) {
         $competition = $this->getById($competitionId);
@@ -139,9 +140,24 @@ class Competition {
             return [];
         }
 
-        $nominations = json_decode($competition['nomination_options'], true);
+        $nominationData = $competition['nomination_options'];
 
-        return is_array($nominations) ? $nominations : [];
+        // Try to decode as JSON first
+        $nominations = json_decode($nominationData, true);
+
+        // If JSON decode failed, try legacy newline-separated format
+        if (!is_array($nominations)) {
+            // Split by any type of newline (Unix, Windows, Mac) and filter empty values
+            $nominations = preg_split('/\r\n|\r|\n/', $nominationData);
+            $nominations = array_filter(
+                array_map('trim', $nominations),
+                function($value) {
+                    return !empty($value) && $value !== 'null';
+                }
+            );
+        }
+
+        return is_array($nominations) ? array_values($nominations) : [];
     }
 
     /**

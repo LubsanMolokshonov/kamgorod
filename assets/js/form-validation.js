@@ -74,62 +74,196 @@ $(document).ready(function() {
     $('#registrationForm').on('submit', function(e) {
         e.preventDefault();
 
+        console.log('Form submission started');
+
         // Validate required fields
         let isValid = true;
+        let errors = [];
 
         // Clear previous errors
         $('.form-control').removeClass('error');
         $('.error-message').hide();
 
-        // Validate FIO
-        const fio = $('#fio').val().trim();
-        if (fio.length === 0 || fio.length > 55) {
-            $('#fio').addClass('error');
-            $('#fio').siblings('.error-message').text('ФИО обязательно (не более 55 символов)').show();
-            isValid = false;
-        }
+        // Get current tab
+        const currentTab = $('#currentTab').val();
+        console.log('Current tab:', currentTab);
 
-        // Validate email
-        const email = $('#email').val().trim();
-        if (!validateEmail(email)) {
-            $('#email').addClass('error');
-            $('#email').siblings('.error-message').text('Некорректный email адрес').show();
-            isValid = false;
-        }
+        if (currentTab === 'participant') {
+            // Validate FIO
+            const fio = $('#fio').val().trim();
+            if (fio.length === 0 || fio.length > 55) {
+                $('#fio').addClass('error');
+                $('#fio').siblings('.error-message').text('ФИО обязательно (не более 55 символов)').show();
+                errors.push('ФИО');
+                isValid = false;
+            }
 
-        // Validate organization
-        const organization = $('#organization').val().trim();
-        if (organization.length === 0) {
-            $('#organization').addClass('error');
-            $('#organization').siblings('.error-message').show();
-            isValid = false;
-        }
+            // Validate email
+            const email = $('#email').val().trim();
+            if (!validateEmail(email)) {
+                $('#email').addClass('error');
+                $('#email').siblings('.error-message').text('Некорректный email адрес').show();
+                errors.push('Email');
+                isValid = false;
+            }
 
-        // Validate nomination
-        const nomination = $('#nomination').val();
-        if (!nomination) {
-            $('#nomination').addClass('error');
-            $('#nomination').siblings('.error-message').show();
-            isValid = false;
-        }
+            // Validate organization
+            const organization = $('#organization').val().trim();
+            if (organization.length === 0) {
+                $('#organization').addClass('error');
+                $('#organization').siblings('.error-message').show();
+                errors.push('Учреждение');
+                isValid = false;
+            }
 
-        // Validate date
-        const date = $('#participation_date').val();
-        if (!date) {
-            $('#participation_date').addClass('error');
-            $('#participation_date').siblings('.error-message').show();
-            isValid = false;
-        }
+            // Validate city
+            const city = $('#city').val().trim();
+            if (city.length === 0) {
+                $('#city').addClass('error');
+                $('#city').siblings('.error-message').show();
+                errors.push('Населенный пункт');
+                isValid = false;
+            }
 
-        // Validate template selection
-        const templateId = $('#selectedTemplateId').val();
-        if (!templateId) {
-            alert('Пожалуйста, выберите дизайн диплома из галереи');
-            isValid = false;
-            // Scroll to gallery
-            $('html, body').animate({
-                scrollTop: $('.diploma-gallery').offset().top - 100
-            }, 300);
+            // Validate placement
+            const placement = $('#placement').val();
+            if (!placement) {
+                $('#placement').addClass('error');
+                $('#placement').siblings('.error-message').show();
+                errors.push('Место');
+                isValid = false;
+            }
+
+            // Validate competition type
+            const competitionType = $('#competition_type').val();
+            if (!competitionType) {
+                $('#competition_type').addClass('error');
+                $('#competition_type').siblings('.error-message').show();
+                errors.push('Тип конкурса');
+                isValid = false;
+            }
+
+            // Validate nomination
+            const nomination = $('#nomination').val();
+            if (!nomination) {
+                $('#nomination').addClass('error');
+                $('#nomination').siblings('.error-message').show();
+                errors.push('Номинация');
+                isValid = false;
+            }
+
+            // Validate date
+            const date = $('#participation_date').val();
+            if (!date) {
+                $('#participation_date').addClass('error');
+                $('#participation_date').siblings('.error-message').show();
+                errors.push('Дата участия');
+                isValid = false;
+            }
+
+            // Validate template selection
+            const templateId = $('#selectedTemplateId').val();
+            if (!templateId) {
+                alert('Пожалуйста, выберите дизайн диплома из галереи');
+                errors.push('Шаблон диплома');
+                isValid = false;
+                // Scroll to gallery
+                $('html, body').animate({
+                    scrollTop: $('.diploma-gallery').offset().top - 100
+                }, 300);
+            }
+
+            if (!isValid) {
+                console.log('Validation errors:', errors);
+            }
+        } else if (currentTab === 'supervisor') {
+            // Supervisor tab validation
+            const supervisorFio = $('#supervisor_fio').val().trim();
+            if (supervisorFio.length === 0 || supervisorFio.length > 55) {
+                $('#supervisor_fio').addClass('error');
+                $('#supervisor_fio').siblings('.error-message').text('ФИО обязательно (не более 55 символов)').show();
+                errors.push('ФИО руководителя');
+                isValid = false;
+            }
+
+            const supervisorEmail = $('#supervisor_email').val().trim();
+            if (!validateEmail(supervisorEmail)) {
+                $('#supervisor_email').addClass('error');
+                $('#supervisor_email').siblings('.error-message').text('Некорректный email адрес').show();
+                errors.push('Email руководителя');
+                isValid = false;
+            }
+
+            const studentFio = $('#student_fio').val().trim();
+            if (studentFio.length === 0 || studentFio.length > 55) {
+                $('#student_fio').addClass('error');
+                $('#student_fio').siblings('.error-message').text('ФИО обязательно (не более 55 символов)').show();
+                errors.push('ФИО учащегося');
+                isValid = false;
+            }
+
+            // Same validations as participant tab
+            const supervisorOrg = $('#supervisor_organization').val().trim();
+            if (supervisorOrg.length === 0) {
+                $('#supervisor_organization').addClass('error');
+                $('#supervisor_organization').siblings('.error-message').show();
+                errors.push('Учреждение');
+                isValid = false;
+            }
+
+            const supervisorCity = $('#supervisor_city').val().trim();
+            if (supervisorCity.length === 0) {
+                $('#supervisor_city').addClass('error');
+                $('#supervisor_city').siblings('.error-message').show();
+                errors.push('Населенный пункт');
+                isValid = false;
+            }
+
+            const supervisorPlacement = $('#supervisor_placement').val();
+            if (!supervisorPlacement) {
+                $('#supervisor_placement').addClass('error');
+                $('#supervisor_placement').siblings('.error-message').show();
+                errors.push('Место');
+                isValid = false;
+            }
+
+            const supervisorCompType = $('#supervisor_competition_type').val();
+            if (!supervisorCompType) {
+                $('#supervisor_competition_type').addClass('error');
+                $('#supervisor_competition_type').siblings('.error-message').show();
+                errors.push('Тип конкурса');
+                isValid = false;
+            }
+
+            const supervisorNomination = $('#supervisor_nomination').val();
+            if (!supervisorNomination) {
+                $('#supervisor_nomination').addClass('error');
+                $('#supervisor_nomination').siblings('.error-message').show();
+                errors.push('Номинация');
+                isValid = false;
+            }
+
+            const supervisorDate = $('#supervisor_participation_date').val();
+            if (!supervisorDate) {
+                $('#supervisor_participation_date').addClass('error');
+                $('#supervisor_participation_date').siblings('.error-message').show();
+                errors.push('Дата участия');
+                isValid = false;
+            }
+
+            const supervisorTemplateId = $('#supervisor_selectedTemplateId').val();
+            if (!supervisorTemplateId) {
+                alert('Пожалуйста, выберите дизайн диплома из галереи');
+                errors.push('Шаблон диплома');
+                isValid = false;
+                $('html, body').animate({
+                    scrollTop: $('.diploma-gallery').offset().top - 100
+                }, 300);
+            }
+
+            if (!isValid) {
+                console.log('Validation errors:', errors);
+            }
         }
 
         if (!isValid) {

@@ -85,7 +85,9 @@ include __DIR__ . '/../includes/header.php';
                                    id="email"
                                    name="email"
                                    value="<?php echo htmlspecialchars($userData['email'] ?? ''); ?>"
-                                   placeholder="Email">
+                                   placeholder="Email"
+                                   required>
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
                         <div class="form-group">
@@ -95,7 +97,9 @@ include __DIR__ . '/../includes/header.php';
                                    name="fio"
                                    maxlength="55"
                                    value="<?php echo htmlspecialchars($userData['full_name'] ?? ''); ?>"
-                                   placeholder="ФИО участника">
+                                   placeholder="ФИО участника"
+                                   required>
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
                         <div class="form-group">
@@ -104,7 +108,9 @@ include __DIR__ . '/../includes/header.php';
                                    id="organization"
                                    name="organization"
                                    value="<?php echo htmlspecialchars($userData['organization'] ?? ''); ?>"
-                                   placeholder="Название учреждения">
+                                   placeholder="Название учреждения"
+                                   required>
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
                         <div class="form-group">
@@ -113,7 +119,9 @@ include __DIR__ . '/../includes/header.php';
                                    id="city"
                                    name="city"
                                    value="<?php echo htmlspecialchars($userData['city'] ?? ''); ?>"
-                                   placeholder="Населенный пункт">
+                                   placeholder="Населенный пункт"
+                                   required>
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
                         <div class="form-row-inline">
@@ -132,33 +140,36 @@ include __DIR__ . '/../includes/header.php';
                         </div>
 
                         <div class="form-group">
-                            <select class="form-control" id="placement" name="placement">
-                                <option value="">1 место - Цена по акции 174 р. (55% скидка до 24 дек...</option>
+                            <select class="form-control" id="placement" name="placement" required>
+                                <option value="">Выберите место</option>
                                 <option value="1">1 место</option>
                                 <option value="2">2 место</option>
                                 <option value="3">3 место</option>
                                 <option value="участник">Участник</option>
                             </select>
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
                         <div class="form-group">
-                            <select class="form-control" id="competition_type" name="competition_type">
-                                <option value="">Тип конкурса:</option>
+                            <select class="form-control" id="competition_type" name="competition_type" required>
+                                <option value="">Выберите тип конкурса</option>
                                 <option value="всероссийский">Всероссийский</option>
                                 <option value="международный">Международный</option>
                                 <option value="межрегиональный">Межрегиональный</option>
                             </select>
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
                         <div class="form-group">
-                            <select class="form-control" id="nomination" name="nomination">
-                                <option value="">Номинация:</option>
+                            <select class="form-control" id="nomination" name="nomination" required>
+                                <option value="">Выберите номинацию</option>
                                 <?php foreach ($nominations as $nom): ?>
                                     <option value="<?php echo htmlspecialchars($nom); ?>">
                                         <?php echo htmlspecialchars($nom); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                             <div class="form-helper-link">
                                 <a href="#" id="selectNominationLink">Выберите</a> или
                                 <a href="#" id="enterNominationLink">введите свою</a> номинацию
@@ -180,7 +191,9 @@ include __DIR__ . '/../includes/header.php';
                                    id="participation_date"
                                    name="participation_date"
                                    value="<?php echo date('Y-m-d'); ?>"
-                                   placeholder="Дата участия">
+                                   placeholder="Дата участия"
+                                   required>
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
                         <button type="submit" class="btn btn-submit">
