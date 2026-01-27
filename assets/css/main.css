@@ -5,28 +5,28 @@
 
 /* CSS Variables */
 :root {
-    /* Primary - dark blue (from logo text) */
-    --primary-purple: #1E3A5F;
-    --dark-purple: #152C4A;
-    --light-purple: #D4E4F7;
-    --purple-card: #3B5998;
+    /* Primary - bright blue (#0077FF) */
+    --primary-purple: #0077FF;
+    --dark-purple: #0066DD;
+    --light-purple: #E8F1FF;
+    --purple-card: #0088FF;
 
     /* Accent - red (from logo book) */
     --accent: #C62828;
     --accent-light: #EF5350;
     --accent-dark: #8E1C1C;
 
-    /* Secondary - blue (from logo book) */
-    --secondary: #3B5998;
-    --secondary-light: #5E81C4;
-    --secondary-dark: #2C4373;
+    /* Secondary - blue variations */
+    --secondary: #0077FF;
+    --secondary-light: #3399FF;
+    --secondary-dark: #0066DD;
 
     /* Highlight - yellow (from logo pencil) */
     --highlight: #F4C430;
     --highlight-dark: #D4A420;
 
     /* Text */
-    --text-dark: #1E3A5F;
+    --text-dark: #2C3E50;
     --text-medium: #4A5568;
     --text-light: #718096;
 
@@ -35,14 +35,14 @@
     --bg-white: #ffffff;
     --bg-cream: #FDF6E3;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);
+    /* Gradients - updated with bright blue */
+    --gradient-primary: linear-gradient(135deg, #0077FF 0%, #0088FF 100%);
     --gradient-accent: linear-gradient(135deg, #C62828 0%, #EF5350 100%);
-    --gradient-hero: linear-gradient(135deg, #1E3A5F 0%, #3B5998 50%, #4A6FA5 100%);
+    --gradient-hero: linear-gradient(135deg, #0077FF 0%, #0088FF 50%, #3399FF 100%);
 
     --border-radius-card: 32px;
     --border-radius-button: 30px;
-    --shadow-card: 6px 6px 10px rgba(30,58,95,0.1);
+    --shadow-card: 6px 6px 10px rgba(0,119,255,0.1);
     --transition-speed: 0.2s;
 }
 
@@ -328,7 +328,7 @@ main {
     width: 100%;
     max-width: 1440px;
     height: 100%;
-    background: linear-gradient(135deg, #1E3A5F 0%, #2C4373 25%, #3B5998 50%, #4A6FA5 75%, #5E81C4 100%);
+    background: var(--gradient-hero);
     border-radius: 0 0 60px 60px;
     z-index: 0;
 }
@@ -442,39 +442,81 @@ main {
 }
 
 .hero-img-1 {
-    width: 200px;
-    height: 200px;
-    top: 80px;
-    left: -50px;
-    background: linear-gradient(135deg, #1E3A5F, #3B5998);
+    width: 220px;
+    height: 220px;
+    top: 20px;
+    left: 0px;
+    background: var(--gradient-primary);
     z-index: 2;
 }
 
 .hero-img-2 {
     width: 300px;
     height: 300px;
-    top: 280px;
-    left: 20px;
+    top: 260px;
+    left: 10px;
     background: linear-gradient(135deg, #3B5998, #5E81C4);
     z-index: 1;
 }
 
 .hero-img-3 {
-    width: 260px;
-    height: 260px;
+    width: 270px;
+    height: 270px;
     top: 10px;
-    right: -20px;
+    right: 50px;
     background: linear-gradient(135deg, #C62828, #EF5350);
     z-index: 4;
 }
 
 .hero-img-4 {
-    width: 240px;
-    height: 240px;
-    top: 320px;
-    right: 60px;
+    width: 230px;
+    height: 230px;
+    top: 300px;
+    right: 150px;
     background: linear-gradient(135deg, #F4C430, #FFD54F);
     z-index: 3;
+}
+
+/* Parallax Performance Optimization */
+.hero-image-circle {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+.hero-images.parallax-active .hero-image-circle {
+    transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Picture element reset */
+.hero-image-circle picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.hero-image-circle picture img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Disable parallax on touch devices */
+@media (hover: none) {
+    .hero-image-circle {
+        will-change: auto !important;
+    }
+}
+
+/* Disable parallax when reduced motion is preferred */
+@media (prefers-reduced-motion: reduce) {
+    .hero-image-circle {
+        will-change: auto !important;
+        transform: none !important;
+        transition: none !important;
+    }
 }
 
 .hero-icon {
@@ -966,31 +1008,31 @@ main {
     }
 
     .hero-img-1 {
-        width: 110px;
-        height: 110px;
-        top: 40px;
-        left: 0;
+        width: 120px;
+        height: 120px;
+        top: 20px;
+        left: 10px;
     }
 
     .hero-img-2 {
         width: 160px;
         height: 160px;
-        top: 170px;
+        top: 150px;
         left: 20px;
     }
 
     .hero-img-3 {
-        width: 130px;
-        height: 130px;
+        width: 140px;
+        height: 140px;
         top: 5px;
-        right: 0;
+        right: 25px;
     }
 
     .hero-img-4 {
-        width: 120px;
-        height: 120px;
-        top: 180px;
-        right: 20px;
+        width: 125px;
+        height: 125px;
+        top: 160px;
+        right: 50px;
     }
 
     .hero-icon {
@@ -1155,31 +1197,31 @@ main {
     }
 
     .hero-img-1 {
-        width: 75px;
-        height: 75px;
-        top: 25px;
+        width: 85px;
+        height: 85px;
+        top: 15px;
         left: 5px;
     }
 
     .hero-img-2 {
-        width: 110px;
-        height: 110px;
-        top: 120px;
+        width: 115px;
+        height: 115px;
+        top: 110px;
         left: 10px;
     }
 
     .hero-img-3 {
-        width: 90px;
-        height: 90px;
-        top: 5px;
-        right: 10px;
+        width: 95px;
+        height: 95px;
+        top: 8px;
+        right: 12px;
     }
 
     .hero-img-4 {
-        width: 90px;
-        height: 90px;
-        top: 130px;
-        right: 15px;
+        width: 92px;
+        height: 92px;
+        top: 115px;
+        right: 28px;
     }
 
     .hero-icon {

@@ -111,13 +111,6 @@ include __DIR__ . '/../includes/header.php';
             <div class="hero-image-circle hero-img-4">
                 <img src="/assets/images/teachers/4.png" alt="Педагог">
             </div>
-
-            <!-- Decorative icons -->
-            <div class="hero-icon hero-icon-star">🏆</div>
-            <div class="hero-icon hero-icon-message">📚</div>
-            <div class="hero-icon hero-icon-phone">🎓</div>
-            <div class="hero-icon hero-icon-game">📜</div>
-            <div class="hero-icon hero-icon-chat">✏️</div>
         </div>
     </div>
 </section>

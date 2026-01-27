@@ -1224,13 +1224,6 @@ include __DIR__ . '/../includes/header.php';
                         <text x="320" y="770" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">Директор</text>
                     </svg>
                 </div>
-
-                <!-- Decorative floating icons -->
-                <div class="hero-icon hero-icon-star">🏆</div>
-                <div class="hero-icon hero-icon-message">📚</div>
-                <div class="hero-icon hero-icon-phone">🎓</div>
-                <div class="hero-icon hero-icon-game">📜</div>
-                <div class="hero-icon hero-icon-chat">✏️</div>
             </div>
         </div>
     </section>
