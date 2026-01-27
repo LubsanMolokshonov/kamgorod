@@ -184,7 +184,7 @@ include __DIR__ . '/../includes/header.php';
                        name="academic_year"
                        class="form-input"
                        value="<?php echo htmlspecialchars($competition['academic_year']); ?>"
-                       placeholder="2024-2025">
+                       placeholder="2025-2026">
             </div>
 
             <div class="form-group">

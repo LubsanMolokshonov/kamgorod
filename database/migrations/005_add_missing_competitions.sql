@@ -13,7 +13,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 -- Специализация: Экологическое воспитание (specialization_id = 6)
 INSERT INTO competitions (title, slug, description, target_participants, award_structure, academic_year, category, nomination_options, price, is_active, display_order) VALUES
-('Юные экологи: природа глазами дошкольников', 'yunye-ekologi-dou', 'Всероссийский конкурс методических разработок по экологическому воспитанию дошкольников', 'Воспитатели, педагоги дошкольного образования, экологи', 'Диплом I, II, III степени в электронном виде', '2024-2025', 'methodology', 'Экологические проекты для малышей\nНаблюдения за природой в детском саду\nОпытно-экспериментальная деятельность\nЭкологические праздники и акции', 150, 1, 30);
+('Юные экологи: природа глазами дошкольников', 'yunye-ekologi-dou', 'Всероссийский конкурс методических разработок по экологическому воспитанию дошкольников', 'Воспитатели, педагоги дошкольного образования, экологи', 'Диплом I, II, III степени в электронном виде', '2025-2026', 'methodology', 'Экологические проекты для малышей\nНаблюдения за природой в детском саду\nОпытно-экспериментальная деятельность\nЭкологические праздники и акции', 150, 1, 30);
 
 SET @comp_id = LAST_INSERT_ID();
 INSERT INTO competition_audience_types (competition_id, audience_type_id) VALUES (@comp_id, 1);
@@ -21,7 +21,7 @@ INSERT INTO competition_specializations (competition_id, specialization_id) VALU
 
 -- Специализация: Социально-коммуникативное развитие (specialization_id = 7)
 INSERT INTO competitions (title, slug, description, target_participants, award_structure, academic_year, category, nomination_options, price, is_active, display_order) VALUES
-('Мир общения: социализация дошкольников', 'mir-obshcheniya-dou', 'Конкурс методических разработок по социально-коммуникативному развитию детей дошкольного возраста', 'Воспитатели, педагоги-психологи, социальные педагоги', 'Диплом I, II, III степени в электронном виде', '2024-2025', 'methodology', 'Игры на социализацию\nРазвитие эмоционального интеллекта\nРабота с семьей\nАдаптация детей в коллективе', 150, 1, 31);
+('Мир общения: социализация дошкольников', 'mir-obshcheniya-dou', 'Конкурс методических разработок по социально-коммуникативному развитию детей дошкольного возраста', 'Воспитатели, педагоги-психологи, социальные педагоги', 'Диплом I, II, III степени в электронном виде', '2025-2026', 'methodology', 'Игры на социализацию\nРазвитие эмоционального интеллекта\nРабота с семьей\nАдаптация детей в коллективе', 150, 1, 31);
 
 SET @comp_id = LAST_INSERT_ID();
 INSERT INTO competition_audience_types (competition_id, audience_type_id) VALUES (@comp_id, 1);
@@ -33,7 +33,7 @@ INSERT INTO competition_specializations (competition_id, specialization_id) VALU
 
 -- Специализация: Литературное чтение (specialization_id = 9)
 INSERT INTO competitions (title, slug, description, target_participants, award_structure, academic_year, category, nomination_options, price, is_active, display_order) VALUES
-('Волшебный мир книги: литературное чтение', 'volshebnyy-mir-knigi', 'Всероссийский конкурс методических разработок по литературному чтению для 1-4 классов', 'Учителя начальных классов, библиотекари', 'Диплом I, II, III степени в электронном виде', '2024-2025', 'methodology', 'Работа с детской книгой\nРазвитие читательской грамотности\nЛитературные игры и викторины\nТворческие проекты по прочитанному', 150, 1, 32);
+('Волшебный мир книги: литературное чтение', 'volshebnyy-mir-knigi', 'Всероссийский конкурс методических разработок по литературному чтению для 1-4 классов', 'Учителя начальных классов, библиотекари', 'Диплом I, II, III степени в электронном виде', '2025-2026', 'methodology', 'Работа с детской книгой\nРазвитие читательской грамотности\nЛитературные игры и викторины\nТворческие проекты по прочитанному', 150, 1, 32);
 
 SET @comp_id = LAST_INSERT_ID();
 INSERT INTO competition_audience_types (competition_id, audience_type_id) VALUES (@comp_id, 2);
@@ -41,7 +41,7 @@ INSERT INTO competition_specializations (competition_id, specialization_id) VALU
 
 -- Специализация: Английский язык в начальной школе (specialization_id = 12)
 INSERT INTO competitions (title, slug, description, target_participants, award_structure, academic_year, category, nomination_options, price, is_active, display_order) VALUES
-('First Steps in English: английский для малышей', 'first-steps-english', 'Конкурс методических разработок по английскому языку для начальной школы', 'Учителя английского языка начальных классов', 'Диплом I, II, III степени в электронном виде', '2024-2025', 'methodology', 'Игровые методики обучения\nПесни и рифмовки на английском\nДраматизация на уроках\nРаннее обучение иностранному языку', 150, 1, 33);
+('First Steps in English: английский для малышей', 'first-steps-english', 'Конкурс методических разработок по английскому языку для начальной школы', 'Учителя английского языка начальных классов', 'Диплом I, II, III степени в электронном виде', '2025-2026', 'methodology', 'Игровые методики обучения\nПесни и рифмовки на английском\nДраматизация на уроках\nРаннее обучение иностранному языку', 150, 1, 33);
 
 SET @comp_id = LAST_INSERT_ID();
 INSERT INTO competition_audience_types (competition_id, audience_type_id) VALUES (@comp_id, 2);
@@ -49,7 +49,7 @@ INSERT INTO competition_specializations (competition_id, specialization_id) VALU
 
 -- Специализация: Изобразительное искусство в начальной школе (specialization_id = 13)
 INSERT INTO competitions (title, slug, description, target_participants, award_structure, academic_year, category, nomination_options, price, is_active, display_order) VALUES
-('Краски детства: ИЗО в начальной школе', 'kraski-detstva-izo', 'Конкурс методических разработок и творческих проектов по изобразительному искусству', 'Учителя начальных классов, учителя ИЗО', 'Диплом I, II, III степени в электронном виде', '2024-2025', 'creative', 'Нетрадиционные техники рисования\nДекоративно-прикладное творчество\nЗнакомство с народным искусством\nПленэрные занятия', 150, 1, 34);
+('Краски детства: ИЗО в начальной школе', 'kraski-detstva-izo', 'Конкурс методических разработок и творческих проектов по изобразительному искусству', 'Учителя начальных классов, учителя ИЗО', 'Диплом I, II, III степени в электронном виде', '2025-2026', 'creative', 'Нетрадиционные техники рисования\nДекоративно-прикладное творчество\nЗнакомство с народным искусством\nПленэрные занятия', 150, 1, 34);
 
 SET @comp_id = LAST_INSERT_ID();
 INSERT INTO competition_audience_types (competition_id, audience_type_id) VALUES (@comp_id, 2);
@@ -57,7 +57,7 @@ INSERT INTO competition_specializations (competition_id, specialization_id) VALU
 
 -- Специализация: Музыка в начальной школе (specialization_id = 14)
 INSERT INTO competitions (title, slug, description, target_participants, award_structure, academic_year, category, nomination_options, price, is_active, display_order) VALUES
-('Музыкальная шкатулка: музыка в начальной школе', 'muzykalnaya-shkatulka', 'Конкурс методических разработок по музыке для 1-4 классов', 'Учителя музыки, учителя начальных классов', 'Диплом I, II, III степени в электронном виде', '2024-2025', 'creative', 'Хоровое пение\nМузыкальные игры и упражнения\nСлушание музыки\nМузыкально-ритмические движения', 150, 1, 35);
+('Музыкальная шкатулка: музыка в начальной школе', 'muzykalnaya-shkatulka', 'Конкурс методических разработок по музыке для 1-4 классов', 'Учителя музыки, учителя начальных классов', 'Диплом I, II, III степени в электронном виде', '2025-2026', 'creative', 'Хоровое пение\nМузыкальные игры и упражнения\nСлушание музыки\nМузыкально-ритмические движения', 150, 1, 35);
 
 SET @comp_id = LAST_INSERT_ID();
 INSERT INTO competition_audience_types (competition_id, audience_type_id) VALUES (@comp_id, 2);
@@ -65,7 +65,7 @@ INSERT INTO competition_specializations (competition_id, specialization_id) VALU
 
 -- Специализация: Физическая культура в начальной школе (specialization_id = 15)
 INSERT INTO competitions (title, slug, description, target_participants, award_structure, academic_year, category, nomination_options, price, is_active, display_order) VALUES
-('Веселые старты: физкультура в начальной школе', 'veselye-starty-nachalnaya', 'Конкурс методических разработок по физической культуре для младших школьников', 'Учителя физической культуры, учителя начальных классов', 'Диплом I, II, III степени в электронном виде', '2024-2025', 'methodology', 'Подвижные игры\nСпортивные праздники\nФизкультминутки\nФормирование основ ЗОЖ', 150, 1, 36);
+('Веселые старты: физкультура в начальной школе', 'veselye-starty-nachalnaya', 'Конкурс методических разработок по физической культуре для младших школьников', 'Учителя физической культуры, учителя начальных классов', 'Диплом I, II, III степени в электронном виде', '2025-2026', 'methodology', 'Подвижные игры\nСпортивные праздники\nФизкультминутки\nФормирование основ ЗОЖ', 150, 1, 36);
 
 SET @comp_id = LAST_INSERT_ID();
 INSERT INTO competition_audience_types (competition_id, audience_type_id) VALUES (@comp_id, 2);
@@ -73,7 +73,7 @@ INSERT INTO competition_specializations (competition_id, specialization_id) VALU
 
 -- Специализация: Технология в начальной школе (specialization_id = 16)
 INSERT INTO competitions (title, slug, description, target_participants, award_structure, academic_year, category, nomination_options, price, is_active, display_order) VALUES
-('Мастерилка: технология в начальной школе', 'masterilka-tehnologiya', 'Конкурс методических разработок и проектов по технологии для 1-4 классов', 'Учителя начальных классов, учителя технологии', 'Диплом I, II, III степени в электронном виде', '2024-2025', 'methodology', 'Работа с бумагой и картоном\nКонструирование\nРабота с природными материалами\nОсновы проектной деятельности', 150, 1, 37);
+('Мастерилка: технология в начальной школе', 'masterilka-tehnologiya', 'Конкурс методических разработок и проектов по технологии для 1-4 классов', 'Учителя начальных классов, учителя технологии', 'Диплом I, II, III степени в электронном виде', '2025-2026', 'methodology', 'Работа с бумагой и картоном\nКонструирование\nРабота с природными материалами\nОсновы проектной деятельности', 150, 1, 37);
 
 SET @comp_id = LAST_INSERT_ID();
 INSERT INTO competition_audience_types (competition_id, audience_type_id) VALUES (@comp_id, 2);
@@ -85,7 +85,7 @@ INSERT INTO competition_specializations (competition_id, specialization_id) VALU
 
 -- Специализация: Экономические специальности (specialization_id = 33)
 INSERT INTO competitions (title, slug, description, target_participants, award_structure, academic_year, category, nomination_options, price, is_active, display_order) VALUES
-('Экономика и бизнес: подготовка специалистов СПО', 'ekonomika-biznes-spo', 'Конкурс методических разработок по экономическим дисциплинам в СПО', 'Преподаватели экономических дисциплин в СПО', 'Диплом I, II, III степени в электронном виде', '2024-2025', 'methodology', 'Бухгалтерский учет\nБанковское дело\nЭкономика предприятия\nДеловые игры и кейсы', 150, 1, 38);
+('Экономика и бизнес: подготовка специалистов СПО', 'ekonomika-biznes-spo', 'Конкурс методических разработок по экономическим дисциплинам в СПО', 'Преподаватели экономических дисциплин в СПО', 'Диплом I, II, III степени в электронном виде', '2025-2026', 'methodology', 'Бухгалтерский учет\nБанковское дело\nЭкономика предприятия\nДеловые игры и кейсы', 150, 1, 38);
 
 SET @comp_id = LAST_INSERT_ID();
 INSERT INTO competition_audience_types (competition_id, audience_type_id) VALUES (@comp_id, 4);
@@ -93,7 +93,7 @@ INSERT INTO competition_specializations (competition_id, specialization_id) VALU
 
 -- Специализация: Гуманитарные специальности (specialization_id = 34)
 INSERT INTO competitions (title, slug, description, target_participants, award_structure, academic_year, category, nomination_options, price, is_active, display_order) VALUES
-('Гуманитарное образование в СПО', 'gumanitarnoe-obrazovanie-spo', 'Конкурс методических разработок для гуманитарных специальностей СПО', 'Преподаватели гуманитарных дисциплин в колледжах', 'Диплом I, II, III степени в электронном виде', '2024-2025', 'methodology', 'Социальная работа\nПраво и юриспруденция\nДокументоведение\nТуризм и сервис', 150, 1, 39);
+('Гуманитарное образование в СПО', 'gumanitarnoe-obrazovanie-spo', 'Конкурс методических разработок для гуманитарных специальностей СПО', 'Преподаватели гуманитарных дисциплин в колледжах', 'Диплом I, II, III степени в электронном виде', '2025-2026', 'methodology', 'Социальная работа\nПраво и юриспруденция\nДокументоведение\nТуризм и сервис', 150, 1, 39);
 
 SET @comp_id = LAST_INSERT_ID();
 INSERT INTO competition_audience_types (competition_id, audience_type_id) VALUES (@comp_id, 4);

@@ -71,7 +71,7 @@ include __DIR__ . '/../includes/header.php';
     width: 100%;
     max-width: 1440px;
     height: 100%;
-    background: linear-gradient(135deg, #1E3A5F 0%, #2C4373 25%, #3B5998 50%, #4A6FA5 75%, #5E81C4 100%);
+    background: var(--gradient-hero);
     border-radius: 0 0 60px 60px;
     z-index: 0;
 }
@@ -149,12 +149,12 @@ include __DIR__ . '/../includes/header.php';
     margin-top: 40px;
     text-decoration: none;
     transition: all 0.3s ease;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 24px rgba(0, 119, 255, 0.25);
 }
 
 .btn-hero-cta:hover {
     transform: translateY(-4px) scale(1.05);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+    box-shadow: 0 12px 32px rgba(0, 119, 255, 0.4);
     opacity: 1;
 }
 
@@ -257,7 +257,7 @@ include __DIR__ . '/../includes/header.php';
     background: white;
     border-radius: 24px;
     padding: 40px 32px;
-    box-shadow: 0 4px 20px rgba(67,61,136,0.08);
+    box-shadow: 0 4px 20px rgba(0,119,255,0.08);
     transition: all 0.3s ease;
     text-align: center;
     border: 2px solid transparent;
@@ -265,7 +265,7 @@ include __DIR__ . '/../includes/header.php';
 
 .feature-card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 12px 40px rgba(67,61,136,0.15);
+    box-shadow: 0 12px 40px rgba(0,119,255,0.15);
     border-color: var(--light-purple);
 }
 
@@ -355,7 +355,7 @@ include __DIR__ . '/../includes/header.php';
     background: var(--primary-purple);
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(30, 58, 95, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 119, 255, 0.3);
 }
 
 .btn-regulations .btn-icon {
@@ -380,13 +380,13 @@ include __DIR__ . '/../includes/header.php';
 
 .info-card:hover {
     transform: translateX(4px);
-    box-shadow: 0 4px 20px rgba(30, 58, 95, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 119, 255, 0.15);
     border-color: var(--primary-purple);
 }
 
 /* Highlight карточка (для цены) */
 .info-card-highlight {
-    background: linear-gradient(135deg, #F5F7FA 0%, #E8EDF2 100%);
+    background: linear-gradient(135deg, #E8F1FF 0%, #D4E4FF 100%);
     border-color: var(--primary-purple);
     border-width: 2px;
 }
@@ -552,7 +552,7 @@ include __DIR__ . '/../includes/header.php';
 /* Nominations Section */
 .nominations-section {
     padding: 80px 0;
-    background: var(--bg-light);
+    background: #F5F9FF;
 }
 
 .nominations-grid {
@@ -566,7 +566,7 @@ include __DIR__ . '/../includes/header.php';
     padding: 24px 28px;
     border-radius: 20px;
     border-left: 5px solid var(--primary-purple);
-    box-shadow: 0 2px 10px rgba(67,61,136,0.06);
+    box-shadow: 0 2px 10px rgba(0,119,255,0.06);
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
@@ -575,7 +575,7 @@ include __DIR__ . '/../includes/header.php';
 
 .nomination-card:hover {
     transform: translateX(8px);
-    box-shadow: 0 4px 20px rgba(67,61,136,0.12);
+    box-shadow: 0 4px 20px rgba(0,119,255,0.15);
     border-left-color: var(--purple-card);
 }
 
@@ -615,7 +615,7 @@ include __DIR__ . '/../includes/header.php';
     right: 0;
     width: 400px;
     height: 400px;
-    background: radial-gradient(circle, rgba(30,58,95,0.05) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(0,119,255,0.05) 0%, transparent 70%);
     border-radius: 50%;
 }
 
@@ -669,7 +669,7 @@ include __DIR__ . '/../includes/header.php';
 /* Price CTA Section */
 .price-cta-section {
     padding: 80px 0;
-    background: var(--bg-light);
+    background: #F5F9FF;
 }
 
 .price-cta-container {
@@ -680,7 +680,7 @@ include __DIR__ . '/../includes/header.php';
     padding: 60px;
     text-align: center;
     color: white;
-    box-shadow: 0 20px 60px rgba(30,58,95,0.3);
+    box-shadow: 0 20px 60px rgba(0,119,255,0.3);
     position: relative;
     overflow: hidden;
 }
@@ -746,12 +746,12 @@ include __DIR__ . '/../includes/header.php';
     display: inline-block;
     text-decoration: none;
     transition: all 0.3s ease;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    box-shadow: 0 8px 24px rgba(0, 119, 255, 0.2);
 }
 
 .btn-cta-large:hover {
     transform: translateY(-4px) scale(1.05);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    box-shadow: 0 12px 32px rgba(0, 119, 255, 0.35);
     opacity: 1;
 }
 
@@ -793,7 +793,7 @@ include __DIR__ . '/../includes/header.php';
     justify-content: center;
     font-size: 28px;
     font-weight: 700;
-    box-shadow: 0 8px 24px rgba(30,58,95,0.3);
+    box-shadow: 0 8px 24px rgba(0,119,255,0.3);
 }
 
 .step-content h3 {
@@ -810,7 +810,7 @@ include __DIR__ . '/../includes/header.php';
 
 /* FAQ Section */
 .faq-section {
-    background: #E8F0F8;
+    background: #E8F1FF;
     border-radius: 40px;
     padding: 60px 80px;
     margin-bottom: 60px;
@@ -831,7 +831,7 @@ include __DIR__ . '/../includes/header.php';
 }
 
 .faq-item {
-    background: #F5F8FC;
+    background: #F0F6FF;
     border-radius: 24px;
     padding: 28px 32px;
     cursor: pointer;
@@ -839,7 +839,7 @@ include __DIR__ . '/../includes/header.php';
 }
 
 .faq-item:hover {
-    background: #EDF2F7;
+    background: #E0EAFF;
 }
 
 .faq-question {
@@ -883,7 +883,7 @@ include __DIR__ . '/../includes/header.php';
     display: none;
     padding-top: 16px;
     margin-top: 16px;
-    border-top: 1px solid rgba(30, 58, 95, 0.1);
+    border-top: 1px solid rgba(0, 119, 255, 0.1);
 }
 
 .faq-item.active .faq-answer {
@@ -942,12 +942,12 @@ include __DIR__ . '/../includes/header.php';
     font-weight: 600;
     text-decoration: none;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(30, 58, 95, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 119, 255, 0.2);
 }
 
 .audience-tag:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(30, 58, 95, 0.35);
+    box-shadow: 0 4px 16px rgba(0, 119, 255, 0.35);
     opacity: 0.9;
 }
 
@@ -1270,7 +1270,7 @@ include __DIR__ . '/../includes/header.php';
                     <?php if (!empty($nominations)): ?>
                     <div class="info-card">
                         <div class="info-card-header">
-                            <div class="info-icon" style="background: linear-gradient(135deg, #3B5998 0%, #5E81C4 100%);">
+                            <div class="info-icon" style="background: var(--gradient-primary);">
                                 <svg fill="white" viewBox="0 0 20 20" width="24" height="24">
                                     <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/>
                                 </svg>
@@ -1330,7 +1330,7 @@ include __DIR__ . '/../includes/header.php';
                     <!-- Цена участия -->
                     <div class="info-card info-card-highlight">
                         <div class="info-card-header">
-                            <div class="info-icon" style="background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);">
+                            <div class="info-icon" style="background: var(--gradient-primary);">
                                 <svg fill="white" viewBox="0 0 20 20" width="24" height="24">
                                     <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
@@ -1354,7 +1354,7 @@ include __DIR__ . '/../includes/header.php';
 
     <!-- Goals Section - Цели конкурса -->
     <?php if (!empty($competition['goals'])): ?>
-    <section class="features-section" style="background: var(--bg-light); padding: 60px 0;">
+    <section class="features-section" style="background: #F5F9FF; padding: 60px 0;">
         <div class="container">
             <h2 class="section-title">Цели конкурса</h2>
             <p class="section-subtitle">Конкурс направлен на достижение следующих целей</p>
@@ -1368,7 +1368,7 @@ include __DIR__ . '/../includes/header.php';
                     $icon = $goalIcons[$index % count($goalIcons)];
                 ?>
                 <div class="feature-card">
-                    <div class="feature-icon" style="font-size: 32px; background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%); border-radius: 16px;">
+                    <div class="feature-icon" style="font-size: 32px; background: var(--gradient-primary); border-radius: 16px;">
                         <?php echo $icon; ?>
                     </div>
                     <p style="font-size: 16px; line-height: 1.6; color: var(--text-dark); margin: 0;">

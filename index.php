@@ -12,7 +12,7 @@ require_once __DIR__ . '/classes/AudienceType.php';
 require_once __DIR__ . '/includes/session.php';
 
 // Page metadata
-$pageTitle = 'Конкурсы для педагогов и школьников 2024-2025 | ' . SITE_NAME;
+$pageTitle = 'Конкурсы для педагогов и школьников 2025-2026 | ' . SITE_NAME;
 $pageDescription = 'Всероссийские и международные конкурсы для учителей, педагогов и школьников. Получите диплом участника после оплаты!';
 
 // Get filters from URL
