@@ -97,10 +97,45 @@ try {
 
     $_SESSION['user_id'] = $userId;
 
+    // Получить данные конкурса для e-commerce
+    $competitionStmt = $db->prepare("SELECT id, title, price, category FROM competitions WHERE id = ?");
+    $competitionStmt->execute([$data['competition_id']]);
+    $competitionData = $competitionStmt->fetch(PDO::FETCH_ASSOC);
+
+    // Получить тип учреждения для e-commerce (category)
+    $audienceTypeStmt = $db->prepare("
+        SELECT at.name
+        FROM audience_types at
+        JOIN competition_audience_types cat ON at.id = cat.audience_type_id
+        WHERE cat.competition_id = ?
+        LIMIT 1
+    ");
+    $audienceTypeStmt->execute([$data['competition_id']]);
+    $audienceType = $audienceTypeStmt->fetchColumn() ?: 'Общее';
+
+    // Получить специализацию для e-commerce (list)
+    $specializationStmt = $db->prepare("
+        SELECT aspc.name
+        FROM audience_specializations aspc
+        JOIN competition_specializations cs ON aspc.id = cs.specialization_id
+        WHERE cs.competition_id = ?
+        LIMIT 1
+    ");
+    $specializationStmt->execute([$data['competition_id']]);
+    $specialization = $specializationStmt->fetchColumn() ?: '';
+
     echo json_encode([
         'success' => true,
         'registration_id' => $registrationId,
-        'message' => 'Регистрация успешно создана'
+        'message' => 'Регистрация успешно создана',
+        'ecommerce' => [
+            'id' => $competitionData['id'],
+            'name' => $competitionData['title'],
+            'price' => $competitionData['price'],
+            'category' => $audienceType,
+            'list' => $specialization,
+            'nomination' => $data['nomination']
+        ]
     ]);
 
 } catch (Exception $e) {

@@ -292,8 +292,32 @@ $(document).ready(function() {
             contentType: false,
             success: function(response) {
                 if (response.success) {
-                    // Redirect to cart
-                    window.location.href = '/pages/cart.php';
+                    // E-commerce: Add to cart event
+                    if (response.ecommerce) {
+                        window.dataLayer = window.dataLayer || [];
+                        window.dataLayer.push({
+                            "ecommerce": {
+                                "currencyCode": "RUB",
+                                "add": {
+                                    "actionField": {"list": response.ecommerce.list || ""},
+                                    "products": [{
+                                        "id": String(response.ecommerce.id),
+                                        "name": response.ecommerce.name,
+                                        "price": parseFloat(response.ecommerce.price),
+                                        "brand": "Педпортал",
+                                        "category": response.ecommerce.category,
+                                        "variant": response.ecommerce.nomination,
+                                        "quantity": 1
+                                    }]
+                                }
+                            }
+                        });
+                    }
+
+                    // Redirect to cart (delay to allow dataLayer to send)
+                    setTimeout(function() {
+                        window.location.href = '/pages/cart.php';
+                    }, 300);
                 } else {
                     // Show error
                     alert(response.message || 'Произошла ошибка при регистрации');

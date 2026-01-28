@@ -402,7 +402,7 @@ include __DIR__ . '/includes/header.php';
             <?php else: ?>
                 <div class="competitions-grid" id="competitionsGrid">
                     <?php foreach ($competitions as $competition): ?>
-                        <div class="competition-card" data-category="<?php echo htmlspecialchars($competition['category']); ?>">
+                        <div class="competition-card" data-category="<?php echo htmlspecialchars($competition['category']); ?>" data-competition-id="<?php echo $competition['id']; ?>">
                             <span class="competition-category">
                                 <?php echo htmlspecialchars(Competition::getCategoryLabel($competition['category'])); ?>
                             </span>
@@ -705,6 +705,29 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
+
+<!-- E-commerce: Impressions -->
+<script>
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+    "ecommerce": {
+        "currencyCode": "RUB",
+        "impressions": [
+            <?php foreach ($competitions as $index => $comp): ?>
+            {
+                "id": "<?php echo $comp['id']; ?>",
+                "name": "<?php echo htmlspecialchars($comp['title'], ENT_QUOTES); ?>",
+                "price": <?php echo $comp['price']; ?>,
+                "brand": "Педпортал",
+                "category": "<?php echo htmlspecialchars(Competition::getCategoryLabel($comp['category']), ENT_QUOTES); ?>",
+                "list": "Главная страница",
+                "position": <?php echo $index + 1; ?>
+            }<?php echo ($index < count($competitions) - 1) ? ',' : ''; ?>
+            <?php endforeach; ?>
+        ]
+    }
+});
+</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -1069,6 +1092,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
     }
+
+    // E-commerce: Click на конкурс
+    document.querySelectorAll('.competition-card a.btn').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            const card = this.closest('.competition-card');
+            const productData = {
+                "id": card.dataset.competitionId,
+                "name": card.querySelector('h3').textContent,
+                "price": parseFloat(card.querySelector('.competition-price').textContent.replace(/[^\d]/g, '')),
+                "brand": "Педпортал",
+                "category": card.querySelector('.competition-category').textContent.trim()
+            };
+
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({
+                "ecommerce": {
+                    "currencyCode": "RUB",
+                    "click": {
+                        "actionField": {"list": "Главная страница"},
+                        "products": [productData]
+                    }
+                }
+            });
+        });
+    });
 });
 </script>
 

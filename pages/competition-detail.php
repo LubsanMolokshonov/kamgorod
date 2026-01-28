@@ -1729,6 +1729,49 @@ document.querySelectorAll('.feature-card, .nomination-card, .award-card').forEac
     </div>
 </div>
 
+<!-- E-commerce: Detail (просмотр товара) -->
+<?php
+// Получить тип учреждения для e-commerce
+$audienceTypeStmt = $db->prepare("
+    SELECT at.name
+    FROM audience_types at
+    JOIN competition_audience_types cat ON at.id = cat.audience_type_id
+    WHERE cat.competition_id = ?
+    LIMIT 1
+");
+$audienceTypeStmt->execute([$competition['id']]);
+$ecomAudienceType = $audienceTypeStmt->fetchColumn() ?: 'Общее';
+
+// Получить специализацию для e-commerce
+$specializationStmt = $db->prepare("
+    SELECT aspc.name
+    FROM audience_specializations aspc
+    JOIN competition_specializations cs ON aspc.id = cs.specialization_id
+    WHERE cs.competition_id = ?
+    LIMIT 1
+");
+$specializationStmt->execute([$competition['id']]);
+$ecomSpecialization = $specializationStmt->fetchColumn() ?: '';
+?>
+<script>
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+    "ecommerce": {
+        "currencyCode": "RUB",
+        "detail": {
+            "actionField": {"list": "<?php echo htmlspecialchars($ecomSpecialization, ENT_QUOTES); ?>"},
+            "products": [{
+                "id": "<?php echo $competition['id']; ?>",
+                "name": "<?php echo htmlspecialchars($competition['title'], ENT_QUOTES); ?>",
+                "price": <?php echo $competition['price']; ?>,
+                "brand": "Педпортал",
+                "category": "<?php echo htmlspecialchars($ecomAudienceType, ENT_QUOTES); ?>"
+            }]
+        }
+    }
+});
+</script>
+
 <?php
 // Include footer
 include __DIR__ . '/../includes/footer.php';

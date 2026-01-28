@@ -321,6 +321,36 @@ include __DIR__ . '/../includes/header.php';
                 }, 1000);
             </script>
 
+            <!-- E-commerce: Purchase event -->
+            <script>
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({
+                "ecommerce": {
+                    "currencyCode": "RUB",
+                    "purchase": {
+                        "actionField": {
+                            "id": "<?php echo htmlspecialchars($order['order_number']); ?>",
+                            "revenue": <?php echo $order['final_amount']; ?><?php if ($order['discount_amount'] > 0): ?>,
+                            "coupon": "2+1"<?php endif; ?>
+
+                        },
+                        "products": [
+                            <?php foreach ($order['items'] as $index => $item): ?>
+                            {
+                                "id": "<?php echo $item['competition_id']; ?>",
+                                "name": "<?php echo htmlspecialchars($item['competition_title'], ENT_QUOTES); ?>",
+                                "price": <?php echo $item['is_free_promotion'] ? 0 : $item['price']; ?>,
+                                "brand": "Педпортал",
+                                "variant": "<?php echo htmlspecialchars($item['nomination'], ENT_QUOTES); ?>",
+                                "quantity": 1
+                            }<?php echo ($index < count($order['items']) - 1) ? ',' : ''; ?>
+                            <?php endforeach; ?>
+                        ]
+                    }
+                }
+            });
+            </script>
+
         <?php endif; ?>
     </div>
 </div>

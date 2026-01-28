@@ -26,6 +26,27 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
+                    // E-commerce: Remove from cart event
+                    if (response.ecommerce) {
+                        window.dataLayer = window.dataLayer || [];
+                        window.dataLayer.push({
+                            "ecommerce": {
+                                "currencyCode": "RUB",
+                                "remove": {
+                                    "products": [{
+                                        "id": String(response.ecommerce.id),
+                                        "name": response.ecommerce.name,
+                                        "price": parseFloat(response.ecommerce.price),
+                                        "brand": "Педпортал",
+                                        "category": response.ecommerce.category,
+                                        "variant": response.ecommerce.nomination,
+                                        "quantity": 1
+                                    }]
+                                }
+                            }
+                        });
+                    }
+
                     // Animate removal
                     cartItem.slideUp(300, function() {
                         // Reload page to recalculate totals
