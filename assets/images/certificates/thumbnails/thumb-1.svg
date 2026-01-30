@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 595 842">
+  <defs>
+    <linearGradient id="bgGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E3A5F"/>
+      <stop offset="100%" style="stop-color:#2C5282"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F6E05E"/>
+      <stop offset="50%" style="stop-color:#ECC94B"/>
+      <stop offset="100%" style="stop-color:#D69E2E"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="595" height="842" fill="#f8fafc"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="595" height="180" fill="url(#bgGrad1)"/>
+
+  <!-- Decorative corners -->
+  <circle cx="40" cy="40" r="6" fill="url(#goldGrad)"/>
+  <circle cx="555" cy="40" r="6" fill="url(#goldGrad)"/>
+  <circle cx="40" cy="802" r="6" fill="url(#goldGrad)"/>
+  <circle cx="555" cy="802" r="6" fill="url(#goldGrad)"/>
+
+  <!-- Border frame -->
+  <rect x="20" y="20" width="555" height="802" fill="none" stroke="#1E3A5F" stroke-width="2" rx="8"/>
+  <rect x="30" y="30" width="535" height="782" fill="none" stroke="url(#goldGrad)" stroke-width="1" rx="6"/>
+
+  <!-- Title -->
+  <text x="297.5" y="80" text-anchor="middle" font-family="Georgia, serif" font-size="36" font-weight="bold" fill="white">СВИДЕТЕЛЬСТВО</text>
+  <text x="297.5" y="115" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#E2E8F0">О ПУБЛИКАЦИИ</text>
+
+  <!-- Journal icon -->
+  <g transform="translate(267, 130)">
+    <rect x="0" y="0" width="60" height="45" rx="4" fill="url(#goldGrad)"/>
+    <rect x="8" y="8" width="44" height="4" fill="#1E3A5F" opacity="0.3"/>
+    <rect x="8" y="16" width="36" height="3" fill="#1E3A5F" opacity="0.3"/>
+    <rect x="8" y="23" width="40" height="3" fill="#1E3A5F" opacity="0.3"/>
+    <rect x="8" y="30" width="30" height="3" fill="#1E3A5F" opacity="0.3"/>
+  </g>
+
+  <!-- Main content area -->
+  <text x="297.5" y="230" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#64748B">Настоящее свидетельство подтверждает, что</text>
+
+  <!-- Author name placeholder -->
+  <rect x="80" y="250" width="435" height="50" fill="white" stroke="#CBD5E1" stroke-width="1" rx="6"/>
+  <text x="297.5" y="282" text-anchor="middle" font-family="Georgia, serif" font-size="22" font-weight="bold" fill="#1E3A5F">ФИО Автора</text>
+
+  <!-- Publication info -->
+  <text x="297.5" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#64748B">опубликовал(а) материал в электронном журнале</text>
+  <text x="297.5" y="355" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#1E3A5F">«Педагогический портал Каменный город»</text>
+
+  <!-- Publication title -->
+  <text x="297.5" y="400" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#64748B">Название публикации:</text>
+  <rect x="60" y="415" width="475" height="60" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1" rx="6"/>
+  <text x="297.5" y="450" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#334155">«Название работы»</text>
+
+  <!-- Details section -->
+  <g transform="translate(80, 500)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="12" fill="#64748B">Учреждение:</text>
+    <text x="100" y="0" font-family="Arial, sans-serif" font-size="12" fill="#334155">Название учреждения</text>
+
+    <text x="0" y="25" font-family="Arial, sans-serif" font-size="12" fill="#64748B">Населенный пункт:</text>
+    <text x="100" y="25" font-family="Arial, sans-serif" font-size="12" fill="#334155">Город</text>
+
+    <text x="0" y="50" font-family="Arial, sans-serif" font-size="12" fill="#64748B">Должность:</text>
+    <text x="100" y="50" font-family="Arial, sans-serif" font-size="12" fill="#334155">Должность автора</text>
+
+    <text x="0" y="75" font-family="Arial, sans-serif" font-size="12" fill="#64748B">Направление:</text>
+    <text x="100" y="75" font-family="Arial, sans-serif" font-size="12" fill="#334155">Методическая разработка</text>
+  </g>
+
+  <!-- Certificate number -->
+  <text x="297.5" y="620" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#94A3B8">Свидетельство № СВ-2026-000001</text>
+
+  <!-- Date -->
+  <g transform="translate(80, 660)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="12" fill="#64748B">Дата публикации:</text>
+    <line x1="100" y1="2" x2="200" y2="2" stroke="#CBD5E1" stroke-width="1"/>
+    <text x="120" y="0" font-family="Arial, sans-serif" font-size="12" fill="#334155">29.01.2026</text>
+  </g>
+
+  <!-- Signature -->
+  <g transform="translate(350, 660)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="12" fill="#64748B">Директор:</text>
+    <line x1="60" y1="2" x2="160" y2="2" stroke="#CBD5E1" stroke-width="1"/>
+  </g>
+
+  <!-- Footer -->
+  <rect x="0" y="720" width="595" height="122" fill="url(#bgGrad1)"/>
+  <text x="297.5" y="760" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#E2E8F0">ООО «Едурегионлаб» | ИНН 5904368615</text>
+  <text x="297.5" y="780" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#94A3B8">Лицензия № Л035-01212-59/00203856 от 17.12.2021</text>
+  <text x="297.5" y="800" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#94A3B8">fgos.pro</text>
+</svg>

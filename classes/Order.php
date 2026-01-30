@@ -14,30 +14,51 @@ class Order {
     /**
      * Create new order from cart
      * Returns order ID
+     * @param int $userId User ID
+     * @param array $cartData Cart data with items, subtotal, discount, total
+     * @param array $certificatesData Optional array of certificate data
+     * @param float $grandTotal Optional grand total including certificates
      */
-    public function createFromCart($userId, $cartData) {
+    public function createFromCart($userId, $cartData, $certificatesData = [], $grandTotal = null) {
         $orderNumber = self::generateOrderNumber();
+
+        // Use totals from cartData (already includes all items with unified 2+1 promotion)
+        $subtotal = $cartData['subtotal'] ?? 0;
+        $discount = $cartData['discount'] ?? 0;
+        $finalAmount = $grandTotal ?? ($cartData['total'] ?? 0);
 
         $insertData = [
             'user_id' => $userId,
             'order_number' => $orderNumber,
-            'total_amount' => $cartData['subtotal'],
-            'discount_amount' => $cartData['discount'],
-            'final_amount' => $cartData['total'],
-            'promotion_applied' => $cartData['promotion_applied'] ? 1 : 0,
+            'total_amount' => $subtotal,
+            'discount_amount' => $discount,
+            'final_amount' => $finalAmount,
+            'promotion_applied' => ($cartData['promotion_applied'] ?? false) ? 1 : 0,
             'payment_status' => 'pending'
         ];
 
         $orderId = $this->db->insert('orders', $insertData);
 
-        // Create order items
-        if ($orderId) {
+        // Create order items for registrations
+        if ($orderId && !empty($cartData['items'])) {
             foreach ($cartData['items'] as $item) {
                 $this->db->insert('order_items', [
                     'order_id' => $orderId,
                     'registration_id' => $item['registration_id'],
                     'price' => $item['price'],
                     'is_free_promotion' => $item['is_free'] ? 1 : 0
+                ]);
+            }
+        }
+
+        // Create order items for certificates (with promotion support)
+        if ($orderId && !empty($certificatesData)) {
+            foreach ($certificatesData as $cert) {
+                $this->db->insert('order_items', [
+                    'order_id' => $orderId,
+                    'certificate_id' => $cert['id'],
+                    'price' => $cert['price'] ?? 149,
+                    'is_free_promotion' => !empty($cert['is_free']) ? 1 : 0
                 ]);
             }
         }
@@ -103,15 +124,20 @@ class Order {
     }
 
     /**
-     * Get order items with registration details
+     * Get order items with registration and certificate details
      */
     public function getOrderItems($orderId) {
         return $this->db->query(
-            "SELECT oi.*, r.nomination, r.work_title,
-                    c.title as competition_title, c.category
+            "SELECT oi.*,
+                    r.nomination, r.work_title,
+                    c.title as competition_title, c.category,
+                    pc.publication_id, pc.author_name as cert_author_name,
+                    p.title as publication_title
              FROM order_items oi
-             JOIN registrations r ON oi.registration_id = r.id
-             JOIN competitions c ON r.competition_id = c.id
+             LEFT JOIN registrations r ON oi.registration_id = r.id
+             LEFT JOIN competitions c ON r.competition_id = c.id
+             LEFT JOIN publication_certificates pc ON oi.certificate_id = pc.id
+             LEFT JOIN publications p ON pc.publication_id = p.id
              WHERE oi.order_id = ?",
             [$orderId]
         );

@@ -131,10 +131,9 @@ a:hover {
 }
 
 .logo-image {
-    width: 270px;
-    height: 85px;
-    object-fit: cover;
-    object-position: center;
+    width: auto;
+    height: 50px;
+    object-fit: contain;
     transition: transform var(--transition-speed) ease-in-out;
 }
 
@@ -188,6 +187,69 @@ a:hover {
 .main-nav a:hover {
     color: var(--primary-purple);
     opacity: 1;
+}
+
+/* Navigation Dropdown */
+.nav-dropdown {
+    position: relative;
+}
+
+.nav-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.nav-dropdown-trigger::after {
+    content: '';
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid currentColor;
+    transition: transform 0.2s;
+}
+
+.nav-dropdown:hover .nav-dropdown-trigger::after {
+    transform: rotate(180deg);
+}
+
+.nav-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    min-width: 220px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.nav-dropdown:hover .nav-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.nav-dropdown-menu .dropdown-item {
+    display: block;
+    padding: 12px 20px;
+    color: var(--text-dark);
+    font-size: 14px;
+    font-weight: 400;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.nav-dropdown-menu .dropdown-item:hover {
+    background: var(--bg-light);
+    color: var(--primary-purple);
 }
 
 .nav-cta {
@@ -919,6 +981,34 @@ main {
 
     .main-nav.active {
         display: flex;
+    }
+
+    /* Mobile nav dropdown */
+    .nav-dropdown {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .nav-dropdown-trigger::after {
+        display: none;
+    }
+
+    .nav-dropdown-menu {
+        position: static;
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        box-shadow: none;
+        background: var(--bg-light);
+        border-radius: 8px;
+        min-width: 100%;
+        padding: 8px 0;
+    }
+
+    .nav-dropdown-menu .dropdown-item {
+        padding: 10px 16px;
+        font-size: 14px;
     }
 
     .hamburger {

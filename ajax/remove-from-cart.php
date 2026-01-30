@@ -1,7 +1,7 @@
 <?php
 /**
  * Remove Item from Cart AJAX Endpoint
- * Removes registration from session cart
+ * Removes registration or certificate from session cart
  */
 
 session_start();
@@ -10,13 +10,32 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/session.php';
 
-// Get registration ID
+// Get item IDs
 $registrationId = $_POST['registration_id'] ?? null;
+$certificateId = $_POST['certificate_id'] ?? null;
 
+// Handle certificate removal
+if ($certificateId) {
+    if (removeCertificateFromCart($certificateId)) {
+        echo json_encode([
+            'success' => true,
+            'message' => 'Свидетельство удалено из корзины',
+            'cart_count' => getCartCount()
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Свидетельство не найдено в корзине'
+        ]);
+    }
+    exit;
+}
+
+// Handle registration removal
 if (!$registrationId) {
     echo json_encode([
         'success' => false,
-        'message' => 'ID регистрации не указан'
+        'message' => 'ID не указан'
     ]);
     exit;
 }

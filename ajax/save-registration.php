@@ -12,6 +12,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Registration.php';
 require_once __DIR__ . '/../classes/Validator.php';
+require_once __DIR__ . '/../classes/EmailJourney.php';
 
 // Validate inputs
 $validator = new Validator($_POST);
@@ -96,6 +97,15 @@ try {
     }
 
     $_SESSION['user_id'] = $userId;
+
+    // Schedule email journey for unpaid registration
+    try {
+        $emailJourney = new EmailJourney($db);
+        $emailJourney->scheduleForRegistration($registrationId, $userId);
+    } catch (Exception $e) {
+        // Log error but don't fail the registration
+        error_log('Email Journey scheduling error: ' . $e->getMessage());
+    }
 
     // Получить данные конкурса для e-commerce
     $competitionStmt = $db->prepare("SELECT id, title, price, category FROM competitions WHERE id = ?");

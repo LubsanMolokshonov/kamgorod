@@ -8,6 +8,8 @@ session_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
+require_once __DIR__ . '/../classes/Publication.php';
+require_once __DIR__ . '/../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Auto-login via cookie if session doesn't exist
@@ -55,10 +57,19 @@ $stmt = $db->prepare("
 $stmt->execute([$_SESSION['user_email']]);
 $registrations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Get user's publications
+$publicationObj = new Publication($db);
+$certObj = new PublicationCertificate($db);
+$userPublications = $publicationObj->getByUser($_SESSION['user_id']);
+$userCertificates = $certObj->getByUser($_SESSION['user_id']);
+
+// Current tab
+$activeTab = $_GET['tab'] ?? 'diplomas';
+
 // Page metadata
 $pageTitle = 'Личный кабинет | ' . SITE_NAME;
 $pageDescription = 'Ваши регистрации и дипломы';
-$additionalCSS = ['/assets/css/cabinet.css'];
+$additionalCSS = ['/assets/css/cabinet.css', '/assets/css/journal.css?v=' . time()];
 
 // Include header
 include __DIR__ . '/../includes/header.php';
@@ -75,7 +86,169 @@ include __DIR__ . '/../includes/header.php';
             </p>
         </div>
 
-        <?php if (empty($registrations)): ?>
+        <!-- Tabs -->
+        <div class="cabinet-tabs">
+            <a href="?tab=diplomas" class="cabinet-tab <?php echo $activeTab === 'diplomas' ? 'active' : ''; ?>">
+                <span class="tab-icon">🏆</span>
+                Дипломы
+                <?php if (!empty($registrations)): ?>
+                    <span class="tab-count"><?php echo count($registrations); ?></span>
+                <?php endif; ?>
+            </a>
+            <a href="?tab=publications" class="cabinet-tab <?php echo $activeTab === 'publications' ? 'active' : ''; ?>">
+                <span class="tab-icon">📄</span>
+                Публикации
+                <?php if (!empty($userPublications)): ?>
+                    <span class="tab-count"><?php echo count($userPublications); ?></span>
+                <?php endif; ?>
+            </a>
+        </div>
+
+        <?php if ($activeTab === 'publications'): ?>
+            <!-- Publications Tab -->
+            <?php if (empty($userPublications)): ?>
+                <div class="empty-cabinet">
+                    <div class="empty-icon">📄</div>
+                    <h2>У вас пока нет публикаций</h2>
+                    <p>Опубликуйте свой материал и получите свидетельство</p>
+                    <a href="/pages/submit-publication.php" class="btn btn-primary">
+                        Опубликовать статью
+                    </a>
+                </div>
+            <?php else: ?>
+                <!-- Success message for new payments -->
+                <?php if (isset($_GET['payment']) && $_GET['payment'] === 'success'): ?>
+                    <div class="success-message">
+                        <div class="success-icon">✅</div>
+                        <div>
+                            <h3>Оплата успешно завершена!</h3>
+                            <p>Ваше свидетельство готово к скачиванию</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <div class="registrations-section">
+                    <h2>Ваши публикации (<?php echo count($userPublications); ?>)</h2>
+
+                    <div class="registrations-grid">
+                        <?php foreach ($userPublications as $pub):
+                            // Get certificate for this publication
+                            $pubCert = null;
+                            foreach ($userCertificates as $cert) {
+                                if ($cert['publication_id'] == $pub['id']) {
+                                    $pubCert = $cert;
+                                    break;
+                                }
+                            }
+
+                            // Status mapping
+                            $statusMap = [
+                                'draft' => ['name' => 'Черновик', 'color' => '#9ca3af'],
+                                'pending' => ['name' => 'На модерации', 'color' => '#fbbf24'],
+                                'published' => ['name' => 'Опубликовано', 'color' => '#10b981'],
+                                'rejected' => ['name' => 'Отклонено', 'color' => '#ef4444']
+                            ];
+                            $statusInfo = $statusMap[$pub['status']] ?? ['name' => 'Неизвестно', 'color' => '#9ca3af'];
+
+                            $certStatusMap = [
+                                'none' => ['name' => 'Не оформлено', 'color' => '#9ca3af'],
+                                'pending' => ['name' => 'Ожидает оплаты', 'color' => '#fbbf24'],
+                                'paid' => ['name' => 'Оплачено', 'color' => '#3b82f6'],
+                                'ready' => ['name' => 'Готово', 'color' => '#10b981']
+                            ];
+                            $certStatusInfo = $certStatusMap[$pub['certificate_status']] ?? ['name' => 'Не оформлено', 'color' => '#9ca3af'];
+                        ?>
+                            <div class="registration-card">
+                                <div class="card-header">
+                                    <h3><?php echo htmlspecialchars($pub['title']); ?></h3>
+                                    <span class="status-badge" style="background-color: <?php echo $statusInfo['color']; ?>">
+                                        <?php echo $statusInfo['name']; ?>
+                                    </span>
+                                </div>
+
+                                <div class="card-body">
+                                    <?php if ($pub['type_name']): ?>
+                                        <div class="info-row">
+                                            <span class="label">Тип:</span>
+                                            <span class="value"><?php echo htmlspecialchars($pub['type_name']); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div class="info-row">
+                                        <span class="label">Дата загрузки:</span>
+                                        <span class="value"><?php echo date('d.m.Y H:i', strtotime($pub['created_at'])); ?></span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="label">Свидетельство:</span>
+                                        <span class="value" style="color: <?php echo $certStatusInfo['color']; ?>">
+                                            <?php echo $certStatusInfo['name']; ?>
+                                        </span>
+                                    </div>
+                                    <?php if ($pub['status'] === 'rejected' && $pub['moderation_comment']): ?>
+                                        <div class="info-row">
+                                            <span class="label">Причина:</span>
+                                            <span class="value" style="color: #ef4444;">
+                                                <?php echo htmlspecialchars($pub['moderation_comment']); ?>
+                                            </span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="card-actions">
+                                    <?php if ($pub['status'] === 'published'): ?>
+                                        <a href="/pages/publication.php?slug=<?php echo urlencode($pub['slug']); ?>"
+                                           class="btn btn-outline"
+                                           target="_blank">
+                                            👁 Просмотреть
+                                        </a>
+                                    <?php endif; ?>
+
+                                    <?php if ($pub['certificate_status'] === 'ready' && $pubCert): ?>
+                                        <a href="/ajax/download-certificate.php?id=<?php echo $pubCert['id']; ?>"
+                                           class="btn btn-success btn-download">
+                                            📥 Скачать свидетельство
+                                        </a>
+                                    <?php elseif ($pub['certificate_status'] === 'pending' || $pub['certificate_status'] === 'none'): ?>
+                                        <a href="/pages/publication-certificate.php?id=<?php echo $pub['id']; ?>"
+                                           class="btn btn-primary">
+                                            💳 Оформить свидетельство
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Info Section -->
+                <div class="info-section">
+                    <h3>О публикациях</h3>
+                    <ul>
+                        <li>
+                            <strong>Модерация:</strong> После загрузки публикация проходит проверку (1-2 рабочих дня)
+                        </li>
+                        <li>
+                            <strong>Свидетельство:</strong> Доступно для скачивания сразу после оплаты
+                        </li>
+                        <li>
+                            <strong>Журнал:</strong> После модерации публикация появляется в каталоге журнала
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Actions -->
+                <div class="cabinet-actions">
+                    <a href="/pages/submit-publication.php" class="btn btn-primary">
+                        Опубликовать ещё одну статью
+                    </a>
+                    <a href="/pages/journal.php" class="btn btn-outline">
+                        Перейти к журналу
+                    </a>
+                </div>
+            <?php endif; ?>
+
+        <?php else: ?>
+            <!-- Diplomas Tab (default) -->
+            <?php if (empty($registrations)): ?>
             <!-- No registrations -->
             <div class="empty-cabinet">
                 <div class="empty-icon">📋</div>
@@ -178,6 +351,7 @@ include __DIR__ . '/../includes/header.php';
                     Принять участие в других конкурсах
                 </a>
             </div>
+        <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>

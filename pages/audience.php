@@ -248,6 +248,8 @@ include __DIR__ . '/../includes/header.php';
 
         <!-- Контент с карточками -->
         <div class="content-area">
+            <?php include __DIR__ . '/../includes/catalog-search.php'; ?>
+
             <div class="competitions-count mb-20">
                 Найдено конкурсов: <strong id="totalCount"><?php echo $totalCompetitions; ?></strong>
             </div>

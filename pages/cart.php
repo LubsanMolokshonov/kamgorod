@@ -2,24 +2,101 @@
 /**
  * Shopping Cart Page
  * Displays cart items with 2+1 promotion and price calculation
+ * Supports both competition registrations and publication certificates
+ * Promotion applies to ALL item types combined
  */
 
 session_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Registration.php';
+require_once __DIR__ . '/../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Check if cart exists
+$registrations = getCart();
+$certificates = getCartCertificates();
+
 if (isCartEmpty()) {
     // Show empty cart page
     $isEmpty = true;
-    $cartData = null;
+    $allItems = [];
+    $subtotal = 0;
+    $discount = 0;
+    $grandTotal = 0;
+    $promotionApplied = false;
 } else {
-    // Calculate cart with promotion
-    $registrationObj = new Registration($db);
-    $cartData = $registrationObj->calculateCartTotal($_SESSION['cart']);
     $isEmpty = false;
+
+    // Collect ALL items into one array for unified promotion calculation
+    $allItems = [];
+
+    // Get registrations
+    $registrationObj = new Registration($db);
+    foreach ($registrations as $regId) {
+        $registration = $registrationObj->getById($regId);
+        if ($registration) {
+            $allItems[] = [
+                'type' => 'registration',
+                'id' => $regId,
+                'name' => $registration['competition_title'],
+                'meta' => 'Номинация: ' . $registration['nomination'],
+                'price' => (float)$registration['competition_price'],
+                'is_free' => false,
+                'raw_data' => $registration
+            ];
+        }
+    }
+
+    // Get certificates
+    $certObj = new PublicationCertificate($db);
+    foreach ($certificates as $certId) {
+        $cert = $certObj->getById($certId);
+        if ($cert) {
+            $allItems[] = [
+                'type' => 'certificate',
+                'id' => $cert['id'],
+                'name' => $cert['publication_title'],
+                'meta' => 'Свидетельство о публикации • ' . $cert['author_name'],
+                'price' => (float)($cert['price'] ?? 149),
+                'is_free' => false,
+                'raw_data' => $cert
+            ];
+        }
+    }
+
+    // Calculate subtotal
+    $subtotal = 0;
+    foreach ($allItems as $item) {
+        $subtotal += $item['price'];
+    }
+
+    // Apply 2+1 promotion to ALL items combined
+    $discount = 0;
+    $itemCount = count($allItems);
+    $promotionApplied = false;
+
+    if ($itemCount >= 3) {
+        // Sort by price descending to make cheapest items free
+        usort($allItems, function($a, $b) {
+            return $b['price'] <=> $a['price'];
+        });
+
+        // Calculate free items (every 3rd item)
+        $freeItemCount = floor($itemCount / 3);
+
+        for ($i = 0; $i < $freeItemCount; $i++) {
+            $freeIndex = ($i + 1) * 3 - 1; // Indices: 2, 5, 8, ...
+            if (isset($allItems[$freeIndex])) {
+                $allItems[$freeIndex]['is_free'] = true;
+                $discount += $allItems[$freeIndex]['price'];
+            }
+        }
+
+        $promotionApplied = true;
+    }
+
+    $grandTotal = $subtotal - $discount;
 }
 
 // Page metadata
@@ -38,10 +115,10 @@ include __DIR__ . '/../includes/header.php';
             <h1>
                 Ваша корзина
                 <?php if (!$isEmpty): ?>
-                    <span class="item-count-badge"><?php echo count($cartData['items']); ?> шт.</span>
+                    <span class="item-count-badge"><?php echo count($allItems); ?> шт.</span>
                 <?php endif; ?>
             </h1>
-            <p>Проверьте выбранные конкурсы перед оплатой</p>
+            <p>Проверьте выбранные товары перед оплатой</p>
         </div>
 
         <?php if ($isEmpty): ?>
@@ -49,45 +126,46 @@ include __DIR__ . '/../includes/header.php';
             <div class="empty-cart">
                 <div class="empty-cart-icon">🛒</div>
                 <h2>Корзина пуста</h2>
-                <p>Добавьте конкурсы в корзину, чтобы принять участие</p>
+                <p>Добавьте конкурсы или публикации в корзину</p>
                 <a href="/index.php" class="btn btn-primary">
                     Перейти к конкурсам
                 </a>
             </div>
         <?php else: ?>
             <!-- Promotion Banner -->
-            <?php if ($cartData['promotion_applied']): ?>
+            <?php if ($promotionApplied): ?>
                 <div class="promotion-banner">
                     <div class="promotion-icon">🎁</div>
                     <div class="promotion-content">
                         <h3>Акция применена!</h3>
-                        <p>При оплате 2 конкурсов — третий бесплатно! Вы экономите <?php echo number_format($cartData['discount'], 0, ',', ' '); ?> ₽</p>
+                        <p>При оплате 2 мероприятий — третье бесплатно! Вы экономите <?php echo number_format($discount, 0, ',', ' '); ?> ₽</p>
                     </div>
                 </div>
-            <?php else: ?>
+            <?php elseif (count($allItems) < 3): ?>
                 <div class="promotion-banner">
                     <div class="promotion-icon">✨</div>
                     <div class="promotion-content">
                         <h3>Специальное предложение!</h3>
-                        <p>При оплате 2 конкурсов — третий бесплатно!
-                        <?php if (count($cartData['items']) == 1): ?>
-                            Добавьте еще <?php echo 3 - count($cartData['items']); ?> конкурса, чтобы получить скидку.
-                        <?php elseif (count($cartData['items']) == 2): ?>
-                            Добавьте еще <?php echo 3 - count($cartData['items']); ?> конкурс, чтобы получить его бесплатно!
+                        <p>При оплате 2 мероприятий — третье бесплатно!
+                        <?php $remaining = 3 - count($allItems); ?>
+                        <?php if ($remaining == 2): ?>
+                            Добавьте еще 2 мероприятия, чтобы получить скидку.
+                        <?php elseif ($remaining == 1): ?>
+                            Добавьте еще 1 мероприятие, чтобы получить его бесплатно!
                         <?php endif; ?>
                         </p>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <!-- Cart Items -->
+            <!-- All Cart Items -->
             <div class="cart-items">
-                <?php foreach ($cartData['items'] as $item): ?>
+                <?php foreach ($allItems as $item): ?>
                     <div class="cart-item <?php echo $item['is_free'] ? 'free-item' : ''; ?>">
                         <div class="item-details">
-                            <div class="item-name"><?php echo htmlspecialchars($item['competition_name']); ?></div>
+                            <div class="item-name"><?php echo htmlspecialchars($item['name']); ?></div>
                             <div class="item-meta">
-                                Номинация: <?php echo htmlspecialchars($item['nomination']); ?>
+                                <?php echo htmlspecialchars($item['meta']); ?>
                             </div>
                         </div>
 
@@ -101,7 +179,11 @@ include __DIR__ . '/../includes/header.php';
                         </div>
 
                         <button class="remove-btn"
-                                data-registration-id="<?php echo $item['registration_id']; ?>"
+                                <?php if ($item['type'] === 'registration'): ?>
+                                    data-registration-id="<?php echo $item['id']; ?>"
+                                <?php else: ?>
+                                    data-certificate-id="<?php echo $item['id']; ?>"
+                                <?php endif; ?>
                                 title="Удалить из корзины">
                             ✕
                         </button>
@@ -112,7 +194,7 @@ include __DIR__ . '/../includes/header.php';
             <!-- Add More Button -->
             <div class="add-more-section">
                 <a href="/index.php?from=cart" class="add-more-btn">
-                    + Принять участие еще в одном конкурсе
+                    + Добавить ещё мероприятие
                 </a>
             </div>
 
@@ -120,19 +202,19 @@ include __DIR__ . '/../includes/header.php';
             <div class="price-summary">
                 <div class="summary-row">
                     <span>Сумма:</span>
-                    <span><?php echo number_format($cartData['subtotal'], 0, ',', ' '); ?> ₽</span>
+                    <span><?php echo number_format($subtotal, 0, ',', ' '); ?> ₽</span>
                 </div>
 
-                <?php if ($cartData['discount'] > 0): ?>
+                <?php if ($discount > 0): ?>
                     <div class="summary-row discount">
                         <span>Скидка (акция 2+1):</span>
-                        <span>-<?php echo number_format($cartData['discount'], 0, ',', ' '); ?> ₽</span>
+                        <span>-<?php echo number_format($discount, 0, ',', ' '); ?> ₽</span>
                     </div>
                 <?php endif; ?>
 
                 <div class="summary-row total">
                     <span>Итого к оплате:</span>
-                    <span><?php echo number_format($cartData['total'], 0, ',', ' '); ?> ₽</span>
+                    <span><?php echo number_format($grandTotal, 0, ',', ' '); ?> ₽</span>
                 </div>
             </div>
 
@@ -141,7 +223,7 @@ include __DIR__ . '/../includes/header.php';
                 <form action="/ajax/create-payment.php" method="POST" id="paymentForm">
                     <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                     <button type="submit" class="btn btn-danger payment-btn">
-                        Перейти к оплате (<?php echo number_format($cartData['total'], 0, ',', ' '); ?> ₽)
+                        Перейти к оплате (<?php echo number_format($grandTotal, 0, ',', ' '); ?> ₽)
                     </button>
                 </form>
                 <p style="margin-top: 16px; color: var(--text-medium); font-size: 14px;">
@@ -154,8 +236,8 @@ include __DIR__ . '/../includes/header.php';
                 <h3 style="color: var(--primary-purple); margin-bottom: 16px;">Что дальше?</h3>
                 <ol style="padding-left: 20px; color: var(--text-medium);">
                     <li style="margin-bottom: 8px;">После оплаты вы автоматически попадете в личный кабинет</li>
-                    <li style="margin-bottom: 8px;">Дипломы будут доступны для скачивания сразу после оплаты</li>
-                    <li style="margin-bottom: 8px;">Дипломы предоставляются в формате PDF высокого качества</li>
+                    <li style="margin-bottom: 8px;">Дипломы и свидетельства будут доступны для скачивания сразу после оплаты</li>
+                    <li style="margin-bottom: 8px;">Документы предоставляются в формате PDF высокого качества</li>
                     <li>На ваш email придет подтверждение оплаты</li>
                 </ol>
             </div>
@@ -164,8 +246,9 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-// Inline handler to ensure it works (backup for cart.js)
+// Cart page handler
 document.addEventListener('DOMContentLoaded', function() {
+    // Payment form handler
     const form = document.getElementById('paymentForm');
     if (form) {
         form.addEventListener('submit', function(e) {
@@ -201,6 +284,39 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    // Remove buttons handler (for both registrations and certificates)
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const registrationId = this.dataset.registrationId;
+            const certificateId = this.dataset.certificateId;
+
+            const formData = new FormData();
+            if (registrationId) {
+                formData.append('registration_id', registrationId);
+            } else if (certificateId) {
+                formData.append('certificate_id', certificateId);
+            }
+
+            fetch('/ajax/remove-from-cart.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload page to update totals
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Ошибка удаления');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при удалении');
+            });
+        });
+    });
 });
 </script>
 

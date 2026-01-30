@@ -22,7 +22,7 @@ function getCart() {
 }
 
 /**
- * Add item to cart
+ * Add item to cart (competition registration)
  */
 function addToCart($registrationId) {
     initSession();
@@ -33,6 +33,53 @@ function addToCart($registrationId) {
 
     if (!in_array($registrationId, $_SESSION['cart'])) {
         $_SESSION['cart'][] = $registrationId;
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Add publication certificate to cart
+ */
+function addCertificateToCart($certificateId) {
+    initSession();
+
+    if (!isset($_SESSION['cart_certificates'])) {
+        $_SESSION['cart_certificates'] = [];
+    }
+
+    if (!in_array($certificateId, $_SESSION['cart_certificates'])) {
+        $_SESSION['cart_certificates'][] = $certificateId;
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Get publication certificates from cart
+ */
+function getCartCertificates() {
+    initSession();
+    return $_SESSION['cart_certificates'] ?? [];
+}
+
+/**
+ * Remove certificate from cart
+ */
+function removeCertificateFromCart($certificateId) {
+    initSession();
+
+    if (!isset($_SESSION['cart_certificates'])) {
+        return false;
+    }
+
+    $key = array_search($certificateId, $_SESSION['cart_certificates']);
+
+    if ($key !== false) {
+        unset($_SESSION['cart_certificates'][$key]);
+        $_SESSION['cart_certificates'] = array_values($_SESSION['cart_certificates']);
         return true;
     }
 
@@ -61,50 +108,63 @@ function removeFromCart($registrationId) {
 }
 
 /**
- * Clear cart
+ * Clear cart (both registrations and certificates)
  */
 function clearCart() {
     initSession();
     $_SESSION['cart'] = [];
+    $_SESSION['cart_certificates'] = [];
 }
 
 /**
- * Get cart count
+ * Get cart count (registrations + certificates)
  */
 function getCartCount() {
-    return count(getCart());
+    return count(getCart()) + count(getCartCertificates());
 }
 
 /**
  * Check if cart is empty
  */
 function isCartEmpty() {
-    return getCartCount() === 0;
+    return count(getCart()) === 0 && count(getCartCertificates()) === 0;
 }
 
 /**
  * Get cart total amount
- * Returns total price considering 2+1 promotion
+ * Returns total price considering 2+1 promotion for registrations + certificates
  */
 function getCartTotal() {
-    $cart = getCart();
-
-    if (empty($cart)) {
-        return 0;
-    }
-
-    // We need to calculate the total with promotion
-    // This requires database access
     global $db;
     if (!isset($db)) {
         return 0;
     }
 
-    require_once __DIR__ . '/../classes/Registration.php';
-    $registrationObj = new Registration($db);
-    $cartData = $registrationObj->calculateCartTotal($cart);
+    $total = 0;
 
-    return $cartData['total'];
+    // Calculate registrations total with promotion
+    $cart = getCart();
+    if (!empty($cart)) {
+        require_once __DIR__ . '/../classes/Registration.php';
+        $registrationObj = new Registration($db);
+        $cartData = $registrationObj->calculateCartTotal($cart);
+        $total += $cartData['total'];
+    }
+
+    // Add certificates total (no promotion for certificates)
+    $certificates = getCartCertificates();
+    if (!empty($certificates)) {
+        require_once __DIR__ . '/../classes/PublicationCertificate.php';
+        $certObj = new PublicationCertificate($db);
+        foreach ($certificates as $certId) {
+            $cert = $certObj->getById($certId);
+            if ($cert) {
+                $total += (float)($cert['price'] ?? 149);
+            }
+        }
+    }
+
+    return $total;
 }
 
 /**

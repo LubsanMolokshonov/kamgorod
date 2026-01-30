@@ -11,6 +11,7 @@ initSession();
     <title><?php echo $pageTitle ?? 'Педагогический портал'; ?></title>
     <meta name="description" content="<?php echo $pageDescription ?? 'Всероссийские конкурсы для педагогов и школьников'; ?>">
     <link rel="stylesheet" href="/assets/css/main.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="/assets/css/search.css?v=<?php echo time(); ?>">
 
     <!-- Yandex.Metrika counter -->
     <script type="text/javascript">
@@ -42,7 +43,7 @@ initSession();
         <div class="container">
             <div class="header-container">
                 <a href="/index.php" class="logo">
-                    <img src="/logo.png" alt="<?php echo SITE_NAME ?? 'Педагогический портал'; ?>" class="logo-image">
+                    <img src="/assets/images/logo.svg" alt="<?php echo SITE_NAME ?? 'Педагогический портал'; ?>" class="logo-image">
                 </a>
 
                 <div class="header-smi-badge">
@@ -50,37 +51,53 @@ initSession();
                     <span>Эл. №ФС 77-74524 от 24.12.2018</span>
                 </div>
 
-                <?php
-                // Получить типы аудитории для dropdown
-                if (!isset($audienceTypes)) {
-                    require_once __DIR__ . '/../classes/AudienceType.php';
-                    $audienceTypeObj = new AudienceType($db);
-                    $audienceTypes = $audienceTypeObj->getAll();
-                }
-                ?>
+                <!-- Поиск конкурсов -->
+                <div class="header-search" id="headerSearch">
+                    <div class="search-container">
+                        <input type="text"
+                               class="search-input"
+                               id="searchInput"
+                               placeholder="Найти конкурс..."
+                               autocomplete="off"
+                               aria-label="Поиск конкурсов">
+                        <button type="button" class="search-clear" id="searchClear" aria-label="Очистить">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="search-btn" id="searchBtn" aria-label="Искать">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
 
-                <!-- Dropdown меню для выбора аудитории -->
-                <div class="audience-dropdown">
-                    <button class="audience-dropdown-btn" id="audienceDropdownBtn">
-                        <span>Для кого конкурсы?</span>
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M4 6L8 10L12 6H4Z"/>
-                        </svg>
-                    </button>
-
-                    <div class="audience-dropdown-menu" id="audienceDropdownMenu">
-                        <a href="/index.php" class="dropdown-item">Все конкурсы</a>
-                        <div class="dropdown-divider"></div>
-                        <?php foreach ($audienceTypes as $type): ?>
-                        <a href="/<?php echo $type['slug']; ?>" class="dropdown-item">
-                            <?php echo htmlspecialchars($type['name']); ?>
-                        </a>
-                        <?php endforeach; ?>
+                    <!-- Dropdown с результатами -->
+                    <div class="search-results" id="searchResults">
+                        <div class="search-results-inner">
+                            <!-- Результаты будут добавлены динамически -->
+                        </div>
+                        <div class="search-loading" id="searchLoading">
+                            <div class="search-spinner"></div>
+                            <span>Поиск...</span>
+                        </div>
+                        <div class="search-empty" id="searchEmpty">
+                            <span>Ничего не найдено</span>
+                            <p>Попробуйте изменить запрос</p>
+                        </div>
                     </div>
                 </div>
 
                 <nav class="main-nav" id="mainNav">
                     <a href="/index.php">Конкурсы</a>
+                    <div class="nav-dropdown">
+                        <a href="/pages/journal.php" class="nav-dropdown-trigger">Журнал</a>
+                        <div class="nav-dropdown-menu">
+                            <a href="/pages/journal.php" class="dropdown-item">О журнале</a>
+                            <a href="/pages/journal.php#catalog" class="dropdown-item">Опубликованные материалы</a>
+                            <a href="/pages/submit-publication.php" class="dropdown-item">Опубликовать статью</a>
+                        </div>
+                    </div>
                     <a href="/pages/about.php">О портале</a>
                     <?php if (isset($_SESSION['user_email'])): ?>
                         <a href="/pages/cabinet.php">Личный кабинет</a>
@@ -105,6 +122,13 @@ initSession();
                 </a>
                 <?php endif; ?>
 
+                <!-- Mobile Search Trigger -->
+                <button type="button" class="mobile-search-trigger" id="mobileSearchTrigger" aria-label="Поиск">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+
                 <div class="hamburger" id="hamburger">
                     <span></span>
                     <span></span>
@@ -113,27 +137,5 @@ initSession();
             </div>
         </div>
     </header>
-
-    <script>
-    // Dropdown для аудитории
-    document.addEventListener('DOMContentLoaded', function() {
-        const dropdownBtn = document.getElementById('audienceDropdownBtn');
-        const dropdownMenu = document.getElementById('audienceDropdownMenu');
-
-        if (dropdownBtn && dropdownMenu) {
-            dropdownBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                dropdownMenu.classList.toggle('show');
-            });
-
-            // Закрыть при клике вне dropdown
-            document.addEventListener('click', function(e) {
-                if (!dropdownBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
-                    dropdownMenu.classList.remove('show');
-                }
-            });
-        }
-    });
-    </script>
 
     <main>

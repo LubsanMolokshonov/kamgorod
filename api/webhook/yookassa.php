@@ -33,6 +33,8 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../classes/Database.php';
 require_once __DIR__ . '/../../classes/Order.php';
 require_once __DIR__ . '/../../classes/Registration.php';
+require_once __DIR__ . '/../../classes/PublicationCertificate.php';
+require_once __DIR__ . '/../../classes/EmailJourney.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -160,10 +162,34 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
         // Mark all registrations as paid
         $orderObj->markRegistrationsAsPaid($orderId);
 
+        // Mark all publication certificates as paid and generate them
+        $certObj = new PublicationCertificate($GLOBALS['db']);
+        $orderItems = $orderObj->getOrderItems($orderId);
+        foreach ($orderItems as $item) {
+            if (!empty($item['certificate_id'])) {
+                $certObj->updateStatus($item['certificate_id'], 'paid');
+                $certObj->generate($item['certificate_id']);
+                logWebhook('INFO', $paymentId, "Certificate {$item['certificate_id']} generated for order {$orderNumber}", '');
+            }
+        }
+
         // COMMIT TRANSACTION
         $GLOBALS['db']->commit();
 
         logWebhook('SUCCESS', $paymentId, "Order {$orderNumber} marked as succeeded", '');
+
+        // Cancel email journey for paid registrations
+        try {
+            $emailJourney = new EmailJourney($GLOBALS['db']);
+            foreach ($orderItems as $item) {
+                if (!empty($item['registration_id'])) {
+                    $emailJourney->cancelForRegistration($item['registration_id']);
+                }
+            }
+            logWebhook('INFO', $paymentId, "Email journey cancelled for order {$orderNumber}", '');
+        } catch (Exception $e) {
+            logWebhook('WARNING', $paymentId, "Email journey cancel failed: " . $e->getMessage(), '');
+        }
 
         // Send success email (non-blocking)
         try {
