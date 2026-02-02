@@ -19,6 +19,24 @@
                 </div>
 
                 <div class="footer-column">
+                    <h4>Вебинары</h4>
+                    <p>
+                        <a href="/pages/webinars.php">Все вебинары</a><br>
+                        <a href="/pages/webinars.php?upcoming=1">Ближайшие вебинары</a><br>
+                        <a href="/pages/webinars.php?archive=1">Архив записей</a>
+                    </p>
+                </div>
+
+                <div class="footer-column">
+                    <h4>Публикации</h4>
+                    <p>
+                        <a href="/pages/journal.php">Журнал публикаций</a><br>
+                        <a href="/pages/submit-publication.php">Опубликовать материал</a><br>
+                        <a href="/pages/publication-certificate.php">Получить сертификат</a>
+                    </p>
+                </div>
+
+                <div class="footer-column">
                     <h4>Помощь</h4>
                     <p>
                         <a href="/pages/faq.php">Частые вопросы</a><br>

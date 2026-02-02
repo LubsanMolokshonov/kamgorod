@@ -125,19 +125,7 @@ try {
         throw new Exception('Ошибка создания регистрации');
     }
 
-    // Send to Bitrix24 (async, don't fail if it fails)
-    try {
-        $bitrix24 = new Bitrix24Integration();
-        if ($bitrix24->isConfigured()) {
-            $leadId = $bitrix24->createWebinarLead($registrationData, $webinar);
-            if ($leadId) {
-                $registrationObj->updateBitrix24LeadId($registrationId, $leadId);
-            }
-        }
-    } catch (Exception $e) {
-        error_log("Bitrix24 error: " . $e->getMessage());
-        // Don't fail registration if Bitrix24 fails
-    }
+    // Note: Bitrix24 sync is handled automatically in WebinarRegistration::create()
 
     // Set session user if not logged in
     if (!getUserId()) {
