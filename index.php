@@ -171,7 +171,7 @@ include __DIR__ . '/includes/header.php';
 
                 <div class="feature-card feature-card--badge">
                     <div class="feature-logo">
-                        <img src="/Контент/eagle_s.svg" alt="СМИ" width="70" height="70">
+                        <img src="/assets/images/eagle_s.svg" alt="СМИ" width="70" height="70">
                     </div>
                     <div class="feature-text">
                         <span class="feature-label">Свидетельство о регистрации СМИ:</span>
