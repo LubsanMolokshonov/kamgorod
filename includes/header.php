@@ -90,6 +90,7 @@ initSession();
 
                 <nav class="main-nav" id="mainNav">
                     <a href="/index.php">Конкурсы</a>
+                    <a href="/pages/webinars.php">Вебинары</a>
                     <div class="nav-dropdown">
                         <a href="/pages/journal.php" class="nav-dropdown-trigger">Журнал</a>
                         <div class="nav-dropdown-menu">

@@ -4,6 +4,12 @@
  * Loads environment variables and defines application constants
  */
 
+// Prevent multiple inclusion
+if (defined('CONFIG_LOADED')) {
+    return;
+}
+define('CONFIG_LOADED', true);
+
 // Load .env file
 $envFile = __DIR__ . '/../.env';
 if (file_exists($envFile)) {
@@ -29,47 +35,53 @@ if (file_exists($envFile)) {
 }
 
 // Database Configuration
-define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
-define('DB_NAME', $_ENV['DB_NAME'] ?? 'pedagogy_platform');
-define('DB_USER', $_ENV['DB_USER'] ?? 'root');
-define('DB_PASS', $_ENV['DB_PASS'] ?? '');
-define('DB_CHARSET', 'utf8mb4');
+if (!defined('DB_HOST')) define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
+if (!defined('DB_NAME')) define('DB_NAME', $_ENV['DB_NAME'] ?? 'pedagogy_platform');
+if (!defined('DB_USER')) define('DB_USER', $_ENV['DB_USER'] ?? 'root');
+if (!defined('DB_PASS')) define('DB_PASS', $_ENV['DB_PASS'] ?? '');
+if (!defined('DB_CHARSET')) define('DB_CHARSET', 'utf8mb4');
 
 // Site Configuration
-define('SITE_URL', $_ENV['SITE_URL'] ?? 'http://localhost');
-define('SITE_NAME', $_ENV['SITE_NAME'] ?? 'Педагогический портал');
-define('APP_ENV', $_ENV['APP_ENV'] ?? 'local');
-define('BASE_PATH', dirname(__DIR__));
+if (!defined('SITE_URL')) define('SITE_URL', $_ENV['SITE_URL'] ?? 'http://localhost');
+if (!defined('SITE_NAME')) define('SITE_NAME', $_ENV['SITE_NAME'] ?? 'Педагогический портал');
+if (!defined('APP_ENV')) define('APP_ENV', $_ENV['APP_ENV'] ?? 'local');
+if (!defined('BASE_PATH')) define('BASE_PATH', dirname(__DIR__));
 
 // Yookassa Configuration
-define('YOOKASSA_SHOP_ID', $_ENV['YOOKASSA_SHOP_ID'] ?? '');
-define('YOOKASSA_SECRET_KEY', $_ENV['YOOKASSA_SECRET_KEY'] ?? '');
-define('YOOKASSA_MODE', $_ENV['YOOKASSA_MODE'] ?? 'sandbox');
+if (!defined('YOOKASSA_SHOP_ID')) define('YOOKASSA_SHOP_ID', $_ENV['YOOKASSA_SHOP_ID'] ?? '');
+if (!defined('YOOKASSA_SECRET_KEY')) define('YOOKASSA_SECRET_KEY', $_ENV['YOOKASSA_SECRET_KEY'] ?? '');
+if (!defined('YOOKASSA_MODE')) define('YOOKASSA_MODE', $_ENV['YOOKASSA_MODE'] ?? 'sandbox');
+
+// Bitrix24 CRM Integration
+if (!defined('BITRIX24_WEBHOOK_URL')) define('BITRIX24_WEBHOOK_URL', $_ENV['BITRIX24_WEBHOOK_URL'] ?? '');
+if (!defined('BITRIX24_WEBINAR_PIPELINE_ID')) define('BITRIX24_WEBINAR_PIPELINE_ID', $_ENV['BITRIX24_WEBINAR_PIPELINE_ID'] ?? 102);
 
 // Email Configuration
-define('SMTP_HOST', $_ENV['SMTP_HOST'] ?? '');
-define('SMTP_PORT', $_ENV['SMTP_PORT'] ?? 587);
-define('SMTP_USERNAME', $_ENV['SMTP_USERNAME'] ?? '');
-define('SMTP_PASSWORD', $_ENV['SMTP_PASSWORD'] ?? '');
-define('SMTP_FROM_EMAIL', $_ENV['SMTP_FROM_EMAIL'] ?? 'noreply@localhost');
-define('SMTP_FROM_NAME', $_ENV['SMTP_FROM_NAME'] ?? SITE_NAME);
+if (!defined('SMTP_HOST')) define('SMTP_HOST', $_ENV['SMTP_HOST'] ?? '');
+if (!defined('SMTP_PORT')) define('SMTP_PORT', $_ENV['SMTP_PORT'] ?? 587);
+if (!defined('SMTP_USERNAME')) define('SMTP_USERNAME', $_ENV['SMTP_USERNAME'] ?? '');
+if (!defined('SMTP_PASSWORD')) define('SMTP_PASSWORD', $_ENV['SMTP_PASSWORD'] ?? '');
+if (!defined('SMTP_FROM_EMAIL')) define('SMTP_FROM_EMAIL', $_ENV['SMTP_FROM_EMAIL'] ?? 'noreply@localhost');
+if (!defined('SMTP_FROM_NAME')) define('SMTP_FROM_NAME', defined('SITE_NAME') ? SITE_NAME : 'Педагогический портал');
 
 // Session Configuration
-define('SESSION_LIFETIME', $_ENV['SESSION_LIFETIME'] ?? 86400);
-define('COOKIE_LIFETIME', $_ENV['COOKIE_LIFETIME'] ?? 2592000); // 30 days
+if (!defined('SESSION_LIFETIME')) define('SESSION_LIFETIME', $_ENV['SESSION_LIFETIME'] ?? 86400);
+if (!defined('COOKIE_LIFETIME')) define('COOKIE_LIFETIME', $_ENV['COOKIE_LIFETIME'] ?? 2592000); // 30 days
 
 // Competition Categories
-define('COMPETITION_CATEGORIES', [
-    'methodology' => 'Методические разработки',
-    'extracurricular' => 'Внеурочная деятельность',
-    'student_projects' => 'Проекты учащихся',
-    'creative' => 'Творческие конкурсы'
-]);
+if (!defined('COMPETITION_CATEGORIES')) {
+    define('COMPETITION_CATEGORIES', [
+        'methodology' => 'Методические разработки',
+        'extracurricular' => 'Внеурочная деятельность',
+        'student_projects' => 'Проекты учащихся',
+        'creative' => 'Творческие конкурсы'
+    ]);
+}
 
 // File Upload Paths
-define('UPLOADS_DIR', BASE_PATH . '/uploads/diplomas/');
-define('TEMPLATES_DIR', BASE_PATH . '/assets/images/diplomas/templates/');
-define('THUMBNAILS_DIR', BASE_PATH . '/assets/images/diplomas/thumbnails/');
+if (!defined('UPLOADS_DIR')) define('UPLOADS_DIR', BASE_PATH . '/uploads/diplomas/');
+if (!defined('TEMPLATES_DIR')) define('TEMPLATES_DIR', BASE_PATH . '/assets/images/diplomas/templates/');
+if (!defined('THUMBNAILS_DIR')) define('THUMBNAILS_DIR', BASE_PATH . '/assets/images/diplomas/thumbnails/');
 
 // Ensure upload directories exist
 if (!file_exists(UPLOADS_DIR)) {
@@ -82,13 +94,15 @@ if (!file_exists(THUMBNAILS_DIR)) {
     mkdir(THUMBNAILS_DIR, 0755, true);
 }
 
-// Session Security Settings
-ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_samesite', 'Strict');
-if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
-    ini_set('session.cookie_secure', 1);
+// Session Security Settings (only if session not started)
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.cookie_samesite', 'Strict');
+    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+        ini_set('session.cookie_secure', 1);
+    }
+    ini_set('session.use_strict_mode', 1);
 }
-ini_set('session.use_strict_mode', 1);
 
 // Error Reporting (disable in production)
 if (YOOKASSA_MODE === 'sandbox') {
