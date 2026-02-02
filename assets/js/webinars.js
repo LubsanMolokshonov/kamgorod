@@ -7,9 +7,100 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize countdown timer
     initCountdown();
 
+    // Initialize phone mask
+    initPhoneMask();
+
     // Initialize registration form
     initRegistrationForm();
+
+    // Initialize smooth scroll for CTA button
+    initSmoothScroll();
 });
+
+/**
+ * Phone Input Mask
+ */
+function initPhoneMask() {
+    const phoneInput = document.getElementById('phone');
+    if (!phoneInput) return;
+
+    phoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+
+        // If starts with 8, replace with 7
+        if (value.startsWith('8')) {
+            value = '7' + value.substring(1);
+        }
+
+        // Limit to 11 digits
+        if (value.length > 11) {
+            value = value.substring(0, 11);
+        }
+
+        // Format the number
+        let formatted = '+7';
+        if (value.length > 1) {
+            formatted += ' (' + value.substring(1, 4);
+        }
+        if (value.length >= 4) {
+            formatted += ') ' + value.substring(4, 7);
+        }
+        if (value.length >= 7) {
+            formatted += '-' + value.substring(7, 9);
+        }
+        if (value.length >= 9) {
+            formatted += '-' + value.substring(9, 11);
+        }
+
+        e.target.value = formatted;
+    });
+
+    // Set initial value
+    if (!phoneInput.value || phoneInput.value.trim() === '') {
+        phoneInput.value = '+7 ';
+    }
+
+    // Prevent deleting country code
+    phoneInput.addEventListener('keydown', function(e) {
+        if ((e.key === 'Backspace' || e.key === 'Delete') &&
+            (e.target.selectionStart <= 3 || e.target.value.length <= 3)) {
+            e.preventDefault();
+            e.target.value = '+7 ';
+        }
+    });
+
+    // Handle focus
+    phoneInput.addEventListener('focus', function(e) {
+        if (!e.target.value || e.target.value === '+7') {
+            e.target.value = '+7 ';
+        }
+        // Set cursor after +7
+        setTimeout(() => {
+            e.target.setSelectionRange(3, 3);
+        }, 0);
+    });
+}
+
+/**
+ * Smooth Scroll to Registration Form
+ */
+function initSmoothScroll() {
+    const ctaButton = document.querySelector('.btn-hero-cta');
+    if (!ctaButton) return;
+
+    ctaButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        const targetSection = document.querySelector(targetId);
+
+        if (targetSection) {
+            targetSection.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    });
+}
 
 /**
  * Countdown Timer
@@ -60,6 +151,15 @@ function initRegistrationForm() {
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
+        // Validate consents first (152-FZ compliance)
+        if (typeof window.ConsentValidation !== 'undefined') {
+            if (!window.ConsentValidation.validate()) {
+                // Consent validation failed, scroll to consents
+                window.ConsentValidation.scrollToConsents();
+                return;
+            }
+        }
+
         // Disable button
         submitBtn.disabled = true;
         submitBtn.textContent = 'Регистрация...';
@@ -76,6 +176,11 @@ function initRegistrationForm() {
         if (urlParams.get('utm_source')) formData.append('utm_source', urlParams.get('utm_source'));
         if (urlParams.get('utm_medium')) formData.append('utm_medium', urlParams.get('utm_medium'));
         if (urlParams.get('utm_campaign')) formData.append('utm_campaign', urlParams.get('utm_campaign'));
+
+        // Add consent data to FormData (152-FZ compliance)
+        if (typeof window.ConsentValidation !== 'undefined') {
+            window.ConsentValidation.addToFormData(formData);
+        }
 
         try {
             const response = await fetch('/ajax/register-webinar.php', {
@@ -97,7 +202,8 @@ function initRegistrationForm() {
                 if (!data.already_registered) {
                     form.querySelectorAll('.form-group').forEach(el => el.style.display = 'none');
                     submitBtn.style.display = 'none';
-                    form.querySelector('.form-note').style.display = 'none';
+                    const formNote = form.querySelector('.form-note');
+                    if (formNote) formNote.style.display = 'none';
                 }
 
                 // Track conversion (Yandex Metrika)
@@ -112,7 +218,7 @@ function initRegistrationForm() {
 
                 // Re-enable button
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Зарегистрироваться бесплатно';
+                submitBtn.textContent = 'Зарегистрироваться';
             }
         } catch (error) {
             console.error('Registration error:', error);
@@ -122,7 +228,7 @@ function initRegistrationForm() {
 
             // Re-enable button
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Зарегистрироваться бесплатно';
+            submitBtn.textContent = 'Зарегистрироваться';
         }
     });
 }

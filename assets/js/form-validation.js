@@ -316,7 +316,7 @@ $(document).ready(function() {
 
                     // Redirect to cart (delay to allow dataLayer to send)
                     setTimeout(function() {
-                        window.location.href = '/pages/cart.php';
+                        window.location.href = '/korzina';
                     }, 300);
                 } else {
                     // Show error

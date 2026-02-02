@@ -54,13 +54,13 @@ include __DIR__ . "/../includes/header.php";
 <section class="webinars-filters">
     <div class="container">
         <div class="status-tabs">
-            <a href="?status=upcoming" class="tab <?php echo $status === "upcoming" ? "active" : ""; ?>">
+            <a href="/vebinary/predstoyashchie" class="tab <?php echo $status === "upcoming" ? "active" : ""; ?>">
                 Предстоящие <span class="tab-count"><?php echo $counts["upcoming"]; ?></span>
             </a>
-            <a href="?status=recordings" class="tab <?php echo $status === "recordings" ? "active" : ""; ?>">
+            <a href="/vebinary/zapisi" class="tab <?php echo $status === "recordings" ? "active" : ""; ?>">
                 Записи <span class="tab-count"><?php echo $counts["recordings"]; ?></span>
             </a>
-            <a href="?status=autowebinar" class="tab <?php echo $status === "autowebinar" ? "active" : ""; ?>">
+            <a href="/vebinary/avtovebinary" class="tab <?php echo $status === "autowebinar" ? "active" : ""; ?>">
                 Автовебинары <span class="tab-count"><?php echo $counts["autowebinars"]; ?></span>
             </a>
         </div>
@@ -68,9 +68,17 @@ include __DIR__ . "/../includes/header.php";
         <div class="audience-filter">
             <span class="filter-label">Тип учреждения:</span>
             <div class="filter-chips">
-                <a href="?status=<?php echo $status; ?>" class="chip <?php echo !$audienceTypeId ? "active" : ""; ?>">Все</a>
+                <?php
+                $baseUrl = match($status) {
+                    'upcoming' => '/vebinary/predstoyashchie',
+                    'recordings' => '/vebinary/zapisi',
+                    'autowebinar' => '/vebinary/avtovebinary',
+                    default => '/vebinary'
+                };
+                ?>
+                <a href="<?php echo $baseUrl; ?>" class="chip <?php echo !$audienceTypeId ? "active" : ""; ?>">Все</a>
                 <?php foreach ($audienceTypes as $type): ?>
-                    <a href="?status=<?php echo $status; ?>&audience_type=<?php echo $type["id"]; ?>"
+                    <a href="<?php echo $baseUrl; ?>?audience_type=<?php echo $type["id"]; ?>"
                        class="chip <?php echo $audienceTypeId == $type["id"] ? "active" : ""; ?>">
                         <?php echo htmlspecialchars($type["name"]); ?>
                     </a>
@@ -110,7 +118,7 @@ include __DIR__ . "/../includes/header.php";
                         </div>
 
                         <h3 class="webinar-card-title">
-                            <a href="/pages/webinar.php?slug=<?php echo htmlspecialchars($webinar["slug"]); ?>">
+                            <a href="/vebinar/<?php echo htmlspecialchars($webinar["slug"]); ?>">
                                 <?php echo htmlspecialchars($webinar["title"]); ?>
                             </a>
                         </h3>
@@ -136,7 +144,7 @@ include __DIR__ . "/../includes/header.php";
                                 <span class="meta-item"><?php echo $webinar["duration_minutes"]; ?> мин</span>
                                 <span class="meta-item"><?php echo $webinar["registrations_count"]; ?> участников</span>
                             </div>
-                            <a href="/pages/webinar.php?slug=<?php echo htmlspecialchars($webinar["slug"]); ?>"
+                            <a href="/vebinar/<?php echo htmlspecialchars($webinar["slug"]); ?>"
                                class="btn btn-primary btn-sm">
                                 <?php echo $isUpcoming ? "Зарегистрироваться" : "Подробнее"; ?>
                             </a>

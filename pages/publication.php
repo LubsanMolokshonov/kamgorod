@@ -23,11 +23,11 @@ if ($slug) {
     $publication = $publicationObj->getById($id);
     // Redirect to slug URL if published
     if ($publication && $publication['status'] === 'published' && $publication['slug']) {
-        header('Location: /pages/publication.php?slug=' . urlencode($publication['slug']), true, 301);
+        header('Location: /publikaciya/' . urlencode($publication['slug']), true, 301);
         exit;
     }
 } else {
-    header('Location: /pages/journal.php');
+    header('Location: /zhurnal');
     exit;
 }
 
@@ -40,7 +40,7 @@ if (!$publication || $publication['status'] !== 'published') {
         <div class="error-page">
             <h1>Публикация не найдена</h1>
             <p>Запрашиваемая публикация не существует или была удалена.</p>
-            <a href="/pages/journal.php" class="btn btn-primary">Перейти к журналу</a>
+            <a href="/zhurnal" class="btn btn-primary">Перейти к журналу</a>
         </div>
     </div>
     <?php
@@ -78,10 +78,10 @@ include __DIR__ . '/../includes/header.php';
                 <nav class="breadcrumbs">
                     <a href="/">Главная</a>
                     <span class="separator">/</span>
-                    <a href="/pages/journal.php">Журнал</a>
+                    <a href="/zhurnal">Журнал</a>
                     <?php if (!empty($tags)): ?>
                         <span class="separator">/</span>
-                        <a href="/pages/journal.php?tag=<?php echo urlencode($tags[0]['slug']); ?>">
+                        <a href="/zhurnal?tag=<?php echo urlencode($tags[0]['slug']); ?>">
                             <?php echo htmlspecialchars($tags[0]['name']); ?>
                         </a>
                     <?php endif; ?>
@@ -146,7 +146,7 @@ include __DIR__ . '/../includes/header.php';
                     <?php if (!empty($tags)): ?>
                         <div class="publication-tags">
                             <?php foreach ($tags as $tag): ?>
-                                <a href="/pages/journal.php?tag=<?php echo urlencode($tag['slug']); ?>"
+                                <a href="/zhurnal?tag=<?php echo urlencode($tag['slug']); ?>"
                                    class="tag-badge"
                                    style="--tag-color: <?php echo $tag['color'] ?? '#3498DB'; ?>">
                                     <?php echo htmlspecialchars($tag['name']); ?>
@@ -210,7 +210,7 @@ include __DIR__ . '/../includes/header.php';
                     <div class="cta-card">
                         <h3>Хотите опубликовать свой материал?</h3>
                         <p>Поделитесь своим опытом с коллегами и получите официальное свидетельство о публикации</p>
-                        <a href="/pages/submit-publication.php" class="btn btn-primary btn-lg">
+                        <a href="/opublikovat" class="btn btn-primary btn-lg">
                             Опубликовать статью
                         </a>
                     </div>
@@ -242,7 +242,7 @@ include __DIR__ . '/../includes/header.php';
                         <ul class="related-list">
                             <?php foreach ($related as $rel): ?>
                                 <li>
-                                    <a href="/pages/publication.php?slug=<?php echo urlencode($rel['slug']); ?>">
+                                    <a href="/publikaciya/<?php echo urlencode($rel['slug']); ?>">
                                         <span class="related-title"><?php echo htmlspecialchars($rel['title']); ?></span>
                                         <span class="related-author"><?php echo htmlspecialchars($rel['author_name']); ?></span>
                                     </a>
@@ -257,7 +257,7 @@ include __DIR__ . '/../includes/header.php';
                     <h3>Поделиться</h3>
                     <div class="share-buttons">
                         <?php
-                        $shareUrl = urlencode(SITE_URL . '/pages/publication.php?slug=' . $publication['slug']);
+                        $shareUrl = urlencode(SITE_URL . '/publikaciya/' . $publication['slug']);
                         $shareTitle = urlencode($publication['title']);
                         ?>
                         <a href="https://vk.com/share.php?url=<?php echo $shareUrl; ?>&title=<?php echo $shareTitle; ?>"

@@ -12,6 +12,7 @@ require_once __DIR__ . '/../classes/Competition.php';
 require_once __DIR__ . '/../classes/AudienceType.php';
 require_once __DIR__ . '/../classes/AudienceSpecialization.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/url-helper.php';
 
 // Получить slug типа аудитории из URL
 $audienceSlug = $_GET['slug'] ?? '';
@@ -27,7 +28,7 @@ $competitionObj = new Competition($db);
 $audienceType = $audienceTypeObj->getBySlug($audienceSlug);
 
 if (!$audienceType) {
-    header('Location: /index.php');
+    header('Location: /konkursy');
     exit;
 }
 
@@ -276,7 +277,10 @@ include __DIR__ . '/../includes/header.php';
                                 <span>/ участие</span>
                             </div>
 
-                            <a href="/pages/competition-detail.php?slug=<?php echo htmlspecialchars($competition['slug']); ?>"
+                            <?php
+                            $compUrl = '/' . $audienceSlug . '/konkurs/' . urlencode($competition['slug']);
+                            ?>
+                            <a href="<?php echo $compUrl; ?>"
                                class="btn btn-primary btn-block">
                                 Принять участие
                             </a>

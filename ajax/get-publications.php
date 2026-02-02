@@ -43,7 +43,7 @@ try {
     // Enrich publications with tags
     foreach ($publications as &$pub) {
         $pub['tags'] = $publicationObj->getTags($pub['id']);
-        $pub['url'] = '/pages/publication.php?slug=' . urlencode($pub['slug']);
+        $pub['url'] = '/publikaciya/' . urlencode($pub['slug']);
 
         // Format date
         if ($pub['published_at']) {

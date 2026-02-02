@@ -11,10 +11,10 @@
                 <div class="footer-column">
                     <h4>Конкурсы</h4>
                     <p>
-                        <a href="/index.php?category=methodology">Методические разработки</a><br>
-                        <a href="/index.php?category=extracurricular">Внеурочная деятельность</a><br>
-                        <a href="/index.php?category=student_projects">Проекты учащихся</a><br>
-                        <a href="/index.php?category=creative">Творческие конкурсы</a>
+                        <a href="/konkursy/metodika">Методические разработки</a><br>
+                        <a href="/konkursy/vneurochnaya">Внеурочная деятельность</a><br>
+                        <a href="/konkursy/proekty">Проекты учащихся</a><br>
+                        <a href="/konkursy/tvorchestvo">Творческие конкурсы</a>
                     </p>
                 </div>
 

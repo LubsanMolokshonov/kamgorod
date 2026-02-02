@@ -9,6 +9,7 @@ header('Content-Type: application/json; charset=UTF-8');
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Competition.php';
+require_once __DIR__ . '/../includes/url-helper.php';
 
 try {
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 21;
@@ -46,12 +47,18 @@ try {
 
     // Generate HTML for cards
     $html = '';
+    $contextAudience = $audience ?? null;
+
     foreach ($competitions as $competition) {
         $categoryLabel = Competition::getCategoryLabel($competition['category']);
         $description = htmlspecialchars(mb_substr($competition['description'], 0, 150) . '...');
         $price = number_format($competition['price'], 0, ',', ' ');
         $slug = htmlspecialchars($competition['slug']);
         $title = htmlspecialchars($competition['title']);
+
+        // Get audience types for smart URL generation
+        $compAudienceTypes = $competitionObj->getAudienceTypes($competition['id']);
+        $compUrl = getCompetitionUrl($competition['slug'], $compAudienceTypes, $contextAudience);
 
         $html .= <<<HTML
 <div class="competition-card" data-category="{$competition['category']}">
@@ -62,7 +69,7 @@ try {
         {$price} ₽
         <span>/ участие</span>
     </div>
-    <a href="/pages/competition-detail.php?slug={$slug}" class="btn btn-primary btn-block">
+    <a href="{$compUrl}" class="btn btn-primary btn-block">
         Принять участие
     </a>
 </div>

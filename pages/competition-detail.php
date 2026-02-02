@@ -10,11 +10,12 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Competition.php';
 require_once __DIR__ . '/../includes/session.php';
 
-// Get slug from URL
+// Get slug and optional audience from URL
 $slug = $_GET['slug'] ?? '';
+$audienceSlug = $_GET['audience'] ?? null;
 
 if (empty($slug)) {
-    header('Location: /index.php');
+    header('Location: /konkursy');
     exit;
 }
 
@@ -23,7 +24,7 @@ $competitionObj = new Competition($db);
 $competition = $competitionObj->getBySlug($slug);
 
 if (!$competition) {
-    header('Location: /index.php');
+    header('Location: /konkursy');
     exit;
 }
 

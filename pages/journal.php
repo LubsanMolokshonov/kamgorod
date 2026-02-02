@@ -112,7 +112,7 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
             <div class="hero-actions">
-                <a href="/pages/submit-publication.php" class="btn btn-primary btn-lg">
+                <a href="/opublikovat" class="btn btn-primary btn-lg">
                     Опубликовать бесплатно
                 </a>
                 <a href="#catalog" class="btn btn-outline btn-lg">
@@ -219,7 +219,7 @@ include __DIR__ . '/../includes/header.php';
         </div>
 
         <div class="steps-cta">
-            <a href="/pages/submit-publication.php" class="btn btn-primary btn-lg">
+            <a href="/opublikovat" class="btn btn-primary btn-lg">
                 Начать публикацию
             </a>
         </div>
@@ -269,7 +269,7 @@ include __DIR__ . '/../includes/header.php';
                     <span class="price-value">149 ₽</span>
                 </div>
 
-                <a href="/pages/submit-publication.php" class="btn btn-primary">
+                <a href="/opublikovat" class="btn btn-primary">
                     Опубликовать и получить свидетельство
                 </a>
             </div>
@@ -355,7 +355,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="cta-card">
             <h3>Готовы опубликовать свою работу?</h3>
             <p>Присоединяйтесь к тысячам педагогов, которые уже поделились своим опытом</p>
-            <a href="/pages/submit-publication.php" class="btn btn-white btn-lg">
+            <a href="/opublikovat" class="btn btn-white btn-lg">
                 Опубликовать бесплатно
             </a>
         </div>
@@ -385,7 +385,7 @@ include __DIR__ . '/../includes/header.php';
                 <?php endif; ?>
             </div>
 
-            <a href="/pages/submit-publication.php" class="btn btn-primary">
+            <a href="/opublikovat" class="btn btn-primary">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -399,7 +399,7 @@ include __DIR__ . '/../includes/header.php';
             <aside class="journal-sidebar">
                 <!-- Search -->
                 <div class="sidebar-section">
-                    <form action="/pages/journal.php" method="GET" class="search-form">
+                    <form action="/zhurnal" method="GET" class="search-form">
                         <input type="text"
                                name="q"
                                value="<?php echo htmlspecialchars($search); ?>"
@@ -419,13 +419,13 @@ include __DIR__ . '/../includes/header.php';
                     <h3 class="sidebar-title">Направления</h3>
                     <ul class="filter-list">
                         <li>
-                            <a href="/pages/journal.php#catalog" class="filter-link <?php echo !$currentTag ? 'active' : ''; ?>">
+                            <a href="/zhurnal#catalog" class="filter-link <?php echo !$currentTag ? 'active' : ''; ?>">
                                 Все направления
                             </a>
                         </li>
                         <?php foreach ($directions as $tag): ?>
                             <li>
-                                <a href="/pages/journal.php?tag=<?php echo urlencode($tag['slug']); ?>#catalog"
+                                <a href="/zhurnal?tag=<?php echo urlencode($tag['slug']); ?>#catalog"
                                    class="filter-link <?php echo $tagSlug === $tag['slug'] ? 'active' : ''; ?>"
                                    style="--tag-color: <?php echo $tag['color'] ?? '#3498DB'; ?>">
                                     <span class="tag-dot"></span>
@@ -444,14 +444,14 @@ include __DIR__ . '/../includes/header.php';
                     <h3 class="sidebar-title">Типы публикаций</h3>
                     <ul class="filter-list">
                         <li>
-                            <a href="/pages/journal.php<?php echo $tagSlug ? '?tag=' . urlencode($tagSlug) : ''; ?>#catalog"
+                            <a href="/zhurnal<?php echo $tagSlug ? '?tag=' . urlencode($tagSlug) : ''; ?>#catalog"
                                class="filter-link <?php echo !$currentType ? 'active' : ''; ?>">
                                 Все типы
                             </a>
                         </li>
                         <?php foreach ($types as $type): ?>
                             <li>
-                                <a href="/pages/journal.php?type=<?php echo urlencode($type['slug']); ?><?php echo $tagSlug ? '&tag=' . urlencode($tagSlug) : ''; ?>#catalog"
+                                <a href="/zhurnal?type=<?php echo urlencode($type['slug']); ?><?php echo $tagSlug ? '&tag=' . urlencode($tagSlug) : ''; ?>#catalog"
                                    class="filter-link <?php echo $typeSlug === $type['slug'] ? 'active' : ''; ?>">
                                     <?php echo htmlspecialchars($type['name']); ?>
                                     <?php if ($type['publications_count'] > 0): ?>
@@ -472,7 +472,7 @@ include __DIR__ . '/../includes/header.php';
                     <ul class="filter-list collapsed">
                         <?php foreach ($subjects as $tag): ?>
                             <li>
-                                <a href="/pages/journal.php?tag=<?php echo urlencode($tag['slug']); ?>#catalog"
+                                <a href="/zhurnal?tag=<?php echo urlencode($tag['slug']); ?>#catalog"
                                    class="filter-link <?php echo $tagSlug === $tag['slug'] ? 'active' : ''; ?>">
                                     <?php echo htmlspecialchars($tag['name']); ?>
                                     <?php if ($tag['publications_count'] > 0): ?>
@@ -530,7 +530,7 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <h3>Публикаций пока нет</h3>
                         <p>Станьте первым автором в этом разделе!</p>
-                        <a href="/pages/submit-publication.php" class="btn btn-primary">
+                        <a href="/opublikovat" class="btn btn-primary">
                             Опубликовать статью
                         </a>
                     </div>
@@ -539,7 +539,7 @@ include __DIR__ . '/../includes/header.php';
                     <div class="publications-grid">
                         <?php foreach ($publications as $pub): ?>
                             <article class="publication-card">
-                                <a href="/pages/publication.php?slug=<?php echo urlencode($pub['slug']); ?>" class="card-link">
+                                <a href="/publikaciya/<?php echo urlencode($pub['slug']); ?>" class="card-link">
                                     <div class="card-header">
                                         <?php if ($pub['type_name']): ?>
                                             <span class="publication-type"><?php echo htmlspecialchars($pub['type_name']); ?></span>
@@ -691,7 +691,7 @@ function buildUrl($params = []) {
     }
 
     $query = http_build_query($merged);
-    return '/pages/journal.php' . ($query ? '?' . $query : '') . '#catalog';
+    return '/zhurnal' . ($query ? '?' . $query : '') . '#catalog';
 }
 ?>
 

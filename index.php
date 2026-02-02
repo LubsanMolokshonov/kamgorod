@@ -10,6 +10,7 @@ require_once __DIR__ . '/classes/Database.php';
 require_once __DIR__ . '/classes/Competition.php';
 require_once __DIR__ . '/classes/AudienceType.php';
 require_once __DIR__ . '/includes/session.php';
+require_once __DIR__ . '/includes/url-helper.php';
 
 // Page metadata
 $pageTitle = 'Конкурсы для педагогов и школьников 2025-2026 | ' . SITE_NAME;
@@ -403,7 +404,12 @@ include __DIR__ . '/includes/header.php';
                 </div>
             <?php else: ?>
                 <div class="competitions-grid" id="competitionsGrid">
-                    <?php foreach ($competitions as $competition): ?>
+                    <?php foreach ($competitions as $competition):
+                        // Get audience types for this competition
+                        $compAudienceTypes = $competitionObj->getAudienceTypes($competition['id']);
+                        $currentContext = getCurrentAudienceContext();
+                        $compUrl = getCompetitionUrl($competition['slug'], $compAudienceTypes, $currentContext);
+                    ?>
                         <div class="competition-card" data-category="<?php echo htmlspecialchars($competition['category']); ?>" data-competition-id="<?php echo $competition['id']; ?>">
                             <span class="competition-category">
                                 <?php echo htmlspecialchars(Competition::getCategoryLabel($competition['category'])); ?>
@@ -418,7 +424,7 @@ include __DIR__ . '/includes/header.php';
                                 <span>/ участие</span>
                             </div>
 
-                            <a href="/pages/competition-detail.php?slug=<?php echo htmlspecialchars($competition['slug']); ?>" class="btn btn-primary btn-block">
+                            <a href="<?php echo $compUrl; ?>" class="btn btn-primary btn-block">
                                 Принять участие
                             </a>
                         </div>
@@ -750,7 +756,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .filter(cb => cb.checked && cb.value !== 'all')
             .map(cb => cb.value);
 
-        let url = '/index.php';
+        let url = '/konkursy';
         const params = [];
 
         if (selectedAudience && selectedAudience.value) {
@@ -890,7 +896,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Переходим на страницу с обновленными параметрами
-        let url = '/index.php';
+        let url = '/konkursy';
         const paramsString = urlParams.toString();
         if (paramsString) {
             url += '?' + paramsString;
@@ -914,7 +920,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedSpec = document.querySelector('input[name="mobile_specialization"]:checked');
         const selectedCategory = document.querySelector('input[name="mobile_category"]:checked');
 
-        let url = '/index.php';
+        let url = '/konkursy';
         const params = [];
 
         if (selectedAudience && selectedAudience.value) {

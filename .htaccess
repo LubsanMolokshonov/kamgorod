@@ -3,16 +3,82 @@
 
 # Enable Rewrite Engine
 RewriteEngine On
+RewriteBase /
 
 # HTTPS Redirect (uncomment when SSL is installed)
 # RewriteCond %{HTTPS} off
 # RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
-# Clean URLs for audience landing pages
-RewriteRule ^(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)$ pages/audience.php?slug=$1 [L,QSA]
+# ================================================
+# КОНКУРСЫ
+# ================================================
 
-# Clean URLs for competition detail pages
-RewriteRule ^competition/([a-z0-9-]+)$ pages/competition-detail.php?slug=$1 [L,QSA]
+# Список конкурсов
+RewriteRule ^konkursy/?$ index.php [L,QSA]
+
+# Категории конкурсов
+RewriteRule ^konkursy/metodika/?$ index.php?category=methodology [L,QSA]
+RewriteRule ^konkursy/vneurochnaya/?$ index.php?category=extracurricular [L,QSA]
+RewriteRule ^konkursy/proekty/?$ index.php?category=student_projects [L,QSA]
+RewriteRule ^konkursy/tvorchestvo/?$ index.php?category=creative [L,QSA]
+
+# Детальная страница конкурса с указанием типа аудитории
+RewriteRule ^(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/konkurs/([a-z0-9-]+)/?$ pages/competition-detail.php?audience=$1&slug=$2 [L,QSA]
+
+# Детальная страница конкурса (общая, без аудитории)
+RewriteRule ^konkurs/([a-z0-9-]+)/?$ pages/competition-detail.php?slug=$1 [L,QSA]
+
+# ================================================
+# ВЕБИНАРЫ
+# ================================================
+
+# Список вебинаров
+RewriteRule ^vebinary/?$ pages/webinars.php [L,QSA]
+
+# Вебинары по статусу
+RewriteRule ^vebinary/predstoyashchie/?$ pages/webinars.php?status=upcoming [L,QSA]
+RewriteRule ^vebinary/zapisi/?$ pages/webinars.php?status=recordings [L,QSA]
+RewriteRule ^vebinary/avtovebinary/?$ pages/webinars.php?status=autowebinar [L,QSA]
+
+# Детальная страница вебинара
+RewriteRule ^vebinar/([a-z0-9-]+)/?$ pages/webinar.php?slug=$1 [L,QSA]
+
+# ================================================
+# ЖУРНАЛ / ПУБЛИКАЦИИ
+# ================================================
+
+# Журнал - главная
+RewriteRule ^zhurnal/?$ pages/journal.php [L,QSA]
+
+# Детальная страница публикации
+RewriteRule ^publikaciya/([a-z0-9-]+)/?$ pages/publication.php?slug=$1 [L,QSA]
+
+# Подача публикации
+RewriteRule ^opublikovat/?$ pages/submit-publication.php [L,QSA]
+
+# Сертификат публикации
+RewriteRule ^sertifikat-publikacii/?$ pages/publication-certificate.php [L,QSA]
+
+# ================================================
+# АУДИТОРИЯ
+# ================================================
+
+RewriteRule ^(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/?$ pages/audience.php?slug=$1 [L,QSA]
+
+# ================================================
+# ЛИЧНЫЙ КАБИНЕТ И ДЕЙСТВИЯ
+# ================================================
+
+RewriteRule ^kabinet/?$ pages/cabinet.php [L,QSA]
+RewriteRule ^korzina/?$ pages/cart.php [L,QSA]
+RewriteRule ^vhod/?$ pages/login.php [L,QSA]
+RewriteRule ^vyhod/?$ pages/logout.php [L,QSA]
+
+# ================================================
+# СЛУЖЕБНЫЕ СТРАНИЦЫ
+# ================================================
+
+RewriteRule ^o-portale/?$ pages/about.php [L,QSA]
 
 # Prevent direct access to sensitive files
 <FilesMatch "\.(env|sql|md|log)$">
