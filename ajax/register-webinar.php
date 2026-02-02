@@ -26,8 +26,7 @@ try {
     $fullName = trim($_POST['full_name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
-    $organization = trim($_POST['organization'] ?? '');
-    $position = trim($_POST['position'] ?? '');
+    $institutionTypeId = intval($_POST['institution_type_id'] ?? 0);
     $city = trim($_POST['city'] ?? '');
 
     // UTM parameters
@@ -54,6 +53,19 @@ try {
     // Check for Cyrillic in email
     if (preg_match('/[а-яА-ЯёЁ]/u', $email)) {
         throw new Exception('Email не должен содержать кириллицу');
+    }
+
+    // Validate institution type
+    if (!$institutionTypeId) {
+        throw new Exception('Укажите тип учреждения');
+    }
+
+    // Verify institution type exists
+    require_once __DIR__ . '/../classes/AudienceType.php';
+    $audienceTypeObj = new AudienceType($db);
+    $institutionType = $audienceTypeObj->getById($institutionTypeId);
+    if (!$institutionType) {
+        throw new Exception('Выбран некорректный тип учреждения');
     }
 
     // Get webinar
@@ -92,14 +104,19 @@ try {
 
     if ($user) {
         $userId = $user['id'];
+        // Update user's institution type if provided and different
+        if ($institutionTypeId && $user['institution_type_id'] != $institutionTypeId) {
+            $userObj->update($userId, ['institution_type_id' => $institutionTypeId]);
+        }
     } else {
         // Create new user
         $userId = $userObj->create([
             'email' => $email,
             'full_name' => $fullName,
             'phone' => $phone,
-            'organization' => $organization,
-            'city' => $city
+            'organization' => null,
+            'city' => $city,
+            'institution_type_id' => $institutionTypeId ?: null
         ]);
     }
 
@@ -110,8 +127,8 @@ try {
         'full_name' => $fullName,
         'email' => $email,
         'phone' => $phone,
-        'organization' => $organization,
-        'position' => $position,
+        'organization' => null,
+        'position' => null,
         'city' => $city,
         'utm_source' => $utmSource,
         'utm_medium' => $utmMedium,

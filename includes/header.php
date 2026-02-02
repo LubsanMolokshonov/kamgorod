@@ -10,6 +10,7 @@ initSession();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $pageTitle ?? 'Педагогический портал'; ?></title>
     <meta name="description" content="<?php echo $pageDescription ?? 'Всероссийские конкурсы для педагогов и школьников'; ?>">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/assets/css/main.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="/assets/css/search.css?v=<?php echo time(); ?>">
 

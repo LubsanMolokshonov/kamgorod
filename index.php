@@ -75,28 +75,15 @@ include __DIR__ . '/includes/header.php';
 <section class="hero-landing">
     <div class="container">
         <div class="hero-content">
-            <h1 class="hero-title">Всероссийские конкурсы<br>для педагогов<br>и школьников</h1>
+            <h1 class="hero-title">Всероссийские конкурсы для педагогов и школьников</h1>
 
             <p class="hero-subtitle">Участвуйте в конкурсах для педагогов и получите сертификат участника или победителя</p>
 
             <a href="#competitions" class="btn btn-hero">Участвовать в конкурсах</a>
-
-            <div class="hero-features">
-                <div class="feature-card">
-                    <div class="feature-text">
-                        <h3>Свидетельство о регистрации СМИ: Эл. №ФС 77-74524 от 24.12.2018</h3>
-                    </div>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-text">
-                        <h3>Ускоренное рассмотрение конкурсных работ за 2 дня</h3>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        <div class="hero-images" id="heroImages">
+        <div class="hero-right">
+            <div class="hero-images" id="heroImages">
             <div class="hero-image-circle hero-img-1" data-parallax-speed="0.3">
                 <picture>
                     <source
@@ -145,30 +132,6 @@ include __DIR__ . '/includes/header.php';
                         height="300">
                 </picture>
             </div>
-            <div class="hero-image-circle hero-img-3" data-parallax-speed="0.7">
-                <picture>
-                    <source
-                        media="(max-width: 768px)"
-                        srcset="/assets/images/teachers/optimized/mobile/3.webp"
-                        type="image/webp">
-                    <source
-                        media="(max-width: 768px)"
-                        srcset="/assets/images/teachers/optimized/mobile/3.jpg"
-                        type="image/jpeg">
-                    <source
-                        srcset="/assets/images/teachers/optimized/desktop/3.webp"
-                        type="image/webp">
-                    <source
-                        srcset="/assets/images/teachers/optimized/desktop/3.jpg"
-                        type="image/jpeg">
-                    <img
-                        src="/assets/images/teachers/optimized/desktop/3.jpg"
-                        alt="Педагог"
-                        loading="lazy"
-                        width="270"
-                        height="270">
-                </picture>
-            </div>
             <div class="hero-image-circle hero-img-4" data-parallax-speed="0.4">
                 <picture>
                     <source
@@ -192,6 +155,29 @@ include __DIR__ . '/includes/header.php';
                         width="230"
                         height="230">
                 </picture>
+            </div>
+            </div>
+
+            <div class="hero-features hero-features--badges">
+                <div class="feature-card feature-card--badge">
+                    <div class="feature-logo">
+                        <img src="/assets/images/skolkovo.webp" alt="Сколково" width="70" height="70">
+                    </div>
+                    <div class="feature-text">
+                        <span class="feature-label">Резидент</span>
+                        <span class="feature-label">Сколково</span>
+                    </div>
+                </div>
+
+                <div class="feature-card feature-card--badge">
+                    <div class="feature-logo">
+                        <img src="/Контент/eagle_s.svg" alt="СМИ" width="70" height="70">
+                    </div>
+                    <div class="feature-text">
+                        <span class="feature-label">Свидетельство о регистрации СМИ:</span>
+                        <span class="feature-label">Эл. №ФС 77-74524</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

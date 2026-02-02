@@ -83,34 +83,104 @@ include __DIR__ . '/../includes/header.php';
             <p class="hero-subtitle"><?php echo htmlspecialchars($audienceType['description']); ?></p>
 
             <a href="#competitions" class="btn btn-hero">Выбрать конкурс</a>
-
-            <div class="hero-features">
-                <div class="feature-card">
-                    <div class="feature-text">
-                        <h3>Свидетельство о регистрации СМИ: Эл. №ФС 77-74524 от 24.12.2018</h3>
-                    </div>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-text">
-                        <h3>Ускоренное рассмотрение конкурсных работ за 2 дня</h3>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        <div class="hero-images">
-            <div class="hero-image-circle hero-img-1">
-                <img src="/assets/images/teachers/1.png" alt="Педагог">
+        <div class="hero-right">
+            <div class="hero-images" id="heroImages">
+            <div class="hero-image-circle hero-img-1" data-parallax-speed="0.3">
+                <picture>
+                    <source
+                        media="(max-width: 768px)"
+                        srcset="/assets/images/teachers/optimized/mobile/1.webp"
+                        type="image/webp">
+                    <source
+                        media="(max-width: 768px)"
+                        srcset="/assets/images/teachers/optimized/mobile/1.jpg"
+                        type="image/jpeg">
+                    <source
+                        srcset="/assets/images/teachers/optimized/desktop/1.webp"
+                        type="image/webp">
+                    <source
+                        srcset="/assets/images/teachers/optimized/desktop/1.jpg"
+                        type="image/jpeg">
+                    <img
+                        src="/assets/images/teachers/optimized/desktop/1.jpg"
+                        alt="Педагог"
+                        loading="lazy"
+                        width="220"
+                        height="220">
+                </picture>
             </div>
-            <div class="hero-image-circle hero-img-2">
-                <img src="/assets/images/teachers/2.png" alt="Педагог">
+            <div class="hero-image-circle hero-img-2" data-parallax-speed="0.5">
+                <picture>
+                    <source
+                        media="(max-width: 768px)"
+                        srcset="/assets/images/teachers/optimized/mobile/2.webp"
+                        type="image/webp">
+                    <source
+                        media="(max-width: 768px)"
+                        srcset="/assets/images/teachers/optimized/mobile/2.jpg"
+                        type="image/jpeg">
+                    <source
+                        srcset="/assets/images/teachers/optimized/desktop/2.webp"
+                        type="image/webp">
+                    <source
+                        srcset="/assets/images/teachers/optimized/desktop/2.jpg"
+                        type="image/jpeg">
+                    <img
+                        src="/assets/images/teachers/optimized/desktop/2.jpg"
+                        alt="Педагог"
+                        loading="lazy"
+                        width="300"
+                        height="300">
+                </picture>
             </div>
-            <div class="hero-image-circle hero-img-3">
-                <img src="/assets/images/teachers/3.png" alt="Педагог">
+            <div class="hero-image-circle hero-img-4" data-parallax-speed="0.4">
+                <picture>
+                    <source
+                        media="(max-width: 768px)"
+                        srcset="/assets/images/teachers/optimized/mobile/4.webp"
+                        type="image/webp">
+                    <source
+                        media="(max-width: 768px)"
+                        srcset="/assets/images/teachers/optimized/mobile/4.jpg"
+                        type="image/jpeg">
+                    <source
+                        srcset="/assets/images/teachers/optimized/desktop/4.webp"
+                        type="image/webp">
+                    <source
+                        srcset="/assets/images/teachers/optimized/desktop/4.jpg"
+                        type="image/jpeg">
+                    <img
+                        src="/assets/images/teachers/optimized/desktop/4.jpg"
+                        alt="Педагог"
+                        loading="lazy"
+                        width="230"
+                        height="230">
+                </picture>
             </div>
-            <div class="hero-image-circle hero-img-4">
-                <img src="/assets/images/teachers/4.png" alt="Педагог">
+            </div>
+
+            <div class="hero-features hero-features--badges">
+                <div class="feature-card feature-card--badge">
+                    <div class="feature-logo">
+                        <img src="/assets/images/skolkovo.webp" alt="Сколково" width="70" height="70">
+                    </div>
+                    <div class="feature-text">
+                        <span class="feature-label">Резидент</span>
+                        <span class="feature-label">Сколково</span>
+                    </div>
+                </div>
+
+                <div class="feature-card feature-card--badge">
+                    <div class="feature-logo">
+                        <img src="/Контент/eagle_s.svg" alt="СМИ" width="70" height="70">
+                    </div>
+                    <div class="feature-text">
+                        <span class="feature-label">Свидетельство о регистрации СМИ:</span>
+                        <span class="feature-label">Эл. №ФС 77-74524</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

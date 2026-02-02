@@ -320,12 +320,18 @@ class Bitrix24Integration {
             $contactData['PHONE'] = [['VALUE' => $registration['phone'], 'VALUE_TYPE' => 'WORK']];
         }
 
-        if (!empty($registration['organization'])) {
-            $contactData['COMPANY_TITLE'] = $registration['organization'];
-        }
-
-        if (!empty($registration['position'])) {
-            $contactData['POST'] = $registration['position'];
+        // Use institution type from user profile
+        if (!empty($registration['institution_type_name'])) {
+            $contactData['COMPANY_TITLE'] = $registration['institution_type_name'];
+            $contactData['POST'] = 'Педагог';
+        } else {
+            // Fallback for legacy data
+            if (!empty($registration['organization'])) {
+                $contactData['COMPANY_TITLE'] = $registration['organization'];
+            }
+            if (!empty($registration['position'])) {
+                $contactData['POST'] = $registration['position'];
+            }
         }
 
         return $this->createContact($contactData);
@@ -363,6 +369,12 @@ class Bitrix24Integration {
         $comments[] = "Вебинар: " . $webinar['title'];
         $comments[] = "Дата: " . date('d.m.Y H:i', strtotime($webinar['scheduled_at']));
 
+        // Add institution type to comments
+        if (!empty($registration['institution_type_name'])) {
+            $comments[] = "Тип учреждения: " . $registration['institution_type_name'];
+        }
+
+        // Legacy data fallback
         if (!empty($registration['organization'])) {
             $comments[] = "Организация: " . $registration['organization'];
         }

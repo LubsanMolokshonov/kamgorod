@@ -52,7 +52,8 @@ class User {
             'phone' => $data['phone'] ?? null,
             'city' => $data['city'] ?? null,
             'organization' => $data['organization'] ?? null,
-            'profession' => $data['profession'] ?? null
+            'profession' => $data['profession'] ?? null,
+            'institution_type_id' => $data['institution_type_id'] ?? null
         ];
 
         return $this->db->insert('users', $insertData);
@@ -66,7 +67,7 @@ class User {
         $updateData = [];
 
         // Only update provided fields
-        $allowedFields = ['full_name', 'phone', 'city', 'organization', 'profession', 'session_token'];
+        $allowedFields = ['full_name', 'phone', 'city', 'organization', 'profession', 'session_token', 'institution_type_id'];
 
         foreach ($allowedFields as $field) {
             if (isset($data[$field])) {

@@ -316,13 +316,14 @@
 
 /* ==================== Webinar Detail Page ==================== */
 
-/* Webinar Hero - New Design */
+/* Webinar Hero - Skillbox Style Dark Theme */
 .webinar-hero {
-    padding: 100px 0 80px;
+    padding: 100px 0 0;
     margin-top: -80px;
     position: relative;
     overflow: hidden;
     color: #fff;
+    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
 }
 
 .webinar-hero::before {
@@ -334,131 +335,160 @@
     width: 100%;
     max-width: 1440px;
     height: 100%;
-    background: var(--gradient-hero);
-    border-radius: 0 0 60px 60px;
+    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+    border-radius: 0 0 80px 80px;
     z-index: 0;
 }
 
 .webinar-hero .container {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     position: relative;
     z-index: 1;
-    padding: 80px 80px 0;
-    gap: 48px;
+    padding: 20px 20px 0;
+    gap: 40px;
 }
 
 .webinar-hero-content {
-    flex: 0 0 70%;
+    flex: 0 0 58%;
     color: white;
+    padding-top: 40px;
 }
 
 .webinar-badges {
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 32px;
 }
 
 .hero-category {
     display: inline-block;
-    background: rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.1);
     backdrop-filter: blur(10px);
-    padding: 10px 24px;
-    border-radius: 30px;
-    font-size: 14px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .webinar-title {
-    font-size: 48px;
+    font-size: 56px;
     font-weight: 700;
-    line-height: 1.2;
-    margin-bottom: 32px;
+    line-height: 1.15;
+    margin-bottom: 40px;
     color: white;
 }
 
 .hero-subtitle {
-    font-size: 17px;
-    color: rgba(255, 255, 255, 0.95);
-    margin-bottom: 16px;
-    font-weight: 600;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 20px;
+    font-weight: 500;
 }
 
 .hero-topics-list {
     list-style: none;
     padding: 0;
-    margin: 0 0 30px 0;
+    margin: 0 0 32px 0;
 }
 
 .hero-topics-list li {
-    font-size: 17px;
-    color: rgba(255, 255, 255, 0.9);
-    padding: 8px 0;
-    padding-left: 24px;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.85);
+    padding: 6px 0;
+    padding-left: 20px;
     position: relative;
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
 .hero-topics-list li::before {
     content: '•';
     position: absolute;
     left: 0;
-    color: white;
+    color: rgba(255, 255, 255, 0.7);
     font-weight: bold;
-    font-size: 20px;
+    font-size: 18px;
 }
 
 .hero-gift-box {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
-    border-radius: 16px;
-    padding: 20px 24px;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-top: 20px;
     margin-bottom: 32px;
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: inline-block;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    max-width: fit-content;
 }
 
 .gift-icon {
     flex-shrink: 0;
-    font-size: 32px;
+    font-size: 24px;
 }
 
 .gift-text {
-    font-size: 15px;
-    color: rgba(255, 255, 255, 0.95);
-    line-height: 1.6;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.5;
     margin: 0;
+}
+
+.hero-cta-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
 }
 
 .btn-hero-cta {
     display: inline-block;
-    background: white;
-    color: var(--primary-purple);
-    font-size: 17px;
-    font-weight: 700;
-    padding: 16px 40px;
-    border-radius: var(--border-radius-button);
+    background: linear-gradient(90deg, #5B4DFF 0%, #8B7DFF 100%);
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 18px 36px;
+    border-radius: 16px;
     text-decoration: none;
     transition: all var(--transition-speed) ease-in-out;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 16px rgba(91, 77, 255, 0.4);
     border: none;
     cursor: pointer;
 }
 
 .btn-hero-cta:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 24px rgba(91, 77, 255, 0.5);
+    opacity: 1;
 }
 
-/* Hero Speaker Image */
+.skolkovo-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.skolkovo-logo {
+    height: 48px;
+    width: auto;
+}
+
+.skolkovo-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    line-height: 1.3;
+    text-align: left;
+}
+
+/* Hero Speaker Image - Skillbox Style */
 .hero-speaker-section {
-    flex: 0 0 30%;
+    flex: 0 0 38%;
     position: relative;
     display: flex;
     align-items: flex-end;
@@ -468,6 +498,7 @@
 .hero-speaker-image {
     position: relative;
     width: 100%;
+    max-width: 420px;
     transition: transform 0.3s ease;
 }
 
@@ -476,11 +507,62 @@
     height: auto;
     object-fit: cover;
     border-radius: 24px 24px 0 0;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .hero-speaker-image:hover {
     transform: translateY(-8px);
+}
+
+/* Webinar Benefits Section - Skillbox Style */
+.webinar-benefits-section {
+    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+    padding: 0 0 80px;
+    margin-top: 0;
+}
+
+.webinar-benefits-section .container {
+    max-width: 1440px;
+    padding: 0 80px;
+}
+
+.webinar-benefits-section .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin: 0;
+}
+
+.webinar-benefits-section .competition-card {
+    background: white;
+    border-radius: 24px;
+    padding: 28px 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.webinar-benefits-section .competition-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.webinar-benefits-section .competition-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2C3E50;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.webinar-benefits-section .competition-card p {
+    font-size: 14px;
+    color: #64748B;
+    margin: 0;
+    line-height: 1.5;
 }
 
 /* Registration Section - New Design */
@@ -1009,6 +1091,7 @@
 @media (max-width: 1024px) {
     .webinar-hero .container {
         padding: 60px 40px 0;
+        gap: 30px;
     }
 
     .webinar-title {
@@ -1016,11 +1099,20 @@
     }
 
     .webinar-hero-content {
-        flex: 0 0 65%;
+        flex: 0 0 55%;
     }
 
     .hero-speaker-section {
-        flex: 0 0 35%;
+        flex: 0 0 42%;
+    }
+
+    .webinar-benefits-section .container {
+        padding: 0 40px;
+    }
+
+    .webinar-benefits-section .steps-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
     }
 
     .webinar-content-wrapper {
@@ -1118,7 +1210,7 @@
 
 @media (max-width: 640px) {
     .webinar-hero {
-        padding: 80px 0 60px;
+        padding: 80px 0 40px;
     }
 
     .webinar-hero::before {
@@ -1128,6 +1220,32 @@
     .webinar-hero .container {
         flex-direction: column;
         padding: 60px 24px 0;
+        gap: 30px;
+    }
+
+    .webinar-benefits-section {
+        padding: 0 0 60px;
+    }
+
+    .webinar-benefits-section .container {
+        padding: 0 24px;
+    }
+
+    .webinar-benefits-section .steps-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .webinar-benefits-section .competition-card {
+        padding: 24px 20px;
+    }
+
+    .webinar-benefits-section .competition-card h3 {
+        font-size: 15px;
+    }
+
+    .webinar-benefits-section .competition-card p {
+        font-size: 13px;
     }
 
     .webinar-content-wrapper {
@@ -1173,13 +1291,14 @@
     .webinar-hero-content {
         flex: 1;
         width: 100%;
-        text-align: center;
+        text-align: left;
+        padding-top: 20px;
     }
 
     .hero-speaker-section {
         flex: 1;
         width: 100%;
-        margin-top: 40px;
+        margin-top: 30px;
         align-items: center;
     }
 
@@ -1188,29 +1307,51 @@
     }
 
     .hero-speaker-image img {
-        border-radius: 16px;
+        border-radius: 20px 20px 0 0;
     }
 
     .webinar-title {
-        font-size: 28px;
+        font-size: 32px;
     }
 
     .hero-subtitle {
-        font-size: 18px;
+        font-size: 15px;
     }
 
     .hero-topics-list li {
-        font-size: 16px;
+        font-size: 15px;
         text-align: left;
     }
 
     .webinar-badges {
-        justify-content: center;
+        justify-content: flex-start;
+        flex-wrap: wrap;
     }
 
     .hero-category {
         font-size: 12px;
-        padding: 8px 16px;
+        padding: 6px 14px;
+    }
+
+    .btn-hero-cta {
+        font-size: 15px;
+        padding: 16px 32px;
+    }
+
+    .hero-cta-row {
+        gap: 16px;
+    }
+
+    .skolkovo-badge {
+        gap: 10px;
+    }
+
+    .skolkovo-logo {
+        height: 40px;
+    }
+
+    .skolkovo-text {
+        font-size: 12px;
     }
 
     /* Registration Form Mobile */

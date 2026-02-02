@@ -112,9 +112,12 @@ class WebinarRegistration {
     public function getById($id) {
         return $this->db->queryOne(
             "SELECT wr.*, w.title as webinar_title, w.slug as webinar_slug,
-                    w.scheduled_at, w.duration_minutes, w.certificate_price, w.certificate_hours
+                    w.scheduled_at, w.duration_minutes, w.certificate_price, w.certificate_hours,
+                    u.institution_type_id, at.name as institution_type_name
              FROM webinar_registrations wr
              JOIN webinars w ON wr.webinar_id = w.id
+             LEFT JOIN users u ON wr.user_id = u.id
+             LEFT JOIN audience_types at ON u.institution_type_id = at.id
              WHERE wr.id = ?",
             [$id]
         );

@@ -66,37 +66,29 @@ include __DIR__ . '/../includes/header.php';
         <div class="webinar-hero-content">
             <!-- Badges -->
             <div class="webinar-badges">
-                <span class="hero-category">Бесплатный онлайн практикум для педагогов ОО</span>
-                <span class="hero-category"><?php echo $dateInfo['date_full']; ?> МСК</span>
+                <span class="hero-category" style="font-size: 16px;">Бесплатный онлайн практикум для педагогов ОО</span>
+                <span class="hero-category" style="font-size: 16px;"><?php echo $dateInfo['date_full']; ?> МСК</span>
             </div>
 
             <!-- Title -->
             <h1 class="webinar-title"><?php echo htmlspecialchars($webinar['title']); ?></h1>
 
-            <!-- Topics (если есть поле topics в БД) -->
-            <?php if (!empty($webinar['topics'])): ?>
-                <?php $topics = json_decode($webinar['topics'], true); ?>
-                <?php if ($topics): ?>
-                    <h3 class="hero-subtitle">На вебинаре вы узнаете:</h3>
-                    <ul class="hero-topics-list">
-                        <?php foreach ($topics as $topic): ?>
-                            <li><?php echo htmlspecialchars($topic); ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php endif; ?>
-            <?php endif; ?>
-
             <!-- Gift Box -->
             <div class="hero-gift-box">
-                <span class="gift-icon">🎁</span>
-                <p class="gift-text">
-                    Все зарегистрированные участники получат подарки: запись эфира, презентацию
-                    и возможность получить электронный именной сертификат на <?php echo $webinar['certificate_hours']; ?> часа.
+                <p class="gift-text" style="font-size: 16px;">
+                    Практические приёмы от Учителя года: как сделать «Разговоры о важном» интересными для учеников
                 </p>
             </div>
 
-            <!-- CTA Button -->
-            <a href="#registration-form" class="btn-hero-cta">Принять бесплатное участие</a>
+            <!-- CTA Button and Skolkovo Badge -->
+            <div class="hero-cta-row">
+                <a href="#registration-form" class="btn-hero-cta">Принять бесплатное участие</a>
+
+                <div class="skolkovo-badge">
+                    <img src="/assets/images/skolkovo.webp" alt="Skolkovo" class="skolkovo-logo">
+                    <span class="skolkovo-text">Резидент<br>Сколково</span>
+                </div>
+            </div>
         </div>
 
         <!-- Speaker Photo -->
@@ -112,35 +104,32 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </section>
 
-<!-- Webinar Benefits Section -->
-<div class="container mt-40 mb-40">
-    <div class="text-center">
-        <h2>Преимущества участия</h2>
-        <p class="mb-40">Все возможности для вашего профессионального развития</p>
-
+<!-- Webinar Benefits Section - Skillbox Style -->
+<section class="webinar-benefits-section">
+    <div class="container">
         <div class="steps-grid">
             <div class="competition-card animated">
-                <h3>1. Бесплатное участие в практикуме</h3>
-                <p>Наш портал проводит практикумы бесплатно</p>
+                <h3>Бесплатное участие</h3>
+                <p>Только открытые мероприятия для педагогов</p>
             </div>
 
             <div class="competition-card animated">
-                <h3>2. Прямой онлайн-эфир</h3>
+                <h3>Прямой онлайн-эфир</h3>
                 <p>Присоединяйтесь в прямом эфире, слушайте доклад и задавайте волнующие вопросы эксперту</p>
             </div>
 
             <div class="competition-card animated">
-                <h3>3. Запись эфира и материалы эксперта в подарок</h3>
+                <h3>Запись эфира и материалы</h3>
                 <p>Сохраняйте чек-листы, инструкции и презентации и используйте их в своей работе</p>
             </div>
 
             <div class="competition-card animated">
-                <h3>4. Оформите сертификат участника на 2 часа</h3>
-                <p>Пополняйте свое портфолио официальным документом</p>
+                <h3>Сертификат участника</h3>
+                <p>Вы можете офомрить сертификат участника на 2 часа</p>
             </div>
         </div>
     </div>
-</div>
+</section>
 
 <!-- Webinar Content -->
 <section class="webinar-content">
@@ -282,21 +271,31 @@ include __DIR__ . '/../includes/header.php';
                             </div>
 
                             <div class="form-group">
-                                <label class="position-label">Должность</label>
-                                <select name="position">
-                                    <option value="">Выберите должность</option>
-                                    <option value="Учитель">Учитель</option>
-                                    <option value="Классный руководитель">Классный руководитель</option>
-                                    <option value="Педагог-организатор">Педагог-организатор</option>
-                                    <option value="Заместитель директора">Заместитель директора</option>
-                                    <option value="Директор">Директор</option>
-                                    <option value="Воспитатель">Воспитатель</option>
-                                    <option value="Другое">Другое</option>
-                                </select>
-                            </div>
+                                <label class="position-label">Тип учреждения *</label>
+                                <select name="institution_type_id" id="institution_type_id" required>
+                                    <option value="">Выберите тип учреждения</option>
+                                    <?php
+                                    require_once __DIR__ . '/../classes/AudienceType.php';
+                                    $audienceTypeObj = new AudienceType($db);
+                                    $institutionTypes = $audienceTypeObj->getAll(true);
 
-                            <div class="form-group">
-                                <input type="text" name="organization" placeholder="Образовательная организация">
+                                    // Get user's saved institution type if logged in
+                                    $userInstitutionTypeId = null;
+                                    if (!empty($_SESSION['user_id'])) {
+                                        require_once __DIR__ . '/../classes/User.php';
+                                        $userObj = new User($db);
+                                        $currentUser = $userObj->getById($_SESSION['user_id']);
+                                        $userInstitutionTypeId = $currentUser['institution_type_id'] ?? null;
+                                    }
+
+                                    foreach ($institutionTypes as $type):
+                                        $selected = ($type['id'] == $userInstitutionTypeId) ? 'selected' : '';
+                                    ?>
+                                        <option value="<?php echo $type['id']; ?>" <?php echo $selected; ?>>
+                                            <?php echo htmlspecialchars($type['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
 
                             <div class="form-checkbox">
