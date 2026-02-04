@@ -1233,11 +1233,44 @@ main {
     }
 
     .competitions-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
     }
 
     .competition-card {
-        padding: 24px;
+        padding: 16px;
+    }
+
+    .competition-category {
+        padding: 4px 10px;
+        font-size: 11px;
+        margin-bottom: 8px;
+    }
+
+    .competition-card h3 {
+        font-size: 15px;
+        margin-bottom: 8px;
+        line-height: 1.3;
+    }
+
+    .competition-card p {
+        font-size: 14px;
+        margin-bottom: 10px;
+        line-height: 1.4;
+    }
+
+    .competition-price {
+        font-size: 18px;
+        margin-bottom: 10px;
+    }
+
+    .competition-price span {
+        font-size: 12px;
+    }
+
+    .competition-card .btn {
+        font-size: 12px;
+        padding: 8px 16px;
     }
 
     /* Sidebar mobile styles */
@@ -1284,12 +1317,26 @@ main {
     }
 
     .hero-landing {
-        padding: 60px 0 40px;
+        padding: 50px 0 30px;
     }
 
     .hero-landing .container {
-        flex-direction: row;
-        padding: 0 24px;
+        flex-direction: column;
+        padding: 0 16px;
+        gap: 20px;
+    }
+
+    .hero-title {
+        font-size: 26px;
+    }
+
+    .hero-subtitle {
+        font-size: 14px;
+    }
+
+    .btn-hero {
+        font-size: 14px;
+        padding: 14px 28px;
     }
 
     .hero-content {
@@ -1525,7 +1572,23 @@ main {
 
 @media (max-width: 640px) {
     .steps-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .steps-grid .competition-card {
+        padding: 16px;
+        min-height: auto;
+    }
+
+    .steps-grid .competition-card h3 {
+        font-size: 15px;
+        margin-bottom: 8px;
+    }
+
+    .steps-grid .competition-card p {
+        font-size: 14px;
+        line-height: 1.4;
     }
 }
 
@@ -1665,24 +1728,40 @@ main {
 
 @media (max-width: 640px) {
     .faq-section {
-        padding: 40px 24px;
-        border-radius: 30px;
+        padding: 30px 16px;
+        border-radius: 24px;
+        margin-bottom: 40px;
     }
 
     .faq-section h2 {
-        font-size: 28px;
+        font-size: 24px;
+        margin-bottom: 24px;
+    }
+
+    .faq-grid {
+        gap: 8px;
     }
 
     .faq-item {
-        padding: 24px 20px;
+        padding: 16px 14px;
+        border-radius: 12px;
     }
 
     .faq-question h3 {
-        font-size: 16px;
+        font-size: 15px;
+        line-height: 1.4;
+    }
+
+    .faq-icon {
+        font-size: 20px;
+        width: 24px;
+        height: 24px;
     }
 
     .faq-answer {
         font-size: 14px;
+        line-height: 1.5;
+        padding-top: 12px;
     }
 
     .criteria-section {
@@ -2576,42 +2655,44 @@ body.popup-open {
 
 @media (max-width: 640px) {
     .criteria-section-new {
-        padding: 40px 24px;
-        border-radius: 30px;
+        padding: 30px 16px;
+        border-radius: 24px;
+        margin-bottom: 40px;
     }
 
     .criteria-section-new h2 {
-        font-size: 26px;
-        margin-bottom: 30px;
+        font-size: 22px;
+        margin-bottom: 20px;
     }
 
     .criteria-grid {
         grid-template-columns: 1fr;
-        gap: 12px;
+        gap: 8px;
     }
 
     .criteria-card {
-        padding: 20px 16px;
+        padding: 12px 14px;
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 12px;
         text-align: left;
     }
 
     .criteria-icon {
-        width: 50px;
-        height: 50px;
+        width: 40px;
+        height: 40px;
         margin: 0;
         flex-shrink: 0;
     }
 
     .criteria-icon svg {
-        width: 24px;
-        height: 24px;
+        width: 18px;
+        height: 18px;
     }
 
     .criteria-card h4 {
         font-size: 14px;
+        line-height: 1.3;
     }
 }
 
@@ -3036,7 +3117,45 @@ body.popup-open {
 
     .licenses-grid {
         grid-template-columns: 1fr;
-        gap: 32px;
+        gap: 20px;
+    }
+
+    .license-card {
+        padding: 20px;
+        flex-direction: row;
+        align-items: stretch;
+        text-align: left;
+        gap: 20px;
+    }
+
+    .license-icon {
+        width: 90px;
+        height: 90px;
+        margin-bottom: 0;
+        flex-shrink: 0;
+        align-self: flex-start;
+    }
+
+    .license-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        flex: 1;
+        align-items: flex-start;
+    }
+
+    .license-title {
+        margin-bottom: 8px;
+        min-height: auto;
+    }
+
+    .license-subtitle {
+        margin-bottom: 12px;
+    }
+
+    .license-button {
+        margin-top: auto;
+        align-self: flex-start;
     }
 
     .activity-content.active {
@@ -3057,8 +3176,76 @@ body.popup-open {
 }
 
 @media (max-width: 640px) {
+    .homepage-recent-activity {
+        margin: 50px 0;
+    }
+
+    .activity-tabs {
+        margin-bottom: 24px;
+        gap: 10px;
+    }
+
+    .activity-tab {
+        padding: 10px 20px;
+        font-size: 14px;
+        border-radius: 24px;
+    }
+
     .activity-content.active {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .competition-card,
+    .webinar-card,
+    .publication-card {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .competition-category,
+    .webinar-badge,
+    .publication-type {
+        padding: 4px 10px;
+        font-size: 11px;
+        margin-bottom: 8px;
+    }
+
+    .competition-title,
+    .competition-card h3,
+    .webinar-title,
+    .publication-title {
+        font-size: 15px;
+        margin-bottom: 8px;
+        line-height: 1.3;
+    }
+
+    .competition-description,
+    .competition-card p,
+    .webinar-date,
+    .webinar-speaker,
+    .publication-meta {
+        font-size: 14px;
+        line-height: 1.4;
+        margin-bottom: 10px;
+    }
+
+    .competition-footer {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .competition-price {
+        font-size: 18px;
+        margin-bottom: 8px;
+    }
+
+    .competition-card .btn,
+    .webinar-card .btn,
+    .publication-card .btn {
+        font-size: 12px;
+        padding: 8px 16px;
     }
 
     .service-card {
@@ -3079,39 +3266,74 @@ body.popup-open {
         height: 32px;
     }
 
+    .licenses-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
     .license-card {
-        padding: 24px;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
+        padding: 16px;
+        flex-direction: row;
+        align-items: stretch;
+        text-align: left;
+        gap: 16px;
     }
 
     .license-icon {
-        width: 100px;
-        height: 100px;
-        margin-bottom: 16px;
+        width: 80px;
+        height: 80px;
+        margin-bottom: 0;
+        flex-shrink: 0;
+        align-self: flex-start;
     }
 
     .license-icon::after {
-        width: 28px;
-        height: 28px;
+        width: 20px;
+        height: 20px;
     }
 
     .license-content {
-        align-items: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        flex: 1;
+        align-items: flex-start;
     }
 
     .license-title {
-        font-size: 18px;
+        font-size: 15px;
+        margin-bottom: 6px;
+        min-height: auto;
     }
 
     .license-subtitle {
         font-size: 13px;
+        margin-bottom: 10px;
     }
 
     .license-button {
-        width: 100%;
-        align-self: stretch;
+        width: auto;
+        align-self: flex-start;
+        margin-top: auto;
+        padding: 8px 16px;
+        font-size: 12px;
+    }
+
+    .audience-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .audience-card {
+        padding: 18px 14px;
+    }
+
+    .audience-card h3 {
+        font-size: 15px;
+    }
+
+    .audience-card p {
+        font-size: 14px;
     }
 
     .activity-tabs {
@@ -3151,6 +3373,37 @@ body.popup-open {
     .hero-buttons .btn {
         width: 100%;
         text-align: center;
+    }
+
+    /* Общие оптимизации */
+    .container {
+        padding: 0 16px;
+    }
+
+    .mt-40 {
+        margin-top: 24px;
+    }
+
+    .mt-60 {
+        margin-top: 36px;
+    }
+
+    .mb-40 {
+        margin-bottom: 24px;
+    }
+
+    .mb-60 {
+        margin-bottom: 36px;
+    }
+
+    .text-center h2 {
+        font-size: 22px;
+        margin-bottom: 16px;
+    }
+
+    .text-center p {
+        font-size: 15px;
+        margin-bottom: 20px;
     }
 }
 
@@ -3612,8 +3865,46 @@ body.popup-open {
     }
 
     .licenses-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 24px;
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .license-card {
+        padding: 20px;
+        flex-direction: row;
+        align-items: stretch;
+        text-align: left;
+        gap: 20px;
+    }
+
+    .license-icon {
+        width: 100px;
+        height: 100px;
+        margin-bottom: 0;
+        flex-shrink: 0;
+        align-self: flex-start;
+    }
+
+    .license-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        flex: 1;
+        align-items: flex-start;
+    }
+
+    .license-title {
+        margin-bottom: 8px;
+        min-height: auto;
+    }
+
+    .license-subtitle {
+        margin-bottom: 12px;
+    }
+
+    .license-button {
+        margin-top: auto;
+        align-self: flex-start;
     }
 }
 
@@ -3647,7 +3938,7 @@ body.popup-open {
 
 @media (max-width: 640px) {
     .homepage-hero {
-        padding: 80px 0 40px;
+        padding: 60px 0 30px;
     }
 
     .homepage-hero::before {
@@ -3656,35 +3947,35 @@ body.popup-open {
 
     .homepage-hero .container {
         flex-direction: column;
-        padding: 60px 20px 0;
-        gap: 30px;
+        padding: 40px 16px 0;
+        gap: 20px;
     }
 
     .homepage-benefits-section {
-        padding: 0 0 60px;
+        padding: 0 0 40px;
     }
 
     .homepage-benefits-section .container {
-        padding: 0 24px;
+        padding: 0 16px;
     }
 
     .homepage-benefits-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
     }
 
     .homepage-benefit-card {
-        padding: 24px 20px;
+        padding: 18px 14px;
     }
 
     .benefit-card-icon {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
     }
 
     .benefit-card-icon svg {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
     }
 
     .homepage-benefit-card h3 {
@@ -3692,11 +3983,11 @@ body.popup-open {
     }
 
     .homepage-benefit-card p {
-        font-size: 13px;
+        font-size: 14px;
     }
 
     .stats-number {
-        font-size: 20px;
+        font-size: 18px;
     }
 
     .stats-label {
@@ -3721,53 +4012,53 @@ body.popup-open {
         flex: 1 1 100% !important;
         max-width: 100% !important;
         justify-content: space-evenly;
-        gap: 8px;
-        margin-bottom: 20px;
-        padding: 0 10px;
+        gap: 6px;
+        margin-bottom: 16px;
+        padding: 0 8px;
     }
 
     .homepage-hero-images .hero-image-circle,
     .homepage-hero-images .hero-img-1,
     .homepage-hero-images .hero-img-2,
     .homepage-hero-images .hero-img-4 {
-        width: 114px;
-        height: 114px;
-        border-width: 3px;
+        width: 96px;
+        height: 96px;
+        border-width: 2px;
     }
 
     .homepage-hero-badges-bottom {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 10px;
+        gap: 8px;
     }
 
     .homepage-hero-badges-bottom .feature-card--badge {
-        padding: 10px;
-        gap: 12px;
-        border-radius: 14px;
+        padding: 8px;
+        gap: 8px;
+        border-radius: 12px;
     }
 
     .homepage-hero-badges-bottom .feature-logo {
-        width: 50px;
-        height: 50px;
+        width: 40px;
+        height: 40px;
     }
 
     .homepage-hero-badges-bottom .feature-logo img {
-        width: 50px;
-        height: 50px;
+        width: 40px;
+        height: 40px;
         border-radius: 10px;
     }
 
     .homepage-hero-badges-bottom .feature-label {
-        font-size: 11px;
+        font-size: 10px;
     }
 
     .homepage-hero-title {
-        font-size: 32px;
+        font-size: 26px;
     }
 
     .homepage-hero-subtitle-text {
-        font-size: 15px;
+        font-size: 13px;
     }
 
     .homepage-hero-badges {
@@ -3781,12 +4072,12 @@ body.popup-open {
     }
 
     .btn-homepage-cta {
-        font-size: 15px;
-        padding: 16px 32px;
+        font-size: 14px;
+        padding: 14px 28px;
     }
 
     .homepage-hero-cta-row {
-        gap: 16px;
+        gap: 12px;
     }
 
     .homepage-skolkovo-badge {

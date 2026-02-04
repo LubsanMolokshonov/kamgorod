@@ -648,7 +648,11 @@ include __DIR__ . '/../includes/header.php';
     }
 
     .description-text {
-        font-size: 16px;
+        font-size: 13px;
+    }
+
+    .description-text p {
+        font-size: 13px !important;
     }
 
     .info-card {
@@ -1173,7 +1177,7 @@ include __DIR__ . '/../includes/header.php';
 
 @media (max-width: 640px) {
     .hero-landing {
-        padding: 80px 0 40px;
+        padding: 60px 0 30px;
     }
 
     .hero-landing::before {
@@ -1182,70 +1186,80 @@ include __DIR__ . '/../includes/header.php';
 
     .hero-landing .container {
         flex-direction: column;
-        padding: 80px 24px 0;
-        gap: 30px;
+        padding: 60px 16px 0;
+        gap: 20px;
     }
 
     .hero-content {
         flex: 1;
         width: 100%;
         text-align: left;
-        padding-top: 20px;
+        padding-top: 10px;
     }
 
     .hero-diploma {
         flex: 1;
         width: 100%;
-        margin-top: 30px;
+        margin-top: 20px;
         align-items: center;
-        padding: 20px 0;
+        padding: 15px 0;
     }
 
     .diploma-stack {
-        width: 280px;
-        height: 360px;
+        width: 240px;
+        height: 310px;
     }
 
     .diploma-item {
-        width: 180px;
+        width: 150px;
     }
 
-    .diploma-1 { left: 0; top: 60px; transform: rotate(-10deg); }
-    .diploma-2 { left: 12px; top: 45px; transform: rotate(-6deg); }
-    .diploma-3 { left: 24px; top: 30px; transform: rotate(-2deg); }
-    .diploma-4 { left: 40px; top: 18px; transform: rotate(2deg); }
-    .diploma-5 { left: 56px; top: 8px; transform: rotate(6deg); }
-    .diploma-6 { left: 72px; top: 0; transform: rotate(10deg); }
+    .diploma-1 { left: 0; top: 50px; transform: rotate(-10deg); }
+    .diploma-2 { left: 10px; top: 38px; transform: rotate(-6deg); }
+    .diploma-3 { left: 20px; top: 25px; transform: rotate(-2deg); }
+    .diploma-4 { left: 33px; top: 15px; transform: rotate(2deg); }
+    .diploma-5 { left: 46px; top: 7px; transform: rotate(6deg); }
+    .diploma-6 { left: 60px; top: 0; transform: rotate(10deg); }
 
     .hero-badges {
         justify-content: flex-start;
         flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 20px;
     }
 
     .hero-category {
-        font-size: 12px;
-        padding: 6px 14px;
+        font-size: 11px;
+        padding: 6px 12px;
     }
 
     .hero-title {
-        font-size: 32px;
+        font-size: 26px;
+        margin-bottom: 20px;
+        line-height: 1.2;
+    }
+
+    .hero-subtitle {
+        font-size: 14px;
+        margin-bottom: 16px;
     }
 
     .hero-gift-box {
-        margin-bottom: 24px;
+        margin-bottom: 20px;
+        padding: 12px 16px;
     }
 
     .gift-text {
-        font-size: 14px;
+        font-size: 13px;
     }
 
     .btn-hero-cta {
-        font-size: 15px;
-        padding: 16px 32px;
+        font-size: 14px;
+        padding: 14px 28px;
     }
 
     .hero-cta-row {
-        gap: 16px;
+        gap: 12px;
     }
 
     .skolkovo-badge {
@@ -1261,78 +1275,453 @@ include __DIR__ . '/../includes/header.php';
     }
 
     .competition-benefits-section {
-        padding: 0 0 60px;
+        padding: 0 0 40px;
     }
 
     .competition-benefits-section .container {
-        padding: 0 24px;
+        padding: 0 16px;
     }
 
     .benefits-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
     }
 
     .benefit-card {
-        padding: 24px 20px;
+        padding: 18px 14px;
+    }
+
+    .benefit-card-icon {
+        width: 36px;
+        height: 36px;
+        margin-bottom: 8px;
+    }
+
+    .benefit-card-icon svg {
+        width: 20px;
+        height: 20px;
     }
 
     .benefit-card h3 {
         font-size: 15px;
+        line-height: 1.3;
     }
 
     .benefit-card p {
-        font-size: 13px;
+        font-size: 14px;
+        line-height: 1.4;
     }
 
     .section-title {
-        font-size: 28px;
+        font-size: 24px;
+        margin-bottom: 20px;
     }
 
     .price-cta-container {
-        padding: 40px 32px;
-        border-radius: 30px;
+        padding: 30px 20px;
+        border-radius: 24px;
     }
 
     .price-amount {
-        font-size: 48px;
+        font-size: 40px;
+    }
+
+    .price-label {
+        font-size: 13px;
     }
 
     .features-grid,
     .nominations-grid,
     .awards-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .feature-item,
+    .nomination-item,
+    .award-item {
+        padding: 16px;
+    }
+
+    .feature-item h4,
+    .nomination-item h4,
+    .award-item h4 {
+        font-size: 15px;
+        line-height: 1.3;
+    }
+
+    .feature-item p,
+    .nomination-item p,
+    .award-item p {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .feature-icon,
+    .nomination-icon,
+    .award-icon {
+        width: 36px;
+        height: 36px;
+        margin-bottom: 8px;
+    }
+
+    .feature-icon svg,
+    .nomination-icon svg,
+    .award-icon svg {
+        width: 18px;
+        height: 18px;
     }
 
     .step-item {
-        gap: 20px;
+        gap: 12px;
+        padding: 16px;
     }
 
     .step-number {
-        width: 52px;
-        height: 52px;
-        font-size: 24px;
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+
+    .step-content h3 {
+        font-size: 15px;
+        margin-bottom: 6px;
+    }
+
+    .step-content p {
+        font-size: 14px;
+        line-height: 1.4;
     }
 
     .faq-section {
-        padding: 40px 24px;
-        border-radius: 30px;
+        padding: 30px 16px;
+        border-radius: 24px;
+        margin-bottom: 40px;
     }
 
     .faq-section h2 {
-        font-size: 28px;
+        font-size: 24px;
+        margin-bottom: 24px;
+    }
+
+    .faq-grid {
+        gap: 8px;
     }
 
     .faq-item {
-        padding: 24px 20px;
+        padding: 16px 14px;
+        border-radius: 12px;
     }
 
     .faq-question h3 {
-        font-size: 16px;
+        font-size: 15px;
+        line-height: 1.4;
+    }
+
+    .faq-icon {
+        font-size: 20px;
+        width: 24px;
+        height: 24px;
     }
 
     .faq-answer {
         font-size: 14px;
+        line-height: 1.5;
+        padding-top: 12px;
+    }
+
+    /* Общие оптимизации */
+    .container {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .about-section-modern,
+    .competition-benefits-section,
+    .features-section,
+    .nominations-section,
+    .awards-section,
+    .steps-section {
+        margin-bottom: 40px;
+    }
+
+    .text-center h2 {
+        font-size: 22px;
+        margin-bottom: 16px;
+    }
+
+    .text-center p {
+        font-size: 15px;
+        margin-bottom: 20px;
+    }
+
+    /* Оптимизация секций для компактности */
+    .features-section,
+    .nominations-section,
+    .awards-section,
+    .steps-section,
+    .price-cta-section {
+        padding: 40px 0 !important;
+    }
+
+    .section-subtitle {
+        font-size: 14px !important;
+        margin-bottom: 24px !important;
+    }
+
+    /* Feature cards оптимизация */
+    .feature-card {
+        padding: 18px 14px !important;
+        border-radius: 16px !important;
+    }
+
+    .feature-card h3 {
+        font-size: 15px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .feature-card p {
+        font-size: 14px !important;
+    }
+
+    .feature-icon {
+        width: 44px !important;
+        height: 44px !important;
+        margin-bottom: 12px !important;
+        border-radius: 12px !important;
+        font-size: 24px !important;
+    }
+
+    .feature-icon svg {
+        width: 22px !important;
+        height: 22px !important;
+    }
+
+    /* Nomination cards оптимизация */
+    .nomination-card {
+        padding: 14px 16px !important;
+        border-radius: 12px !important;
+        gap: 14px !important;
+    }
+
+    .nomination-number {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 15px !important;
+        border-radius: 8px !important;
+    }
+
+    .nomination-card p {
+        font-size: 14px !important;
+    }
+
+    /* Award cards оптимизация */
+    .award-card {
+        padding: 20px 16px !important;
+        border-radius: 16px !important;
+    }
+
+    .award-card h3 {
+        font-size: 18px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .award-card p {
+        font-size: 14px !important;
+    }
+
+    .award-icon {
+        font-size: 36px !important;
+        margin-bottom: 10px !important;
+    }
+
+    /* Criteria section оптимизация */
+    .criteria-section-new {
+        padding: 0 !important;
+    }
+
+    .criteria-section-new h2 {
+        font-size: 22px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .criteria-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    .criteria-card {
+        padding: 14px 12px !important;
+        border-radius: 12px !important;
+    }
+
+    .criteria-card h4 {
+        font-size: 13px !important;
+        line-height: 1.3 !important;
+    }
+
+    .criteria-icon {
+        width: 36px !important;
+        height: 36px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .criteria-icon svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    /* Steps section дополнительная оптимизация */
+    .steps-container {
+        max-width: 100% !important;
+    }
+
+    .step-item {
+        margin-bottom: 16px !important;
+    }
+
+    /* About section дополнительная оптимизация */
+    .about-section-modern {
+        padding: 40px 0 !important;
+    }
+
+    .about-section-modern .section-title {
+        font-size: 24px !important;
+        margin-bottom: 24px !important;
+    }
+
+    .about-description {
+        gap: 16px !important;
+    }
+
+    .about-info-cards {
+        gap: 10px !important;
+    }
+
+    .info-card {
+        padding: 14px 16px !important;
+        border-radius: 14px !important;
+    }
+
+    .info-card-title {
+        font-size: 15px !important;
+    }
+
+    .info-icon {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 10px !important;
+    }
+
+    .info-icon svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    .nominations-list li {
+        font-size: 14px !important;
+        padding: 4px 0 !important;
+        padding-left: 24px !important;
+    }
+
+    .award-text,
+    .year-text {
+        font-size: 14px !important;
+    }
+
+    .price-amount {
+        font-size: 28px !important;
+    }
+
+    .price-note {
+        font-size: 12px !important;
+    }
+
+    .btn-regulations {
+        padding: 12px 24px !important;
+        font-size: 14px !important;
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* Goals section оптимизация */
+    .features-section[style*="padding: 60px 0"] {
+        padding: 40px 0 !important;
+    }
+
+    .features-grid[style*="grid-template-columns"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        min-height: auto !important;
+    }
+
+    .feature-card .feature-icon[style*="font-size: 32px"] {
+        font-size: 24px !important;
+        width: 44px !important;
+        height: 44px !important;
+        margin-bottom: 10px !important;
+        border-radius: 12px !important;
+    }
+
+    .feature-card p[style*="font-size: 16px"] {
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+    }
+
+    /* Objectives section оптимизация */
+    .features-section div[style*="max-width: 900px"] {
+        max-width: 100% !important;
+    }
+
+    .features-section div[style*="display: grid; gap: 16px"] {
+        gap: 10px !important;
+    }
+
+    .features-section div[style*="display: flex; gap: 16px; align-items: flex-start; padding: 20px"] {
+        padding: 14px 12px !important;
+        gap: 10px !important;
+        border-radius: 12px !important;
+    }
+
+    .features-section div[style*="flex-shrink: 0; width: 32px; height: 32px"] {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 14px !important;
+        border-radius: 6px !important;
+    }
+
+    .features-section div[style*="display: flex"] p[style*="font-size: 16px"] {
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+    }
+
+    /* Общая оптимизация контейнеров */
+    .container[style*="margin-bottom"] {
+        margin-bottom: 24px !important;
+    }
+
+    /* Оптимизация для Price CTA если она есть */
+    .price-cta-section {
+        padding: 40px 0 !important;
+    }
+
+    .price-features {
+        gap: 16px !important;
+    }
+
+    .price-feature {
+        font-size: 13px !important;
+    }
+
+    .btn-cta-large {
+        font-size: 16px !important;
+        padding: 16px 36px !important;
+    }
+
+    /* Оптимизация padding для всех основных секций */
+    section[style*="padding"] {
+        padding: 40px 0 !important;
     }
 }
 </style>
