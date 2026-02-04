@@ -3,16 +3,14 @@
  */
 
 /* === Journal Landing Page Hero === */
-.journal-hero {
+.journal-hero-main {
     background: linear-gradient(135deg, #0077FF 0%, #0088FF 50%, #3399FF 100%);
-    color: white;
     padding: 80px 0 100px;
-    text-align: center;
     position: relative;
     overflow: hidden;
 }
 
-.journal-hero::before {
+.journal-hero-main::before {
     content: '';
     position: absolute;
     top: 0;
@@ -23,66 +21,38 @@
     opacity: 0.5;
 }
 
-.journal-hero .container {
-    position: relative;
-    z-index: 1;
-}
-
-.journal-hero .hero-content {
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.hero-badge {
-    display: inline-block;
-    padding: 8px 20px;
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 30px;
-    font-size: 0.9rem;
-    margin-bottom: 24px;
-    backdrop-filter: blur(4px);
-}
-
-.journal-hero .hero-title {
-    font-size: 3rem;
-    font-weight: 700;
-    line-height: 1.2;
-    margin-bottom: 24px;
-}
-
-.journal-hero .hero-title .highlight {
-    color: #fbbf24;
-}
-
-.journal-hero .hero-subtitle {
-    font-size: 1.2rem;
-    opacity: 0.9;
-    max-width: 600px;
-    margin: 0 auto 40px;
-    line-height: 1.6;
-}
-
-.journal-hero .hero-stats {
-    display: flex;
+/* Journal Hero Image - override homepage hero styles */
+.journal-hero-image {
+    display: flex !important;
+    align-items: center;
     justify-content: center;
-    gap: 60px;
-    margin-bottom: 40px;
+    gap: 0 !important;
 }
 
-.journal-hero .stat-item {
-    text-align: center;
+.journal-hero-image img {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    border: none !important;
+    object-fit: contain;
 }
 
-.journal-hero .stat-number {
-    display: block;
-    font-size: 2.5rem;
-    font-weight: 700;
+/* Remove hero-image-circle styles for journal */
+.journal-hero-image .hero-image-circle {
+    display: none;
 }
 
-.journal-hero .stat-label {
-    font-size: 0.9rem;
-    opacity: 0.8;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .journal-hero-main {
+        padding: 50px 0 70px;
+    }
+
+    .journal-hero-image img {
+        border-radius: 12px;
+    }
 }
 
 .hero-actions {
@@ -90,6 +60,31 @@
     gap: 16px;
     justify-content: center;
     flex-wrap: wrap;
+}
+
+/* Button Base Styles */
+.btn {
+    display: inline-block;
+    padding: 14px 32px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border: none;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #0077FF 0%, #0088FF 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 119, 255, 0.3);
+    opacity: 1;
 }
 
 .btn-lg {

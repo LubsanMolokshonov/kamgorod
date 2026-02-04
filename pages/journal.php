@@ -83,41 +83,44 @@ include __DIR__ . '/../includes/header.php';
 
 <?php if ($showLanding): ?>
 <!-- Hero Section -->
-<section class="journal-hero">
+<section class="homepage-hero journal-hero-main">
     <div class="container">
-        <div class="hero-content">
-            <div class="hero-badge">Педагогический онлайн-журнал</div>
-            <h1 class="hero-title">
-                Бесплатная публикация<br>
-                <span class="highlight">ваших материалов</span>
-            </h1>
-            <p class="hero-subtitle">
-                Опубликуйте свою статью, методическую разработку или конспект урока
-                в нашем электронном журнале и получите официальное свидетельство о публикации
-            </p>
+        <div class="homepage-hero-content">
+            <!-- Title -->
+            <h1 class="homepage-hero-title">Педагогический онлайн-журнал для публикации ваших материалов</h1>
 
-            <div class="hero-stats">
-                <div class="stat-item">
-                    <span class="stat-number"><?php echo number_format($totalCount); ?>+</span>
-                    <span class="stat-label">публикаций</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">24/7</span>
-                    <span class="stat-label">доступ</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">PDF</span>
-                    <span class="stat-label">свидетельство</span>
-                </div>
+            <!-- CTA Row -->
+            <div class="homepage-hero-cta-row">
+                <a href="/opublikovat" class="btn-homepage-cta">Опубликовать бесплатно</a>
+            </div>
+        </div>
+
+        <!-- Journal Image Section -->
+        <div class="homepage-hero-right">
+            <div class="homepage-hero-images journal-hero-image">
+                <img src="/assets/images/journal-hero.png" alt="Педагогический журнал" loading="eager">
             </div>
 
-            <div class="hero-actions">
-                <a href="/opublikovat" class="btn btn-primary btn-lg">
-                    Опубликовать бесплатно
-                </a>
-                <a href="#catalog" class="btn btn-outline btn-lg">
-                    Читать публикации
-                </a>
+            <div class="homepage-hero-badges-bottom">
+                <div class="feature-card feature-card--badge">
+                    <div class="feature-logo">
+                        <img src="/assets/images/skolkovo.webp" alt="Сколково" width="70" height="70">
+                    </div>
+                    <div class="feature-text">
+                        <span class="feature-label">Резидент</span>
+                        <span class="feature-label">Сколково</span>
+                    </div>
+                </div>
+
+                <div class="feature-card feature-card--badge">
+                    <div class="feature-logo">
+                        <img src="/assets/images/eagle_s.svg" alt="СМИ" width="70" height="70">
+                    </div>
+                    <div class="feature-text">
+                        <span class="feature-label">Свидетельство о регистрации СМИ:</span>
+                        <span class="feature-label">Эл. №ФС 77-74524</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

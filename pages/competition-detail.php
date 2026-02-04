@@ -161,22 +161,22 @@ include __DIR__ . '/../includes/header.php';
 
 .btn-hero-cta {
     display: inline-block;
-    background: linear-gradient(90deg, #5B4DFF 0%, #8B7DFF 100%);
+    background: var(--gradient-primary);
     color: white;
     font-size: 16px;
     font-weight: 600;
     padding: 18px 36px;
-    border-radius: 16px;
+    border-radius: var(--border-radius-button);
     text-decoration: none;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 16px rgba(91, 77, 255, 0.4);
+    box-shadow: 0 4px 16px rgba(0, 119, 255, 0.4);
     border: none;
     cursor: pointer;
 }
 
 .btn-hero-cta:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(91, 77, 255, 0.5);
+    box-shadow: 0 8px 24px rgba(0, 119, 255, 0.5);
     opacity: 1;
 }
 

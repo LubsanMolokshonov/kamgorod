@@ -583,4 +583,45 @@ class Publication {
             $params
         );
     }
+
+    /**
+     * Get count of published publications
+     * @return int
+     */
+    public function getPublishedCount() {
+        $result = $this->db->queryOne(
+            "SELECT COUNT(*) as count FROM publications WHERE status = 'published'"
+        );
+        return $result['count'] ?? 0;
+    }
+
+    /**
+     * Get all publications with filters
+     * @param array $filters - Array of filters ['status' => 'published']
+     * @param int $limit - Number of results to return
+     * @return array
+     */
+    public function getAll($filters = [], $limit = 50) {
+        $sql = "SELECT p.*, pt.name as type_name, u.full_name as author_name
+                FROM publications p
+                LEFT JOIN publication_types pt ON p.publication_type_id = pt.id
+                LEFT JOIN users u ON p.user_id = u.id
+                WHERE 1=1";
+        $params = [];
+
+        if (isset($filters['status'])) {
+            $sql .= " AND p.status = ?";
+            $params[] = $filters['status'];
+        }
+
+        if (isset($filters['type_id'])) {
+            $sql .= " AND p.publication_type_id = ?";
+            $params[] = $filters['type_id'];
+        }
+
+        $sql .= " ORDER BY p.published_at DESC LIMIT ?";
+        $params[] = (int)$limit;
+
+        return $this->db->query($sql, $params);
+    }
 }

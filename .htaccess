@@ -10,17 +10,24 @@ RewriteBase /
 # RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
 # ================================================
+# ГЛАВНАЯ СТРАНИЦА
+# ================================================
+
+# Главная страница портала
+RewriteRule ^$ index.php [L]
+
+# ================================================
 # КОНКУРСЫ
 # ================================================
 
 # Список конкурсов
-RewriteRule ^konkursy/?$ index.php [L,QSA]
+RewriteRule ^konkursy/?$ competitions.php [L,QSA]
 
 # Категории конкурсов
-RewriteRule ^konkursy/metodika/?$ index.php?category=methodology [L,QSA]
-RewriteRule ^konkursy/vneurochnaya/?$ index.php?category=extracurricular [L,QSA]
-RewriteRule ^konkursy/proekty/?$ index.php?category=student_projects [L,QSA]
-RewriteRule ^konkursy/tvorchestvo/?$ index.php?category=creative [L,QSA]
+RewriteRule ^konkursy/metodika/?$ competitions.php?category=methodology [L,QSA]
+RewriteRule ^konkursy/vneurochnaya/?$ competitions.php?category=extracurricular [L,QSA]
+RewriteRule ^konkursy/proekty/?$ competitions.php?category=student_projects [L,QSA]
+RewriteRule ^konkursy/tvorchestvo/?$ competitions.php?category=creative [L,QSA]
 
 # Детальная страница конкурса с указанием типа аудитории
 RewriteRule ^(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/konkurs/([a-z0-9-]+)/?$ pages/competition-detail.php?audience=$1&slug=$2 [L,QSA]
