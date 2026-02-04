@@ -36,13 +36,18 @@ try {
         }
     }
 
-    // Collect form data
+    // Get recipient type (participant or supervisor)
+    $recipientType = $_POST['recipient_type'] ?? 'participant';
+
+    // Collect form data - synchronized with DiplomaPreview.php fields
     $data = [
         'fio' => $_POST['fio'] ?? '',
         'email' => $_POST['email'] ?? '',
         'organization' => $_POST['organization'] ?? '',
         'city' => $_POST['city'] ?? '',
         'supervisor_name' => $_POST['supervisor_name'] ?? '',
+        'supervisor_organization' => $_POST['supervisor_organization'] ?? '',
+        'supervisor_city' => $_POST['supervisor_city'] ?? $_POST['city'] ?? '', // Fallback to participant city
         'nomination' => $_POST['nomination'] ?? '',
         'competition_type' => $_POST['competition_type'] ?? '',
         'work_title' => $_POST['work_title'] ?? '',
@@ -52,7 +57,7 @@ try {
     ];
 
     // Generate preview with real data
-    $preview = new DiplomaPreview($templateId, $data);
+    $preview = new DiplomaPreview($templateId, $data, $recipientType);
     $svgContent = $preview->generate();
 
     // Return SVG as data URI

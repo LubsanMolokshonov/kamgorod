@@ -13,7 +13,7 @@ main:has(.diploma-form-wrapper) {
 .diploma-form-wrapper {
     background: #f0f4f8;
     min-height: 100vh;
-    padding: 100px 20px 60px;
+    padding: 100px 20px 40px;
 }
 
 .diploma-form-container {
@@ -23,25 +23,29 @@ main:has(.diploma-form-wrapper) {
 
 .diploma-form-title {
     text-align: center;
-    font-size: 42px;
+    font-size: 32px;
     font-weight: 700;
     color: #1a1a1a;
-    margin-bottom: 50px;
+    margin-bottom: 30px;
     line-height: 1.2;
 }
 
 .diploma-form-title .highlight-blue {
-    color: #0065B1;
+    color: var(--primary-purple);
 }
 
 /* Main Content Layout */
 .diploma-form-content {
     display: grid;
-    grid-template-columns: minmax(400px, 600px) 1fr;
-    gap: 30px;
-    align-items: start;
-    max-width: 1400px;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    align-items: stretch;
+    max-width: 1440px;
     margin: 0 auto;
+    background: #fff;
+    border-radius: var(--border-radius-card);
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
 }
 
 /* Registration Container - Legacy Support */
@@ -286,6 +290,15 @@ select.form-control {
     cursor: pointer;
 }
 
+/* Select with custom arrow */
+.diploma-form-left select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0 center;
+    padding-right: 30px;
+}
+
 /* Checkbox Toggle */
 .checkbox-group {
     display: flex;
@@ -387,53 +400,55 @@ select.form-control {
 
 /* Left Side - Form */
 .diploma-form-left {
-    background: #D7EAFC;
-    border-radius: 20px;
-    padding: 40px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    background: #fff;
+    border-radius: 24px;
+    padding: 30px 24px 30px 30px;
+    box-shadow: none;
+    border-right: 1px dashed #e5e7eb;
 }
 
 /* Tab Switcher */
 .diploma-tabs {
     display: flex;
-    gap: 0;
-    margin-bottom: 30px;
+    gap: 6px;
+    margin-bottom: 20px;
     background: transparent;
-    border-radius: 0;
-    overflow: visible;
+    flex-wrap: wrap;
 }
 
 .diploma-tab {
     flex: 1;
-    padding: 16px 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 18px;
+    background: #f3f4f6;
     border: none;
-    background: #B8D9F5;
-    color: #34314B;
-    font-size: 16px;
-    font-weight: 600;
+    border-radius: 50px;
+    color: var(--text-dark);
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-    border-radius: 0;
+    transition: all 0.2s ease;
 }
 
 .diploma-tab:first-child {
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
+    border-radius: 50px;
 }
 
 .diploma-tab:last-child {
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
+    border-radius: 50px;
 }
 
 .diploma-tab.active {
-    background: #0065B1;
-    color: white;
+    background: var(--gradient-primary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 119, 255, 0.3);
 }
 
 .diploma-tab:hover:not(.active) {
-    background: #A5CCF0;
+    background: #e5e7eb;
 }
 
 /* Tab Content */
@@ -447,24 +462,26 @@ select.form-control {
 
 /* Form Controls - New Style */
 .diploma-form-left .form-group {
-    margin-bottom: 14px;
+    margin-bottom: 8px;
 }
 
 .diploma-form-left .form-control {
     width: 100%;
-    padding: 12px 14px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
+    padding: 10px 12px;
+    border: none;
+    border-bottom: 2px solid #e5e7eb;
+    border-radius: 0;
     font-size: 14px;
     font-family: inherit;
-    background: white;
-    transition: all 0.2s ease;
+    background: transparent;
+    color: var(--text-dark);
+    transition: border-color 0.3s ease;
 }
 
 .diploma-form-left .form-control:focus {
     outline: none;
-    border-color: #0065B1;
-    box-shadow: 0 0 0 2px rgba(0, 101, 177, 0.1);
+    border-bottom-color: var(--primary-purple);
+    box-shadow: none;
 }
 
 .diploma-form-left .form-control::placeholder {
@@ -474,10 +491,10 @@ select.form-control {
 
 /* Form Labels */
 .form-label-small {
-    font-size: 12px;
-    color: #4b5563;
-    margin-bottom: 6px;
     display: block;
+    font-size: 12px;
+    color: var(--text-medium);
+    margin-bottom: 4px;
     font-weight: 500;
 }
 
@@ -491,13 +508,13 @@ select.form-control {
 
 /* Helper Links */
 .form-helper-link {
-    font-size: 13px;
-    margin-top: 6px;
-    color: #6b7280;
+    font-size: 12px;
+    margin-top: 4px;
+    color: var(--text-medium);
 }
 
 .form-helper-link a {
-    color: #0065B1;
+    color: var(--primary-purple);
     text-decoration: none;
     font-weight: 500;
 }
@@ -509,24 +526,24 @@ select.form-control {
 /* Submit Button */
 .btn-submit {
     width: 100%;
-    padding: 14px 24px;
-    background: #EE3F58;
-    color: white;
+    padding: 12px 24px;
+    background: var(--gradient-primary);
+    color: #fff;
     border: none;
-    border-radius: 8px;
-    font-size: 15px;
+    border-radius: var(--border-radius-button);
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 20px;
+    transition: all 0.3s ease;
+    margin-top: 16px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
+    box-shadow: 0 4px 16px rgba(0, 119, 255, 0.4);
 }
 
 .btn-submit:hover {
-    background: #d63548;
-    transform: translateY(-1px);
-    box-shadow: 0 3px 10px rgba(238, 63, 88, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 119, 255, 0.5);
 }
 
 .btn-submit:active {
@@ -540,12 +557,12 @@ select.form-control {
 }
 
 .diploma-preview-container {
-    background: white;
-    border-radius: 20px;
-    padding: 30px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    background: #fff;
+    border-radius: 0;
+    padding: 20px;
+    box-shadow: none;
     display: flex;
-    gap: 20px;
+    gap: 16px;
     align-items: flex-start;
 }
 
@@ -555,8 +572,8 @@ select.form-control {
     text-align: center;
     background: #f9fafb;
     border-radius: 12px;
-    padding: 30px 20px;
-    min-height: 600px;
+    padding: 16px;
+    min-height: 500px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -576,16 +593,16 @@ select.form-control {
 .diploma-gallery {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    max-height: 700px;
+    gap: 8px;
+    max-height: 550px;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 5px;
-    padding-right: 10px;
+    padding-right: 8px;
     scrollbar-width: thin;
-    scrollbar-color: #0065B1 #e0e8f0;
+    scrollbar-color: var(--primary-purple) #e0e8f0;
     flex-shrink: 0;
-    width: 110px;
+    width: 90px;
 }
 
 .diploma-gallery::-webkit-scrollbar {
@@ -598,12 +615,12 @@ select.form-control {
 }
 
 .diploma-gallery::-webkit-scrollbar-thumb {
-    background: #0065B1;
+    background: var(--primary-purple);
     border-radius: 3px;
 }
 
 .diploma-gallery::-webkit-scrollbar-thumb:hover {
-    background: #004d8a;
+    background: var(--dark-purple);
 }
 
 .diploma-gallery-item {
@@ -621,12 +638,12 @@ select.form-control {
 .diploma-gallery-item:hover {
     transform: translateX(-3px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border-color: #0065B1;
+    border-color: var(--primary-purple);
 }
 
 .diploma-gallery-item.active {
-    border-color: #0065B1;
-    box-shadow: 0 0 0 3px rgba(0, 101, 177, 0.2);
+    border-color: var(--primary-purple);
+    box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.2);
     transform: translateX(-5px);
 }
 
@@ -641,7 +658,14 @@ select.form-control {
 @media (max-width: 1200px) {
     .diploma-form-content {
         grid-template-columns: 1fr;
-        gap: 30px;
+        gap: 0;
+    }
+
+    .diploma-form-left {
+        border-right: none;
+        border-bottom: 1px dashed #e5e7eb;
+        padding: 30px 24px;
+        border-radius: 0;
     }
 
     .diploma-form-right {
@@ -650,11 +674,12 @@ select.form-control {
     }
 
     .diploma-form-title {
-        font-size: 36px;
+        font-size: 28px;
     }
 
     .diploma-preview-container {
         flex-direction: column-reverse;
+        padding: 24px;
     }
 
     .diploma-gallery {
@@ -715,41 +740,34 @@ select.form-control {
     }
 
     .diploma-form-left {
-        padding: 20px;
-        border-radius: 15px;
+        padding: 20px 16px;
+        border-radius: 0;
+        border-bottom: 1px dashed #e5e7eb;
     }
 
     .diploma-tabs {
-        margin-bottom: 20px;
+        margin-bottom: 16px;
+        gap: 4px;
     }
 
     .diploma-tab {
-        padding: 12px 16px;
-        font-size: 14px;
+        padding: 8px 12px;
+        font-size: 13px;
+        border-radius: 50px;
     }
 
     .diploma-tab:first-child,
     .diploma-tab:last-child {
-        border-radius: 0;
-    }
-
-    .diploma-tab:first-child {
-        border-top-left-radius: 6px;
-        border-bottom-left-radius: 6px;
-    }
-
-    .diploma-tab:last-child {
-        border-top-right-radius: 6px;
-        border-bottom-right-radius: 6px;
+        border-radius: 50px;
     }
 
     .diploma-form-left .form-control {
-        font-size: 14px;
-        padding: 11px 12px;
+        font-size: 16px;
+        padding: 10px 12px;
     }
 
     .btn-submit {
-        padding: 13px 20px;
+        padding: 12px 20px;
         font-size: 14px;
     }
 

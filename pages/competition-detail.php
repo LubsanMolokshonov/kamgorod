@@ -55,12 +55,14 @@ include __DIR__ . '/../includes/header.php';
     margin-top: -80px;
 }
 
-/* Hero Section */
+/* Hero Section - Skillbox Style Dark Theme */
 .hero-landing {
-    padding: 100px 0 80px;
-    margin-top: 80px;
+    padding: 100px 0 0;
+    margin-top: -80px;
     position: relative;
     overflow: hidden;
+    color: #fff;
+    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
 }
 
 .hero-landing::before {
@@ -72,155 +74,282 @@ include __DIR__ . '/../includes/header.php';
     width: 100%;
     max-width: 1440px;
     height: 100%;
-    background: var(--gradient-hero);
-    border-radius: 0 0 60px 60px;
+    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+    border-radius: 0 0 80px 80px;
     z-index: 0;
 }
 
 .hero-landing .container {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     position: relative;
     z-index: 1;
-    padding: 0 80px;
+    padding: 100px 20px 0;
+    gap: 40px;
 }
 
 .hero-content {
-    flex: 0 0 50%;
+    flex: 0 0 58%;
     color: white;
+    padding-top: 40px;
+}
+
+/* Hero Badges */
+.hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 32px;
 }
 
 .hero-category {
     display: inline-block;
-    background: rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.1);
     backdrop-filter: blur(10px);
-    padding: 10px 24px;
-    border-radius: 30px;
-    font-size: 14px;
-    font-weight: 600;
-    text-transform: uppercase;
-    margin-bottom: 24px;
-    letter-spacing: 1px;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .hero-title {
-    font-size: 52px;
+    font-size: 56px;
     font-weight: 700;
-    margin-bottom: 30px;
+    line-height: 1.15;
+    margin-bottom: 40px;
     color: white;
-    line-height: 1.2;
 }
 
 .hero-subtitle {
-    font-size: 20px;
-    color: rgba(255, 255, 255, 0.95);
-    margin-bottom: 30px;
-}
-
-.hero-meta {
-    display: flex;
-    justify-content: flex-start;
-    gap: 24px;
-    flex-wrap: wrap;
-    margin-bottom: 30px;
     font-size: 16px;
-    opacity: 0.95;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 20px;
+    font-weight: 500;
 }
 
-.hero-meta-item {
+/* Gift Box - описание */
+.hero-gift-box {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-top: 20px;
+    margin-bottom: 32px;
+    display: inline-block;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    max-width: fit-content;
+}
+
+.gift-text {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* CTA Row с Сколково */
+.hero-cta-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-}
-
-.hero-meta-item svg {
-    width: 20px;
-    height: 20px;
+    gap: 24px;
+    flex-wrap: wrap;
 }
 
 .btn-hero-cta {
     display: inline-block;
-    background: white;
-    color: var(--primary-purple);
-    font-size: 18px;
-    font-weight: 700;
-    padding: 18px 48px;
-    border-radius: 50px;
-    margin-top: 40px;
+    background: linear-gradient(90deg, #5B4DFF 0%, #8B7DFF 100%);
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 18px 36px;
+    border-radius: 16px;
     text-decoration: none;
     transition: all 0.3s ease;
-    box-shadow: 0 8px 24px rgba(0, 119, 255, 0.25);
+    box-shadow: 0 4px 16px rgba(91, 77, 255, 0.4);
+    border: none;
+    cursor: pointer;
 }
 
 .btn-hero-cta:hover {
-    transform: translateY(-4px) scale(1.05);
-    box-shadow: 0 12px 32px rgba(0, 119, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(91, 77, 255, 0.5);
     opacity: 1;
 }
 
-/* Hero Diploma Section */
+/* Сколково Badge */
+.skolkovo-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.skolkovo-logo {
+    height: 48px;
+    width: auto;
+}
+
+.skolkovo-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    line-height: 1.3;
+    text-align: left;
+}
+
+/* Hero Diploma Section - Stack of 6 diplomas */
 .hero-diploma {
-    flex: 0 0 45%;
+    flex: 0 0 38%;
     position: relative;
-    height: 600px;
-    overflow: visible;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 40px 0;
 }
 
-.hero-diploma-image {
+.diploma-stack {
     position: relative;
-    z-index: 3;
-    max-width: 400px;
-    width: 100%;
-    transition: transform 0.3s ease;
+    width: 380px;
+    height: 480px;
+    perspective: 1000px;
 }
 
-.hero-diploma-image svg {
+.diploma-item {
+    position: absolute;
+    width: 260px;
+    transition: all 0.4s ease;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+}
+
+.diploma-item img {
     width: 100%;
     height: auto;
-    border-radius: 16px;
-    border: 8px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    display: block;
+    border-radius: 12px;
 }
 
-.hero-diploma-image:hover {
-    transform: scale(1.05);
+/* 6 diplomas fanned out */
+.diploma-1 {
+    left: 0;
+    top: 80px;
+    transform: rotate(-15deg);
+    z-index: 1;
 }
 
-/* Floating Decorative Icons */
-.hero-icon {
-    position: absolute;
-    font-size: 40px;
+.diploma-2 {
+    left: 20px;
+    top: 55px;
+    transform: rotate(-9deg);
+    z-index: 2;
+}
+
+.diploma-3 {
+    left: 40px;
+    top: 35px;
+    transform: rotate(-3deg);
+    z-index: 3;
+}
+
+.diploma-4 {
+    left: 60px;
+    top: 20px;
+    transform: rotate(3deg);
+    z-index: 4;
+}
+
+.diploma-5 {
+    left: 80px;
+    top: 10px;
+    transform: rotate(9deg);
     z-index: 5;
-    animation: float 3s ease-in-out infinite;
 }
 
-.hero-icon-star {
-    top: 30px;
-    right: 250px;
+.diploma-6 {
+    left: 100px;
+    top: 0;
+    transform: rotate(15deg);
+    z-index: 6;
 }
 
-.hero-icon-message {
-    top: 180px;
-    right: 500px;
+/* Hover effect - fan out more */
+.diploma-stack:hover .diploma-1 {
+    transform: rotate(-20deg) translateX(-20px);
 }
 
-.hero-icon-phone {
-    top: 400px;
-    right: 600px;
+.diploma-stack:hover .diploma-2 {
+    transform: rotate(-12deg) translateX(-12px);
 }
 
-.hero-icon-game {
-    top: 300px;
-    right: 100px;
+.diploma-stack:hover .diploma-3 {
+    transform: rotate(-4deg) translateX(-4px);
 }
 
-.hero-icon-chat {
-    top: 500px;
-    right: 380px;
+.diploma-stack:hover .diploma-4 {
+    transform: rotate(4deg) translateX(4px);
+}
+
+.diploma-stack:hover .diploma-5 {
+    transform: rotate(12deg) translateX(12px);
+}
+
+.diploma-stack:hover .diploma-6 {
+    transform: rotate(20deg) translateX(20px);
+}
+
+/* Benefits Section - карточки под hero */
+.competition-benefits-section {
+    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+    padding: 0 0 80px;
+    margin-top: 0;
+}
+
+.competition-benefits-section .container {
+    max-width: 1440px;
+    padding: 0 80px;
+}
+
+.benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin: 0;
+}
+
+.benefit-card {
+    background: white;
+    border-radius: 24px;
+    padding: 28px 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.benefit-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.benefit-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2C3E50;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.benefit-card p {
+    font-size: 14px;
+    color: #64748B;
+    margin: 0;
+    line-height: 1.5;
 }
 
 /* Features Grid */
@@ -970,33 +1099,47 @@ include __DIR__ . '/../includes/header.php';
 }
 
 /* Responsive */
-@media (max-width: 960px) {
+@media (max-width: 1024px) {
     .hero-landing .container {
-        padding: 0 40px;
+        padding: 80px 40px 0;
+        gap: 30px;
     }
 
     .hero-title {
         font-size: 42px;
     }
 
-    .hero-diploma-image {
-        max-width: 350px;
+    .hero-content {
+        flex: 0 0 55%;
     }
 
-    .hero-icon {
-        font-size: 35px;
+    .hero-diploma {
+        flex: 0 0 42%;
     }
 
-    .hero-icon-star {
-        right: 200px;
+    .diploma-stack {
+        width: 320px;
+        height: 420px;
     }
 
-    .hero-icon-message {
-        right: 400px;
+    .diploma-item {
+        width: 220px;
     }
 
-    .hero-icon-phone {
-        right: 500px;
+    .diploma-1 { left: 0; top: 70px; transform: rotate(-12deg); }
+    .diploma-2 { left: 15px; top: 50px; transform: rotate(-7deg); }
+    .diploma-3 { left: 30px; top: 32px; transform: rotate(-2deg); }
+    .diploma-4 { left: 50px; top: 18px; transform: rotate(2deg); }
+    .diploma-5 { left: 70px; top: 8px; transform: rotate(7deg); }
+    .diploma-6 { left: 90px; top: 0; transform: rotate(12deg); }
+
+    .competition-benefits-section .container {
+        padding: 0 40px;
+    }
+
+    .benefits-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
     }
 
     .section-title {
@@ -1022,9 +1165,15 @@ include __DIR__ . '/../includes/header.php';
     }
 }
 
+@media (max-width: 768px) {
+    .benefits-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 640px) {
     .hero-landing {
-        padding: 80px 0 60px;
+        padding: 80px 0 40px;
     }
 
     .hero-landing::before {
@@ -1033,36 +1182,107 @@ include __DIR__ . '/../includes/header.php';
 
     .hero-landing .container {
         flex-direction: column;
-        padding: 0 24px;
+        padding: 80px 24px 0;
+        gap: 30px;
     }
 
     .hero-content {
         flex: 1;
         width: 100%;
-        text-align: center;
+        text-align: left;
+        padding-top: 20px;
     }
 
     .hero-diploma {
         flex: 1;
         width: 100%;
-        height: auto;
-        margin-top: 40px;
+        margin-top: 30px;
+        align-items: center;
+        padding: 20px 0;
     }
 
-    .hero-diploma-image {
-        max-width: 300px;
+    .diploma-stack {
+        width: 280px;
+        height: 360px;
     }
 
-    .hero-meta {
-        justify-content: center;
+    .diploma-item {
+        width: 180px;
     }
 
-    .hero-icon {
-        display: none;
+    .diploma-1 { left: 0; top: 60px; transform: rotate(-10deg); }
+    .diploma-2 { left: 12px; top: 45px; transform: rotate(-6deg); }
+    .diploma-3 { left: 24px; top: 30px; transform: rotate(-2deg); }
+    .diploma-4 { left: 40px; top: 18px; transform: rotate(2deg); }
+    .diploma-5 { left: 56px; top: 8px; transform: rotate(6deg); }
+    .diploma-6 { left: 72px; top: 0; transform: rotate(10deg); }
+
+    .hero-badges {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .hero-category {
+        font-size: 12px;
+        padding: 6px 14px;
     }
 
     .hero-title {
-        font-size: 28px;
+        font-size: 32px;
+    }
+
+    .hero-gift-box {
+        margin-bottom: 24px;
+    }
+
+    .gift-text {
+        font-size: 14px;
+    }
+
+    .btn-hero-cta {
+        font-size: 15px;
+        padding: 16px 32px;
+    }
+
+    .hero-cta-row {
+        gap: 16px;
+    }
+
+    .skolkovo-badge {
+        gap: 10px;
+    }
+
+    .skolkovo-logo {
+        height: 40px;
+    }
+
+    .skolkovo-text {
+        font-size: 12px;
+    }
+
+    .competition-benefits-section {
+        padding: 0 0 60px;
+    }
+
+    .competition-benefits-section .container {
+        padding: 0 24px;
+    }
+
+    .benefits-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .benefit-card {
+        padding: 24px 20px;
+    }
+
+    .benefit-card h3 {
+        font-size: 15px;
+    }
+
+    .benefit-card p {
+        font-size: 13px;
     }
 
     .section-title {
@@ -1094,11 +1314,6 @@ include __DIR__ . '/../includes/header.php';
         font-size: 24px;
     }
 
-    .hero-meta {
-        gap: 16px;
-        font-size: 14px;
-    }
-
     .faq-section {
         padding: 40px 24px;
         border-radius: 30px;
@@ -1123,107 +1338,87 @@ include __DIR__ . '/../includes/header.php';
 </style>
 
 <div class="landing-page">
-    <!-- Hero Section -->
+    <!-- Hero Section - Skillbox Style -->
     <section class="hero-landing">
         <div class="container">
             <div class="hero-content">
-                <div class="hero-category">
-                    Конкурс для <?php echo htmlspecialchars($competition['target_participants_genitive'] ?? $competition['target_participants']); ?>
+                <!-- Badges -->
+                <div class="hero-badges">
+                    <span class="hero-category">Конкурс для <?php echo htmlspecialchars($competition['target_participants_genitive'] ?? $competition['target_participants']); ?></span>
+                    <span class="hero-category"><?php echo $deadline_formatted; ?></span>
                 </div>
+
+                <!-- Title -->
                 <h1 class="hero-title"><?php echo htmlspecialchars($competition['title']); ?></h1>
 
-                <div class="hero-meta">
-                    <div class="hero-meta-item">
-                        <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
-                        <span>Дистанционный формат</span>
-                    </div>
-                    <div class="hero-meta-item">
-                        <svg fill="currentColor" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"/></svg>
-                        <span><?php echo $deadline_formatted; ?></span>
-                    </div>
-                    <div class="hero-meta-item">
-                        <svg fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                        <span>Одноэтапный</span>
-                    </div>
+                <!-- Gift Box - краткое описание -->
+                <div class="hero-gift-box">
+                    <p class="gift-text">
+                        Дистанционный формат • Одноэтапный • Диплом сразу после оплаты
+                    </p>
                 </div>
 
-                <a href="/pages/registration.php?competition_id=<?php echo $competition['id']; ?>" class="btn-hero-cta">
-                    Принять участие
-                </a>
+                <!-- CTA Button and Skolkovo Badge -->
+                <div class="hero-cta-row">
+                    <a href="/pages/registration.php?competition_id=<?php echo $competition['id']; ?>" class="btn-hero-cta">
+                        Принять участие
+                    </a>
+
+                    <div class="skolkovo-badge">
+                        <img src="/assets/images/skolkovo.webp" alt="Skolkovo" class="skolkovo-logo">
+                        <span class="skolkovo-text">Резидент<br>Сколково</span>
+                    </div>
+                </div>
             </div>
 
+            <!-- Diploma Stack - 6 diplomas -->
             <div class="hero-diploma">
-                <div class="hero-diploma-image">
-                    <svg width="600" height="848" viewBox="0 0 600 848" xmlns="http://www.w3.org/2000/svg">
-                        <!-- Background with gradient -->
-                        <defs>
-                            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" style="stop-color:#e8f4f8;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#d4e4ff;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
-                            </linearGradient>
-                        </defs>
+                <div class="diploma-stack">
+                    <div class="diploma-item diploma-1">
+                        <img src="/assets/images/diplomas/previews/diploma-1.svg" alt="Диплом вариант 1">
+                    </div>
+                    <div class="diploma-item diploma-2">
+                        <img src="/assets/images/diplomas/previews/diploma-2.svg" alt="Диплом вариант 2">
+                    </div>
+                    <div class="diploma-item diploma-3">
+                        <img src="/assets/images/diplomas/previews/diploma-3.svg" alt="Диплом вариант 3">
+                    </div>
+                    <div class="diploma-item diploma-4">
+                        <img src="/assets/images/diplomas/previews/diploma-4.svg" alt="Диплом вариант 4">
+                    </div>
+                    <div class="diploma-item diploma-5">
+                        <img src="/assets/images/diplomas/previews/diploma-5.svg" alt="Диплом вариант 5">
+                    </div>
+                    <div class="diploma-item diploma-6">
+                        <img src="/assets/images/diplomas/previews/diploma-6.svg" alt="Диплом вариант 6">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-                        <!-- Background -->
-                        <rect width="600" height="848" fill="url(#grad1)"/>
+    <!-- Benefits Section -->
+    <section class="competition-benefits-section">
+        <div class="container">
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <h3>Дистанционный формат</h3>
+                    <p>Участвуйте из любой точки России без необходимости выезда</p>
+                </div>
 
-                        <!-- Border -->
-                        <rect x="20" y="20" width="560" height="808" fill="none" stroke="#3b82f6" stroke-width="3"/>
-                        <rect x="30" y="30" width="540" height="788" fill="none" stroke="#3b82f6" stroke-width="1"/>
+                <div class="benefit-card">
+                    <h3>Быстрый результат</h3>
+                    <p>Получите диплом сразу после оплаты — без ожидания и очередей</p>
+                </div>
 
-                        <!-- Decorative corners -->
-                        <circle cx="50" cy="50" r="8" fill="#3b82f6"/>
-                        <circle cx="550" cy="50" r="8" fill="#3b82f6"/>
-                        <circle cx="50" cy="798" r="8" fill="#3b82f6"/>
-                        <circle cx="550" cy="798" r="8" fill="#3b82f6"/>
+                <div class="benefit-card">
+                    <h3>Официальный документ</h3>
+                    <p>Диплом от издания с регистрацией СМИ для вашего портфолио</p>
+                </div>
 
-                        <!-- Header -->
-                        <rect x="50" y="60" width="500" height="80" fill="url(#headerGrad)" rx="10"/>
-                        <text x="300" y="105" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle">ДИПЛОМ</text>
-                        <text x="300" y="130" font-family="Arial, sans-serif" font-size="16" fill="white" text-anchor="middle">УЧАСТНИКА</text>
-
-                        <!-- Award icon -->
-                        <circle cx="300" cy="220" r="40" fill="#fbbf24" stroke="#f59e0b" stroke-width="3"/>
-                        <text x="300" y="235" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle">★</text>
-
-                        <!-- Content area -->
-                        <text x="300" y="300" font-family="Arial, sans-serif" font-size="18" fill="#374151" text-anchor="middle">Настоящий диплом выдан</text>
-
-                        <!-- Name placeholder -->
-                        <rect x="100" y="320" width="400" height="50" fill="white" stroke="#3b82f6" stroke-width="2" rx="5"/>
-                        <text x="300" y="352" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#1f2937" text-anchor="middle">Иванов Иван Иванович</text>
-
-                        <!-- Achievement text -->
-                        <text x="300" y="410" font-family="Arial, sans-serif" font-size="16" fill="#374151" text-anchor="middle">за участие в конкурсе</text>
-
-                        <!-- Competition name -->
-                        <rect x="80" y="430" width="440" height="80" fill="white" stroke="#3b82f6" stroke-width="2" rx="5"/>
-                        <text x="300" y="460" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#1f2937" text-anchor="middle">Всероссийский конкурс</text>
-                        <text x="300" y="490" font-family="Arial, sans-serif" font-size="16" fill="#4b5563" text-anchor="middle">«Математика для малышей: современные подходы»</text>
-
-                        <!-- Details -->
-                        <text x="80" y="540" font-family="Arial, sans-serif" font-size="12" fill="#374151">Учреждение: Название учреждения</text>
-                        <text x="80" y="560" font-family="Arial, sans-serif" font-size="12" fill="#374151">Населенный пункт: Населенный пункт</text>
-
-                        <text x="80" y="590" font-family="Arial, sans-serif" font-size="14" fill="#374151">Номинация:</text>
-                        <text x="80" y="615" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1f2937">Творческая работа</text>
-
-                        <text x="80" y="645" font-family="Arial, sans-serif" font-size="14" fill="#374151">Название работы:</text>
-                        <text x="80" y="670" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1f2937">«Название творческой работы»</text>
-
-                        <text x="80" y="700" font-family="Arial, sans-serif" font-size="14" fill="#374151">Место:</text>
-                        <text x="80" y="725" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#3b82f6">1 место</text>
-
-                        <!-- Footer -->
-                        <line x1="80" y1="750" x2="280" y2="750" stroke="#9ca3af" stroke-width="1"/>
-                        <text x="80" y="770" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">Дата</text>
-
-                        <line x1="320" y1="750" x2="520" y2="750" stroke="#9ca3af" stroke-width="1"/>
-                        <text x="320" y="770" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">Директор</text>
-                    </svg>
+                <div class="benefit-card">
+                    <h3>Акция 2+1</h3>
+                    <p>При оплате 2 конкурсов — третий бесплатно!</p>
                 </div>
             </div>
         </div>

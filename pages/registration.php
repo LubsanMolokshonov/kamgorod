@@ -141,8 +141,7 @@ include __DIR__ . '/../includes/header.php';
 
                         <div class="form-group">
                             <select class="form-control" id="placement" name="placement" required>
-                                <option value="">Выберите место</option>
-                                <option value="1">1 место</option>
+                                <option value="1" selected>1 место</option>
                                 <option value="2">2 место</option>
                                 <option value="3">3 место</option>
                                 <option value="участник">Участник</option>
@@ -152,8 +151,7 @@ include __DIR__ . '/../includes/header.php';
 
                         <div class="form-group">
                             <select class="form-control" id="competition_type" name="competition_type" required>
-                                <option value="">Выберите тип конкурса</option>
-                                <option value="всероссийский">Всероссийский</option>
+                                <option value="всероссийский" selected>Всероссийский</option>
                                 <option value="международный">Международный</option>
                                 <option value="межрегиональный">Межрегиональный</option>
                             </select>
@@ -162,9 +160,8 @@ include __DIR__ . '/../includes/header.php';
 
                         <div class="form-group">
                             <select class="form-control" id="nomination" name="nomination" required>
-                                <option value="">Выберите номинацию</option>
-                                <?php foreach ($nominations as $nom): ?>
-                                    <option value="<?php echo htmlspecialchars($nom); ?>">
+                                <?php foreach ($nominations as $index => $nom): ?>
+                                    <option value="<?php echo htmlspecialchars($nom); ?>"<?php echo $index === 0 ? ' selected' : ''; ?>>
                                         <?php echo htmlspecialchars($nom); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -282,9 +279,9 @@ include __DIR__ . '/../includes/header.php';
                     <!-- Main Preview - Now first (on the left) -->
                     <div class="diploma-preview-main">
                         <img id="diplomaPreview"
-                             src="/assets/images/diplomas/templates/diploma-template-1.svg"
+                             src="/assets/images/diplomas/templates/backgrounds/template-1.svg"
                              alt="Предпросмотр диплома"
-                             onerror="this.src='https://via.placeholder.com/600x848/dac2ff/8742ee?text=Предпросмотр+диплома'">
+                             onerror="this.src='/assets/images/diplomas/thumbnails/thumb-1.svg'">
                     </div>
 
                     <!-- Template Gallery - Vertical on the right -->

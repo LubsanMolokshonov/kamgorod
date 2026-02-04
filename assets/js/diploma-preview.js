@@ -72,6 +72,7 @@ $(document).ready(function() {
         if (currentTab === 'participant') {
             formData = {
                 ...formData,
+                recipient_type: 'participant',
                 fio: $('#fio').val(),
                 email: $('#email').val(),
                 organization: $('#organization').val(),
@@ -84,12 +85,17 @@ $(document).ready(function() {
                 participation_date: $('#participation_date').val()
             };
         } else {
+            // Supervisor diploma - use supervisor-specific fields
             formData = {
                 ...formData,
+                recipient_type: 'supervisor',
                 fio: $('input[name="supervisor_name_alt"]').val(),
+                supervisor_name: $('input[name="supervisor_name_alt"]').val(),
                 email: $('#supervisor_email').val(),
                 organization: $('#supervisor_organization').val(),
+                supervisor_organization: $('#supervisor_organization').val(),
                 city: $('input[name="supervisor_city"]').val(),
+                supervisor_city: $('input[name="supervisor_city"]').val(),
                 nomination: $('select[name="supervisor_nomination"]').val(),
                 competition_type: $('select[name="supervisor_competition_type"]').val(),
                 work_title: $('input[name="supervisor_work_title"]').val(),
@@ -106,15 +112,15 @@ $(document).ready(function() {
                 if (response.success) {
                     previewImg.attr('src', response.preview_url);
                 } else {
-                    // Fallback to template image
-                    const templatePath = '/assets/images/diplomas/templates/diploma-template-' + selectedTemplateId + '.svg';
+                    // Fallback to new template design
+                    const templatePath = '/assets/images/diplomas/templates/backgrounds/template-' + selectedTemplateId + '.svg';
                     previewImg.attr('src', templatePath + '?t=' + new Date().getTime());
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Preview AJAX error:', error);
-                // Fallback to template image
-                const templatePath = '/assets/images/diplomas/templates/diploma-template-' + selectedTemplateId + '.svg';
+                // Fallback to new template design
+                const templatePath = '/assets/images/diplomas/templates/backgrounds/template-' + selectedTemplateId + '.svg';
                 previewImg.attr('src', templatePath + '?t=' + new Date().getTime());
             }
         });
