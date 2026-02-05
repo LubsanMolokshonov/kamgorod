@@ -257,7 +257,6 @@ class SearchService {
         }
 
         $whereClause = implode(' OR ', $likePatterns);
-        $params[] = $limit;
 
         return $this->db->query(
             "SELECT c.*,
@@ -276,7 +275,7 @@ class SearchService {
             array_merge(
                 ['%' . $query . '%', '%' . $query . '%', '%' . $query . '%'],
                 $params,
-                ['%' . $query . '%']
+                ['%' . $query . '%', $limit]
             )
         );
     }
