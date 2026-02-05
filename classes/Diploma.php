@@ -387,9 +387,14 @@ class Diploma {
             'autoLangToFont' => true
         ]);
 
-        // Set background image from backgrounds folder
+        // Set background image from backgrounds folder (PNG for better mPDF compatibility)
         $templateId = $registration['diploma_template_id'] ?? 1;
-        $templateImagePath = __DIR__ . '/../assets/images/diplomas/templates/backgrounds/template-' . $templateId . '.svg';
+        $templateImagePath = __DIR__ . '/../assets/images/diplomas/templates/backgrounds/template-' . $templateId . '.png';
+
+        // Fallback to SVG if PNG doesn't exist
+        if (!file_exists($templateImagePath)) {
+            $templateImagePath = __DIR__ . '/../assets/images/diplomas/templates/backgrounds/template-' . $templateId . '.svg';
+        }
 
         // Fallback to old path if new doesn't exist
         if (!file_exists($templateImagePath)) {
@@ -551,10 +556,10 @@ HTML;
         $stampPath = __DIR__ . '/..' . self::CHAIRMAN_STAMP_PATH;
         $stampHtml = '';
 
-        // Add stamp image if exists
+        // Add stamp image if exists (positioned near chairman signature block)
         if (file_exists($stampPath)) {
             $stampHtml = sprintf(
-                '<img class="chairman-stamp" style="position: absolute; left: 113mm; top: 218mm; width: 56mm; height: 35mm;" src="%s" />',
+                '<div style="position: absolute; left: 120mm; top: 225mm; width: 50mm; height: 50mm;"><img src="%s" style="width: 50mm; height: auto;" /></div>',
                 $stampPath
             );
         }
