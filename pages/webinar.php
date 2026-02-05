@@ -302,9 +302,8 @@ include __DIR__ . '/../includes/header.php';
                                 <label class="checkbox-label">
                                     <input type="checkbox" name="agree" required>
                                     <span class="checkbox-text">
-                                        Я согласен на
-                                        <a href="/politika-konfidenczialnosti" class="link-terms" target="_blank">обработку персональных данных</a>
-                                        в соответствии с 152-ФЗ
+                                        Я принимаю условия <a href="/pages/terms.php" class="link-terms" target="_blank">Пользовательского соглашения</a>
+                                        и даю согласие на <a href="/pages/privacy.php" class="link-terms" target="_blank">обработку персональных данных</a>
                                     </span>
                                 </label>
                             </div>

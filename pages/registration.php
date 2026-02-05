@@ -193,6 +193,19 @@ include __DIR__ . '/../includes/header.php';
                             <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
+                        <!-- Agreement Checkbox -->
+                        <div class="form-agreement" style="margin-bottom: 20px;">
+                            <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" name="agreement" id="agreement" required style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0;">
+                                <span class="agreement-text" style="font-size: 13px; color: #64748B; line-height: 1.5;">
+                                    Я принимаю условия <a href="/pages/terms.php" target="_blank" style="color: #3B5998;">Пользовательского соглашения</a>
+                                    и даю согласие на обработку персональных данных в соответствии с
+                                    <a href="/pages/privacy.php" target="_blank" style="color: #3B5998;">Политикой конфиденциальности</a>
+                                </span>
+                            </label>
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
+                        </div>
+
                         <button type="submit" class="btn btn-submit">
                             ПОПОЛНИТЬ ПОРТФОЛИО СЕЙЧАС
                         </button>
@@ -264,6 +277,19 @@ include __DIR__ . '/../includes/header.php';
                                    name="supervisor_participation_date"
                                    value="<?php echo date('Y-m-d'); ?>"
                                    placeholder="Дата участия">
+                        </div>
+
+                        <!-- Agreement Checkbox for Supervisor -->
+                        <div class="form-agreement" style="margin-bottom: 20px;">
+                            <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" name="supervisor_agreement" id="supervisor_agreement" required style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0;">
+                                <span class="agreement-text" style="font-size: 13px; color: #64748B; line-height: 1.5;">
+                                    Я принимаю условия <a href="/pages/terms.php" target="_blank" style="color: #3B5998;">Пользовательского соглашения</a>
+                                    и даю согласие на обработку персональных данных в соответствии с
+                                    <a href="/pages/privacy.php" target="_blank" style="color: #3B5998;">Политикой конфиденциальности</a>
+                                </span>
+                            </label>
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
                         <button type="submit" class="btn btn-submit">

@@ -727,8 +727,6 @@ main {
 .sidebar-filters {
     width: 280px;
     flex-shrink: 0;
-    position: sticky;
-    top: 100px;
     height: fit-content;
     background: white;
     border-radius: 24px;

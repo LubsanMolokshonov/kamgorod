@@ -264,8 +264,9 @@ include __DIR__ . '/../includes/header.php';
                                     <input type="checkbox" name="agreement" id="agreement" required>
                                     <span class="checkmark"></span>
                                     <span class="agreement-text">
-                                        Я подтверждаю, что являюсь автором материала и согласен с
-                                        <a href="/pages/terms.php" target="_blank">правилами публикации</a>
+                                        Я подтверждаю, что являюсь автором материала, принимаю условия
+                                        <a href="/pages/terms.php" target="_blank">Пользовательского соглашения</a>
+                                        и даю согласие на <a href="/pages/privacy.php" target="_blank">обработку персональных данных</a>
                                     </span>
                                 </label>
                             </div>

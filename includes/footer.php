@@ -41,8 +41,8 @@
                     <p>
                         <a href="/pages/faq.php">Частые вопросы</a><br>
                         <a href="/pages/contacts.php">Контакты</a><br>
-                        <a href="/pages/privacy.php">Политика конфиденциальности</a><br>
-                        <a href="/pages/terms.php">Условия использования</a>
+                        <a href="/pages/terms.php">Пользовательское соглашение</a><br>
+                        <a href="/pages/privacy.php">Политика конфиденциальности</a>
                     </p>
                 </div>
 
