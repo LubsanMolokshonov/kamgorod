@@ -246,7 +246,7 @@ include __DIR__ . '/../includes/header.php';
                 <?php endforeach; ?>
             </div>
             <div class="filter-popup-footer">
-                <button class="filter-popup-apply btn btn-primary btn-block">Закрыть</button>
+                <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
             </div>
         </div>
     </div>
@@ -273,7 +273,7 @@ include __DIR__ . '/../includes/header.php';
                 <?php endforeach; ?>
             </div>
             <div class="filter-popup-footer">
-                <button class="filter-popup-apply btn btn-primary btn-block">Закрыть</button>
+                <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
             </div>
         </div>
     </div>

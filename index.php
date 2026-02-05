@@ -338,7 +338,7 @@ include __DIR__ . '/includes/header.php';
                             <line x1="8" y1="2" x2="8" y2="6"></line>
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
-                        <?php echo date('d.m.Y в H:i', strtotime($webinar['start_time'])); ?>
+                        <?php echo date('d.m.Y в H:i', strtotime($webinar['scheduled_at'])); ?>
                     </div>
                     <?php if (!empty($webinar['speaker_name'])): ?>
                     <div class="webinar-speaker">
@@ -483,25 +483,6 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.add('active');
             const targetId = this.dataset.tab;
             document.getElementById(targetId).classList.add('active');
-        });
-    });
-
-    // FAQ accordion
-    const faqItems = document.querySelectorAll('.faq-item');
-    faqItems.forEach(item => {
-        const question = item.querySelector('.faq-question');
-        question.addEventListener('click', () => {
-            const isActive = item.classList.contains('active');
-
-            // Close all other items
-            faqItems.forEach(otherItem => {
-                if (otherItem !== item) {
-                    otherItem.classList.remove('active');
-                }
-            });
-
-            // Toggle current item
-            item.classList.toggle('active', !isActive);
         });
     });
 

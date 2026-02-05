@@ -2267,9 +2267,11 @@ include __DIR__ . '/../includes/header.php';
 
 <script>
 // FAQ Toggle
-document.querySelectorAll('.faq-item').forEach(item => {
-    item.addEventListener('click', () => {
-        item.classList.toggle('active');
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.faq-item').forEach(item => {
+        item.addEventListener('click', function() {
+            this.classList.toggle('active');
+        });
     });
 });
 

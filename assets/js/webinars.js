@@ -3,7 +3,8 @@
  * Countdown timer and registration form handling
  */
 
-document.addEventListener('DOMContentLoaded', function() {
+// Run initialization when DOM is ready
+function initWebinarPage() {
     // Initialize countdown timer
     initCountdown();
 
@@ -15,7 +16,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize smooth scroll for CTA button
     initSmoothScroll();
-});
+
+    // Initialize FAQ accordion for webinar page
+    initFaqAccordion();
+}
+
+// Check if DOM is already loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWebinarPage);
+} else {
+    // DOM is already ready
+    initWebinarPage();
+}
+
+/**
+ * FAQ Accordion for Webinar Page
+ */
+function initFaqAccordion() {
+    const faqItems = document.querySelectorAll('.faq-item');
+    if (!faqItems.length) return;
+
+    faqItems.forEach(function(item) {
+        item.addEventListener('click', function() {
+            this.classList.toggle('active');
+        });
+    });
+}
 
 /**
  * Phone Input Mask

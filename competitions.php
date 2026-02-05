@@ -77,7 +77,7 @@ include __DIR__ . '/includes/header.php';
         <div class="hero-content">
             <h1 class="hero-title">Всероссийские конкурсы для педагогов и школьников</h1>
 
-            <p class="hero-subtitle">Участвуйте в конкурсах для педагогов и получите сертификат участника или победителя</p>
+            <p class="hero-subtitle">Участвуйте в конкурсах для педагогов и получите диплом участника или победителя</p>
 
             <a href="#competitions" class="btn btn-hero">Участвовать в конкурсах</a>
         </div>
@@ -264,7 +264,7 @@ include __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
             </div>
             <div class="filter-popup-footer">
-                <button class="filter-popup-apply btn btn-primary btn-block">Закрыть</button>
+                <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
             </div>
         </div>
     </div>
@@ -290,7 +290,7 @@ include __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
             </div>
             <div class="filter-popup-footer">
-                <button class="filter-popup-apply btn btn-primary btn-block">Закрыть</button>
+                <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
             </div>
         </div>
     </div>
@@ -316,7 +316,7 @@ include __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
             </div>
             <div class="filter-popup-footer">
-                <button class="filter-popup-apply btn btn-primary btn-block">Закрыть</button>
+                <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
             </div>
         </div>
     </div>
