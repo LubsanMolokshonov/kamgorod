@@ -64,10 +64,15 @@ include __DIR__ . '/../includes/header.php';
 <section class="webinar-hero">
     <div class="container">
         <div class="webinar-hero-content">
+            <!-- Partner Logos -->
+            <div class="partner-logos">
+                <img src="/assets/images/logo-kamenny-gorod-white.svg" alt="Каменный Город" class="partner-logo">
+            </div>
+
             <!-- Badges -->
             <div class="webinar-badges">
                 <span class="hero-category" style="font-size: 16px;">Бесплатный онлайн практикум для педагогов ОО</span>
-                <span class="hero-category" style="font-size: 16px;"><?php echo $dateInfo['date_full']; ?> МСК</span>
+                <span class="hero-category" style="font-size: 16px;"><?php echo $dateInfo['date_full']; ?> в <?php echo $dateInfo['time']; ?> МСК</span>
             </div>
 
             <!-- Title -->
@@ -142,17 +147,6 @@ include __DIR__ . '/../includes/header.php';
                 <!-- Main Description -->
                 <div class="webinar-description">
                     <?php echo $webinar['description']; ?>
-
-                    <?php if (!empty($audienceTypes)): ?>
-                        <div class="webinar-audience">
-                            <h3>Для кого этот вебинар</h3>
-                            <div class="audience-tags">
-                                <?php foreach ($audienceTypes as $type): ?>
-                                    <span class="audience-tag"><?php echo htmlspecialchars($type['name']); ?></span>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
                 </div>
 
                 <!-- Speaker Video Card -->
