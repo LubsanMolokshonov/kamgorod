@@ -191,11 +191,25 @@ function initRegistrationForm() {
             const data = await response.json();
 
             if (data.success) {
-                // Show success message
-                formMessage.className = 'form-message success';
-                formMessage.innerHTML = data.already_registered
+                // Build success message
+                let successHtml = data.already_registered
                     ? 'Вы уже зарегистрированы на этот вебинар!'
                     : '<strong>Вы успешно зарегистрированы!</strong><br>На указанный email придет письмо с подтверждением.';
+
+                // Add cabinet info for new users
+                if (!data.already_registered && data.cabinet_created) {
+                    successHtml += '<br><br><strong>Создан личный кабинет!</strong><br>' +
+                        'Теперь вы можете отслеживать все ваши вебинары и конкурсы.';
+                }
+
+                // Add button to cabinet
+                const cabinetUrl = data.cabinet_url || '/pages/cabinet.php?tab=webinars';
+                successHtml += '<div style="margin-top: 16px;">' +
+                    '<a href="' + cabinetUrl + '" class="btn btn-outline" style="display: inline-block;">Перейти в личный кабинет</a></div>';
+
+                // Show success message
+                formMessage.className = 'form-message success';
+                formMessage.innerHTML = successHtml;
                 formMessage.style.display = 'block';
 
                 // Hide form fields
@@ -204,11 +218,24 @@ function initRegistrationForm() {
                     submitBtn.style.display = 'none';
                     const formNote = form.querySelector('.form-note');
                     if (formNote) formNote.style.display = 'none';
+
+                    // Hide consent checkbox
+                    const formCheckbox = form.querySelector('.form-checkbox');
+                    if (formCheckbox) formCheckbox.style.display = 'none';
+
+                    // Hide consent container
+                    const consentContainer = form.querySelector('.consent-container');
+                    if (consentContainer) consentContainer.style.display = 'none';
                 }
 
                 // Track conversion (Yandex Metrika)
                 if (typeof ym !== 'undefined') {
                     ym(106465857, 'reachGoal', 'webinar_registration');
+
+                    // Separate goal for cabinet creation
+                    if (data.cabinet_created) {
+                        ym(106465857, 'reachGoal', 'cabinet_created_webinar');
+                    }
                 }
             } else {
                 // Show error message

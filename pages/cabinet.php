@@ -10,6 +10,8 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Publication.php';
 require_once __DIR__ . '/../classes/PublicationCertificate.php';
+require_once __DIR__ . '/../classes/Webinar.php';
+require_once __DIR__ . '/../classes/WebinarRegistration.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Auto-login via cookie if session doesn't exist
@@ -63,8 +65,15 @@ $certObj = new PublicationCertificate($db);
 $userPublications = $publicationObj->getByUser($_SESSION['user_id']);
 $userCertificates = $certObj->getByUser($_SESSION['user_id']);
 
+// Get user's webinar registrations
+$webinarRegObj = new WebinarRegistration($db);
+$userWebinars = $webinarRegObj->getByUser($_SESSION['user_id']);
+
 // Current tab
 $activeTab = $_GET['tab'] ?? 'diplomas';
+if (!in_array($activeTab, ['diplomas', 'publications', 'webinars'])) {
+    $activeTab = 'diplomas';
+}
 
 // Page metadata
 $pageTitle = 'Личный кабинет | ' . SITE_NAME;
@@ -102,9 +111,157 @@ include __DIR__ . '/../includes/header.php';
                     <span class="tab-count"><?php echo count($userPublications); ?></span>
                 <?php endif; ?>
             </a>
+            <a href="?tab=webinars" class="cabinet-tab <?php echo $activeTab === 'webinars' ? 'active' : ''; ?>">
+                <span class="tab-icon">📺</span>
+                Вебинары
+                <?php if (!empty($userWebinars)): ?>
+                    <span class="tab-count"><?php echo count($userWebinars); ?></span>
+                <?php endif; ?>
+            </a>
         </div>
 
-        <?php if ($activeTab === 'publications'): ?>
+        <?php if ($activeTab === 'webinars'): ?>
+            <!-- Webinars Tab -->
+            <?php if (empty($userWebinars)): ?>
+                <div class="empty-cabinet">
+                    <div class="empty-icon">📺</div>
+                    <h2>У вас пока нет регистраций на вебинары</h2>
+                    <p>Зарегистрируйтесь на бесплатные вебинары и получите сертификаты</p>
+                    <a href="/pages/webinars.php" class="btn btn-primary">
+                        Посмотреть вебинары
+                    </a>
+                </div>
+            <?php else: ?>
+                <!-- Success message for new registrations -->
+                <?php if (isset($_GET['registered']) && $_GET['registered'] === 'success'): ?>
+                    <div class="success-message">
+                        <div class="success-icon">✅</div>
+                        <div>
+                            <h3>Вы успешно зарегистрированы на вебинар!</h3>
+                            <p>Ссылка на трансляцию будет отправлена на вашу почту</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <div class="registrations-section">
+                    <h2>Ваши вебинары (<?php echo count($userWebinars); ?>)</h2>
+
+                    <div class="registrations-grid">
+                        <?php foreach ($userWebinars as $webinar):
+                            // Determine webinar status
+                            $webinarTime = strtotime($webinar['scheduled_at']);
+                            $now = time();
+                            $isUpcoming = $webinar['webinar_status'] === 'scheduled' || $webinar['webinar_status'] === 'live';
+                            $isPast = $webinar['webinar_status'] === 'completed';
+                            $hasRecording = !empty($webinar['video_url']);
+
+                            // Certificate available 1 hour after webinar start
+                            $certificateAvailableTime = $webinarTime + 3600; // +1 hour
+                            $canGetCertificate = $now >= $certificateAvailableTime;
+                            $certificatePrice = $webinar['certificate_price'] ?? 149;
+
+                            // Status for display
+                            if ($webinar['webinar_status'] === 'live') {
+                                $statusInfo = ['name' => 'Идет сейчас', 'color' => '#ef4444'];
+                            } elseif ($isUpcoming) {
+                                $statusInfo = ['name' => 'Предстоящий', 'color' => '#3b82f6'];
+                            } elseif ($hasRecording) {
+                                $statusInfo = ['name' => 'Запись доступна', 'color' => '#10b981'];
+                            } else {
+                                $statusInfo = ['name' => 'Завершен', 'color' => '#9ca3af'];
+                            }
+
+                            // Format date
+                            $dateFormatted = date('d.m.Y в H:i', $webinarTime);
+                        ?>
+                            <div class="registration-card webinar-card">
+                                <div class="card-header" style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);">
+                                    <h3><?php echo htmlspecialchars($webinar['webinar_title']); ?></h3>
+                                    <span class="status-badge <?php echo $webinar['webinar_status'] === 'live' ? 'live' : ''; ?>" style="background-color: <?php echo $statusInfo['color']; ?>">
+                                        <?php echo $statusInfo['name']; ?>
+                                    </span>
+                                </div>
+
+                                <div class="card-body">
+                                    <div class="info-row">
+                                        <span class="label">Дата проведения:</span>
+                                        <span class="value"><?php echo $dateFormatted; ?> МСК</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="label">Дата регистрации:</span>
+                                        <span class="value"><?php echo date('d.m.Y H:i', strtotime($webinar['created_at'])); ?></span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="label">Email:</span>
+                                        <span class="value"><?php echo htmlspecialchars($webinar['email']); ?></span>
+                                    </div>
+                                    <?php if ($canGetCertificate): ?>
+                                    <div class="info-row">
+                                        <span class="label">Сертификат:</span>
+                                        <span class="value"><?php echo number_format($certificatePrice, 0, ',', ' '); ?> ₽</span>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="card-actions">
+                                    <?php if ($webinar['webinar_status'] === 'live'): ?>
+                                        <a href="<?php echo htmlspecialchars($webinar['broadcast_url'] ?? '/pages/webinar.php?slug=' . $webinar['webinar_slug']); ?>"
+                                           class="btn btn-success btn-download" target="_blank">
+                                            🔴 Смотреть трансляцию
+                                        </a>
+                                    <?php elseif ($isUpcoming): ?>
+                                        <a href="/pages/webinar.php?slug=<?php echo urlencode($webinar['webinar_slug']); ?>"
+                                           class="btn btn-primary">
+                                            📅 Подробнее о вебинаре
+                                        </a>
+                                    <?php elseif ($hasRecording): ?>
+                                        <a href="/pages/webinar.php?slug=<?php echo urlencode($webinar['webinar_slug']); ?>"
+                                           class="btn btn-success btn-download">
+                                            ▶️ Смотреть запись
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="btn btn-outline" style="opacity: 0.6; cursor: default;">
+                                            Вебинар завершен
+                                        </span>
+                                    <?php endif; ?>
+
+                                    <?php if ($canGetCertificate): ?>
+                                        <a href="/pages/webinar-certificate.php?registration_id=<?php echo $webinar['id']; ?>"
+                                           class="btn btn-outline">
+                                            📜 Получить сертификат
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Info Section -->
+                <div class="info-section">
+                    <h3>О вебинарах</h3>
+                    <ul>
+                        <li>
+                            <strong>Трансляция:</strong> Ссылка на прямой эфир придет на вашу почту за час до начала
+                        </li>
+                        <li>
+                            <strong>Запись:</strong> После завершения вебинара запись появится в течение 24 часов
+                        </li>
+                        <li>
+                            <strong>Сертификат:</strong> Вы можете оформить именной сертификат участника после вебинара
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Actions -->
+                <div class="cabinet-actions">
+                    <a href="/pages/webinars.php" class="btn btn-primary">
+                        Смотреть другие вебинары
+                    </a>
+                </div>
+            <?php endif; ?>
+
+        <?php elseif ($activeTab === 'publications'): ?>
             <!-- Publications Tab -->
             <?php if (empty($userPublications)): ?>
                 <div class="empty-cabinet">

@@ -171,11 +171,12 @@ class WebinarRegistration {
     public function getByUser($userId) {
         return $this->db->query(
             "SELECT wr.*, w.title as webinar_title, w.slug as webinar_slug,
-                    w.scheduled_at, w.status as webinar_status, w.video_url
+                    w.scheduled_at, w.status as webinar_status, w.video_url,
+                    w.broadcast_url, w.certificate_price, w.certificate_hours
              FROM webinar_registrations wr
              JOIN webinars w ON wr.webinar_id = w.id
              WHERE wr.user_id = ?
-             ORDER BY wr.created_at DESC",
+             ORDER BY w.scheduled_at DESC",
             [$userId]
         );
     }

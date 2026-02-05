@@ -13,6 +13,7 @@ require_once __DIR__ . '/../classes/Webinar.php';
 require_once __DIR__ . '/../classes/WebinarRegistration.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Bitrix24Integration.php';
+require_once __DIR__ . '/../classes/WebinarEmailJourney.php';
 require_once __DIR__ . '/../includes/session.php';
 
 try {
@@ -101,6 +102,7 @@ try {
     $userObj = new User($db);
     $user = $userObj->findByEmail($email);
     $userId = null;
+    $isNewUser = !$user;
 
     if ($user) {
         $userId = $user['id'];
@@ -119,6 +121,18 @@ try {
             'institution_type_id' => $institutionTypeId ?: null
         ]);
     }
+
+    // Generate session_token for auto-login (like competitions)
+    $sessionToken = $userObj->generateSessionToken($userId);
+
+    // Set cookie for auto-login (30 days)
+    setcookie('session_token', $sessionToken, [
+        'expires' => time() + (30 * 24 * 60 * 60),
+        'path' => '/',
+        'secure' => isset($_SERVER['HTTPS']),
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
 
     // Create registration
     $registrationData = [
@@ -144,6 +158,17 @@ try {
 
     // Note: Bitrix24 sync is handled automatically in WebinarRegistration::create()
 
+    // Schedule email journey for this registration
+    try {
+        $emailJourney = new WebinarEmailJourney($db);
+        $emailJourney->scheduleForRegistration($registrationId);
+        // Send confirmation email immediately
+        $emailJourney->sendConfirmationEmail($registrationId);
+    } catch (Exception $emailError) {
+        // Log error but don't fail registration
+        error_log("Webinar Email Journey Error: " . $emailError->getMessage());
+    }
+
     // Set session user if not logged in
     if (!getUserId()) {
         setUserId($userId);
@@ -159,7 +184,9 @@ try {
         'webinar_title' => $webinar['title'],
         'email' => $email,
         'broadcast_url' => $webinar['broadcast_url'] ?? '',
-        'scheduled_at' => $webinar['scheduled_at']
+        'scheduled_at' => $webinar['scheduled_at'],
+        'cabinet_created' => $isNewUser,
+        'cabinet_url' => '/pages/cabinet.php?tab=webinars'
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
