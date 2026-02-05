@@ -74,8 +74,6 @@ $(document).ready(function() {
     $('#registrationForm').on('submit', function(e) {
         e.preventDefault();
 
-        console.log('Form submission started');
-
         // Validate required fields
         let isValid = true;
         let errors = [];
@@ -83,10 +81,10 @@ $(document).ready(function() {
         // Clear previous errors
         $('.form-control').removeClass('error');
         $('.error-message').hide();
+        $('.form-agreement .error-message').hide();
 
         // Get current tab
         const currentTab = $('#currentTab').val();
-        console.log('Current tab:', currentTab);
 
         if (currentTab === 'participant') {
             // Validate FIO
@@ -173,9 +171,13 @@ $(document).ready(function() {
                 }, 300);
             }
 
-            if (!isValid) {
-                console.log('Validation errors:', errors);
+            // Validate agreement checkbox
+            if (!$('#agreement').is(':checked')) {
+                $('#agreement').closest('.form-agreement').find('.error-message').text('Необходимо принять условия').show();
+                errors.push('Согласие с условиями');
+                isValid = false;
             }
+
         } else if (currentTab === 'supervisor') {
             // Supervisor tab validation
             const supervisorFio = $('#supervisor_fio').val().trim();
@@ -261,8 +263,11 @@ $(document).ready(function() {
                 }, 300);
             }
 
-            if (!isValid) {
-                console.log('Validation errors:', errors);
+            // Validate agreement checkbox
+            if (!$('#supervisor_agreement').is(':checked')) {
+                $('#supervisor_agreement').closest('.form-agreement').find('.error-message').text('Необходимо принять условия').show();
+                errors.push('Согласие с условиями');
+                isValid = false;
             }
         }
 
@@ -290,6 +295,7 @@ $(document).ready(function() {
             data: formData,
             processData: false,
             contentType: false,
+            dataType: 'json',
             success: function(response) {
                 if (response.success) {
                     // E-commerce: Add to cart event
@@ -388,6 +394,13 @@ $(document).ready(function() {
             if ($(this).siblings('.helper-text').length) {
                 $(this).siblings('.helper-text').show();
             }
+        }
+    });
+
+    // Clear agreement checkbox error when checked
+    $('#agreement, #supervisor_agreement').on('change', function() {
+        if ($(this).is(':checked')) {
+            $(this).closest('.form-agreement').find('.error-message').hide();
         }
     });
 });

@@ -196,7 +196,7 @@ include __DIR__ . '/../includes/header.php';
                         <!-- Agreement Checkbox -->
                         <div class="form-agreement" style="margin-bottom: 20px;">
                             <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
-                                <input type="checkbox" name="agreement" id="agreement" required style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0;">
+                                <input type="checkbox" name="agreement" id="agreement" style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0;">
                                 <span class="agreement-text" style="font-size: 13px; color: #64748B; line-height: 1.5;">
                                     Я принимаю условия <a href="/pages/terms.php" target="_blank" style="color: #3B5998;">Пользовательского соглашения</a>
                                     и даю согласие на обработку персональных данных в соответствии с
@@ -282,7 +282,7 @@ include __DIR__ . '/../includes/header.php';
                         <!-- Agreement Checkbox for Supervisor -->
                         <div class="form-agreement" style="margin-bottom: 20px;">
                             <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
-                                <input type="checkbox" name="supervisor_agreement" id="supervisor_agreement" required style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0;">
+                                <input type="checkbox" name="supervisor_agreement" id="supervisor_agreement" style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0;">
                                 <span class="agreement-text" style="font-size: 13px; color: #64748B; line-height: 1.5;">
                                     Я принимаю условия <a href="/pages/terms.php" target="_blank" style="color: #3B5998;">Пользовательского соглашения</a>
                                     и даю согласие на обработку персональных данных в соответствии с
