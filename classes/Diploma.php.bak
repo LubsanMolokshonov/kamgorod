@@ -374,25 +374,9 @@ class Diploma {
             ? ($registration['supervisor_city'] ?? $registration['city'])
             : $registration['city'];
 
-        // Ensure temp directory exists
-        $tempDir = '/tmp/mpdf';
-        if (!is_dir($tempDir)) {
-            mkdir($tempDir, 0777, true);
-        }
+        // Configure mPDF with explicit UTF-8 support
+// Ensure temp directory exists        $tempDir = '/tmp/mpdf';        if (!is_dir($tempDir)) {            mkdir($tempDir, 0777, true);        }                // Configure mPDF with explicit UTF-8 support and custom temp directory        $mpdf = new Mpdf([            'mode' => 'utf-8',            'format' => 'A4', // A4 Portrait (210mm x 297mm)            'margin_left' => 0,            'margin_right' => 0,            'margin_top' => 0,            'margin_bottom' => 0,            'default_font' => 'dejavusans', // Supports Cyrillic            'autoScriptToLang' => true,            'autoLangToFont' => true,            'tempDir' => $tempDir  // Use system temp directory        ]);
 
-        // Configure mPDF with explicit UTF-8 support and custom temp directory
-        $mpdf = new Mpdf([
-            'mode' => 'utf-8',
-            'format' => 'A4', // A4 Portrait (210mm x 297mm)
-            'margin_left' => 0,
-            'margin_right' => 0,
-            'margin_top' => 0,
-            'margin_bottom' => 0,
-            'default_font' => 'dejavusans', // Supports Cyrillic
-            'autoScriptToLang' => true,
-            'autoLangToFont' => true,
-            'tempDir' => $tempDir  // Use system temp directory
-        ]);
         // Set background image from backgrounds folder (PNG for better mPDF compatibility)
         $templateId = $registration['diploma_template_id'] ?? 1;
         $templateImagePath = __DIR__ . '/../assets/images/diplomas/templates/backgrounds/template-' . $templateId . '.png';
