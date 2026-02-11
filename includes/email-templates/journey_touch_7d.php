@@ -7,8 +7,8 @@ ob_start();
 ?>
 <div class="email-header" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%);">
     <div class="email-header-content">
-        <div class="logo">
-            <img src="<?php echo SITE_URL; ?>/assets/images/logo.svg" alt="ФГОС-Практикум">
+        <div class="logo" style="text-align: center;">
+            <img src="<?php echo SITE_URL; ?>/assets/images/logo-white.png" alt="ФГОС-Практикум" style="height: 40px;">
         </div>
         <h1>Последний шанс!</h1>
         <p>Специальное предложение для вас</p>

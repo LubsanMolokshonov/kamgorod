@@ -7,8 +7,8 @@ ob_start();
 ?>
 <div class="email-header">
     <div class="email-header-content">
-        <div class="logo">
-            <img src="<?php echo SITE_URL; ?>/assets/images/logo.svg" alt="ФГОС-Практикум">
+        <div class="logo" style="text-align: center;">
+            <img src="<?php echo SITE_URL; ?>/assets/images/logo-white.png" alt="ФГОС-Практикум" style="height: 40px;">
         </div>
         <h1>Вы почти завершили регистрацию!</h1>
         <p>Остался один шаг до участия в конкурсе</p>

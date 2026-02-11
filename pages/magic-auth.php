@@ -60,6 +60,14 @@ setcookie(
     true
 );
 
+// Восстановить корзину из pending-регистраций
+$stmt = $db->prepare("SELECT id FROM registrations WHERE user_id = ? AND status = 'pending'");
+$stmt->execute([$user['id']]);
+$pendingRegs = $stmt->fetchAll(PDO::FETCH_COLUMN);
+if (!empty($pendingRegs)) {
+    $_SESSION['cart'] = $pendingRegs;
+}
+
 // Редирект на целевую страницу
 header('Location: ' . $redirect);
 exit;
