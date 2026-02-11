@@ -10,9 +10,9 @@ ob_start();
 ?>
 <div class="email-header">
     <div class="email-header-content">
-        <div class="logo" style="display: flex; align-items: center; justify-content: center; gap: 20px;">
-            <img src="<?php echo $site_url; ?>/assets/images/logo-white.png" alt="ФГОС-Практикум" style="height: 50px;">
-            <img src="<?php echo $site_url; ?>/assets/images/logo-kamenny-gorod-white.svg" alt="Каменный Город" style="height: 40px;">
+        <div class="logo" style="text-align: center;">
+            <img src="<?php echo $site_url; ?>/assets/images/logo-white.png" alt="ФГОС-Практикум" style="height: 40px; vertical-align: middle;">
+            <img src="<?php echo $site_url; ?>/assets/images/logo-kamenny-gorod-white.png" alt="Каменный Город" style="height: 40px; vertical-align: middle; margin-left: 20px;">
         </div>
         <h1>Вы зарегистрированы!</h1>
         <p>Ждём вас на вебинаре</p>

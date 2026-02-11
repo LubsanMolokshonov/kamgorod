@@ -23,10 +23,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $fullName = trim($_POST['full_name'] ?? '');
 
+    $agreement = isset($_POST['agreement']);
+
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Пожалуйста, введите корректный email';
     } elseif (empty($fullName)) {
         $error = 'Пожалуйста, введите ФИО';
+    } elseif (!$agreement) {
+        $error = 'Необходимо принять условия пользовательского соглашения и политики конфиденциальности';
     } else {
         try {
             // Check if user exists
@@ -64,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Page metadata
 $pageTitle = 'Вход / Регистрация | ' . SITE_NAME;
 $pageDescription = 'Войдите в личный кабинет или зарегистрируйтесь';
-$additionalCSS = ['/assets/css/login.css'];
+$additionalCSS = ['/assets/css/login.css?v=' . time()];
 
 // Include header
 include __DIR__ . '/../includes/header.php';
@@ -113,6 +117,17 @@ include __DIR__ . '/../includes/header.php';
                         placeholder="Иванов Иван Иванович"
                         value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>"
                     >
+                </div>
+
+                <div class="form-agreement">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="agreement" id="agreement" required>
+                        <span class="agreement-text">
+                            Я принимаю условия <a href="/pages/terms.php" target="_blank">Пользовательского соглашения</a>
+                            и даю согласие на обработку персональных данных в соответствии с
+                            <a href="/pages/privacy.php" target="_blank">Политикой конфиденциальности</a>
+                        </span>
+                    </label>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-block">

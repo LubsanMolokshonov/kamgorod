@@ -103,6 +103,7 @@
 .login-info h3 {
     font-size: 24px;
     margin-bottom: 24px;
+    color: #ffffff !important;
 }
 
 .login-info ul {
@@ -125,6 +126,40 @@
     left: 0;
     font-weight: bold;
     font-size: 20px;
+}
+
+.form-agreement {
+    margin-top: -8px;
+}
+
+.form-agreement .checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.form-agreement input[type="checkbox"] {
+    margin-top: 3px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    accent-color: #1E3A5F;
+}
+
+.form-agreement .agreement-text {
+    font-size: 13px;
+    color: #64748B;
+    line-height: 1.5;
+}
+
+.form-agreement .agreement-text a {
+    color: #3B5998;
+    text-decoration: none;
+}
+
+.form-agreement .agreement-text a:hover {
+    text-decoration: underline;
 }
 
 /* Responsive */

@@ -86,6 +86,8 @@ RewriteRule ^vyhod/?$ pages/logout.php [L,QSA]
 # ================================================
 
 RewriteRule ^o-portale/?$ pages/about.php [L,QSA]
+RewriteRule ^polzovatelskoe-soglashenie/?$ pages/terms.php [L,QSA]
+RewriteRule ^politika-konfidencialnosti/?$ pages/privacy.php [L,QSA]
 
 # Prevent direct access to sensitive files
 <FilesMatch "\.(env|sql|md|log)$">
