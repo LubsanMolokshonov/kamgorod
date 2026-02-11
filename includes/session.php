@@ -87,6 +87,53 @@ function removeCertificateFromCart($certificateId) {
 }
 
 /**
+ * Add webinar certificate to cart
+ */
+function addWebinarCertificateToCart($webinarCertificateId) {
+    initSession();
+
+    if (!isset($_SESSION['cart_webinar_certificates'])) {
+        $_SESSION['cart_webinar_certificates'] = [];
+    }
+
+    if (!in_array($webinarCertificateId, $_SESSION['cart_webinar_certificates'])) {
+        $_SESSION['cart_webinar_certificates'][] = $webinarCertificateId;
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Get webinar certificates from cart
+ */
+function getCartWebinarCertificates() {
+    initSession();
+    return $_SESSION['cart_webinar_certificates'] ?? [];
+}
+
+/**
+ * Remove webinar certificate from cart
+ */
+function removeWebinarCertificateFromCart($webinarCertificateId) {
+    initSession();
+
+    if (!isset($_SESSION['cart_webinar_certificates'])) {
+        return false;
+    }
+
+    $key = array_search($webinarCertificateId, $_SESSION['cart_webinar_certificates']);
+
+    if ($key !== false) {
+        unset($_SESSION['cart_webinar_certificates'][$key]);
+        $_SESSION['cart_webinar_certificates'] = array_values($_SESSION['cart_webinar_certificates']);
+        return true;
+    }
+
+    return false;
+}
+
+/**
  * Remove item from cart
  */
 function removeFromCart($registrationId) {
@@ -114,20 +161,21 @@ function clearCart() {
     initSession();
     $_SESSION['cart'] = [];
     $_SESSION['cart_certificates'] = [];
+    $_SESSION['cart_webinar_certificates'] = [];
 }
 
 /**
  * Get cart count (registrations + certificates)
  */
 function getCartCount() {
-    return count(getCart()) + count(getCartCertificates());
+    return count(getCart()) + count(getCartCertificates()) + count(getCartWebinarCertificates());
 }
 
 /**
  * Check if cart is empty
  */
 function isCartEmpty() {
-    return count(getCart()) === 0 && count(getCartCertificates()) === 0;
+    return count(getCart()) === 0 && count(getCartCertificates()) === 0 && count(getCartWebinarCertificates()) === 0;
 }
 
 /**
@@ -160,6 +208,19 @@ function getCartTotal() {
             $cert = $certObj->getById($certId);
             if ($cert) {
                 $total += (float)($cert['price'] ?? 149);
+            }
+        }
+    }
+
+    // Add webinar certificates total
+    $webinarCertificates = getCartWebinarCertificates();
+    if (!empty($webinarCertificates)) {
+        require_once __DIR__ . '/../classes/WebinarCertificate.php';
+        $webCertObj = new WebinarCertificate($db);
+        foreach ($webinarCertificates as $webCertId) {
+            $webCert = $webCertObj->getById($webCertId);
+            if ($webCert) {
+                $total += (float)($webCert['price'] ?? 149);
             }
         }
     }

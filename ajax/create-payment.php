@@ -13,6 +13,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Registration.php';
 require_once __DIR__ . '/../classes/PublicationCertificate.php';
+require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../includes/session.php';
@@ -42,12 +43,14 @@ try {
     // Initialize classes
     $registrationObj = new Registration($db);
     $certObj = new PublicationCertificate($db);
+    $webCertObj = new WebinarCertificate($db);
     $userObj = new User($db);
     $orderObj = new Order($db);
 
     // Get registrations and certificates from cart
     $registrations = getCart();
     $certificates = getCartCertificates();
+    $webinarCertificates = getCartWebinarCertificates();
 
     // Collect ALL items into one array for unified promotion calculation
     $allItems = [];
@@ -80,6 +83,23 @@ try {
                 'price' => (float)($cert['price'] ?? 149),
                 'is_free' => false,
                 'raw_data' => $cert
+            ];
+        }
+    }
+
+    // Get webinar certificates
+    $webinarCertificatesData = [];
+    foreach ($webinarCertificates as $webCertId) {
+        $webCert = $webCertObj->getById($webCertId);
+        if ($webCert) {
+            $webinarCertificatesData[] = $webCert;
+            $allItems[] = [
+                'type' => 'webinar_certificate',
+                'id' => $webCert['id'],
+                'name' => $webCert['webinar_title'],
+                'price' => (float)($webCert['price'] ?? 149),
+                'is_free' => false,
+                'raw_data' => $webCert
             ];
         }
     }
@@ -170,6 +190,13 @@ try {
                 $_SESSION['user_email'] = $user['email'];
                 $_SESSION['user_id'] = $userId;
             }
+        } elseif (!empty($webinarCertificatesData)) {
+            $userId = $webinarCertificatesData[0]['user_id'];
+            $user = $userObj->getById($userId);
+            if ($user) {
+                $_SESSION['user_email'] = $user['email'];
+                $_SESSION['user_id'] = $userId;
+            }
         }
 
         // Mark all registrations as paid
@@ -182,6 +209,12 @@ try {
         foreach ($certificatesData as $cert) {
             $certObj->updateStatus($cert['id'], 'paid');
             $certObj->generate($cert['id']);
+        }
+
+        // Mark all webinar certificates as paid and generate them
+        foreach ($webinarCertificatesData as $webCert) {
+            $webCertObj->updateStatus($webCert['id'], 'paid');
+            $webCertObj->generate($webCert['id']);
         }
 
         // Generate auto-login token and set cookie (30 days)
@@ -240,6 +273,13 @@ try {
             $userEmail = $user['email'];
             $userName = $user['full_name'];
         }
+    } elseif (!empty($webinarCertificatesData)) {
+        $userId = $webinarCertificatesData[0]['user_id'];
+        $user = $userObj->getById($userId);
+        if ($user) {
+            $userEmail = $user['email'];
+            $userName = $user['full_name'];
+        }
     }
 
     if (!$userId || !$userEmail) {
@@ -258,7 +298,16 @@ try {
             $certificatesWithPromotion[] = $certData;
         }
     }
-    $orderId = $orderObj->createFromCart($userId, $cartData, $certificatesWithPromotion, $grandTotal);
+    // Collect webinar certificates with promotion info
+    $webinarCertsWithPromotion = [];
+    foreach ($allItems as $item) {
+        if ($item['type'] === 'webinar_certificate') {
+            $wcData = $item['raw_data'];
+            $wcData['is_free'] = $item['is_free'];
+            $webinarCertsWithPromotion[] = $wcData;
+        }
+    }
+    $orderId = $orderObj->createFromCart($userId, $cartData, $certificatesWithPromotion, $grandTotal, $webinarCertsWithPromotion);
 
     if (!$orderId) {
         throw new Exception('Не удалось создать заказ');
@@ -279,9 +328,13 @@ try {
     foreach ($allItems as $item) {
         $itemPrice = $item['is_free'] ? 0 : $item['price'];
         if ($itemPrice > 0) {
-            $description = $item['type'] === 'certificate'
-                ? 'Свидетельство о публикации: ' . mb_substr($item['name'], 0, 100)
-                : mb_substr($item['name'], 0, 128);
+            if ($item['type'] === 'certificate') {
+                $description = 'Свидетельство о публикации: ' . mb_substr($item['name'], 0, 100);
+            } elseif ($item['type'] === 'webinar_certificate') {
+                $description = 'Сертификат вебинара: ' . mb_substr($item['name'], 0, 100);
+            } else {
+                $description = mb_substr($item['name'], 0, 128);
+            }
 
             $receiptItems[] = [
                 'description' => $description,
@@ -322,6 +375,7 @@ try {
                 'user_id' => $userId,
                 'user_email' => $userEmail,
                 'certificate_ids' => !empty($certificates) ? implode(',', $certificates) : null,
+                'webinar_certificate_ids' => !empty($webinarCertificates) ? implode(',', $webinarCertificates) : null,
             ],
         ],
         $orderNumber // Idempotency key

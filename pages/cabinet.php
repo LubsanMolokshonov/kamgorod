@@ -12,6 +12,7 @@ require_once __DIR__ . '/../classes/Publication.php';
 require_once __DIR__ . '/../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../classes/Webinar.php';
 require_once __DIR__ . '/../classes/WebinarRegistration.php';
+require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Auto-login via cookie if session doesn't exist
@@ -68,6 +69,14 @@ $userCertificates = $certObj->getByUser($_SESSION['user_id']);
 // Get user's webinar registrations
 $webinarRegObj = new WebinarRegistration($db);
 $userWebinars = $webinarRegObj->getByUser($_SESSION['user_id']);
+
+// Get user's webinar certificates indexed by registration_id
+$webCertObj = new WebinarCertificate($db);
+$userWebinarCerts = $webCertObj->getByUser($_SESSION['user_id']);
+$webinarCertsByRegId = [];
+foreach ($userWebinarCerts as $wc) {
+    $webinarCertsByRegId[$wc['registration_id']] = $wc;
+}
 
 // Current tab
 $activeTab = $_GET['tab'] ?? 'diplomas';
@@ -174,8 +183,8 @@ include __DIR__ . '/../includes/header.php';
                             // Format date
                             $dateFormatted = date('d.m.Y в H:i', $webinarTime);
                         ?>
-                            <div class="registration-card webinar-card">
-                                <div class="card-header" style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);">
+                            <div class="registration-card">
+                                <div class="card-header">
                                     <h3><?php echo htmlspecialchars($webinar['webinar_title']); ?></h3>
                                     <span class="status-badge <?php echo $webinar['webinar_status'] === 'live' ? 'live' : ''; ?>" style="background-color: <?php echo $statusInfo['color']; ?>">
                                         <?php echo $statusInfo['name']; ?>
@@ -220,16 +229,28 @@ include __DIR__ . '/../includes/header.php';
                                             ▶️ Смотреть запись
                                         </a>
                                     <?php else: ?>
-                                        <span class="btn btn-outline" style="opacity: 0.6; cursor: default;">
+                                        <span class="btn" style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; cursor: default;">
                                             Вебинар завершен
                                         </span>
                                     <?php endif; ?>
 
-                                    <?php if ($canGetCertificate): ?>
-                                        <a href="/pages/webinar-certificate.php?registration_id=<?php echo $webinar['id']; ?>"
-                                           class="btn btn-outline">
-                                            📜 Получить сертификат
-                                        </a>
+                                    <?php if ($canGetCertificate):
+                                        $webCert = $webinarCertsByRegId[$webinar['id']] ?? null;
+                                        if ($webCert && $webCert['status'] === 'ready'): ?>
+                                            <a href="/ajax/download-webinar-certificate.php?id=<?php echo $webCert['id']; ?>"
+                                               class="btn btn-success btn-download">
+                                                📥 Скачать сертификат
+                                            </a>
+                                        <?php elseif ($webCert && $webCert['status'] === 'paid'): ?>
+                                            <span class="btn btn-outline" style="opacity: 0.7; cursor: default;">
+                                                ⏳ Сертификат формируется
+                                            </span>
+                                        <?php else: ?>
+                                            <a href="/pages/webinar-certificate.php?registration_id=<?php echo $webinar['id']; ?>"
+                                               class="btn btn-primary">
+                                                📜 Получить сертификат (<?php echo number_format($certificatePrice, 0, ',', ' '); ?> ₽)
+                                            </a>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 </div>
                             </div>

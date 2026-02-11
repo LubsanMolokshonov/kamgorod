@@ -11,6 +11,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Registration.php';
 require_once __DIR__ . '/../classes/PublicationCertificate.php';
+require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Check if cart exists
@@ -61,6 +62,24 @@ if (isCartEmpty()) {
                 'price' => (float)($cert['price'] ?? 149),
                 'is_free' => false,
                 'raw_data' => $cert
+            ];
+        }
+    }
+
+    // Get webinar certificates
+    $webCertObj = new WebinarCertificate($db);
+    $webinarCertificates = getCartWebinarCertificates();
+    foreach ($webinarCertificates as $webCertId) {
+        $webCert = $webCertObj->getById($webCertId);
+        if ($webCert) {
+            $allItems[] = [
+                'type' => 'webinar_certificate',
+                'id' => $webCert['id'],
+                'name' => $webCert['webinar_title'],
+                'meta' => 'Сертификат участника вебинара • ' . $webCert['full_name'],
+                'price' => (float)($webCert['price'] ?? 149),
+                'is_free' => false,
+                'raw_data' => $webCert
             ];
         }
     }
@@ -181,6 +200,8 @@ include __DIR__ . '/../includes/header.php';
                         <button class="remove-btn"
                                 <?php if ($item['type'] === 'registration'): ?>
                                     data-registration-id="<?php echo $item['id']; ?>"
+                                <?php elseif ($item['type'] === 'webinar_certificate'): ?>
+                                    data-webinar-certificate-id="<?php echo $item['id']; ?>"
                                 <?php else: ?>
                                     data-certificate-id="<?php echo $item['id']; ?>"
                                 <?php endif; ?>
@@ -290,12 +311,15 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             const registrationId = this.dataset.registrationId;
             const certificateId = this.dataset.certificateId;
+            const webinarCertificateId = this.dataset.webinarCertificateId;
 
             const formData = new FormData();
             if (registrationId) {
                 formData.append('registration_id', registrationId);
             } else if (certificateId) {
                 formData.append('certificate_id', certificateId);
+            } else if (webinarCertificateId) {
+                formData.append('webinar_certificate_id', webinarCertificateId);
             }
 
             fetch('/ajax/remove-from-cart.php', {

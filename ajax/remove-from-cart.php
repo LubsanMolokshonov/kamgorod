@@ -13,6 +13,24 @@ require_once __DIR__ . '/../includes/session.php';
 // Get item IDs
 $registrationId = $_POST['registration_id'] ?? null;
 $certificateId = $_POST['certificate_id'] ?? null;
+$webinarCertificateId = $_POST['webinar_certificate_id'] ?? null;
+
+// Handle webinar certificate removal
+if ($webinarCertificateId) {
+    if (removeWebinarCertificateFromCart($webinarCertificateId)) {
+        echo json_encode([
+            'success' => true,
+            'message' => 'Сертификат удален из корзины',
+            'cart_count' => getCartCount()
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Сертификат не найден в корзине'
+        ]);
+    }
+    exit;
+}
 
 // Handle certificate removal
 if ($certificateId) {

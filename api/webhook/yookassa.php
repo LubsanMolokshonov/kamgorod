@@ -34,6 +34,7 @@ require_once __DIR__ . '/../../classes/Database.php';
 require_once __DIR__ . '/../../classes/Order.php';
 require_once __DIR__ . '/../../classes/Registration.php';
 require_once __DIR__ . '/../../classes/PublicationCertificate.php';
+require_once __DIR__ . '/../../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../../classes/EmailJourney.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
@@ -170,6 +171,16 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                 $certObj->updateStatus($item['certificate_id'], 'paid');
                 $certObj->generate($item['certificate_id']);
                 logWebhook('INFO', $paymentId, "Certificate {$item['certificate_id']} generated for order {$orderNumber}", '');
+            }
+        }
+
+        // Mark all webinar certificates as paid and generate them
+        $webCertObj = new WebinarCertificate($GLOBALS['db']);
+        foreach ($orderItems as $item) {
+            if (!empty($item['webinar_certificate_id'])) {
+                $webCertObj->updateStatus($item['webinar_certificate_id'], 'paid');
+                $webCertObj->generate($item['webinar_certificate_id']);
+                logWebhook('INFO', $paymentId, "Webinar certificate {$item['webinar_certificate_id']} generated for order {$orderNumber}", '');
             }
         }
 

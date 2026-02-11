@@ -19,7 +19,7 @@ class Order {
      * @param array $certificatesData Optional array of certificate data
      * @param float $grandTotal Optional grand total including certificates
      */
-    public function createFromCart($userId, $cartData, $certificatesData = [], $grandTotal = null) {
+    public function createFromCart($userId, $cartData, $certificatesData = [], $grandTotal = null, $webinarCertificatesData = []) {
         $orderNumber = self::generateOrderNumber();
 
         // Use totals from cartData (already includes all items with unified 2+1 promotion)
@@ -59,6 +59,18 @@ class Order {
                     'certificate_id' => $cert['id'],
                     'price' => $cert['price'] ?? 149,
                     'is_free_promotion' => !empty($cert['is_free']) ? 1 : 0
+                ]);
+            }
+        }
+
+        // Create order items for webinar certificates (with promotion support)
+        if ($orderId && !empty($webinarCertificatesData)) {
+            foreach ($webinarCertificatesData as $webCert) {
+                $this->db->insert('order_items', [
+                    'order_id' => $orderId,
+                    'webinar_certificate_id' => $webCert['id'],
+                    'price' => $webCert['price'] ?? 149,
+                    'is_free_promotion' => !empty($webCert['is_free']) ? 1 : 0
                 ]);
             }
         }
@@ -132,12 +144,17 @@ class Order {
                     r.nomination, r.work_title,
                     c.title as competition_title, c.category,
                     pc.publication_id, pc.author_name as cert_author_name,
-                    p.title as publication_title
+                    p.title as publication_title,
+                    wc.webinar_id, wc.full_name as webinar_cert_name,
+                    wc.certificate_number as webinar_cert_number,
+                    w.title as webinar_title
              FROM order_items oi
              LEFT JOIN registrations r ON oi.registration_id = r.id
              LEFT JOIN competitions c ON r.competition_id = c.id
              LEFT JOIN publication_certificates pc ON oi.certificate_id = pc.id
              LEFT JOIN publications p ON pc.publication_id = p.id
+             LEFT JOIN webinar_certificates wc ON oi.webinar_certificate_id = wc.id
+             LEFT JOIN webinars w ON wc.webinar_id = w.id
              WHERE oi.order_id = ?",
             [$orderId]
         );
