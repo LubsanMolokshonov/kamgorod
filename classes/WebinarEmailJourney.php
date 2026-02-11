@@ -6,6 +6,7 @@
  */
 
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/../includes/magic-link-helper.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -112,7 +113,7 @@ class WebinarEmailJourney {
         $emailLog = $this->db->queryOne(
             "SELECT wel.*,
                     t.email_subject, t.email_template, t.code as touchpoint_code,
-                    wr.full_name, wr.email, wr.phone, wr.organization, wr.city,
+                    wr.full_name, wr.email, wr.phone, wr.organization, wr.city, wr.user_id,
                     w.id as webinar_id, w.title as webinar_title, w.slug as webinar_slug,
                     w.scheduled_at as webinar_scheduled_at, w.duration_minutes,
                     w.broadcast_url, w.video_url, w.short_description,
@@ -166,7 +167,7 @@ class WebinarEmailJourney {
         $pendingEmails = $this->db->query(
             "SELECT wel.*,
                     t.email_subject, t.email_template, t.code as touchpoint_code,
-                    wr.full_name, wr.email, wr.phone, wr.organization, wr.city,
+                    wr.full_name, wr.email, wr.phone, wr.organization, wr.city, wr.user_id,
                     w.id as webinar_id, w.title as webinar_title, w.slug as webinar_slug,
                     w.scheduled_at as webinar_scheduled_at, w.duration_minutes,
                     w.broadcast_url, w.video_url, w.short_description,
@@ -307,6 +308,8 @@ class WebinarEmailJourney {
         $nameParts = explode(' ', trim($emailData['full_name']));
         $firstName = count($nameParts) > 1 ? $nameParts[1] : $nameParts[0]; // Surname Name -> Name
 
+        $userId = $emailData['user_id'] ?? null;
+
         return [
             'user_name' => $emailData['full_name'],
             'user_first_name' => $firstName,
@@ -314,6 +317,7 @@ class WebinarEmailJourney {
             'user_phone' => $emailData['phone'] ?? '',
             'user_organization' => $emailData['organization'] ?? '',
             'user_city' => $emailData['city'] ?? '',
+            'user_id' => $userId,
 
             'webinar_id' => $emailData['webinar_id'],
             'webinar_title' => $emailData['webinar_title'],
@@ -337,8 +341,8 @@ class WebinarEmailJourney {
             'registration_id' => $emailData['webinar_registration_id'],
             'calendar_url' => SITE_URL . '/ajax/generate-ics.php?registration_id=' . $emailData['webinar_registration_id'],
             'webinar_url' => SITE_URL . '/vebinar/' . $emailData['webinar_slug'],
-            'cabinet_url' => SITE_URL . '/pages/cabinet.php?tab=webinars',
-            'certificate_url' => SITE_URL . '/pages/webinar-certificate.php?registration_id=' . $emailData['webinar_registration_id'],
+            'cabinet_url' => generateMagicUrl($userId, '/pages/cabinet.php?tab=webinars'),
+            'certificate_url' => generateMagicUrl($userId, '/pages/webinar-certificate.php?registration_id=' . $emailData['webinar_registration_id']),
             'unsubscribe_url' => $unsubscribeUrl,
             'site_url' => SITE_URL,
             'site_name' => SITE_NAME ?? 'ФГОС-Практикум',

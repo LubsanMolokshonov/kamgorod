@@ -68,6 +68,9 @@ if (!defined('SMTP_FROM_NAME')) define('SMTP_FROM_NAME', defined('SITE_NAME') ? 
 if (!defined('SESSION_LIFETIME')) define('SESSION_LIFETIME', $_ENV['SESSION_LIFETIME'] ?? 86400);
 if (!defined('COOKIE_LIFETIME')) define('COOKIE_LIFETIME', $_ENV['COOKIE_LIFETIME'] ?? 2592000); // 30 days
 
+// Magic Link Configuration (auto-login from email links)
+if (!defined('MAGIC_LINK_SECRET')) define('MAGIC_LINK_SECRET', $_ENV['MAGIC_LINK_SECRET'] ?? 'default-change-me');
+
 // Competition Categories
 if (!defined('COMPETITION_CATEGORIES')) {
     define('COMPETITION_CATEGORIES', [

@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/magic-link-helper.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -93,6 +94,7 @@ function sendPaymentSuccessEmail($userId, $orderId) {
  */
 function buildSuccessEmailBody($order, $user) {
     $siteUrl = SITE_URL;
+    $cabinetLink = generateMagicUrl($user['id'], '/pages/cabinet.php');
     $orderNumber = htmlspecialchars($order['order_number']);
     $fullName = htmlspecialchars($user['full_name']);
     $finalAmount = number_format($order['final_amount'], 0, ',', ' ');
@@ -152,7 +154,7 @@ function buildSuccessEmailBody($order, $user) {
             <p>Ваши дипломы будут доступны в личном кабинете после подведения итогов конкурса.</p>
 
             <center>
-                <a href="{$siteUrl}/pages/cabinet.php" class="button">Перейти в личный кабинет</a>
+                <a href="{$cabinetLink}" class="button">Перейти в личный кабинет</a>
             </center>
 
             <p>Если у вас возникли вопросы, пожалуйста, свяжитесь с нами через форму обратной связи на сайте.</p>
@@ -177,6 +179,7 @@ function buildSuccessEmailBodyText($order, $user) {
     $discountAmount = number_format($order['discount_amount'], 0, ',', ' ');
     $paidDate = date('d.m.Y H:i', strtotime($order['paid_at'] ?? $order['created_at']));
     $siteUrl = SITE_URL;
+    $cabinetLink = generateMagicUrl($user['id'], '/pages/cabinet.php');
 
     $itemsText = '';
     foreach ($order['items'] as $item) {
@@ -200,7 +203,7 @@ function buildSuccessEmailBodyText($order, $user) {
 
 Ваши дипломы будут доступны в личном кабинете после подведения итогов конкурса.
 
-Перейти в личный кабинет: {$siteUrl}/pages/cabinet.php
+Перейти в личный кабинет: {$cabinetLink}
 
 Если у вас возникли вопросы, пожалуйста, свяжитесь с нами через форму обратной связи на сайте.
 
@@ -244,6 +247,7 @@ function sendPaymentFailureEmail($userId, $orderId) {
         $mail->Subject = 'Проблема с оплатой заказа ' . $order['order_number'];
 
         $siteUrl = SITE_URL;
+        $cartLink = generateMagicUrl($user['id'], '/pages/cart.php');
         $orderNumber = htmlspecialchars($order['order_number']);
         $fullName = htmlspecialchars($user['full_name']);
 
@@ -270,7 +274,7 @@ function sendPaymentFailureEmail($userId, $orderId) {
             <p>К сожалению, платеж по заказу №{$orderNumber} не был завершен.</p>
             <p>Вы можете попробовать оплатить заказ снова или связаться с нашей службой поддержки.</p>
             <center>
-                <a href="{$siteUrl}/pages/cart.php" class="button">Попробовать снова</a>
+                <a href="{$cartLink}" class="button">Попробовать снова</a>
             </center>
         </div>
     </div>
@@ -278,7 +282,7 @@ function sendPaymentFailureEmail($userId, $orderId) {
 </html>
 HTML;
 
-        $mail->AltBody = "Здравствуйте, {$fullName}!\n\nК сожалению, платеж по заказу №{$orderNumber} не был завершен.\n\nВы можете попробовать оплатить заказ снова: {$siteUrl}/pages/cart.php";
+        $mail->AltBody = "Здравствуйте, {$fullName}!\n\nК сожалению, платеж по заказу №{$orderNumber} не был завершен.\n\nВы можете попробовать оплатить заказ снова: {$cartLink}";
 
         $mail->send();
 

@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/../includes/magic-link-helper.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -198,11 +199,12 @@ class EmailJourney {
             $templateData = [
                 'user_name' => $emailData['full_name'],
                 'user_email' => $emailData['email'],
+                'user_id' => $emailData['user_id'],
                 'competition_title' => $emailData['competition_title'],
                 'competition_price' => $emailData['competition_price'],
                 'nomination' => $emailData['nomination'],
                 'work_title' => $emailData['work_title'],
-                'payment_url' => SITE_URL . '/pages/cart.php',
+                'payment_url' => generateMagicUrl($emailData['user_id'], '/pages/cart.php'),
                 'competition_url' => SITE_URL . '/pages/competition-detail.php?slug=' . $emailData['competition_slug'],
                 'unsubscribe_url' => $unsubscribeUrl,
                 'site_url' => SITE_URL,
