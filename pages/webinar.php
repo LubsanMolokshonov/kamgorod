@@ -71,7 +71,7 @@ include __DIR__ . '/../includes/header.php';
 
             <!-- Badges -->
             <div class="webinar-badges">
-                <span class="hero-category" style="font-size: 16px;">Бесплатный онлайн практикум для педагогов ОО</span>
+                <span class="hero-category" style="font-size: 16px;">Бесплатный онлайн практикум для педагогов</span>
                 <span class="hero-category" style="font-size: 16px;"><?php echo $dateInfo['date_full']; ?> в <?php echo $dateInfo['time']; ?> МСК</span>
             </div>
 
@@ -81,7 +81,7 @@ include __DIR__ . '/../includes/header.php';
             <!-- Gift Box -->
             <div class="hero-gift-box">
                 <p class="gift-text" style="font-size: 16px;">
-                    Практические приёмы от Директора года: как сделать «Разговоры о важном» интересными для учеников
+                    <?php echo htmlspecialchars($webinar['short_description']); ?>
                 </p>
             </div>
 

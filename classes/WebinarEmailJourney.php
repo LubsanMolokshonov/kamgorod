@@ -398,8 +398,12 @@ class WebinarEmailJourney {
                 if ($data['video_url']) {
                     $text .= "Смотреть запись: {$data['video_url']}\n\n";
                 }
+                $text .= "Скачать презентацию и подарок: https://disk.360.yandex.ru/d/zLDKwR2dmVUQ-g\n\n";
+                $text .= "Заполнить анкету обратной связи: https://clck.ru/3Rktcu\n\n";
                 $text .= "Получите именной сертификат на {$data['certificate_hours']} часа за {$data['certificate_price']} руб.\n";
-                $text .= "Оформить: {$data['certificate_url']}\n";
+                $text .= "Оформить: {$data['certificate_url']}\n\n";
+                $text .= "Приглашаем на следующий вебинар «Взаимодействие с семьями воспитанников через читательские марафоны»:\n";
+                $text .= "https://fgos.pro/vebinar/vzaimodeystvie-s-semyami-vospitannikov-cherez-chitatelskie-marafony?utm_source=email&utm_campaign=pismoposle1veba\n";
                 break;
         }
 
