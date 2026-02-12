@@ -87,7 +87,12 @@ foreach ($migrations as $migration) {
             }
             
             try {
-                $db->exec($statement);
+                if (stripos($statement, 'SELECT') === 0) {
+                    $result = $db->query($statement);
+                    if ($result) $result->closeCursor();
+                } else {
+                    $db->exec($statement);
+                }
                 $executed++;
             } catch (PDOException $e) {
                 $msg = $e->getMessage();
