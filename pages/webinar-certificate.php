@@ -505,6 +505,25 @@ include __DIR__ . '/../includes/header.php';
 }
 </style>
 
+<!-- E-commerce: Detail (просмотр товара — сертификат вебинара) -->
+<script>
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+    "ecommerce": {
+        "currencyCode": "RUB",
+        "detail": {
+            "products": [{
+                "id": "wc-<?php echo $registration['webinar_id']; ?>",
+                "name": "<?php echo htmlspecialchars($registration['webinar_title'], ENT_QUOTES); ?>",
+                "price": <?php echo $certificatePrice; ?>,
+                "brand": "Педпортал",
+                "category": "Вебинары"
+            }]
+        }
+    }
+});
+</script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('webinarCertificateForm');
@@ -562,7 +581,27 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.redirect_url) {
-                window.location.href = data.redirect_url;
+                // E-commerce: Add to cart event
+                if (data.ecommerce) {
+                    window.dataLayer = window.dataLayer || [];
+                    window.dataLayer.push({
+                        "ecommerce": {
+                            "currencyCode": "RUB",
+                            "add": {
+                                "products": [{
+                                    "id": String(data.ecommerce.id),
+                                    "name": data.ecommerce.name,
+                                    "price": parseFloat(data.ecommerce.price),
+                                    "brand": "Педпортал",
+                                    "category": data.ecommerce.category,
+                                    "quantity": 1
+                                }]
+                            }
+                        }
+                    });
+                }
+                // Delay redirect to allow dataLayer to send
+                setTimeout(function() { window.location.href = data.redirect_url; }, 300);
             } else {
                 alert(data.message || 'Произошла ошибка');
                 btn.disabled = false;

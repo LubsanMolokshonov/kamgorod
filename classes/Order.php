@@ -141,12 +141,13 @@ class Order {
     public function getOrderItems($orderId) {
         return $this->db->query(
             "SELECT oi.*,
-                    r.nomination, r.work_title,
+                    r.competition_id, r.nomination, r.work_title,
                     c.title as competition_title, c.category,
                     pc.publication_id, pc.author_name as cert_author_name,
                     p.title as publication_title,
                     wc.webinar_id, wc.full_name as webinar_cert_name,
                     wc.certificate_number as webinar_cert_number,
+                    wc.hours as webinar_cert_hours, wc.price as webinar_cert_price,
                     w.title as webinar_title
              FROM order_items oi
              LEFT JOIN registrations r ON oi.registration_id = r.id

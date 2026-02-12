@@ -103,7 +103,13 @@ try {
         'success' => true,
         'redirect_url' => '/pages/cart.php',
         'certificate_id' => $certificate['id'],
-        'message' => 'Сертификат добавлен в корзину'
+        'message' => 'Сертификат добавлен в корзину',
+        'ecommerce' => [
+            'id' => 'wc-' . $certificate['webinar_id'],
+            'name' => $registration['webinar_title'] ?? '',
+            'price' => $certificate['price'] ?? 149,
+            'category' => 'Вебинары'
+        ]
     ]);
 
 } catch (Throwable $e) {

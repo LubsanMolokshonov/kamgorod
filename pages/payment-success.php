@@ -322,6 +322,34 @@ include __DIR__ . '/../includes/header.php';
             </script>
 
             <!-- E-commerce: Purchase event -->
+            <?php
+            // Собрать все товары для e-commerce
+            $ecomProducts = [];
+            foreach ($order['items'] as $item) {
+                if (!empty($item['webinar_certificate_id'])) {
+                    // Сертификат вебинара
+                    $ecomProducts[] = [
+                        'id' => 'wc-' . $item['webinar_id'],
+                        'name' => $item['webinar_title'],
+                        'price' => $item['is_free_promotion'] ? 0 : (float)($item['webinar_cert_price'] ?? $item['price']),
+                        'brand' => 'Педпортал',
+                        'category' => 'Вебинары',
+                        'quantity' => 1
+                    ];
+                } elseif (!empty($item['registration_id'])) {
+                    // Конкурс
+                    $ecomProducts[] = [
+                        'id' => (string)($item['competition_id'] ?? ''),
+                        'name' => $item['competition_title'] ?? '',
+                        'price' => $item['is_free_promotion'] ? 0 : (float)$item['price'],
+                        'brand' => 'Педпортал',
+                        'category' => 'Конкурсы',
+                        'variant' => $item['nomination'] ?? '',
+                        'quantity' => 1
+                    ];
+                }
+            }
+            ?>
             <script>
             window.dataLayer = window.dataLayer || [];
             window.dataLayer.push({
@@ -334,18 +362,7 @@ include __DIR__ . '/../includes/header.php';
                             "coupon": "2+1"<?php endif; ?>
 
                         },
-                        "products": [
-                            <?php foreach ($order['items'] as $index => $item): ?>
-                            {
-                                "id": "<?php echo $item['competition_id']; ?>",
-                                "name": "<?php echo htmlspecialchars($item['competition_title'], ENT_QUOTES); ?>",
-                                "price": <?php echo $item['is_free_promotion'] ? 0 : $item['price']; ?>,
-                                "brand": "Педпортал",
-                                "variant": "<?php echo htmlspecialchars($item['nomination'], ENT_QUOTES); ?>",
-                                "quantity": 1
-                            }<?php echo ($index < count($order['items']) - 1) ? ',' : ''; ?>
-                            <?php endforeach; ?>
-                        ]
+                        "products": <?php echo json_encode($ecomProducts, JSON_UNESCAPED_UNICODE); ?>
                     }
                 }
             });

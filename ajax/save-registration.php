@@ -142,7 +142,7 @@ try {
             'id' => $competitionData['id'],
             'name' => $competitionData['title'],
             'price' => $competitionData['price'],
-            'category' => $audienceType,
+            'category' => 'Конкурсы',
             'list' => $specialization,
             'nomination' => $data['nomination']
         ]

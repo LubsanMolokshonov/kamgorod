@@ -329,6 +329,25 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // E-commerce: Remove from cart event
+                    if (data.ecommerce) {
+                        window.dataLayer = window.dataLayer || [];
+                        window.dataLayer.push({
+                            "ecommerce": {
+                                "currencyCode": "RUB",
+                                "remove": {
+                                    "products": [{
+                                        "id": String(data.ecommerce.id),
+                                        "name": data.ecommerce.name,
+                                        "price": parseFloat(data.ecommerce.price),
+                                        "brand": "Педпортал",
+                                        "category": data.ecommerce.category || "Вебинары",
+                                        "quantity": 1
+                                    }]
+                                }
+                            }
+                        });
+                    }
                     // Reload page to update totals
                     window.location.reload();
                 } else {

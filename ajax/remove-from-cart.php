@@ -17,11 +17,31 @@ $webinarCertificateId = $_POST['webinar_certificate_id'] ?? null;
 
 // Handle webinar certificate removal
 if ($webinarCertificateId) {
+    // Получить данные сертификата для e-commerce перед удалением
+    $webCertEcommerce = null;
+    $stmt = $db->prepare("
+        SELECT wc.id, wc.webinar_id, wc.price, w.title as webinar_title
+        FROM webinar_certificates wc
+        JOIN webinars w ON wc.webinar_id = w.id
+        WHERE wc.id = ?
+    ");
+    $stmt->execute([$webinarCertificateId]);
+    $webCertData = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($webCertData) {
+        $webCertEcommerce = [
+            'id' => 'wc-' . $webCertData['webinar_id'],
+            'name' => $webCertData['webinar_title'],
+            'price' => $webCertData['price'],
+            'category' => 'Вебинары'
+        ];
+    }
+
     if (removeWebinarCertificateFromCart($webinarCertificateId)) {
         echo json_encode([
             'success' => true,
             'message' => 'Сертификат удален из корзины',
-            'cart_count' => getCartCount()
+            'cart_count' => getCartCount(),
+            'ecommerce' => $webCertEcommerce
         ]);
     } else {
         echo json_encode([
@@ -74,7 +94,7 @@ if ($itemData) {
         'id' => $itemData['id'],
         'name' => $itemData['title'],
         'price' => $itemData['price'],
-        'category' => $itemData['category'],
+        'category' => 'Конкурсы',
         'nomination' => $itemData['nomination']
     ];
 }

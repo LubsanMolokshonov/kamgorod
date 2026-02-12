@@ -2352,7 +2352,7 @@ window.dataLayer.push({
                 "name": "<?php echo htmlspecialchars($competition['title'], ENT_QUOTES); ?>",
                 "price": <?php echo $competition['price']; ?>,
                 "brand": "Педпортал",
-                "category": "<?php echo htmlspecialchars($ecomAudienceType, ENT_QUOTES); ?>"
+                "category": "Конкурсы"
             }]
         }
     }
