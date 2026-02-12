@@ -2,7 +2,7 @@
 /**
  * WebinarEmailJourney Class
  * Manages email automation for webinar registrations
- * 4 emails: confirmation, 24h reminder, 1h broadcast link, follow-up
+ * 5 emails: confirmation, 24h reminder, 1h broadcast link, 15min reminder, follow-up
  */
 
 require_once __DIR__ . '/Database.php';
@@ -391,6 +391,12 @@ class WebinarEmailJourney {
                 $text .= "Через 1 час начнётся вебинар \"{$data['webinar_title']}\"!\n\n";
                 $text .= "Ссылка на трансляцию: {$data['broadcast_url']}\n\n";
                 $text .= "Нажмите на ссылку за 5 минут до начала.\n";
+                break;
+
+            case 'webinar_reminder_15min':
+                $text .= "До начала вебинара \"{$data['webinar_title']}\" осталось 15 минут!\n\n";
+                $text .= "Ссылка на трансляцию: {$data['broadcast_url']}\n\n";
+                $text .= "Войдите прямо сейчас, чтобы занять место.\n";
                 break;
 
             case 'webinar_followup':

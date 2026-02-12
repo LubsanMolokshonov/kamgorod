@@ -37,6 +37,7 @@ class WebinarCertificate {
             'user_id' => $data['user_id'],
             'registration_id' => $data['registration_id'],
             'full_name' => $data['full_name'],
+            'author_name' => $data['full_name'],
             'organization' => $data['organization'] ?? '',
             'position' => $data['position'] ?? '',
             'city' => $data['city'] ?? '',
