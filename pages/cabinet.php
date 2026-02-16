@@ -242,9 +242,10 @@ include __DIR__ . '/../includes/header.php';
                                                 📥 Скачать сертификат
                                             </a>
                                         <?php elseif ($webCert && $webCert['status'] === 'paid'): ?>
-                                            <span class="btn btn-outline" style="opacity: 0.7; cursor: default;">
-                                                ⏳ Сертификат формируется
-                                            </span>
+                                            <a href="/ajax/download-webinar-certificate.php?id=<?php echo $webCert['id']; ?>"
+                                               class="btn btn-success btn-download">
+                                                📥 Скачать сертификат
+                                            </a>
                                         <?php else: ?>
                                             <a href="/pages/webinar-certificate.php?registration_id=<?php echo $webinar['id']; ?>"
                                                class="btn btn-primary">

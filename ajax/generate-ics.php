@@ -4,9 +4,9 @@
  * Endpoint: /ajax/generate-ics.php?registration_id=123
  */
 
-require_once dirname(__DIR__) . '/includes/config.php';
-require_once BASE_PATH . '/classes/Database.php';
-require_once BASE_PATH . '/classes/IcsGenerator.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../classes/Database.php';
+require_once __DIR__ . '/../classes/IcsGenerator.php';
 
 header('Content-Type: application/json');
 
@@ -17,15 +17,16 @@ try {
         throw new Exception('Registration ID is required');
     }
 
-    $db = new Database($pdo);
+    $database = new Database($db);
 
     // Get registration with webinar data
-    $registration = $db->queryOne(
+    $registration = $database->queryOne(
         "SELECT wr.*, w.id as webinar_id, w.title, w.slug, w.scheduled_at,
                 w.duration_minutes, w.broadcast_url, w.short_description, w.description,
-                w.speaker_name
+                s.full_name as speaker_name
          FROM webinar_registrations wr
          JOIN webinars w ON wr.webinar_id = w.id
+         LEFT JOIN speakers s ON w.speaker_id = s.id
          WHERE wr.id = ?",
         [$registrationId]
     );

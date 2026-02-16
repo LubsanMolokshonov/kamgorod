@@ -250,7 +250,14 @@ class WebinarCertificate {
         );
 
         // Save PDF
-        $mpdf->Output($this->uploadsDir . $filename, 'F');
+        $outputPath = $this->uploadsDir . $filename;
+        $mpdf->Output($outputPath, 'F');
+
+        // Verify file was actually written
+        if (!file_exists($outputPath) || filesize($outputPath) === 0) {
+            error_log("WebinarCertificate: PDF not written to {$outputPath}");
+            return null;
+        }
 
         return $filename;
     }
