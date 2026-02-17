@@ -82,6 +82,25 @@ RewriteRule ^vhod/?$ pages/login.php [L,QSA]
 RewriteRule ^vyhod/?$ pages/logout.php [L,QSA]
 
 # ================================================
+# СВЕДЕНИЯ ОБ ОРГАНИЗАЦИИ
+# ================================================
+
+RewriteRule ^svedeniya/?$ pages/svedeniya/index.php [L,QSA]
+RewriteRule ^svedeniya/osnovnye-svedeniya/?$ pages/svedeniya/osnovnye-svedeniya.php [L,QSA]
+RewriteRule ^svedeniya/struktura-i-organy-upravleniya/?$ pages/svedeniya/struktura.php [L,QSA]
+RewriteRule ^svedeniya/dokumenty/?$ pages/svedeniya/dokumenty.php [L,QSA]
+RewriteRule ^svedeniya/obrazovanie/?$ pages/svedeniya/obrazovanie.php [L,QSA]
+RewriteRule ^svedeniya/obrazovatelnye-standarty/?$ pages/svedeniya/obrazovatelnye-standarty.php [L,QSA]
+RewriteRule ^svedeniya/rukovodstvo/?$ pages/svedeniya/rukovodstvo.php [L,QSA]
+RewriteRule ^svedeniya/materialno-tehnicheskoe-obespechenie/?$ pages/svedeniya/materialno-tehnicheskoe-obespechenie.php [L,QSA]
+RewriteRule ^svedeniya/stipendii/?$ pages/svedeniya/stipendii.php [L,QSA]
+RewriteRule ^svedeniya/platnye-obrazovatelnye-uslugi/?$ pages/svedeniya/platnye-uslugi.php [L,QSA]
+RewriteRule ^svedeniya/fin-hoz-deyatelnost/?$ pages/svedeniya/fin-hoz-deyatelnost.php [L,QSA]
+RewriteRule ^svedeniya/vakantnye-mesta/?$ pages/svedeniya/vakantnye-mesta.php [L,QSA]
+RewriteRule ^svedeniya/mezhdunarodnoe-sotrudnichestvo/?$ pages/svedeniya/mezhdunarodnoe-sotrudnichestvo.php [L,QSA]
+RewriteRule ^svedeniya/dostupnaya-sreda/?$ pages/svedeniya/dostupnaya-sreda.php [L,QSA]
+
+# ================================================
 # СЛУЖЕБНЫЕ СТРАНИЦЫ
 # ================================================
 

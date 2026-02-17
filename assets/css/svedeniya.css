@@ -1,0 +1,469 @@
+/* ================================================
+   СВЕДЕНИЯ ОБ ОРГАНИЗАЦИИ — Общие стили
+   ================================================ */
+
+/* Hero-секция */
+.svedeniya-hero {
+    background: linear-gradient(135deg, #1E3A5F 0%, #2C4373 25%, #3B5998 50%, #4A6FA5 75%, #5E81C4 100%);
+    padding: 120px 0 60px;
+    margin-top: 80px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.svedeniya-hero::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    right: -100px;
+    width: 400px;
+    height: 400px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+}
+
+.svedeniya-hero h1 {
+    font-size: 42px;
+    color: white;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.svedeniya-hero p {
+    font-size: 18px;
+    color: rgba(255,255,255,0.85);
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+    position: relative;
+    z-index: 1;
+}
+
+/* Breadcrumbs */
+.svedeniya-breadcrumbs {
+    padding: 20px 0 0;
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    position: relative;
+    z-index: 1;
+}
+
+.svedeniya-breadcrumbs a {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.svedeniya-breadcrumbs a:hover {
+    color: white;
+}
+
+.svedeniya-breadcrumbs span {
+    margin: 0 8px;
+}
+
+/* ================================================
+   Главная страница раздела — Сетка карточек
+   ================================================ */
+
+.svedeniya-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    padding: 40px 0 60px;
+}
+
+.svedeniya-card {
+    background: white;
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 6px 6px 10px rgba(30,58,95,0.08);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.svedeniya-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 6px 6px 20px rgba(30,58,95,0.15);
+}
+
+.svedeniya-card-number {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+
+.svedeniya-card h3 {
+    font-size: 18px;
+    color: #1E3A5F;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.svedeniya-card p {
+    font-size: 14px;
+    color: #6B7280;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ================================================
+   Подстраницы — Лейаут с боковым меню
+   ================================================ */
+
+.svedeniya-layout {
+    display: flex;
+    gap: 40px;
+    padding: 40px 0 60px;
+    align-items: flex-start;
+}
+
+/* Боковое меню */
+.svedeniya-sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 100px;
+}
+
+.svedeniya-nav {
+    background: white;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 6px 6px 10px rgba(30,58,95,0.08);
+}
+
+.svedeniya-nav-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1E3A5F;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #E5E7EB;
+}
+
+.svedeniya-nav a {
+    display: block;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #4A5568;
+    text-decoration: none;
+    border-radius: 12px;
+    transition: all 0.2s;
+    line-height: 1.4;
+    margin-bottom: 2px;
+}
+
+.svedeniya-nav a:hover {
+    background: #F0F4FF;
+    color: #1E3A5F;
+}
+
+.svedeniya-nav a.active {
+    background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);
+    color: white;
+    font-weight: 600;
+}
+
+/* Контент */
+.svedeniya-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.svedeniya-content-card {
+    background: white;
+    border-radius: 24px;
+    padding: 48px;
+    box-shadow: 6px 6px 10px rgba(30,58,95,0.08);
+}
+
+.svedeniya-content-card h2 {
+    font-size: 28px;
+    color: #1E3A5F;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #E5E7EB;
+}
+
+.svedeniya-content-card h3 {
+    font-size: 20px;
+    color: #1E3A5F;
+    margin: 32px 0 16px;
+}
+
+.svedeniya-content-card p {
+    font-size: 16px;
+    line-height: 1.7;
+    color: #4A5568;
+    margin-bottom: 12px;
+}
+
+/* Информационная таблица */
+.svedeniya-info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+}
+
+.svedeniya-info-table tr {
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.svedeniya-info-table tr:last-child {
+    border-bottom: none;
+}
+
+.svedeniya-info-table td {
+    padding: 16px 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    vertical-align: top;
+}
+
+.svedeniya-info-table td:first-child {
+    width: 40%;
+    font-weight: 600;
+    color: #1E3A5F;
+}
+
+.svedeniya-info-table td:last-child {
+    color: #4A5568;
+}
+
+/* Карточки документов */
+.svedeniya-docs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 24px 0;
+}
+
+.svedeniya-doc-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: #F5F7FA;
+    border-radius: 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.svedeniya-doc-item:hover {
+    background: #E8F0F8;
+    transform: translateX(4px);
+}
+
+.svedeniya-doc-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #1E3A5F 0%, #3B5998 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.svedeniya-doc-icon svg {
+    width: 20px;
+    height: 20px;
+    color: white;
+}
+
+.svedeniya-doc-info {
+    flex: 1;
+}
+
+.svedeniya-doc-info .doc-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1E3A5F;
+    margin-bottom: 2px;
+}
+
+.svedeniya-doc-info .doc-desc {
+    font-size: 13px;
+    color: #6B7280;
+}
+
+.svedeniya-doc-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: #3B5998;
+    background: rgba(59,89,152,0.1);
+    padding: 4px 10px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+/* Инфо-блок с иконкой */
+.svedeniya-info-block {
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+    background: #F0F4FF;
+    border-radius: 16px;
+    margin: 20px 0;
+    border-left: 4px solid #3B5998;
+}
+
+.svedeniya-info-block p {
+    margin: 0;
+    font-size: 15px;
+    color: #4A5568;
+}
+
+/* Пустое состояние */
+.svedeniya-empty {
+    text-align: center;
+    padding: 60px 40px;
+    color: #6B7280;
+}
+
+.svedeniya-empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.svedeniya-empty p {
+    font-size: 16px;
+    color: #6B7280;
+}
+
+/* ================================================
+   Адаптив
+   ================================================ */
+
+@media (max-width: 1200px) {
+    .svedeniya-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 960px) {
+    .svedeniya-hero {
+        padding: 100px 0 48px;
+    }
+
+    .svedeniya-hero h1 {
+        font-size: 32px;
+    }
+
+    .svedeniya-layout {
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .svedeniya-sidebar {
+        width: 100%;
+        position: static;
+    }
+
+    .svedeniya-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 16px;
+    }
+
+    .svedeniya-nav-title {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    .svedeniya-nav a {
+        padding: 8px 12px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .svedeniya-content-card {
+        padding: 32px;
+    }
+
+    .svedeniya-info-table td:first-child {
+        width: 35%;
+    }
+}
+
+@media (max-width: 640px) {
+    .svedeniya-hero {
+        padding: 90px 0 40px;
+    }
+
+    .svedeniya-hero h1 {
+        font-size: 26px;
+    }
+
+    .svedeniya-hero p {
+        font-size: 15px;
+    }
+
+    .svedeniya-cards {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 24px 0 40px;
+    }
+
+    .svedeniya-card {
+        padding: 24px;
+        border-radius: 20px;
+    }
+
+    .svedeniya-content-card {
+        padding: 24px;
+        border-radius: 20px;
+    }
+
+    .svedeniya-content-card h2 {
+        font-size: 22px;
+    }
+
+    .svedeniya-info-table td {
+        display: block;
+        padding: 8px 0;
+        width: 100% !important;
+    }
+
+    .svedeniya-info-table tr {
+        display: block;
+        padding: 12px 0;
+    }
+
+    .svedeniya-nav {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 12px;
+    }
+
+    .svedeniya-nav a {
+        flex-shrink: 0;
+    }
+
+    .svedeniya-doc-item {
+        flex-wrap: wrap;
+    }
+
+    .svedeniya-doc-badge {
+        margin-left: 56px;
+    }
+}
