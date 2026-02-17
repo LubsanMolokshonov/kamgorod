@@ -35,6 +35,7 @@ require_once __DIR__ . '/../../classes/Order.php';
 require_once __DIR__ . '/../../classes/Registration.php';
 require_once __DIR__ . '/../../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../../classes/WebinarCertificate.php';
+require_once __DIR__ . '/../../classes/Diploma.php';
 require_once __DIR__ . '/../../classes/EmailJourney.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
@@ -181,6 +182,25 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                 $webCertObj->updateStatus($item['webinar_certificate_id'], 'paid');
                 $webCertObj->generate($item['webinar_certificate_id']);
                 logWebhook('INFO', $paymentId, "Webinar certificate {$item['webinar_certificate_id']} generated for order {$orderNumber}", '');
+            }
+        }
+
+        // Generate diplomas for paid registrations
+        $diplomaObj = new Diploma($GLOBALS['db']);
+        foreach ($orderItems as $item) {
+            if (!empty($item['registration_id'])) {
+                $result = $diplomaObj->generate($item['registration_id'], 'participant');
+                if ($result['success']) {
+                    logWebhook('INFO', $paymentId, "Diploma (participant) generated for registration {$item['registration_id']}", '');
+                }
+                // Generate supervisor diploma if supervisor exists
+                $regData = $diplomaObj->getRegistrationData($item['registration_id']);
+                if ($regData && !empty($regData['has_supervisor']) && !empty($regData['supervisor_name'])) {
+                    $supResult = $diplomaObj->generate($item['registration_id'], 'supervisor');
+                    if ($supResult['success']) {
+                        logWebhook('INFO', $paymentId, "Diploma (supervisor) generated for registration {$item['registration_id']}", '');
+                    }
+                }
             }
         }
 

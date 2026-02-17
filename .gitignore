@@ -28,3 +28,14 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.cache
+
+# Backup files
+*.backup
+
+# Content folder
+/Контент/
+
+# Uploaded certificates and publications
+/uploads/webinars/certificates/*.pdf
+/uploads/publications/certificates/*.pdf
+/uploads/publications/20*/**/*.pdf

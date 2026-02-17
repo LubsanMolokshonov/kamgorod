@@ -205,6 +205,17 @@ try {
             $stmt->execute([$registrationId]);
         }
 
+        // Generate diplomas for paid registrations
+        require_once __DIR__ . '/../classes/Diploma.php';
+        $diplomaObj = new Diploma($db);
+        foreach ($registrations as $registrationId) {
+            $diplomaObj->generate($registrationId, 'participant');
+            $regData = $diplomaObj->getRegistrationData($registrationId);
+            if ($regData && !empty($regData['has_supervisor']) && !empty($regData['supervisor_name'])) {
+                $diplomaObj->generate($registrationId, 'supervisor');
+            }
+        }
+
         // Mark all certificates as paid and generate them
         foreach ($certificatesData as $cert) {
             $certObj->updateStatus($cert['id'], 'paid');

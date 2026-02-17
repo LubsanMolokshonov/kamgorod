@@ -264,7 +264,7 @@ class Diploma {
     /**
      * Get registration data with all related information
      */
-    private function getRegistrationData($registrationId) {
+    public function getRegistrationData($registrationId) {
         // Ensure UTF-8 is used for this query
         $this->db->exec("SET NAMES utf8mb4");
 

@@ -39,7 +39,7 @@ function configureMailer($mail) {
 }
 
 /**
- * Send payment success notification email
+ * Send payment success notification email with PDF attachments
  */
 function sendPaymentSuccessEmail($userId, $orderId) {
     global $db;
@@ -59,6 +59,9 @@ function sendPaymentSuccessEmail($userId, $orderId) {
             throw new Exception('Order or user not found');
         }
 
+        // Collect PDF attachments for all order items
+        $attachments = collectOrderAttachments($db, $order['items']);
+
         // Initialize and configure PHPMailer
         $mail = new PHPMailer(true);
         configureMailer($mail);
@@ -69,18 +72,24 @@ function sendPaymentSuccessEmail($userId, $orderId) {
 
         // Content
         $mail->isHTML(true);
-        $mail->Subject = 'Оплата заказа ' . $order['order_number'] . ' успешно завершена';
+        $mail->Subject = 'Ваши документы по заказу ' . $order['order_number'];
 
         // Build email body
-        $htmlBody = buildSuccessEmailBody($order, $user);
-        $textBody = buildSuccessEmailBodyText($order, $user);
+        $htmlBody = buildSuccessEmailBody($order, $user, $attachments);
+        $textBody = buildSuccessEmailBodyText($order, $user, $attachments);
 
         $mail->Body = $htmlBody;
         $mail->AltBody = $textBody;
 
+        // Attach PDF documents
+        foreach ($attachments as $att) {
+            $mail->addAttachment($att['path'], $att['name']);
+        }
+
         $mail->send();
 
-        logEmail('SUCCESS', $user['email'], $order['order_number'], 'Payment success email sent');
+        $attachCount = count($attachments);
+        logEmail('SUCCESS', $user['email'], $order['order_number'], "Payment success email sent with {$attachCount} attachment(s)");
         return true;
 
     } catch (Exception $e) {
@@ -90,9 +99,91 @@ function sendPaymentSuccessEmail($userId, $orderId) {
 }
 
 /**
- * Build HTML email body for success
+ * Collect PDF attachments for order items
+ * @param PDO $db Database connection
+ * @param array $items Order items
+ * @return array Attachments [['path' => ..., 'name' => ..., 'type' => ...], ...]
  */
-function buildSuccessEmailBody($order, $user) {
+function collectOrderAttachments($db, $items) {
+    $attachments = [];
+
+    foreach ($items as $item) {
+        // Competition diplomas
+        if (!empty($item['registration_id'])) {
+            $stmt = $db->prepare("
+                SELECT pdf_path, recipient_type FROM diplomas
+                WHERE registration_id = ? AND recipient_type = 'participant'
+                ORDER BY generated_at DESC LIMIT 1
+            ");
+            $stmt->execute([$item['registration_id']]);
+            $diploma = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($diploma && !empty($diploma['pdf_path'])) {
+                $pdfFullPath = BASE_PATH . '/uploads/diplomas/' . $diploma['pdf_path'];
+                if (file_exists($pdfFullPath)) {
+                    $title = !empty($item['competition_title']) ? $item['competition_title'] : 'конкурс';
+                    $attachments[] = [
+                        'path' => $pdfFullPath,
+                        'name' => 'Диплом_' . mb_substr(preg_replace('/[^\w\d\-а-яёА-ЯЁ ]/u', '', $title), 0, 50) . '.pdf',
+                        'type' => 'diploma',
+                        'title' => $title
+                    ];
+                }
+            }
+        }
+
+        // Publication certificates
+        if (!empty($item['certificate_id'])) {
+            $stmt = $db->prepare("SELECT pdf_path FROM publication_certificates WHERE id = ?");
+            $stmt->execute([$item['certificate_id']]);
+            $cert = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($cert && !empty($cert['pdf_path'])) {
+                $pdfFullPath = BASE_PATH . $cert['pdf_path'];
+                if (file_exists($pdfFullPath)) {
+                    $title = !empty($item['publication_title']) ? $item['publication_title'] : 'публикация';
+                    $attachments[] = [
+                        'path' => $pdfFullPath,
+                        'name' => 'Свидетельство_' . mb_substr(preg_replace('/[^\w\d\-а-яёА-ЯЁ ]/u', '', $title), 0, 50) . '.pdf',
+                        'type' => 'certificate',
+                        'title' => $title
+                    ];
+                }
+            }
+        }
+
+        // Webinar certificates
+        if (!empty($item['webinar_certificate_id'])) {
+            $stmt = $db->prepare("SELECT pdf_path FROM webinar_certificates WHERE id = ?");
+            $stmt->execute([$item['webinar_certificate_id']]);
+            $webCert = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($webCert && !empty($webCert['pdf_path'])) {
+                $pdfFullPath = BASE_PATH . $webCert['pdf_path'];
+                if (file_exists($pdfFullPath)) {
+                    $title = !empty($item['webinar_title']) ? $item['webinar_title'] : 'вебинар';
+                    $attachments[] = [
+                        'path' => $pdfFullPath,
+                        'name' => 'Сертификат_' . mb_substr(preg_replace('/[^\w\d\-а-яёА-ЯЁ ]/u', '', $title), 0, 50) . '.pdf',
+                        'type' => 'webinar_certificate',
+                        'title' => $title
+                    ];
+                }
+            }
+        }
+    }
+
+    return $attachments;
+}
+
+/**
+ * Build HTML email body for success with documents list
+ * @param array $order Order data with items
+ * @param array $user User data
+ * @param array $attachments Attached PDF files
+ * @return string HTML email body
+ */
+function buildSuccessEmailBody($order, $user, $attachments = []) {
     $siteUrl = SITE_URL;
     $cabinetLink = generateMagicUrl($user['id'], '/pages/cabinet.php');
     $orderNumber = htmlspecialchars($order['order_number']);
@@ -101,11 +192,54 @@ function buildSuccessEmailBody($order, $user) {
     $discountAmount = number_format($order['discount_amount'], 0, ',', ' ');
     $paidDate = date('d.m.Y H:i', strtotime($order['paid_at'] ?? $order['created_at']));
 
+    // Build items list for all document types
     $itemsHtml = '';
     foreach ($order['items'] as $item) {
-        $competitionTitle = htmlspecialchars($item['competition_title']);
-        $nomination = htmlspecialchars($item['nomination']);
-        $itemsHtml .= "<li><strong>{$competitionTitle}</strong>, номинация: {$nomination}</li>";
+        if (!empty($item['registration_id']) && !empty($item['competition_title'])) {
+            $title = htmlspecialchars($item['competition_title']);
+            $nomination = htmlspecialchars($item['nomination'] ?? '');
+            $nominationText = $nomination ? ", номинация: {$nomination}" : '';
+            $itemsHtml .= "<tr><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\">Диплом</td><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\"><strong>{$title}</strong>{$nominationText}</td></tr>";
+        }
+        if (!empty($item['certificate_id']) && !empty($item['publication_title'])) {
+            $title = htmlspecialchars($item['publication_title']);
+            $itemsHtml .= "<tr><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\">Свидетельство</td><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\"><strong>{$title}</strong></td></tr>";
+        }
+        if (!empty($item['webinar_certificate_id']) && !empty($item['webinar_title'])) {
+            $title = htmlspecialchars($item['webinar_title']);
+            $itemsHtml .= "<tr><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\">Сертификат</td><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\"><strong>{$title}</strong></td></tr>";
+        }
+    }
+
+    // Attachment notice
+    $attachmentHtml = '';
+    if (!empty($attachments)) {
+        $attachCount = count($attachments);
+        $attachmentHtml = <<<HTML
+            <div style="background: #e8f5e9; padding: 16px 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #4caf50;">
+                <p style="margin: 0 0 8px 0; font-weight: bold; color: #2e7d32;">К этому письму прикреплены ваши документы ({$attachCount} шт.):</p>
+                <ul style="margin: 0; padding-left: 20px; color: #333;">
+HTML;
+        foreach ($attachments as $att) {
+            $docType = match($att['type']) {
+                'diploma' => 'Диплом',
+                'certificate' => 'Свидетельство о публикации',
+                'webinar_certificate' => 'Сертификат участника вебинара',
+                default => 'Документ'
+            };
+            $attTitle = htmlspecialchars($att['title']);
+            $attachmentHtml .= "<li>{$docType}: {$attTitle}</li>";
+        }
+        $attachmentHtml .= <<<HTML
+                </ul>
+            </div>
+HTML;
+    }
+
+    // Discount row
+    $discountHtml = '';
+    if ($order['discount_amount'] > 0) {
+        $discountHtml = "<li><strong>Скидка:</strong> {$discountAmount} &#8381;</li>";
     }
 
     return <<<HTML
@@ -114,53 +248,64 @@ function buildSuccessEmailBody($order, $user) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Оплата заказа</title>
+    <title>Ваши документы</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0 0 8px 0; font-size: 24px; }
+        .header p { margin: 0; opacity: 0.9; font-size: 16px; }
         .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
         .order-details { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #667eea; }
         .order-details h3 { margin-top: 0; color: #667eea; }
         .order-details ul { padding-left: 20px; }
-        .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .docs-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        .docs-table th { text-align: left; padding: 8px 12px; background: #f0f0f0; border-bottom: 2px solid #667eea; color: #667eea; }
+        .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
         .footer { text-align: center; color: #777; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>✅ Оплата успешно завершена!</h1>
+            <h1>Благодарим за покупку!</h1>
+            <p>Заказ №{$orderNumber} успешно оплачен</p>
         </div>
         <div class="content">
             <p>Здравствуйте, <strong>{$fullName}</strong>!</p>
 
-            <p>Ваш заказ <strong>№{$orderNumber}</strong> успешно оплачен.</p>
+            <p>Спасибо, что выбрали наш портал! Ваш заказ успешно оплачен, и мы рады отправить вам ваши документы.</p>
+
+            {$attachmentHtml}
 
             <div class="order-details">
                 <h3>Детали заказа:</h3>
                 <ul>
                     <li><strong>Дата оплаты:</strong> {$paidDate}</li>
-                    <li><strong>Сумма к оплате:</strong> {$finalAmount} ₽</li>
-                    <li><strong>Скидка:</strong> {$discountAmount} ₽</li>
+                    <li><strong>Сумма:</strong> {$finalAmount} &#8381;</li>
+                    {$discountHtml}
                 </ul>
 
-                <h3>Участие в конкурсах:</h3>
-                <ul>
+                <h3>Ваши документы:</h3>
+                <table class="docs-table">
+                    <tr>
+                        <th>Тип</th>
+                        <th>Название</th>
+                    </tr>
                     {$itemsHtml}
-                </ul>
+                </table>
             </div>
 
-            <p>Ваши дипломы будут доступны в личном кабинете после подведения итогов конкурса.</p>
+            <p>Все документы также доступны для скачивания в вашем личном кабинете.</p>
 
             <center>
                 <a href="{$cabinetLink}" class="button">Перейти в личный кабинет</a>
             </center>
 
-            <p>Если у вас возникли вопросы, пожалуйста, свяжитесь с нами через форму обратной связи на сайте.</p>
+            <p style="color: #666; font-size: 14px;">Если у вас возникли вопросы, пожалуйста, свяжитесь с нами через форму обратной связи на сайте.</p>
         </div>
         <div class="footer">
-            <p>С уважением,<br>Команда проекта "Каменный город"</p>
+            <p>С уважением,<br>Команда проекта &laquo;Каменный город&raquo;</p>
             <p style="font-size: 12px; color: #999;">Это автоматическое письмо, пожалуйста, не отвечайте на него.</p>
         </div>
     </div>
@@ -171,41 +316,63 @@ HTML;
 
 /**
  * Build plain text email body for success
+ * @param array $order Order data with items
+ * @param array $user User data
+ * @param array $attachments Attached PDF files
+ * @return string Plain text email body
  */
-function buildSuccessEmailBodyText($order, $user) {
+function buildSuccessEmailBodyText($order, $user, $attachments = []) {
     $orderNumber = $order['order_number'];
     $fullName = $user['full_name'];
     $finalAmount = number_format($order['final_amount'], 0, ',', ' ');
     $discountAmount = number_format($order['discount_amount'], 0, ',', ' ');
     $paidDate = date('d.m.Y H:i', strtotime($order['paid_at'] ?? $order['created_at']));
-    $siteUrl = SITE_URL;
     $cabinetLink = generateMagicUrl($user['id'], '/pages/cabinet.php');
 
+    // Build items list for all document types
     $itemsText = '';
     foreach ($order['items'] as $item) {
-        $itemsText .= "  - {$item['competition_title']}, номинация: {$item['nomination']}\n";
+        if (!empty($item['registration_id']) && !empty($item['competition_title'])) {
+            $nomination = !empty($item['nomination']) ? ", номинация: {$item['nomination']}" : '';
+            $itemsText .= "  - Диплом: {$item['competition_title']}{$nomination}\n";
+        }
+        if (!empty($item['certificate_id']) && !empty($item['publication_title'])) {
+            $itemsText .= "  - Свидетельство: {$item['publication_title']}\n";
+        }
+        if (!empty($item['webinar_certificate_id']) && !empty($item['webinar_title'])) {
+            $itemsText .= "  - Сертификат: {$item['webinar_title']}\n";
+        }
+    }
+
+    // Attachment notice
+    $attachText = '';
+    if (!empty($attachments)) {
+        $attachText = "\nК этому письму прикреплены ваши документы (" . count($attachments) . " шт.).\n";
+    }
+
+    // Discount line
+    $discountLine = '';
+    if ($order['discount_amount'] > 0) {
+        $discountLine = "- Скидка: {$discountAmount} руб.\n";
     }
 
     return <<<TEXT
-Оплата заказа {$orderNumber} успешно завершена
+Благодарим за покупку! Заказ №{$orderNumber}
 
 Здравствуйте, {$fullName}!
 
-Ваш заказ №{$orderNumber} успешно оплачен.
-
+Спасибо, что выбрали наш портал! Ваш заказ успешно оплачен.
+{$attachText}
 Детали заказа:
 - Дата оплаты: {$paidDate}
-- Сумма к оплате: {$finalAmount} ₽
-- Скидка: {$discountAmount} ₽
-
-Участие в конкурсах:
+- Сумма: {$finalAmount} руб.
+{$discountLine}
+Ваши документы:
 {$itemsText}
+Все документы также доступны для скачивания в личном кабинете:
+{$cabinetLink}
 
-Ваши дипломы будут доступны в личном кабинете после подведения итогов конкурса.
-
-Перейти в личный кабинет: {$cabinetLink}
-
-Если у вас возникли вопросы, пожалуйста, свяжитесь с нами через форму обратной связи на сайте.
+Если у вас возникли вопросы, свяжитесь с нами через форму обратной связи на сайте.
 
 С уважением,
 Команда проекта "Каменный город"
