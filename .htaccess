@@ -77,6 +77,7 @@ RewriteRule ^(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/?$ pages/aud
 # ================================================
 
 RewriteRule ^kabinet/?$ pages/cabinet.php [L,QSA]
+RewriteRule ^kabinet/avtovebinar/(\d+)/?$ pages/cabinet-autowebinar.php?registration_id=$1 [L,QSA]
 RewriteRule ^korzina/?$ pages/cart.php [L,QSA]
 RewriteRule ^vhod/?$ pages/login.php [L,QSA]
 RewriteRule ^vyhod/?$ pages/logout.php [L,QSA]

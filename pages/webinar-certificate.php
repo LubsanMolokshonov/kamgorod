@@ -52,12 +52,28 @@ if ($registration['user_id'] != $_SESSION['user_id']) {
     exit;
 }
 
-// Check if webinar has passed (certificate available 1 hour after start)
+// Check certificate availability
 $webinarTime = strtotime($registration['scheduled_at']);
 $certificateAvailableTime = $webinarTime + 3600;
-if (time() < $certificateAvailableTime) {
-    header('Location: /pages/cabinet.php?tab=webinars');
-    exit;
+
+// For autowebinars: skip time check, require quiz passage
+require_once __DIR__ . '/../classes/Webinar.php';
+$webinarCheckObj = new Webinar($db);
+$webinarData = $webinarCheckObj->getById($registration['webinar_id']);
+
+if ($webinarData && $webinarData['status'] === 'autowebinar') {
+    require_once __DIR__ . '/../classes/WebinarQuiz.php';
+    $quizCheckObj = new WebinarQuiz($db);
+    if (!$quizCheckObj->hasPassed($registrationId)) {
+        header('Location: /kabinet/avtovebinar/' . $registrationId);
+        exit;
+    }
+} else {
+    // Regular webinars: time-based check
+    if (time() < $certificateAvailableTime) {
+        header('Location: /pages/cabinet.php?tab=webinars');
+        exit;
+    }
 }
 
 // Get existing certificate if any

@@ -217,6 +217,26 @@ function initRegistrationForm() {
             const data = await response.json();
 
             if (data.success) {
+                // Auto-redirect for autowebinars
+                if (data.is_autowebinar && data.autowebinar_url && !data.already_registered) {
+                    if (typeof ym !== 'undefined') {
+                        ym(106465857, 'reachGoal', 'webinar_registration');
+                    }
+                    formMessage.className = 'form-message success';
+                    formMessage.innerHTML = '<strong>Регистрация успешна!</strong> Переход к автовебинару...';
+                    formMessage.style.display = 'block';
+                    form.querySelectorAll('.form-group').forEach(el => el.style.display = 'none');
+                    submitBtn.style.display = 'none';
+                    const formCheckbox = form.querySelector('.form-checkbox');
+                    if (formCheckbox) formCheckbox.style.display = 'none';
+                    const consentContainer = form.querySelector('.consent-container');
+                    if (consentContainer) consentContainer.style.display = 'none';
+                    setTimeout(function() {
+                        window.location.href = data.autowebinar_url;
+                    }, 1500);
+                    return;
+                }
+
                 // Build success message
                 let successHtml = data.already_registered
                     ? 'Вы уже зарегистрированы на этот вебинар!'

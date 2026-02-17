@@ -134,7 +134,10 @@ try {
         'samesite' => 'Lax'
     ]);
 
-    // Create registration
+    // Determine if autowebinar before creating registration
+    $isAutowebinar = $webinar['status'] === 'autowebinar';
+
+    // Create registration (skip Bitrix24 for autowebinars — instant access, no CRM deal needed)
     $registrationData = [
         'webinar_id' => $webinarId,
         'user_id' => $userId,
@@ -147,7 +150,8 @@ try {
         'utm_source' => $utmSource,
         'utm_medium' => $utmMedium,
         'utm_campaign' => $utmCampaign,
-        'registration_source' => 'website'
+        'registration_source' => 'website',
+        'skip_bitrix24' => $isAutowebinar
     ];
 
     $registrationId = $registrationObj->create($registrationData);
@@ -156,17 +160,17 @@ try {
         throw new Exception('Ошибка создания регистрации');
     }
 
-    // Note: Bitrix24 sync is handled automatically in WebinarRegistration::create()
-
-    // Schedule email journey for this registration
-    try {
-        $emailJourney = new WebinarEmailJourney($db);
-        $emailJourney->scheduleForRegistration($registrationId);
-        // Send confirmation email immediately
-        $emailJourney->sendConfirmationEmail($registrationId);
-    } catch (Exception $emailError) {
-        // Log error but don't fail registration
-        error_log("Webinar Email Journey Error: " . $emailError->getMessage());
+    // Schedule email journey (skip for autowebinars — no scheduled time for reminders)
+    if (!$isAutowebinar) {
+        try {
+            $emailJourney = new WebinarEmailJourney($db);
+            $emailJourney->scheduleForRegistration($registrationId);
+            // Send confirmation email immediately
+            $emailJourney->sendConfirmationEmail($registrationId);
+        } catch (Exception $emailError) {
+            // Log error but don't fail registration
+            error_log("Webinar Email Journey Error: " . $emailError->getMessage());
+        }
     }
 
     // Set session user if not logged in
@@ -174,6 +178,9 @@ try {
         setUserId($userId);
         $_SESSION['user_email'] = $email;
     }
+    $cabinetUrl = $isAutowebinar
+        ? '/kabinet/avtovebinar/' . $registrationId
+        : '/pages/cabinet.php?tab=webinars';
 
     // Success response
     echo json_encode([
@@ -186,7 +193,9 @@ try {
         'broadcast_url' => $webinar['broadcast_url'] ?? '',
         'scheduled_at' => $webinar['scheduled_at'],
         'cabinet_created' => $isNewUser,
-        'cabinet_url' => '/pages/cabinet.php?tab=webinars'
+        'cabinet_url' => $cabinetUrl,
+        'is_autowebinar' => $isAutowebinar,
+        'autowebinar_url' => $isAutowebinar ? $cabinetUrl : null
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {

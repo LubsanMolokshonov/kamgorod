@@ -13,6 +13,7 @@ require_once __DIR__ . '/../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../classes/Webinar.php';
 require_once __DIR__ . '/../classes/WebinarRegistration.php';
 require_once __DIR__ . '/../classes/WebinarCertificate.php';
+require_once __DIR__ . '/../classes/WebinarQuiz.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Auto-login via cookie if session doesn't exist
@@ -162,15 +163,25 @@ include __DIR__ . '/../includes/header.php';
                             $now = time();
                             $isUpcoming = $webinar['webinar_status'] === 'scheduled' || $webinar['webinar_status'] === 'live';
                             $isPast = $webinar['webinar_status'] === 'completed';
+                            $isAutowebinar = $webinar['webinar_status'] === 'autowebinar';
                             $hasRecording = !empty($webinar['video_url']);
 
-                            // Certificate available 1 hour after webinar start
+                            // Certificate available 1 hour after webinar start (or always for autowebinars)
                             $certificateAvailableTime = $webinarTime + 3600; // +1 hour
-                            $canGetCertificate = $now >= $certificateAvailableTime;
+                            $canGetCertificate = $isAutowebinar ? true : ($now >= $certificateAvailableTime);
                             $certificatePrice = $webinar['certificate_price'] ?? 149;
 
+                            // Quiz status for autowebinars
+                            $autowebinarQuizPassed = false;
+                            if ($isAutowebinar) {
+                                $quizObj = new WebinarQuiz($db);
+                                $autowebinarQuizPassed = $quizObj->hasPassed($webinar['id']);
+                            }
+
                             // Status for display
-                            if ($webinar['webinar_status'] === 'live') {
+                            if ($isAutowebinar) {
+                                $statusInfo = ['name' => 'Автовебинар', 'color' => '#8b5cf6'];
+                            } elseif ($webinar['webinar_status'] === 'live') {
                                 $statusInfo = ['name' => 'Идет сейчас', 'color' => '#ef4444'];
                             } elseif ($isUpcoming) {
                                 $statusInfo = ['name' => 'Предстоящий', 'color' => '#3b82f6'];
@@ -213,20 +224,25 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
 
                                 <div class="card-actions">
-                                    <?php if ($webinar['webinar_status'] === 'live'): ?>
+                                    <?php if ($isAutowebinar): ?>
+                                        <a href="/kabinet/avtovebinar/<?php echo $webinar['id']; ?>"
+                                           class="btn btn-primary">
+                                            Перейти к автовебинару
+                                        </a>
+                                    <?php elseif ($webinar['webinar_status'] === 'live'): ?>
                                         <a href="<?php echo htmlspecialchars($webinar['broadcast_url'] ?? '/pages/webinar.php?slug=' . $webinar['webinar_slug']); ?>"
                                            class="btn btn-success btn-download" target="_blank">
-                                            🔴 Смотреть трансляцию
+                                            Смотреть трансляцию
                                         </a>
                                     <?php elseif ($isUpcoming): ?>
                                         <a href="/pages/webinar.php?slug=<?php echo urlencode($webinar['webinar_slug']); ?>"
                                            class="btn btn-primary">
-                                            📅 Подробнее о вебинаре
+                                            Подробнее о вебинаре
                                         </a>
                                     <?php elseif ($hasRecording): ?>
                                         <a href="/pages/webinar.php?slug=<?php echo urlencode($webinar['webinar_slug']); ?>"
                                            class="btn btn-success btn-download">
-                                            ▶️ Смотреть запись
+                                            Смотреть запись
                                         </a>
                                     <?php else: ?>
                                         <span class="btn" style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; cursor: default;">
@@ -234,22 +250,41 @@ include __DIR__ . '/../includes/header.php';
                                         </span>
                                     <?php endif; ?>
 
-                                    <?php if ($canGetCertificate):
+                                    <?php if ($isAutowebinar): ?>
+                                        <?php
+                                        $webCert = $webinarCertsByRegId[$webinar['id']] ?? null;
+                                        if ($webCert && in_array($webCert['status'], ['paid', 'ready'])): ?>
+                                            <a href="/ajax/download-webinar-certificate.php?id=<?php echo $webCert['id']; ?>"
+                                               class="btn btn-success btn-download">
+                                                Скачать сертификат
+                                            </a>
+                                        <?php elseif ($autowebinarQuizPassed): ?>
+                                            <a href="/pages/webinar-certificate.php?registration_id=<?php echo $webinar['id']; ?>"
+                                               class="btn btn-primary">
+                                                Получить сертификат (<?php echo number_format($certificatePrice, 0, ',', ' '); ?> ₽)
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="btn" style="background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; cursor: default; font-size: 13px;">
+                                                Пройдите тест для сертификата
+                                            </span>
+                                        <?php endif; ?>
+                                    <?php elseif ($canGetCertificate): ?>
+                                        <?php
                                         $webCert = $webinarCertsByRegId[$webinar['id']] ?? null;
                                         if ($webCert && $webCert['status'] === 'ready'): ?>
                                             <a href="/ajax/download-webinar-certificate.php?id=<?php echo $webCert['id']; ?>"
                                                class="btn btn-success btn-download">
-                                                📥 Скачать сертификат
+                                                Скачать сертификат
                                             </a>
                                         <?php elseif ($webCert && $webCert['status'] === 'paid'): ?>
                                             <a href="/ajax/download-webinar-certificate.php?id=<?php echo $webCert['id']; ?>"
                                                class="btn btn-success btn-download">
-                                                📥 Скачать сертификат
+                                                Скачать сертификат
                                             </a>
                                         <?php else: ?>
                                             <a href="/pages/webinar-certificate.php?registration_id=<?php echo $webinar['id']; ?>"
                                                class="btn btn-primary">
-                                                📜 Получить сертификат (<?php echo number_format($certificatePrice, 0, ',', ' '); ?> ₽)
+                                                Получить сертификат (<?php echo number_format($certificatePrice, 0, ',', ' '); ?> ₽)
                                             </a>
                                         <?php endif; ?>
                                     <?php endif; ?>

@@ -36,7 +36,11 @@ $migrations = [
     '017_seed_publication_data.sql',
     '018_add_certificate_to_order_items.sql',
     '018_auto_approve_publications.sql',
-    '019_update_diploma_templates.sql'
+    '019_update_diploma_templates.sql',
+    '020_add_webinar_email_journey.sql',
+    '021_create_webinar_certificates.sql',
+    '022_add_template_id_to_webinar_certificates.sql',
+    '023_create_webinar_quiz.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';

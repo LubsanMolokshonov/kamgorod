@@ -51,6 +51,7 @@ if ($userEmail) {
 // Format date
 $dateInfo = Webinar::formatDateTime($webinar['scheduled_at']);
 $isUpcoming = in_array($webinar['status'], ['scheduled', 'live']);
+$isAutowebinar = $webinar['status'] === 'autowebinar';
 
 // Page meta
 $pageTitle = ($webinar['meta_title'] ?: 'Вебинар: ' . $webinar['title']) . ' | Каменный город';
@@ -72,7 +73,11 @@ include __DIR__ . '/../includes/header.php';
             <!-- Badges -->
             <div class="webinar-badges">
                 <span class="hero-category" style="font-size: 16px;">Бесплатный онлайн практикум для педагогов</span>
-                <span class="hero-category" style="font-size: 16px;"><?php echo $dateInfo['date_full']; ?> в <?php echo $dateInfo['time']; ?> МСК</span>
+                <?php if ($isAutowebinar): ?>
+                    <span class="hero-category" style="font-size: 16px;">Доступен для просмотра в любое время</span>
+                <?php else: ?>
+                    <span class="hero-category" style="font-size: 16px;"><?php echo $dateInfo['date_full']; ?> в <?php echo $dateInfo['time']; ?> МСК</span>
+                <?php endif; ?>
             </div>
 
             <!-- Title -->
@@ -87,7 +92,7 @@ include __DIR__ . '/../includes/header.php';
 
             <!-- CTA Button and Skolkovo Badge -->
             <div class="hero-cta-row">
-                <a href="#registration-form" class="btn-hero-cta">Принять бесплатное участие</a>
+                <a href="#registration-form" class="btn-hero-cta"><?php echo $isAutowebinar ? 'Получить доступ бесплатно' : 'Принять бесплатное участие'; ?></a>
 
                 <div class="skolkovo-badge">
                     <img src="/assets/images/skolkovo.webp" alt="Skolkovo" class="skolkovo-logo">
@@ -113,25 +118,47 @@ include __DIR__ . '/../includes/header.php';
 <section class="webinar-benefits-section">
     <div class="container">
         <div class="steps-grid">
-            <div class="competition-card animated">
-                <h3>Бесплатное участие</h3>
-                <p>Только открытые мероприятия для педагогов</p>
-            </div>
+            <?php if ($isAutowebinar): ?>
+                <div class="competition-card animated">
+                    <h3>Бесплатный просмотр</h3>
+                    <p>Смотрите запись вебинара в удобное для вас время</p>
+                </div>
 
-            <div class="competition-card animated">
-                <h3>Прямой онлайн-эфир</h3>
-                <p>Присоединяйтесь в прямом эфире, слушайте доклад и задавайте волнующие вопросы эксперту</p>
-            </div>
+                <div class="competition-card animated">
+                    <h3>Тест по материалам</h3>
+                    <p>Пройдите простой тест из 5 вопросов и подтвердите свои знания</p>
+                </div>
 
-            <div class="competition-card animated">
-                <h3>Запись эфира и материалы</h3>
-                <p>Сохраняйте чек-листы, инструкции и презентации и используйте их в своей работе</p>
-            </div>
+                <div class="competition-card animated">
+                    <h3>Сертификат участника</h3>
+                    <p>Оформите именной сертификат на <?php echo $webinar['certificate_hours']; ?> часа</p>
+                </div>
 
-            <div class="competition-card animated">
-                <h3>Сертификат участника</h3>
-                <p>Вы можете оформить сертификат участника на 2 часа</p>
-            </div>
+                <div class="competition-card animated">
+                    <h3>Мгновенный доступ</h3>
+                    <p>Сразу после регистрации вы получите доступ к записи и тесту</p>
+                </div>
+            <?php else: ?>
+                <div class="competition-card animated">
+                    <h3>Бесплатное участие</h3>
+                    <p>Только открытые мероприятия для педагогов</p>
+                </div>
+
+                <div class="competition-card animated">
+                    <h3>Прямой онлайн-эфир</h3>
+                    <p>Присоединяйтесь в прямом эфире, слушайте доклад и задавайте волнующие вопросы эксперту</p>
+                </div>
+
+                <div class="competition-card animated">
+                    <h3>Запись эфира и материалы</h3>
+                    <p>Сохраняйте чек-листы, инструкции и презентации и используйте их в своей работе</p>
+                </div>
+
+                <div class="competition-card animated">
+                    <h3>Сертификат участника</h3>
+                    <p>Вы можете оформить сертификат участника на 2 часа</p>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </section>
@@ -266,7 +293,7 @@ include __DIR__ . '/../includes/header.php';
             <!-- Registration Header -->
             <div class="registration-header">
                 <h2 class="registration-title">
-                    Регистрация на <span class="title-highlight">вебинар</span>
+                    Регистрация на <span class="title-highlight"><?php echo $isAutowebinar ? 'автовебинар' : 'вебинар'; ?></span>
                 </h2>
             </div>
 
@@ -277,8 +304,16 @@ include __DIR__ . '/../includes/header.php';
                         <path d="M8 12l2.5 2.5L16 9" stroke="#22c55e" stroke-width="2"
                               stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <p>Вы уже зарегистрированы на этот вебинар!</p>
-                    <?php if ($webinar['broadcast_url']): ?>
+                    <p>Вы уже зарегистрированы!</p>
+                    <?php if ($isAutowebinar): ?>
+                        <?php
+                        $existingReg = $registrationObj->getByWebinarAndEmail($webinar['id'], $userEmail);
+                        ?>
+                        <a href="/kabinet/avtovebinar/<?php echo $existingReg['id']; ?>"
+                           class="btn btn-primary">
+                            Перейти к автовебинару
+                        </a>
+                    <?php elseif ($webinar['broadcast_url']): ?>
                         <a href="<?php echo htmlspecialchars($webinar['broadcast_url']); ?>"
                            class="btn btn-primary" target="_blank">
                             Перейти к трансляции

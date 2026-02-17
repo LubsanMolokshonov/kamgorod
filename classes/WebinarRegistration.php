@@ -49,8 +49,8 @@ class WebinarRegistration {
         // Обновить счетчик регистраций в вебинаре
         $this->updateWebinarRegistrationsCount($data['webinar_id']);
 
-        // Отправить в Bitrix24 если интеграция доступна
-        if ($this->bitrix24 && defined('BITRIX24_WEBHOOK_URL') && !empty(BITRIX24_WEBHOOK_URL)) {
+        // Отправить в Bitrix24 если интеграция доступна (можно отключить через skip_bitrix24)
+        if (!($data['skip_bitrix24'] ?? false) && $this->bitrix24 && defined('BITRIX24_WEBHOOK_URL') && !empty(BITRIX24_WEBHOOK_URL)) {
             $this->syncWithBitrix24($registrationId);
         }
 
