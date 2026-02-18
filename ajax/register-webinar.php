@@ -160,7 +160,7 @@ try {
         throw new Exception('Ошибка создания регистрации');
     }
 
-    // Schedule email journey (skip for autowebinars — no scheduled time for reminders)
+    // Schedule email journey
     if (!$isAutowebinar) {
         try {
             $emailJourney = new WebinarEmailJourney($db);
@@ -170,6 +170,16 @@ try {
         } catch (Exception $emailError) {
             // Log error but don't fail registration
             error_log("Webinar Email Journey Error: " . $emailError->getMessage());
+        }
+    } else {
+        // Autowebinar: send welcome email with magic link
+        try {
+            require_once __DIR__ . '/../classes/AutowebinarEmailChain.php';
+            $awChain = new AutowebinarEmailChain($db);
+            $awChain->scheduleWelcomeEmail($registrationId);
+            $awChain->sendWelcomeEmail($registrationId);
+        } catch (Exception $emailError) {
+            error_log("Autowebinar Email Chain Error: " . $emailError->getMessage());
         }
     }
 

@@ -40,7 +40,10 @@ $migrations = [
     '020_add_webinar_email_journey.sql',
     '021_create_webinar_certificates.sql',
     '022_add_template_id_to_webinar_certificates.sql',
-    '023_create_webinar_quiz.sql'
+    '023_create_webinar_quiz.sql',
+    '024_add_neuroset_autowebinar.sql',
+    '025_add_bulling_autowebinar.sql',
+    '026_add_autowebinar_email_chain.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';

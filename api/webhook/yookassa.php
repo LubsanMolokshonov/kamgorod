@@ -182,6 +182,19 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                 $webCertObj->updateStatus($item['webinar_certificate_id'], 'paid');
                 $webCertObj->generate($item['webinar_certificate_id']);
                 logWebhook('INFO', $paymentId, "Webinar certificate {$item['webinar_certificate_id']} generated for order {$orderNumber}", '');
+
+                // Cancel autowebinar email chain for this registration
+                try {
+                    require_once BASE_PATH . '/classes/AutowebinarEmailChain.php';
+                    $wcData = $webCertObj->getById($item['webinar_certificate_id']);
+                    if ($wcData && !empty($wcData['registration_id'])) {
+                        $awChain = new AutowebinarEmailChain($GLOBALS['db']);
+                        $awChain->cancelForRegistration($wcData['registration_id']);
+                        logWebhook('INFO', $paymentId, "Autowebinar email chain cancelled for registration {$wcData['registration_id']}", '');
+                    }
+                } catch (Exception $e) {
+                    logWebhook('WARNING', $paymentId, "AW email cancel failed: " . $e->getMessage(), '');
+                }
             }
         }
 
