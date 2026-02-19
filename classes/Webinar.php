@@ -11,7 +11,7 @@ class Webinar {
     const STATUS_SCHEDULED = 'scheduled';
     const STATUS_LIVE = 'live';
     const STATUS_COMPLETED = 'completed';
-    const STATUS_AUTOWEBINAR = 'autowebinar';
+    const STATUS_AUTOWEBINAR = 'videolecture';
 
     public function __construct($pdo) {
         $this->db = new Database($pdo);
@@ -156,8 +156,8 @@ class Webinar {
                 $where[] = "w.status IN ('scheduled', 'live')";
             } elseif ($filters['status'] === 'recordings') {
                 $where[] = "w.status = 'completed' AND w.video_url IS NOT NULL";
-            } elseif ($filters['status'] === 'autowebinar') {
-                $where[] = "w.status = 'autowebinar'";
+            } elseif ($filters['status'] === 'videolecture') {
+                $where[] = "w.status = 'videolecture'";
             } else {
                 $where[] = "w.status = ?";
                 $params[] = $filters['status'];
@@ -213,7 +213,7 @@ class Webinar {
      * @return array Массив вебинаров
      */
     public function getAutowebinars($limit = 10) {
-        return $this->getAll(['status' => 'autowebinar'], $limit);
+        return $this->getAll(['status' => 'videolecture'], $limit);
     }
 
     // ==================== Типы аудитории ====================
@@ -279,7 +279,7 @@ class Webinar {
             "SELECT
                 SUM(CASE WHEN status IN ('scheduled', 'live') THEN 1 ELSE 0 END) as upcoming,
                 SUM(CASE WHEN status = 'completed' AND video_url IS NOT NULL THEN 1 ELSE 0 END) as recordings,
-                SUM(CASE WHEN status = 'autowebinar' THEN 1 ELSE 0 END) as autowebinars
+                SUM(CASE WHEN status = 'videolecture' THEN 1 ELSE 0 END) as autowebinars
              FROM webinars
              WHERE is_active = 1"
         );

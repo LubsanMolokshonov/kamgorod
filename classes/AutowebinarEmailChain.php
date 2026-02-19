@@ -96,7 +96,7 @@ class AutowebinarEmailChain {
              LEFT JOIN webinar_quiz_results qr ON qr.registration_id = wr.id AND qr.passed = 1
              LEFT JOIN webinar_certificates wc ON wc.registration_id = wr.id
              LEFT JOIN email_unsubscribes eu ON eu.email = wr.email
-             WHERE w.status = 'autowebinar'
+             WHERE w.status = 'videolecture'
                AND wr.status = 'registered'
                AND wr.created_at >= ?
                AND wr.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
@@ -490,7 +490,7 @@ class AutowebinarEmailChain {
             // Шаблонные данные
             $autowebinarUrl = generateMagicUrl(
                 $emailData['user_id'],
-                '/kabinet/avtovebinar/' . $emailData['registration_id']
+                '/kabinet/videolektsiya/' . $emailData['registration_id']
             );
 
             $certificateUrl = generateMagicUrl(
@@ -569,11 +569,11 @@ class AutowebinarEmailChain {
 
         $text .= match(true) {
             str_starts_with($touchpointCode, 'aw_welcome') =>
-                "Вы зарегистрированы на автовебинар «{$data['webinar_title']}».\n\n" .
+                "Вы зарегистрированы на видеолекцию «{$data['webinar_title']}».\n\n" .
                 "Перейти к просмотру: {$data['autowebinar_url']}\n\n",
 
             str_starts_with($touchpointCode, 'aw_quiz') =>
-                "Напоминаем: вы зарегистрированы на автовебинар «{$data['webinar_title']}».\n" .
+                "Напоминаем: вы зарегистрированы на видеолекцию «{$data['webinar_title']}».\n" .
                 "Пройдите тест, чтобы получить сертификат на {$data['certificate_hours']} ч.\n\n" .
                 "Перейти к тесту: {$data['autowebinar_url']}\n\n",
 
@@ -616,7 +616,7 @@ class AutowebinarEmailChain {
             "SELECT wr.*, w.title as webinar_title, w.slug as webinar_slug, w.status as webinar_status
              FROM webinar_registrations wr
              JOIN webinars w ON wr.webinar_id = w.id
-             WHERE wr.id = ? AND w.status = 'autowebinar'",
+             WHERE wr.id = ? AND w.status = 'videolecture'",
             [$registrationId]
         );
     }

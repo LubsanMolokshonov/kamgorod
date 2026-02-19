@@ -4,7 +4,7 @@
  * Отправляется сразу после регистрации на автовебинар
  */
 
-$email_subject = "Добро пожаловать на автовебинар: {$webinar_title}";
+$email_subject = "Добро пожаловать на видеолекцию: {$webinar_title}";
 
 $utm = 'utm_source=email&utm_campaign=aw-welcome';
 
@@ -17,17 +17,17 @@ ob_start();
             <img src="<?php echo $site_url; ?>/assets/images/logo-kamenny-gorod-white.png" alt="Каменный Город" style="height: 40px; vertical-align: middle; margin-left: 20px;">
         </div>
         <h1>Вы зарегистрированы!</h1>
-        <p>Автовебинар доступен прямо сейчас</p>
+        <p>Видеолекция доступна прямо сейчас</p>
     </div>
 </div>
 
 <div class="email-content">
     <p class="greeting">Здравствуйте, <?php echo htmlspecialchars($user_name); ?>!</p>
 
-    <p>Вы успешно зарегистрировались на автовебинар. Запись доступна в любое удобное для вас время.</p>
+    <p>Вы успешно зарегистрировались на видеолекцию. Запись доступна в любое удобное для вас время.</p>
 
     <div class="webinar-card">
-        <span class="badge">Бесплатный автовебинар</span>
+        <span class="badge">Бесплатная видеолекция</span>
         <h3><?php echo htmlspecialchars($webinar_title); ?></h3>
         <?php if ($speaker_name): ?>
         <div class="webinar-details">
@@ -47,7 +47,7 @@ ob_start();
         $aw_link = $autowebinar_url . (strpos($autowebinar_url, '?') !== false ? '&' : '?') . $utm;
         ?>
         <a href="<?php echo htmlspecialchars($aw_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #0065B1 0%, #004d8a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(0, 101, 177, 0.4);">
-            Смотреть автовебинар
+            Смотреть видеолекцию
         </a>
     </div>
 

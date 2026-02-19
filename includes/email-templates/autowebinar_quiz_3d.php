@@ -24,7 +24,7 @@ ob_start();
 <div class="email-content">
     <p class="greeting">Здравствуйте, <?php echo htmlspecialchars($user_name); ?>!</p>
 
-    <p>Несколько дней назад вы зарегистрировались на автовебинар <strong>«<?php echo htmlspecialchars($webinar_title); ?>»</strong>.</p>
+    <p>Несколько дней назад вы зарегистрировались на видеолекцию <strong>«<?php echo htmlspecialchars($webinar_title); ?>»</strong>.</p>
 
     <p>Тест ещё не пройден. Напоминаем, зачем это нужно:</p>
 

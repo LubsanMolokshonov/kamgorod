@@ -24,7 +24,7 @@ ob_start();
 <div class="email-content">
     <p class="greeting">Здравствуйте, <?php echo htmlspecialchars($user_name); ?>!</p>
 
-    <p>Вы зарегистрировались на автовебинар <strong>«<?php echo htmlspecialchars($webinar_title); ?>»</strong>, но ещё не прошли тест.</p>
+    <p>Вы зарегистрировались на видеолекцию <strong>«<?php echo htmlspecialchars($webinar_title); ?>»</strong>, но ещё не прошли тест.</p>
 
     <p>Чтобы получить именной сертификат на <strong><?php echo $certificate_hours; ?> академических часа</strong>, нужно:</p>
 
@@ -39,7 +39,7 @@ ob_start();
         $aw_link = $autowebinar_url . (strpos($autowebinar_url, '?') !== false ? '&' : '?') . $utm;
         ?>
         <a href="<?php echo htmlspecialchars($aw_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #0065B1 0%, #004d8a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(0, 101, 177, 0.4);">
-            Перейти к автовебинару
+            Перейти к видеолекции
         </a>
     </div>
 

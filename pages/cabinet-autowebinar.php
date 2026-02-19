@@ -56,7 +56,7 @@ if ($registration['user_id'] != $_SESSION['user_id']) {
 $webinarObj = new Webinar($db);
 $webinar = $webinarObj->getById($registration['webinar_id']);
 
-if (!$webinar || $webinar['status'] !== 'autowebinar') {
+if (!$webinar || $webinar['status'] !== 'videolecture') {
     header('Location: /kabinet?tab=webinars');
     exit;
 }
@@ -77,7 +77,7 @@ $certificateHours = $webinar['certificate_hours'] ?? 2;
 $videoUrl = $webinar['video_url'] ?: 'https://clck.ru/3RmQ2D';
 
 // Page meta
-$pageTitle = 'Автовебинар: ' . $webinar['title'] . ' | ' . SITE_NAME;
+$pageTitle = 'Видеолекция: ' . $webinar['title'] . ' | ' . SITE_NAME;
 $pageDescription = 'Просмотрите запись вебинара, пройдите тест и получите сертификат';
 $additionalCSS = ['/assets/css/cabinet.css'];
 
@@ -90,7 +90,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="autowebinar-breadcrumb">
             <a href="/kabinet?tab=webinars">Личный кабинет</a>
             <span class="breadcrumb-sep">/</span>
-            <span>Автовебинар</span>
+            <span>Видеолекция</span>
         </div>
 
         <!-- Header -->

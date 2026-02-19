@@ -191,7 +191,7 @@ class WebinarEmailJourney {
 
         foreach ($pendingEmails as $emailData) {
             // Skip if webinar is cancelled or deleted
-            if (!in_array($emailData['webinar_status'], ['scheduled', 'live', 'completed', 'autowebinar'])) {
+            if (!in_array($emailData['webinar_status'], ['scheduled', 'live', 'completed', 'videolecture'])) {
                 $this->updateEmailStatus($emailData['id'], 'skipped', 'Webinar not active');
                 $results['skipped']++;
                 continue;

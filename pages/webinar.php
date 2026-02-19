@@ -51,7 +51,7 @@ if ($userEmail) {
 // Format date
 $dateInfo = Webinar::formatDateTime($webinar['scheduled_at']);
 $isUpcoming = in_array($webinar['status'], ['scheduled', 'live']);
-$isAutowebinar = $webinar['status'] === 'autowebinar';
+$isAutowebinar = $webinar['status'] === 'videolecture';
 
 // Page meta
 $pageTitle = ($webinar['meta_title'] ?: 'Вебинар: ' . $webinar['title']) . ' | Каменный город';
@@ -293,7 +293,7 @@ include __DIR__ . '/../includes/header.php';
             <!-- Registration Header -->
             <div class="registration-header">
                 <h2 class="registration-title">
-                    Регистрация на <span class="title-highlight"><?php echo $isAutowebinar ? 'автовебинар' : 'вебинар'; ?></span>
+                    Регистрация на <span class="title-highlight"><?php echo $isAutowebinar ? 'видеолекцию' : 'вебинар'; ?></span>
                 </h2>
             </div>
 
@@ -309,9 +309,9 @@ include __DIR__ . '/../includes/header.php';
                         <?php
                         $existingReg = $registrationObj->getByWebinarAndEmail($webinar['id'], $userEmail);
                         ?>
-                        <a href="/kabinet/avtovebinar/<?php echo $existingReg['id']; ?>"
+                        <a href="/kabinet/videolektsiya/<?php echo $existingReg['id']; ?>"
                            class="btn btn-primary">
-                            Перейти к автовебинару
+                            Перейти к видеолекции
                         </a>
                     <?php elseif ($webinar['broadcast_url']): ?>
                         <a href="<?php echo htmlspecialchars($webinar['broadcast_url']); ?>"

@@ -223,7 +223,7 @@ function initRegistrationForm() {
                         ym(106465857, 'reachGoal', 'webinar_registration');
                     }
                     formMessage.className = 'form-message success';
-                    formMessage.innerHTML = '<strong>Регистрация успешна!</strong> Переход к автовебинару...';
+                    formMessage.innerHTML = '<strong>Регистрация успешна!</strong> Переход к видеолекции...';
                     formMessage.style.display = 'block';
                     form.querySelectorAll('.form-group').forEach(el => el.style.display = 'none');
                     submitBtn.style.display = 'none';

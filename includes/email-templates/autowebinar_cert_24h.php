@@ -24,7 +24,7 @@ ob_start();
 <div class="email-content">
     <p class="greeting">Здравствуйте, <?php echo htmlspecialchars($user_name); ?>!</p>
 
-    <p>Вы прошли тест по автовебинару <strong>«<?php echo htmlspecialchars($webinar_title); ?>»</strong>, но ещё не оформили сертификат.</p>
+    <p>Вы прошли тест по видеолекции <strong>«<?php echo htmlspecialchars($webinar_title); ?>»</strong>, но ещё не оформили сертификат.</p>
 
     <div style="background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border-radius: 16px; padding: 25px; margin: 20px 0; border-left: 4px solid #3b82f6;">
         <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px; font-weight: 600;">Зачем нужен сертификат?</h3>

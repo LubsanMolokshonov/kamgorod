@@ -135,7 +135,7 @@ try {
     ]);
 
     // Determine if autowebinar before creating registration
-    $isAutowebinar = $webinar['status'] === 'autowebinar';
+    $isAutowebinar = $webinar['status'] === 'videolecture';
 
     // Create registration (skip Bitrix24 for autowebinars — instant access, no CRM deal needed)
     $registrationData = [
@@ -189,7 +189,7 @@ try {
         $_SESSION['user_email'] = $email;
     }
     $cabinetUrl = $isAutowebinar
-        ? '/kabinet/avtovebinar/' . $registrationId
+        ? '/kabinet/videolektsiya/' . $registrationId
         : '/pages/cabinet.php?tab=webinars';
 
     // Success response

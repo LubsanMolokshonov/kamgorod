@@ -61,11 +61,11 @@ require_once __DIR__ . '/../classes/Webinar.php';
 $webinarCheckObj = new Webinar($db);
 $webinarData = $webinarCheckObj->getById($registration['webinar_id']);
 
-if ($webinarData && $webinarData['status'] === 'autowebinar') {
+if ($webinarData && $webinarData['status'] === 'videolecture') {
     require_once __DIR__ . '/../classes/WebinarQuiz.php';
     $quizCheckObj = new WebinarQuiz($db);
     if (!$quizCheckObj->hasPassed($registrationId)) {
-        header('Location: /kabinet/avtovebinar/' . $registrationId);
+        header('Location: /kabinet/videolektsiya/' . $registrationId);
         exit;
     }
 } else {

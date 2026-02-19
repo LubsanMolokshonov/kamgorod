@@ -24,7 +24,7 @@ ob_start();
 <div class="email-content">
     <p class="greeting">Здравствуйте, <?php echo htmlspecialchars($user_name); ?>!</p>
 
-    <p>Неделю назад вы зарегистрировались на автовебинар <strong>«<?php echo htmlspecialchars($webinar_title); ?>»</strong>, но тест до сих пор не пройден.</p>
+    <p>Неделю назад вы зарегистрировались на видеолекцию <strong>«<?php echo htmlspecialchars($webinar_title); ?>»</strong>, но тест до сих пор не пройден.</p>
 
     <div class="info-block" style="background: #FEF2F2; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #EF4444;">
         <p style="margin: 0; color: #991B1B; font-size: 15px;"><strong>Это последнее напоминание</strong></p>

@@ -163,7 +163,7 @@ include __DIR__ . '/../includes/header.php';
                             $now = time();
                             $isUpcoming = $webinar['webinar_status'] === 'scheduled' || $webinar['webinar_status'] === 'live';
                             $isPast = $webinar['webinar_status'] === 'completed';
-                            $isAutowebinar = $webinar['webinar_status'] === 'autowebinar';
+                            $isAutowebinar = $webinar['webinar_status'] === 'videolecture';
                             $hasRecording = !empty($webinar['video_url']);
 
                             // Certificate available 1 hour after webinar start (or always for autowebinars)
@@ -180,7 +180,7 @@ include __DIR__ . '/../includes/header.php';
 
                             // Status for display
                             if ($isAutowebinar) {
-                                $statusInfo = ['name' => 'Автовебинар', 'color' => '#8b5cf6'];
+                                $statusInfo = ['name' => 'Видеолекция', 'color' => '#8b5cf6'];
                             } elseif ($webinar['webinar_status'] === 'live') {
                                 $statusInfo = ['name' => 'Идет сейчас', 'color' => '#ef4444'];
                             } elseif ($isUpcoming) {
@@ -225,9 +225,9 @@ include __DIR__ . '/../includes/header.php';
 
                                 <div class="card-actions">
                                     <?php if ($isAutowebinar): ?>
-                                        <a href="/kabinet/avtovebinar/<?php echo $webinar['id']; ?>"
+                                        <a href="/kabinet/videolektsiya/<?php echo $webinar['id']; ?>"
                                            class="btn btn-primary">
-                                            Перейти к автовебинару
+                                            Перейти к видеолекции
                                         </a>
                                     <?php elseif ($webinar['webinar_status'] === 'live'): ?>
                                         <a href="<?php echo htmlspecialchars($webinar['broadcast_url'] ?? '/pages/webinar.php?slug=' . $webinar['webinar_slug']); ?>"
