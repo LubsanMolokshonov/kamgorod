@@ -340,6 +340,7 @@ class WebinarEmailJourney {
 
             'registration_id' => $emailData['webinar_registration_id'],
             'calendar_url' => SITE_URL . '/ajax/generate-ics.php?registration_id=' . $emailData['webinar_registration_id'],
+            'google_calendar_url' => $this->buildGoogleCalendarUrl($webinarDate, $emailData),
             'webinar_url' => SITE_URL . '/vebinar/' . $emailData['webinar_slug'],
             'cabinet_url' => generateMagicUrl($userId, '/pages/cabinet.php?tab=webinars'),
             'certificate_url' => generateMagicUrl($userId, '/pages/webinar-certificate.php?registration_id=' . $emailData['webinar_registration_id']),
@@ -348,6 +349,24 @@ class WebinarEmailJourney {
             'site_name' => SITE_NAME ?? 'ФГОС-Практикум',
             'touchpoint_code' => $emailData['touchpoint_code']
         ];
+    }
+
+    /**
+     * Build Google Calendar URL for webinar
+     */
+    private function buildGoogleCalendarUrl(DateTime $webinarDate, array $emailData): string {
+        $startUtc = (clone $webinarDate)->setTimezone(new DateTimeZone('UTC'));
+        $duration = (int)($emailData['duration_minutes'] ?? 60);
+        $endUtc = (clone $startUtc)->modify("+{$duration} minutes");
+
+        $dates = $startUtc->format('Ymd\THis\Z') . '/' . $endUtc->format('Ymd\THis\Z');
+        $title = $emailData['webinar_title'] ?? '';
+        $details = 'Вебинар на ФГОС-Практикум. Страница: ' . SITE_URL . '/vebinar/' . ($emailData['webinar_slug'] ?? '');
+
+        return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+            . '&text=' . rawurlencode($title)
+            . '&dates=' . $dates
+            . '&details=' . rawurlencode($details);
     }
 
     /**

@@ -277,7 +277,11 @@ include __DIR__ . "/../includes/header.php";
                                 </div>
 
                                 <div class="webinar-card-date">
-                                    <?php echo $dateInfo["date"]; ?>, <?php echo $dateInfo["time"]; ?> (МСК)
+                                    <?php if ($webinar["status"] === "videolecture"): ?>
+                                        Каждый день
+                                    <?php else: ?>
+                                        <?php echo $dateInfo["date"]; ?>, <?php echo $dateInfo["time"]; ?> (МСК)
+                                    <?php endif; ?>
                                 </div>
 
                                 <h3 class="webinar-card-title">

@@ -59,9 +59,23 @@ ob_start();
     <p style="color: #4A5568;"><?php echo nl2br(htmlspecialchars($webinar_description)); ?></p>
     <?php endif; ?>
 
+    <?php if (!empty($broadcast_url)): ?>
+    <div class="broadcast-link-box">
+        <h2>🎬 Ссылка на трансляцию</h2>
+        <p style="margin-bottom: 20px; opacity: 0.9;">Сохраните ссылку — она понадобится завтра</p>
+        <a href="<?php echo htmlspecialchars($broadcast_url); ?>" class="cta-button" style="font-size: 18px; padding: 18px 50px;">
+            ВОЙТИ НА ВЕБИНАР
+        </a>
+        <p class="broadcast-url-text">
+            Если кнопка не работает, скопируйте ссылку:<br>
+            <?php echo htmlspecialchars($broadcast_url); ?>
+        </p>
+    </div>
+    <?php else: ?>
     <div class="info-block">
         <p><strong>📧 Ссылка на трансляцию</strong> придёт вам на почту за 1 час до начала. Проверьте папку «Спам», если письмо не придёт.</p>
     </div>
+    <?php endif; ?>
 
     <h3 style="color: #2C3E50; margin-top: 30px;">Как подготовиться</h3>
     <ul style="color: #4A5568; padding-left: 20px;">
