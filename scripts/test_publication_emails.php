@@ -79,7 +79,16 @@ foreach ($templates as $i => $tpl) {
         // Send email
         $mail = new PHPMailer(true);
         $mail->isSMTP();
-        $mail->Host = SMTP_HOST;
+        // Use host IP if SMTP_HOST is a Docker service name that can't be resolved
+        $smtpHost = SMTP_HOST;
+        if (in_array($smtpHost, ['mailserver', 'mail'])) {
+            $resolved = @gethostbyname($smtpHost);
+            if ($resolved === $smtpHost) {
+                // DNS failed, try host IP
+                $smtpHost = $_ENV['HOST_IP'] ?? gethostbyname(gethostname());
+            }
+        }
+        $mail->Host = $smtpHost;
         $mail->Port = SMTP_PORT;
         $mail->CharSet = 'UTF-8';
         $mail->Timeout = 15;
