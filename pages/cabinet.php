@@ -428,7 +428,7 @@ include __DIR__ . '/../includes/header.php';
                                         </span>
                                     <?php endif; ?>
 
-                                    <?php if ($pub['certificate_status'] === 'ready' && $pubCert): ?>
+                                    <?php if (($pub['certificate_status'] === 'ready' || $pub['certificate_status'] === 'paid') && $pubCert): ?>
                                         <a href="/ajax/download-certificate.php?id=<?php echo $pubCert['id']; ?>"
                                            class="btn btn-success btn-download">
                                             📥 Скачать свидетельство
