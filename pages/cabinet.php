@@ -410,7 +410,7 @@ include __DIR__ . '/../includes/header.php';
                                 <div class="card-actions">
                                     <?php if ($pub['status'] === 'published'): ?>
                                         <a href="/pages/publication.php?slug=<?php echo urlencode($pub['slug']); ?>"
-                                           class="btn btn-outline"
+                                           class="btn btn-primary"
                                            target="_blank">
                                             👁 Просмотреть
                                         </a>

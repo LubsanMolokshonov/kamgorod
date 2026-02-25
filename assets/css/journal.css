@@ -2564,18 +2564,17 @@ textarea.form-control {
     }
 
     .journal-steps .steps-timeline {
-        flex-direction: column;
-        align-items: center;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
     }
 
     .journal-steps .step-item {
-        max-width: 300px;
+        max-width: none;
     }
 
     .journal-steps .step-connector {
-        width: 2px;
-        height: 30px;
-        margin: 0;
+        display: none;
     }
 
     .journal-layout {
@@ -2669,14 +2668,85 @@ textarea.form-control {
     .journal-certificate,
     .journal-faq,
     .journal-cta {
-        padding: 50px 0;
+        padding: 40px 0;
     }
 
     .journal-benefits .section-title,
     .journal-steps .section-title,
     .journal-faq .section-title {
         font-size: 1.5rem;
-        margin-bottom: 30px;
+        margin-bottom: 24px;
+    }
+
+    /* Benefits: 2 columns on mobile */
+    .journal-benefits .benefits-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .journal-benefits .benefit-card {
+        padding: 16px 12px;
+    }
+
+    .journal-benefits .benefit-icon {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 10px;
+    }
+
+    .journal-benefits .benefit-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .journal-benefits .benefit-card h3 {
+        font-size: 0.9rem;
+        margin-bottom: 6px;
+    }
+
+    .journal-benefits .benefit-card p {
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+
+    /* Steps: 2x2 grid on mobile */
+    .journal-steps .steps-timeline {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .journal-steps .step-connector {
+        display: none;
+    }
+
+    .journal-steps .step-item {
+        max-width: none;
+        min-width: 0;
+        padding: 16px 12px;
+        background: white;
+        border-radius: 12px;
+    }
+
+    .journal-steps .step-icon {
+        width: 42px;
+        height: 42px;
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+
+    .journal-steps .step-item h3 {
+        font-size: 0.9rem;
+        margin-bottom: 6px;
+    }
+
+    .journal-steps .step-item p {
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+
+    .steps-cta {
+        margin-top: 24px;
     }
 
     .certificate-info h2 {
@@ -2708,14 +2778,13 @@ textarea.form-control {
     }
 
     .steps-timeline {
-        flex-direction: column;
-        align-items: center;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
     }
 
     .step-connector {
-        width: 2px;
-        height: 30px;
-        margin: 0;
+        display: none;
     }
 
     .form-wrapper {
