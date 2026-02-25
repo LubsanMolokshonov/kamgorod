@@ -57,7 +57,7 @@ class Order {
                 $this->db->insert('order_items', [
                     'order_id' => $orderId,
                     'certificate_id' => $cert['id'],
-                    'price' => $cert['price'] ?? 149,
+                    'price' => $cert['price'] ?? 299,
                     'is_free_promotion' => !empty($cert['is_free']) ? 1 : 0
                 ]);
             }
@@ -69,7 +69,7 @@ class Order {
                 $this->db->insert('order_items', [
                     'order_id' => $orderId,
                     'webinar_certificate_id' => $webCert['id'],
-                    'price' => $webCert['price'] ?? 149,
+                    'price' => $webCert['price'] ?? 200,
                     'is_free_promotion' => !empty($webCert['is_free']) ? 1 : 0
                 ]);
             }

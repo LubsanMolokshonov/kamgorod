@@ -70,7 +70,7 @@ $quizPassed = $quizResult && $quizResult['passed'];
 // Load certificate data
 $certObj = new WebinarCertificate($db);
 $existingCert = $certObj->getByRegistrationId($registrationId);
-$certificatePrice = $webinar['certificate_price'] ?? 149;
+$certificatePrice = $webinar['certificate_price'] ?? 169;
 $certificateHours = $webinar['certificate_hours'] ?? 2;
 
 // Video URL

@@ -86,7 +86,7 @@ $userData = $userStmt->fetch(PDO::FETCH_ASSOC);
 
 // Webinar date formatting
 $webinarDate = date('d.m.Y', $webinarTime);
-$certificatePrice = $registration['certificate_price'] ?? 149;
+$certificatePrice = $registration['certificate_price'] ?? 200;
 $certificateHours = $registration['certificate_hours'] ?? 2;
 
 // Get diploma templates for certificate background selection

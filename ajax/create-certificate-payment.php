@@ -68,7 +68,7 @@ try {
             'city' => $_POST['city'] ?? '',
             'publication_date' => $_POST['publication_date'] ?? date('Y-m-d'),
             'template_id' => intval($_POST['template_id'] ?? 1),
-            'price' => 149.00
+            'price' => 299.00
         ]);
         $certificate = $certObj->getById($certificateId);
     } else {

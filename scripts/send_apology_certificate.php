@@ -115,7 +115,7 @@ foreach ($recipients as $recipient) {
         // Подготовка переменных для шаблона
         $user_name = $fullName;
         $webinar_title = $recipient['webinar_title'];
-        $certificate_price = $recipient['certificate_price'] ?? 149;
+        $certificate_price = $recipient['certificate_price'] ?? 200;
         $certificate_hours = $recipient['certificate_hours'] ?? 2;
         $certificate_url = $certificateUrl;
         $site_url = SITE_URL;

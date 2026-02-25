@@ -191,7 +191,7 @@ include __DIR__ . '/../includes/header.php';
 
                         <div class="price-block">
                             <span class="price-label">Стоимость свидетельства:</span>
-                            <span class="price-value">149 ₽</span>
+                            <span class="price-value">299 ₽</span>
                         </div>
 
                         <button type="submit" class="btn btn-submit">

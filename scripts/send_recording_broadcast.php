@@ -236,7 +236,7 @@ foreach ($users as $index => $user) {
         // Переменные шаблона
         $user_name = $fullName;
         $webinar_title = $webinar['title'];
-        $certificate_price = $webinar['certificate_price'] ?? 149;
+        $certificate_price = $webinar['certificate_price'] ?? 200;
         $certificate_hours = $webinar['certificate_hours'] ?? 2;
         $recording_url = $recordingUrl;
         $site_url = SITE_URL;

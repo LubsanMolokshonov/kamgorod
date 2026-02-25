@@ -169,7 +169,7 @@ include __DIR__ . '/../includes/header.php';
                             // Certificate available 1 hour after webinar start (or always for autowebinars)
                             $certificateAvailableTime = $webinarTime + 3600; // +1 hour
                             $canGetCertificate = $isAutowebinar ? true : ($now >= $certificateAvailableTime);
-                            $certificatePrice = $webinar['certificate_price'] ?? 149;
+                            $certificatePrice = $webinar['certificate_price'] ?? 200;
 
                             // Quiz status for autowebinars
                             $autowebinarQuizPassed = false;

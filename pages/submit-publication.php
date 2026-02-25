@@ -52,7 +52,7 @@ include __DIR__ . '/../includes/header.php';
                 <p>Ваш материал будет размещён в электронном педагогическом журнале и доступен коллегам по всей России</p>
                 <div class="hero-badges">
                     <span class="badge"><strong><?php echo number_format($totalPublications + 1250, 0, '', ' '); ?>+</strong> публикаций</span>
-                    <span class="badge"><strong>149 ₽</strong> свидетельство</span>
+                    <span class="badge"><strong>299 ₽</strong> свидетельство</span>
                     <span class="badge"><strong>5 мин</strong> оформление</span>
                 </div>
             </div>
@@ -282,7 +282,7 @@ include __DIR__ . '/../includes/header.php';
                                     </span>
                                 </button>
                                 <p class="submit-hint">
-                                    После загрузки вы перейдёте к оформлению свидетельства (149 ₽)
+                                    После загрузки вы перейдёте к оформлению свидетельства (299 ₽)
                                 </p>
                             </div>
                         </form>

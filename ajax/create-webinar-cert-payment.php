@@ -73,7 +73,7 @@ try {
             'position' => $_POST['position'] ?? '',
             'city' => $_POST['city'] ?? '',
             'hours' => $registration['certificate_hours'] ?? 2,
-            'price' => $registration['certificate_price'] ?? 149.00,
+            'price' => $registration['certificate_price'] ?? 200.00,
             'template_id' => intval($_POST['template_id'] ?? 1),
         ]);
         $certificate = $webCertObj->getById($certificateId);
@@ -107,7 +107,7 @@ try {
         'ecommerce' => [
             'id' => 'wc-' . $certificate['webinar_id'],
             'name' => $registration['webinar_title'] ?? '',
-            'price' => $certificate['price'] ?? 149,
+            'price' => $certificate['price'] ?? 200,
             'category' => 'Вебинары'
         ]
     ]);

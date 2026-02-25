@@ -335,7 +335,7 @@ class WebinarEmailJourney {
             'speaker_position' => $emailData['speaker_position'] ?? '',
             'speaker_photo' => $emailData['speaker_photo'] ? (str_starts_with($emailData['speaker_photo'], '/') ? SITE_URL . $emailData['speaker_photo'] : SITE_URL . '/uploads/speakers/' . $emailData['speaker_photo']) : '',
 
-            'certificate_price' => $emailData['certificate_price'] ?? 149,
+            'certificate_price' => $emailData['certificate_price'] ?? 200,
             'certificate_hours' => $emailData['certificate_hours'] ?? 2,
 
             'registration_id' => $emailData['webinar_registration_id'],

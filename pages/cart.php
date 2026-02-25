@@ -59,7 +59,7 @@ if (isCartEmpty()) {
                 'id' => $cert['id'],
                 'name' => $cert['publication_title'],
                 'meta' => 'Свидетельство о публикации • ' . $cert['author_name'],
-                'price' => (float)($cert['price'] ?? 149),
+                'price' => (float)($cert['price'] ?? 299),
                 'is_free' => false,
                 'raw_data' => $cert
             ];
@@ -77,7 +77,7 @@ if (isCartEmpty()) {
                 'id' => $webCert['id'],
                 'name' => $webCert['webinar_title'],
                 'meta' => 'Сертификат участника вебинара • ' . $webCert['full_name'],
-                'price' => (float)($webCert['price'] ?? 149),
+                'price' => (float)($webCert['price'] ?? 200),
                 'is_free' => false,
                 'raw_data' => $webCert
             ];

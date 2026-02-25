@@ -44,7 +44,7 @@ class WebinarCertificate {
             'template_id' => $data['template_id'] ?? 1,
             'certificate_number' => $certificateNumber,
             'hours' => $data['hours'] ?? 2,
-            'price' => $data['price'] ?? 149.00,
+            'price' => $data['price'] ?? 200.00,
             'status' => 'pending'
         ];
 

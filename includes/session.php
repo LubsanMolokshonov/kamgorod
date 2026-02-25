@@ -207,7 +207,7 @@ function getCartTotal() {
         foreach ($certificates as $certId) {
             $cert = $certObj->getById($certId);
             if ($cert) {
-                $total += (float)($cert['price'] ?? 149);
+                $total += (float)($cert['price'] ?? 299);
             }
         }
     }
@@ -220,7 +220,7 @@ function getCartTotal() {
         foreach ($webinarCertificates as $webCertId) {
             $webCert = $webCertObj->getById($webCertId);
             if ($webCert) {
-                $total += (float)($webCert['price'] ?? 149);
+                $total += (float)($webCert['price'] ?? 200);
             }
         }
     }

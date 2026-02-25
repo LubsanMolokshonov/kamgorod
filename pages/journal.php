@@ -270,7 +270,7 @@ include __DIR__ . '/../includes/header.php';
 
                 <div class="certificate-price">
                     <span class="price-label">Стоимость свидетельства:</span>
-                    <span class="price-value">149 ₽</span>
+                    <span class="price-value">299 ₽</span>
                 </div>
 
                 <a href="/opublikovat" class="btn btn-primary">

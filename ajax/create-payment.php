@@ -80,7 +80,7 @@ try {
                 'type' => 'certificate',
                 'id' => $cert['id'],
                 'name' => $cert['publication_title'],
-                'price' => (float)($cert['price'] ?? 149),
+                'price' => (float)($cert['price'] ?? 299),
                 'is_free' => false,
                 'raw_data' => $cert
             ];
@@ -97,7 +97,7 @@ try {
                 'type' => 'webinar_certificate',
                 'id' => $webCert['id'],
                 'name' => $webCert['webinar_title'],
-                'price' => (float)($webCert['price'] ?? 149),
+                'price' => (float)($webCert['price'] ?? 200),
                 'is_free' => false,
                 'raw_data' => $webCert
             ];

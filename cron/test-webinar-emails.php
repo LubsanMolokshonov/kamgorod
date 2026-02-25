@@ -41,7 +41,7 @@ $cabinet_url = SITE_URL . '/pages/cabinet.php?tab=webinars';
 $calendar_url = SITE_URL . '/ajax/generate-ics.php?registration_id=1';
 $webinar_url = SITE_URL . '/vebinar/test';
 $unsubscribe_url = SITE_URL . '/pages/unsubscribe.php?token=test';
-$certificate_price = 149;
+$certificate_price = 200;
 $certificate_hours = 2;
 
 echo "Отправка тестовых писем вебинара на: {$testEmail}\n\n";

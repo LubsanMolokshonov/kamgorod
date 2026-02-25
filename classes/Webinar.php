@@ -41,7 +41,7 @@ class Webinar {
             'status' => $data['status'] ?? self::STATUS_DRAFT,
             'is_active' => $data['is_active'] ?? 1,
             'is_free' => $data['is_free'] ?? 1,
-            'certificate_price' => $data['certificate_price'] ?? 149.00,
+            'certificate_price' => $data['certificate_price'] ?? 200.00,
             'certificate_hours' => $data['certificate_hours'] ?? 2,
             'meta_title' => $data['meta_title'] ?? null,
             'meta_description' => $data['meta_description'] ?? null

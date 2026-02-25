@@ -509,7 +509,7 @@ class AutowebinarEmailChain {
                 'speaker_photo'     => $emailData['speaker_photo']
                     ? SITE_URL . '/assets/images/speakers/' . $emailData['speaker_photo']
                     : '',
-                'certificate_price' => $emailData['certificate_price'] ?? 149,
+                'certificate_price' => $emailData['certificate_price'] ?? 169,
                 'certificate_hours' => $emailData['certificate_hours'] ?? 2,
                 'autowebinar_url'   => $autowebinarUrl,
                 'certificate_url'   => $certificateUrl,
