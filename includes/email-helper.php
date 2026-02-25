@@ -242,6 +242,28 @@ HTML;
         $discountHtml = "<li><strong>Скидка:</strong> {$discountAmount} &#8381;</li>";
     }
 
+    // Webinar recommendation block (shown when order contains publication certificates)
+    $webinarRecommendationHtml = '';
+    $hasPublicationCert = false;
+    foreach ($order['items'] as $item) {
+        if (!empty($item['certificate_id'])) {
+            $hasPublicationCert = true;
+            break;
+        }
+    }
+    if ($hasPublicationCert) {
+        $webinarsLink = $siteUrl . '/vebinary?utm_source=email&utm_campaign=post-payment-webinar';
+        $webinarRecommendationHtml = <<<WEBINAR
+            <div style="background: linear-gradient(135deg, #E8F1FF 0%, #f0f7ff 100%); border-radius: 12px; padding: 25px; margin: 25px 0; border-left: 4px solid #0077FF;">
+                <h3 style="margin: 0 0 12px 0; color: #0077FF; font-size: 18px;">Развивайтесь дальше!</h3>
+                <p style="margin: 0 0 15px 0; color: #4A5568; font-size: 15px;">Посмотрите наши видеолекции для педагогов, пройдите тест и получите сертификат участника с указанием академических часов.</p>
+                <center>
+                    <a href="{$webinarsLink}" style="display: inline-block; background: linear-gradient(135deg, #0077FF 0%, #0066DD 100%); color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 50px; font-size: 15px; font-weight: 600; box-shadow: 0 4px 14px rgba(0, 119, 255, 0.3);">Смотреть видеолекции</a>
+                </center>
+            </div>
+WEBINAR;
+    }
+
     return <<<HTML
 <!DOCTYPE html>
 <html lang="ru">
@@ -302,6 +324,8 @@ HTML;
                 <a href="{$cabinetLink}" class="button">Перейти в личный кабинет</a>
             </center>
 
+            {$webinarRecommendationHtml}
+
             <p style="color: #666; font-size: 14px;">Если у вас возникли вопросы, пожалуйста, свяжитесь с нами через форму обратной связи на сайте.</p>
         </div>
         <div class="footer">
@@ -356,6 +380,20 @@ function buildSuccessEmailBodyText($order, $user, $attachments = []) {
         $discountLine = "- Скидка: {$discountAmount} руб.\n";
     }
 
+    // Webinar recommendation (text version)
+    $webinarRecommendationText = '';
+    $hasPublicationCert = false;
+    foreach ($order['items'] as $item) {
+        if (!empty($item['certificate_id'])) {
+            $hasPublicationCert = true;
+            break;
+        }
+    }
+    if ($hasPublicationCert) {
+        $webinarsLink = SITE_URL . '/vebinary';
+        $webinarRecommendationText = "\nРазвивайтесь дальше!\nПосмотрите наши видеолекции для педагогов, пройдите тест и получите сертификат участника.\nСмотреть видеолекции: {$webinarsLink}\n";
+    }
+
     return <<<TEXT
 Благодарим за покупку! Заказ №{$orderNumber}
 
@@ -371,7 +409,7 @@ function buildSuccessEmailBodyText($order, $user, $attachments = []) {
 {$itemsText}
 Все документы также доступны для скачивания в личном кабинете:
 {$cabinetLink}
-
+{$webinarRecommendationText}
 Если у вас возникли вопросы, свяжитесь с нами через форму обратной связи на сайте.
 
 С уважением,

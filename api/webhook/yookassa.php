@@ -37,6 +37,7 @@ require_once __DIR__ . '/../../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../../classes/Diploma.php';
 require_once __DIR__ . '/../../classes/EmailJourney.php';
+require_once __DIR__ . '/../../classes/PublicationEmailChain.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -233,6 +234,25 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
             logWebhook('INFO', $paymentId, "Email journey cancelled for order {$orderNumber}", '');
         } catch (Exception $e) {
             logWebhook('WARNING', $paymentId, "Email journey cancel failed: " . $e->getMessage(), '');
+        }
+
+        // Cancel publication email chain for paid certificates
+        try {
+            $pubChain = new PublicationEmailChain($GLOBALS['db']);
+            foreach ($orderItems as $item) {
+                if (!empty($item['certificate_id'])) {
+                    // Получить publication_id из сертификата
+                    $certRow = $GLOBALS['db']->prepare("SELECT publication_id FROM publication_certificates WHERE id = ?");
+                    $certRow->execute([$item['certificate_id']]);
+                    $certData = $certRow->fetch(PDO::FETCH_ASSOC);
+                    if ($certData) {
+                        $pubChain->cancelForPublication($certData['publication_id']);
+                    }
+                }
+            }
+            logWebhook('INFO', $paymentId, "Publication email chain cancelled for order {$orderNumber}", '');
+        } catch (Exception $e) {
+            logWebhook('WARNING', $paymentId, "Publication email chain cancel failed: " . $e->getMessage(), '');
         }
 
         // Send success email (non-blocking)

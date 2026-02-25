@@ -140,7 +140,7 @@ try {
         'author_name' => $_POST['author_name'],
         'organization' => $_POST['organization'],
         'position' => $_POST['position'] ?? '',
-        'price' => 149.00
+        'price' => 299.00
     ]);
 
     // Set session
@@ -214,6 +214,21 @@ try {
         }
     }
     // === End AI Moderation ===
+
+    // === Schedule Email Chain ===
+    try {
+        require_once __DIR__ . '/../classes/PublicationEmailChain.php';
+        $pubEmailChain = new PublicationEmailChain($db);
+
+        if ($moderationStatus === 'approved') {
+            $pubEmailChain->scheduleInitialEmail($publicationId);
+        } elseif ($moderationStatus === 'rejected') {
+            $pubEmailChain->scheduleRejectedEmail($publicationId);
+        }
+    } catch (Exception $emailChainError) {
+        error_log("Publication email chain error for #{$publicationId}: " . $emailChainError->getMessage());
+    }
+    // === End Email Chain ===
 
     echo json_encode([
         'success' => true,
