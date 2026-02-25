@@ -84,8 +84,8 @@ foreach ($templates as $i => $tpl) {
         if (in_array($smtpHost, ['mailserver', 'mail'])) {
             $resolved = @gethostbyname($smtpHost);
             if ($resolved === $smtpHost) {
-                // DNS failed, try host IP
-                $smtpHost = $_ENV['HOST_IP'] ?? gethostbyname(gethostname());
+                // DNS failed - use server's public IP
+                $smtpHost = '141.105.69.45';
             }
         }
         $mail->Host = $smtpHost;
