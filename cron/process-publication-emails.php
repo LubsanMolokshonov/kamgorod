@@ -9,10 +9,10 @@
  * - Предложение повторной публикации при отклонении (rejected_retry)
  *
  * Recommended cron schedule: every 5 minutes
- * Crontab: */5 * * * * php /path/to/cron/process-publication-emails.php
+ * Crontab: every 5 min - php /path/to/cron/process-publication-emails.php
  *
  * For Docker:
- * Crontab: */5 * * * * docker exec pedagogy_web php /var/www/html/cron/process-publication-emails.php
+ * Crontab: every 5 min - docker exec pedagogy_web php /var/www/html/cron/process-publication-emails.php
  */
 
 // Prevent web access
