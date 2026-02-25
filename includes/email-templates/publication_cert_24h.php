@@ -14,7 +14,6 @@ ob_start();
     <div class="email-header-content">
         <div class="logo" style="text-align: center;">
             <img src="<?php echo $site_url; ?>/assets/images/logo-white.png" alt="ФГОС-Практикум" style="height: 40px; vertical-align: middle;">
-            <img src="<?php echo $site_url; ?>/assets/images/logo-kamenny-gorod-white.png" alt="Каменный Город" style="height: 40px; vertical-align: middle; margin-left: 20px;">
         </div>
         <h1>Не забудьте оформить свидетельство</h1>
         <p>Ваша публикация ждёт документального подтверждения</p>
