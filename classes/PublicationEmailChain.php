@@ -91,7 +91,7 @@ class PublicationEmailChain {
                     p.created_at, p.updated_at,
                     u.email,
                     pc.template_id, pc.status as cert_status,
-                    pc.updated_at as cert_updated_at, pc.created_at as cert_created_at
+                    pc.created_at as cert_created_at
              FROM publications p
              JOIN users u ON p.user_id = u.id
              LEFT JOIN publication_certificates pc ON pc.publication_id = p.id
@@ -379,7 +379,7 @@ class PublicationEmailChain {
     private function getAnchorFromRow($row, $chainType) {
         return match ($chainType) {
             'cert_reminder'    => $row['published_at'] ?? $row['created_at'],
-            'payment_reminder' => $row['cert_updated_at'] ?? $row['cert_created_at'] ?? null,
+            'payment_reminder' => $row['cert_created_at'] ?? null,
             'rejected_retry'   => $row['moderated_at'] ?? $row['updated_at'] ?? $row['created_at'],
             default            => null,
         };
