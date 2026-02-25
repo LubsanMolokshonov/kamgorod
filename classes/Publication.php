@@ -56,7 +56,8 @@ class Publication {
         $allowedFields = [
             'title', 'annotation', 'content', 'file_path', 'file_original_name',
             'file_size', 'file_type', 'publication_type_id', 'slug', 'status',
-            'moderation_comment', 'certificate_status', 'meta_title', 'meta_description'
+            'moderation_comment', 'moderation_type', 'moderated_at', 'gpt_confidence',
+            'certificate_status', 'meta_title', 'meta_description'
         ];
 
         $updateData = [];

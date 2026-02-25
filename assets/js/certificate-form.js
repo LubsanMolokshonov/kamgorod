@@ -1,89 +1,99 @@
 /**
  * Certificate Form Handler
- * Supports both old (template-item) and new (diploma-gallery-item) layouts
+ * Handles template selection, live AJAX preview, and form submission
  */
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('certificateForm');
     if (!form) return;
 
-    // Template selection - support both class names
+    // Template selection
     const templateItems = document.querySelectorAll('.template-item, .diploma-gallery-item');
     const selectedTemplateInput = document.getElementById('selectedTemplateId');
     const previewImage = document.getElementById('certificatePreview') || document.getElementById('diplomaPreview');
 
+    // Publication data from server (set in publication-certificate.php)
+    const pubData = window.certificateData || {};
+    let previewTimeout = null;
+
+    // Template gallery click
     templateItems.forEach(item => {
         item.addEventListener('click', function() {
-            // Update active state
             templateItems.forEach(t => t.classList.remove('active'));
             this.classList.add('active');
 
-            // Update hidden input
             const templateId = this.dataset.templateId;
             selectedTemplateInput.value = templateId;
 
-            // Update preview image
-            if (previewImage) {
-                // First try data-template-src attribute (for certificate templates)
-                if (this.dataset.templateSrc) {
-                    previewImage.src = this.dataset.templateSrc;
-                } else {
-                    // Fallback: transform thumbnail path to template path
-                    const img = this.querySelector('img');
-                    if (img) {
-                        let thumbSrc = img.src;
-                        let fullSrc = thumbSrc;
-
-                        // Transform paths for certificates
-                        if (thumbSrc.includes('/certificates/thumbnails/')) {
-                            fullSrc = thumbSrc.replace('/thumbnails/', '/templates/')
-                                              .replace('thumb-', 'certificate-template-');
-                        }
-                        // Transform paths for diplomas
-                        else if (thumbSrc.includes('/diplomas/thumbnails/')) {
-                            fullSrc = thumbSrc.replace('/thumbnails/', '/templates/')
-                                              .replace('thumb-', 'diploma-template-');
-                        }
-                        else if (thumbSrc.includes('_thumb')) {
-                            fullSrc = thumbSrc.replace('_thumb', '');
-                        }
-
-                        previewImage.src = fullSrc;
-                    }
-                }
-            }
+            // Update preview via AJAX
+            updateCertificatePreview();
         });
     });
 
-    // Live preview update (for old design with overlay)
-    const authorNameInput = document.getElementById('author_name');
-    const organizationInput = document.getElementById('organization');
-    const previewAuthor = document.querySelector('.preview-author');
-    const previewOrg = document.querySelector('.preview-org');
+    // Live preview on input change (debounced 500ms)
+    const formFields = ['#author_name', '#organization', '#city', '#position', '#publication_date'];
+    formFields.forEach(selector => {
+        const field = document.querySelector(selector);
+        if (field) {
+            field.addEventListener('input', debouncePreview);
+            field.addEventListener('change', debouncePreview);
+        }
+    });
 
-    if (authorNameInput && previewAuthor) {
-        authorNameInput.addEventListener('input', function() {
-            previewAuthor.textContent = this.value || 'ФИО автора';
+    function debouncePreview() {
+        clearTimeout(previewTimeout);
+        previewTimeout = setTimeout(updateCertificatePreview, 500);
+    }
+
+    /**
+     * Fetch dynamic preview from server and update preview image
+     */
+    function updateCertificatePreview() {
+        if (!selectedTemplateInput || !selectedTemplateInput.value) return;
+        if (!previewImage) return;
+
+        const publicationId = form.querySelector('input[name="publication_id"]');
+
+        const formData = new FormData();
+        formData.append('template_id', selectedTemplateInput.value);
+        if (publicationId) {
+            formData.append('publication_id', publicationId.value);
+        }
+        formData.append('author_name', document.getElementById('author_name')?.value || '');
+        formData.append('organization', document.getElementById('organization')?.value || '');
+        formData.append('city', document.getElementById('city')?.value || '');
+        formData.append('position', document.getElementById('position')?.value || '');
+        formData.append('publication_date', document.getElementById('publication_date')?.value || '');
+        formData.append('publication_title', pubData.publicationTitle || '');
+        formData.append('publication_type', pubData.publicationType || '');
+        formData.append('direction', pubData.direction || '');
+
+        fetch('/ajax/preview-certificate.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success && result.preview_url) {
+                previewImage.src = result.preview_url;
+            }
+        })
+        .catch(error => {
+            console.error('Certificate preview error:', error);
         });
     }
 
-    if (organizationInput && previewOrg) {
-        organizationInput.addEventListener('input', function() {
-            previewOrg.textContent = this.value;
-        });
-    }
+    // Trigger initial preview on page load
+    updateCertificatePreview();
 
     // Form submission
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        // Find submit button (supports different button setups)
         const submitBtn = form.querySelector('button[type="submit"]');
         const payBtn = document.getElementById('payBtn') || submitBtn;
         const btnText = payBtn.querySelector('.btn-text');
         const btnLoader = payBtn.querySelector('.btn-loader');
-
-        // Store original button text
         const originalText = payBtn.innerHTML;
 
         // Show loading
@@ -91,7 +101,6 @@ document.addEventListener('DOMContentLoaded', function() {
             btnText.style.display = 'none';
             btnLoader.style.display = 'inline-flex';
         } else {
-            // Fallback: change button text directly
             payBtn.innerHTML = '<span class="spinner-small"></span> Переход к оплате...';
         }
         payBtn.disabled = true;
@@ -104,7 +113,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: formData
             });
 
-            // Check if response is OK before parsing JSON
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('Server error:', response.status, errorText);
@@ -114,7 +122,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
 
             if (result.success) {
-                // Redirect to cart
                 window.location.href = result.redirect_url;
             } else {
                 alert(result.message || 'Произошла ошибка');
@@ -137,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Initialize first template if templates exist
+    // Initialize first template if needed
     if (templateItems.length > 0 && !selectedTemplateInput.value) {
         const firstTemplate = templateItems[0];
         selectedTemplateInput.value = firstTemplate.dataset.templateId;

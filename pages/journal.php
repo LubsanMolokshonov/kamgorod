@@ -87,18 +87,19 @@ include __DIR__ . '/../includes/header.php';
     <div class="container">
         <div class="homepage-hero-content">
             <!-- Title -->
-            <h1 class="homepage-hero-title">Педагогический онлайн-журнал для публикации ваших материалов</h1>
+            <h1 class="homepage-hero-title">Публикуйте статьи в&nbsp;электронном педагогическом журнале</h1>
+            <p class="journal-hero-subtitle">Зарегистрированное СМИ с&nbsp;аудиторией педагогов со&nbsp;всей России. Свидетельство о&nbsp;публикации — бесплатно за&nbsp;5&nbsp;минут</p>
 
             <!-- CTA Row -->
             <div class="homepage-hero-cta-row">
-                <a href="/opublikovat" class="btn-homepage-cta">Опубликовать бесплатно</a>
+                <a href="/opublikovat" class="btn-journal-cta">Опубликовать бесплатно</a>
             </div>
         </div>
 
         <!-- Journal Image Section -->
         <div class="homepage-hero-right">
             <div class="homepage-hero-images journal-hero-image">
-                <img src="/assets/images/journal-hero.png" alt="Педагогический журнал" loading="eager">
+                <img src="/assets/images/journal-hero-new.png" alt="Педагогический журнал — обложка и разворот" loading="eager">
             </div>
 
             <div class="homepage-hero-badges-bottom">
@@ -278,14 +279,58 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
             <div class="certificate-image">
-                <img src="/assets/images/certificates/sample-certificate.png" alt="Образец свидетельства о публикации" onerror="this.style.display='none'">
-                <div class="certificate-placeholder">
-                    <div class="placeholder-content">
-                        <div class="placeholder-header">СВИДЕТЕЛЬСТВО</div>
-                        <div class="placeholder-text">о публикации</div>
-                        <div class="placeholder-line"></div>
-                        <div class="placeholder-line short"></div>
-                        <div class="placeholder-qr"></div>
+                <div class="cert-stack">
+                    <div class="cert-stack-item cert-stack-1">
+                        <div class="cert-card" style="background-image: url('/assets/images/diplomas/templates/backgrounds/template-4.png')">
+                            <div class="cert-card-body">
+                                <div class="cert-card-title">СВИДЕТЕЛЬСТВО</div>
+                                <div class="cert-card-subtitle">О ПУБЛИКАЦИИ</div>
+                                <div class="cert-card-label">награждается</div>
+                                <div class="cert-card-name">Козлова Анна Викторовна</div>
+                                <div class="cert-card-text">за публикацию материала<br>в электронном журнале «ФГОС-Практикум»</div>
+                                <div class="cert-card-work">«Развитие речи детей старшего дошкольного<br>возраста через театрализованную деятельность»</div>
+                                <div class="cert-card-details">Учреждение: МБДОУ «Детский сад №45»<br>Населенный пункт: г. Новосибирск<br>Должность: Воспитатель</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cert-stack-item cert-stack-2">
+                        <div class="cert-card" style="background-image: url('/assets/images/diplomas/templates/backgrounds/template-3.png')">
+                            <div class="cert-card-body">
+                                <div class="cert-card-title">СВИДЕТЕЛЬСТВО</div>
+                                <div class="cert-card-subtitle">О ПУБЛИКАЦИИ</div>
+                                <div class="cert-card-label">награждается</div>
+                                <div class="cert-card-name">Иванова Мария Александровна</div>
+                                <div class="cert-card-text">за публикацию материала<br>в электронном журнале «ФГОС-Практикум»</div>
+                                <div class="cert-card-work">«Игровые технологии<br>на уроках математики в 5 классе»</div>
+                                <div class="cert-card-details">Учреждение: МАОУ Гимназия №7<br>Населенный пункт: г. Пермь<br>Должность: Учитель математики</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cert-stack-item cert-stack-3">
+                        <div class="cert-card" style="background-image: url('/assets/images/diplomas/templates/backgrounds/template-2.png')">
+                            <div class="cert-card-body">
+                                <div class="cert-card-title">СВИДЕТЕЛЬСТВО</div>
+                                <div class="cert-card-subtitle">О ПУБЛИКАЦИИ</div>
+                                <div class="cert-card-label">награждается</div>
+                                <div class="cert-card-name">Смирнова Ольга Николаевна</div>
+                                <div class="cert-card-text">за публикацию материала<br>в электронном журнале «ФГОС-Практикум»</div>
+                                <div class="cert-card-work">«Проектная деятельность как средство<br>развития познавательного интереса»</div>
+                                <div class="cert-card-details">Учреждение: МБОУ Лицей №3<br>Населенный пункт: г. Екатеринбург<br>Должность: Учитель русского языка</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cert-stack-item cert-stack-4">
+                        <div class="cert-card" style="background-image: url('/assets/images/diplomas/templates/backgrounds/template-1.png')">
+                            <div class="cert-card-body">
+                                <div class="cert-card-title">СВИДЕТЕЛЬСТВО</div>
+                                <div class="cert-card-subtitle">О ПУБЛИКАЦИИ</div>
+                                <div class="cert-card-label">награждается</div>
+                                <div class="cert-card-name">Петрова Елена Сергеевна</div>
+                                <div class="cert-card-text">за публикацию материала<br>в электронном журнале «ФГОС-Практикум»</div>
+                                <div class="cert-card-work">«Современные подходы к формированию<br>читательской грамотности в начальной школе»</div>
+                                <div class="cert-card-details">Учреждение: МБОУ СОШ №12<br>Населенный пункт: г. Казань<br>Должность: Учитель начальных классов</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -294,63 +339,62 @@ include __DIR__ . '/../includes/header.php';
 </section>
 
 <!-- FAQ Section -->
-<section class="journal-faq">
-    <div class="container">
-        <h2 class="section-title">Часто задаваемые вопросы</h2>
-
-        <div class="faq-list">
+<div class="container mt-60 mb-40">
+    <div class="faq-section">
+        <h2>Часто задаваемые вопросы</h2>
+        <div class="faq-grid">
             <div class="faq-item">
-                <button class="faq-question">
-                    Публикация действительно бесплатная?
-                    <span class="faq-icon">+</span>
-                </button>
+                <div class="faq-question">
+                    <h3>Публикация действительно бесплатная?</h3>
+                    <div class="faq-icon">+</div>
+                </div>
                 <div class="faq-answer">
-                    <p>Да, размещение вашей работы в журнале полностью бесплатно. Оплачивается только оформление свидетельства о публикации, если оно вам необходимо.</p>
+                    Да, размещение вашей работы в журнале полностью бесплатно. Оплачивается только оформление свидетельства о публикации, если оно вам необходимо.
                 </div>
             </div>
 
             <div class="faq-item">
-                <button class="faq-question">
-                    Какие материалы можно публиковать?
-                    <span class="faq-icon">+</span>
-                </button>
+                <div class="faq-question">
+                    <h3>Какие материалы можно публиковать?</h3>
+                    <div class="faq-icon">+</div>
+                </div>
                 <div class="faq-answer">
-                    <p>Методические разработки, конспекты уроков, статьи, сценарии мероприятий, презентации, рабочие программы и другие педагогические материалы.</p>
+                    Методические разработки, конспекты уроков, статьи, сценарии мероприятий, презентации, рабочие программы и другие педагогические материалы.
                 </div>
             </div>
 
             <div class="faq-item">
-                <button class="faq-question">
-                    Как быстро публикуется материал?
-                    <span class="faq-icon">+</span>
-                </button>
+                <div class="faq-question">
+                    <h3>Как быстро публикуется материал?</h3>
+                    <div class="faq-icon">+</div>
+                </div>
                 <div class="faq-answer">
-                    <p>Модерация занимает до 24 часов. После одобрения ваша работа сразу появляется в журнале и становится доступной для чтения и скачивания.</p>
+                    Модерация занимает до 24 часов. После одобрения ваша работа сразу появляется в журнале и становится доступной для чтения и скачивания.
                 </div>
             </div>
 
             <div class="faq-item">
-                <button class="faq-question">
-                    Подходит ли свидетельство для аттестации?
-                    <span class="faq-icon">+</span>
-                </button>
+                <div class="faq-question">
+                    <h3>Подходит ли свидетельство для аттестации?</h3>
+                    <div class="faq-icon">+</div>
+                </div>
                 <div class="faq-answer">
-                    <p>Да, наше свидетельство о публикации принимается аттестационными комиссиями как подтверждение обобщения и распространения педагогического опыта.</p>
+                    Да, наше свидетельство о публикации принимается аттестационными комиссиями как подтверждение обобщения и распространения педагогического опыта.
                 </div>
             </div>
 
             <div class="faq-item">
-                <button class="faq-question">
-                    Могу ли я удалить свою публикацию?
-                    <span class="faq-icon">+</span>
-                </button>
+                <div class="faq-question">
+                    <h3>Могу ли я удалить свою публикацию?</h3>
+                    <div class="faq-icon">+</div>
+                </div>
                 <div class="faq-answer">
-                    <p>Да, вы можете обратиться в поддержку для удаления или редактирования вашей публикации в любой момент.</p>
+                    Да, вы можете обратиться в поддержку для удаления или редактирования вашей публикации в любой момент.
                 </div>
             </div>
         </div>
     </div>
-</section>
+</div>
 
 <!-- CTA Section -->
 <section class="journal-cta">
@@ -649,22 +693,6 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-// FAQ accordion
-document.querySelectorAll('.faq-question').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const item = this.parentElement;
-        const wasActive = item.classList.contains('active');
-
-        // Close all
-        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
-
-        // Open clicked if wasn't active
-        if (!wasActive) {
-            item.classList.add('active');
-        }
-    });
-});
-
 // Sidebar collapsible
 document.querySelectorAll('.collapsible .sidebar-title').forEach(title => {
     title.addEventListener('click', function() {

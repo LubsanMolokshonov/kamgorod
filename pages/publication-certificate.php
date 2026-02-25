@@ -10,6 +10,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Publication.php';
 require_once __DIR__ . '/../classes/PublicationCertificate.php';
+require_once __DIR__ . '/../classes/CertificatePreview.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Get publication ID from URL
@@ -41,6 +42,16 @@ if (isset($_SESSION['user_id']) && $publication['user_id'] != $_SESSION['user_id
 // Get existing certificate if any
 $existingCert = $certObj->getByPublicationId($publicationId);
 
+// Get publication tags for direction
+$publicationTags = $publicationObj->getTags($publicationId);
+$directionTag = '';
+foreach ($publicationTags as $tag) {
+    if ($tag['tag_type'] === 'direction') {
+        $directionTag = $tag['name'];
+        break;
+    }
+}
+
 // Certificate templates - use static array since we have SVG files
 $templates = [
     ['id' => 1, 'name' => 'Синий классический'],
@@ -56,11 +67,26 @@ $userStmt = $db->prepare("SELECT * FROM users WHERE id = ?");
 $userStmt->execute([$publication['user_id']]);
 $userData = $userStmt->fetch(PDO::FETCH_ASSOC);
 
+// Generate initial dynamic preview
+$previewData = [
+    'author_name'        => $userData['full_name'] ?? '',
+    'organization'       => $userData['organization'] ?? '',
+    'city'               => $userData['city'] ?? '',
+    'position'           => $userData['profession'] ?? '',
+    'publication_title'  => $publication['title'],
+    'publication_type'   => $publication['type_name'] ?? '',
+    'direction'          => $directionTag,
+    'publication_date'   => date('Y-m-d'),
+    'certificate_number' => ''
+];
+$initialPreview = new CertificatePreview(1, $previewData);
+$initialPreviewUri = $initialPreview->getDataUri();
+
 // Page metadata
 $pageTitle = 'Оформление свидетельства о публикации | ' . SITE_NAME;
 $pageDescription = 'Оформите свидетельство о публикации в электронном журнале';
 $additionalCSS = ['/assets/css/form.css?v=' . time()];
-$additionalJS = ['/assets/js/diploma-preview.js?v=' . time(), '/assets/js/certificate-form.js?v=' . time()];
+$additionalJS = ['/assets/js/certificate-form.js?v=' . time()];
 
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -185,17 +211,18 @@ include __DIR__ . '/../includes/header.php';
                     <!-- Main Preview -->
                     <div class="diploma-preview-main">
                         <img id="diplomaPreview"
-                             src="/assets/images/certificates/templates/certificate-template-1.svg"
+                             src="<?php echo $initialPreviewUri; ?>"
                              alt="Предпросмотр свидетельства">
                     </div>
 
                     <!-- Template Gallery - Vertical on the right -->
                     <div class="diploma-gallery">
-                        <?php foreach ($templates as $index => $template): ?>
+                        <?php foreach ($templates as $index => $template):
+                            $thumbFile = '/assets/images/diplomas/templates/backgrounds/template-' . $template['id'] . '.svg';
+                        ?>
                             <div class="diploma-gallery-item <?php echo $index === 0 ? 'active' : ''; ?>"
-                                 data-template-id="<?php echo $template['id']; ?>"
-                                 data-template-src="/assets/images/certificates/templates/certificate-template-<?php echo $template['id']; ?>.svg">
-                                <img src="/assets/images/certificates/thumbnails/thumb-<?php echo $template['id']; ?>.svg"
+                                 data-template-id="<?php echo $template['id']; ?>">
+                                <img src="<?php echo $thumbFile; ?>"
                                      alt="<?php echo htmlspecialchars($template['name']); ?>">
                             </div>
                         <?php endforeach; ?>
@@ -205,6 +232,15 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </div>
+
+<!-- Pass publication data to JS for dynamic preview -->
+<script>
+    window.certificateData = {
+        publicationTitle: <?php echo json_encode($publication['title']); ?>,
+        publicationType: <?php echo json_encode($publication['type_name'] ?? ''); ?>,
+        direction: <?php echo json_encode($directionTag); ?>
+    };
+</script>
 
 <!-- Loading Overlay -->
 <div class="loading-overlay" id="loadingOverlay">

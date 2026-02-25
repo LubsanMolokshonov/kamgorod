@@ -164,6 +164,25 @@ class PublicationCertificate {
                 return ['success' => false, 'message' => 'Шаблон не найден'];
             }
 
+            // Fetch publication data for direction tag
+            require_once __DIR__ . '/Publication.php';
+            $pubObj = new Publication($this->pdo);
+            $publication = $pubObj->getById($certificate['publication_id']);
+            $direction = '';
+            if ($publication) {
+                $tags = $pubObj->getTags($certificate['publication_id']);
+                foreach ($tags as $tag) {
+                    if ($tag['tag_type'] === 'direction') {
+                        $direction = $tag['name'];
+                        break;
+                    }
+                }
+                if (empty($direction) && !empty($publication['type_name'])) {
+                    $direction = $publication['type_name'];
+                }
+            }
+            $certificate['direction'] = $direction;
+
             // Generate PDF
             $pdfFilename = $this->generatePDF($certificate, $template);
 
@@ -233,7 +252,7 @@ class PublicationCertificate {
      * @return string|null PDF filename
      */
     private function generatePDF($certificate, $template) {
-        $positions = json_decode($template['field_positions'], true) ?? $this->getDefaultPositions();
+        $positions = $this->getDefaultPositions();
 
         // Configure mPDF
         $mpdf = new Mpdf([
@@ -248,10 +267,15 @@ class PublicationCertificate {
             'autoLangToFont' => true
         ]);
 
-        // Set background
-        $templateImagePath = __DIR__ . '/../assets/images/certificates/' . $template['template_image'];
-        if (file_exists($templateImagePath)) {
-            $mpdf->SetDefaultBodyCSS('background', "url('$templateImagePath')");
+        // Set background - use new diploma background templates (PNG for mPDF)
+        $templateId = $certificate['template_id'] ?? 1;
+        $bgPath = __DIR__ . '/../assets/images/diplomas/templates/backgrounds/template-' . $templateId . '.png';
+        if (!file_exists($bgPath)) {
+            // Fallback to old certificate templates
+            $bgPath = __DIR__ . '/../assets/images/certificates/' . ($template['template_image'] ?? '');
+        }
+        if (file_exists($bgPath)) {
+            $mpdf->SetDefaultBodyCSS('background', "url('$bgPath')");
             $mpdf->SetDefaultBodyCSS('background-image-resize', 6);
         }
 
@@ -273,61 +297,88 @@ class PublicationCertificate {
     }
 
     /**
-     * Build HTML for certificate
+     * Build HTML for certificate with complete layout
+     * Positions in mm (A4: 210x297mm), synchronized with CertificatePreview.php SVG positions
+     * SVG px / 2.834 = mm
      * @param array $certificate Certificate data
      * @param array $positions Field positions
      * @return string HTML
      */
     private function buildCertificateHTML($certificate, $positions) {
+        $authorName = htmlspecialchars($certificate['author_name'] ?? '', ENT_QUOTES, 'UTF-8');
+        $organization = htmlspecialchars($certificate['organization'] ?? '', ENT_QUOTES, 'UTF-8');
+        $city = htmlspecialchars($certificate['city'] ?? '', ENT_QUOTES, 'UTF-8');
+        $position = htmlspecialchars($certificate['position'] ?? '', ENT_QUOTES, 'UTF-8');
+        $pubTitle = htmlspecialchars('«' . ($certificate['publication_title'] ?? '') . '»', ENT_QUOTES, 'UTF-8');
+        $direction = htmlspecialchars($certificate['direction'] ?? '', ENT_QUOTES, 'UTF-8');
+        $certNumber = htmlspecialchars($certificate['certificate_number'] ?? '', ENT_QUOTES, 'UTF-8');
+        $pubDate = !empty($certificate['publication_date'])
+            ? date('d.m.Y', strtotime($certificate['publication_date']))
+            : date('d.m.Y');
+
         $textFields = '';
 
+        // Title: СВИДЕТЕЛЬСТВО (below logo area)
+        $textFields .= $this->createTextField('СВИДЕТЕЛЬСТВО', $positions['title']);
+        $textFields .= $this->createTextField('О ПУБЛИКАЦИИ', $positions['subtitle']);
+
+        // Confirmation text
+        $textFields .= $this->createTextField(
+            'Настоящее свидетельство подтверждает, что',
+            $positions['confirmation_text']
+        );
+
         // Author name
-        if (isset($positions['author_name'])) {
-            $textFields .= $this->createTextField(
-                $certificate['author_name'],
-                $positions['author_name']
-            );
-        }
+        $textFields .= $this->createTextField($authorName, $positions['author_name']);
 
-        // Organization
-        if (isset($positions['organization']) && $certificate['organization']) {
-            $textFields .= $this->createTextField(
-                $certificate['organization'],
-                $positions['organization']
-            );
-        }
-
-        // Position
-        if (isset($positions['position']) && $certificate['position']) {
-            $textFields .= $this->createTextField(
-                $certificate['position'],
-                $positions['position']
-            );
-        }
+        // Published material text
+        $textFields .= $this->createTextField(
+            'опубликовал(а) материал в электронном журнале',
+            $positions['published_text']
+        );
+        $textFields .= $this->createTextField('«ФГОС-Практикум»', $positions['journal_name']);
 
         // Publication title
-        if (isset($positions['publication_title'])) {
-            $textFields .= $this->createTextField(
-                '«' . $certificate['publication_title'] . '»',
-                $positions['publication_title']
-            );
-        }
+        $textFields .= $this->createTextField('Название публикации:', $positions['pub_title_label']);
+        $textFields .= $this->createTextField($pubTitle, $positions['publication_title']);
+
+        // Details
+        $textFields .= $this->createTextField('Учреждение: ' . $organization, $positions['org_line']);
+        $textFields .= $this->createTextField('Населенный пункт: ' . $city, $positions['city_line']);
+        $textFields .= $this->createTextField('Должность: ' . $position, $positions['position_line']);
+        $textFields .= $this->createTextField('Направление: ' . $direction, $positions['direction_line']);
 
         // Certificate number
-        if (isset($positions['certificate_number'])) {
-            $textFields .= $this->createTextField(
-                $certificate['certificate_number'],
-                $positions['certificate_number']
-            );
+        $textFields .= $this->createTextField(
+            'Свидетельство № ' . $certNumber,
+            $positions['certificate_number']
+        );
+
+        // Stamp image
+        $stampPath = __DIR__ . '/../assets/images/diplomas/stamp-brehach.png';
+        if (file_exists($stampPath)) {
+            $textFields .= '<div style="position: absolute; left: 113mm; top: 219mm;">'
+                . '<img src="' . $stampPath . '" width="56mm" height="35mm" />'
+                . '</div>';
         }
 
-        // Issue date
-        if (isset($positions['issue_date'])) {
-            $textFields .= $this->createTextField(
-                date('d.m.Y'),
-                $positions['issue_date']
-            );
-        }
+        // Chairman signature
+        $textFields .= $this->createTextField('Председатель Оргкомитета', $positions['chairman_label']);
+        $textFields .= $this->createTextField('Брехач Р.А.', $positions['chairman_name']);
+
+        // Date (bottom left)
+        $textFields .= $this->createTextField($pubDate, $positions['date_line']);
+
+        // Footer
+        $textFields .= $this->createTextField(
+            'ООО «Едурегионлаб» | ИНН 5904368615',
+            $positions['footer_company']
+        );
+        $textFields .= $this->createTextField(
+            'Лицензия № Л035-01212-59/00203856 от 17.12.2021',
+            $positions['footer_license']
+        );
+        $textFields .= $this->createTextField('fgos.pro', $positions['footer_site']);
 
         $html = <<<HTML
 <!DOCTYPE html>
@@ -342,7 +393,7 @@ class PublicationCertificate {
         }
         .text-field {
             position: absolute;
-            line-height: 1.2;
+            line-height: 1.3;
         }
     </style>
 </head>
@@ -380,17 +431,42 @@ HTML;
     }
 
     /**
-     * Get default field positions
+     * Get default field positions in mm (A4: 210x297mm)
+     * Synchronized with CertificatePreview.php SVG positions (px / 2.834 = mm)
+     * Content starts below logo area (~70mm)
      * @return array Default positions
      */
     private function getDefaultPositions() {
         return [
-            'author_name' => ['x' => 105, 'y' => 120, 'size' => 18, 'font_weight' => 'bold', 'align' => 'center', 'max_width' => 180],
-            'organization' => ['x' => 105, 'y' => 135, 'size' => 12, 'align' => 'center', 'max_width' => 180],
-            'position' => ['x' => 105, 'y' => 145, 'size' => 11, 'align' => 'center', 'max_width' => 180],
-            'publication_title' => ['x' => 105, 'y' => 165, 'size' => 14, 'font_weight' => 'bold', 'align' => 'center', 'max_width' => 180],
-            'certificate_number' => ['x' => 105, 'y' => 220, 'size' => 10, 'align' => 'center', 'max_width' => 100],
-            'issue_date' => ['x' => 105, 'y' => 230, 'size' => 10, 'align' => 'center', 'max_width' => 100]
+            // Title (below logo area, dark text on white background)
+            'title'              => ['x' => 105, 'y' => 81,  'size' => 24, 'font_weight' => 'bold', 'align' => 'center', 'color' => '#0077FF', 'max_width' => 180],
+            'subtitle'           => ['x' => 105, 'y' => 92,  'size' => 13, 'align' => 'center', 'color' => '#000000', 'max_width' => 180],
+            // Confirmation
+            'confirmation_text'  => ['x' => 105, 'y' => 102, 'size' => 9,  'align' => 'center', 'color' => '#333333', 'max_width' => 180],
+            // Author name (main focus)
+            'author_name'        => ['x' => 105, 'y' => 113, 'size' => 14, 'font_weight' => 'bold', 'align' => 'center', 'color' => '#000000', 'max_width' => 160],
+            // Published material
+            'published_text'     => ['x' => 105, 'y' => 123, 'size' => 9,  'align' => 'center', 'color' => '#333333', 'max_width' => 180],
+            'journal_name'       => ['x' => 105, 'y' => 131, 'size' => 11, 'font_weight' => 'bold', 'align' => 'center', 'color' => '#0077FF', 'max_width' => 180],
+            // Publication title
+            'pub_title_label'    => ['x' => 105, 'y' => 140, 'size' => 9,  'align' => 'center', 'color' => '#333333', 'max_width' => 180],
+            'publication_title'  => ['x' => 105, 'y' => 148, 'size' => 10, 'align' => 'center', 'color' => '#000000', 'max_width' => 170],
+            // Details section (left-aligned)
+            'org_line'           => ['x' => 28,  'y' => 165, 'size' => 8,  'align' => 'left', 'color' => '#000000', 'max_width' => 160],
+            'city_line'          => ['x' => 28,  'y' => 172, 'size' => 8,  'align' => 'left', 'color' => '#000000', 'max_width' => 160],
+            'position_line'      => ['x' => 28,  'y' => 179, 'size' => 8,  'align' => 'left', 'color' => '#000000', 'max_width' => 160],
+            'direction_line'     => ['x' => 28,  'y' => 186, 'size' => 8,  'align' => 'left', 'color' => '#000000', 'max_width' => 160],
+            // Certificate number
+            'certificate_number' => ['x' => 105, 'y' => 203, 'size' => 7,  'align' => 'center', 'color' => '#94A3B8', 'max_width' => 100],
+            // Chairman signature (right side)
+            'chairman_label'     => ['x' => 141, 'y' => 233, 'size' => 7,  'align' => 'left', 'color' => '#000000', 'max_width' => 60],
+            'chairman_name'      => ['x' => 141, 'y' => 239, 'size' => 7,  'font_weight' => 'bold', 'align' => 'left', 'color' => '#000000', 'max_width' => 60],
+            // Date (bottom left)
+            'date_line'          => ['x' => 27,  'y' => 249, 'size' => 7,  'align' => 'left', 'color' => '#000000', 'max_width' => 40],
+            // Footer
+            'footer_company'     => ['x' => 105, 'y' => 261, 'size' => 7,  'align' => 'center', 'color' => '#64748B', 'max_width' => 180],
+            'footer_license'     => ['x' => 105, 'y' => 266, 'size' => 6,  'align' => 'center', 'color' => '#94A3B8', 'max_width' => 180],
+            'footer_site'        => ['x' => 105, 'y' => 272, 'size' => 6,  'align' => 'center', 'color' => '#94A3B8', 'max_width' => 180]
         ];
     }
 

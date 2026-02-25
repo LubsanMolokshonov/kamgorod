@@ -56,6 +56,11 @@ if (!defined('YOOKASSA_MODE')) define('YOOKASSA_MODE', $_ENV['YOOKASSA_MODE'] ??
 if (!defined('BITRIX24_WEBHOOK_URL')) define('BITRIX24_WEBHOOK_URL', $_ENV['BITRIX24_WEBHOOK_URL'] ?? '');
 if (!defined('BITRIX24_WEBINAR_PIPELINE_ID')) define('BITRIX24_WEBINAR_PIPELINE_ID', $_ENV['BITRIX24_WEBINAR_PIPELINE_ID'] ?? 102);
 
+// Yandex GPT AI Moderation
+if (!defined('YANDEX_GPT_API_KEY')) define('YANDEX_GPT_API_KEY', $_ENV['YANDEX_GPT_API_KEY'] ?? '');
+if (!defined('YANDEX_GPT_FOLDER_ID')) define('YANDEX_GPT_FOLDER_ID', $_ENV['YANDEX_GPT_FOLDER_ID'] ?? '');
+if (!defined('YANDEX_GPT_MODEL')) define('YANDEX_GPT_MODEL', $_ENV['YANDEX_GPT_MODEL'] ?? 'yandexgpt-lite');
+
 // Email Configuration
 if (!defined('SMTP_HOST')) define('SMTP_HOST', $_ENV['SMTP_HOST'] ?? '');
 if (!defined('SMTP_PORT')) define('SMTP_PORT', $_ENV['SMTP_PORT'] ?? 587);

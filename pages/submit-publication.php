@@ -133,10 +133,63 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
                             </div>
 
-                            <!-- Publication Info Section -->
+                            <!-- File Upload Section -->
                             <div class="form-section">
                                 <h3 class="form-section-title">
                                     <span class="section-number">2</span>
+                                    Файл публикации
+                                </h3>
+
+                                <div class="form-group">
+                                    <div class="file-upload-area" id="fileUploadArea">
+                                        <input type="file"
+                                               id="publication_file"
+                                               name="publication_file"
+                                               accept=".pdf,.doc,.docx"
+                                               class="file-input"
+                                               required>
+                                        <div class="file-upload-content">
+                                            <div class="upload-icon">
+                                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                                </svg>
+                                            </div>
+                                            <p class="upload-text">
+                                                <strong>Перетащите файл сюда</strong><br>
+                                                или <span class="upload-link">выберите на компьютере</span>
+                                            </p>
+                                            <p class="upload-hint">PDF, DOC, DOCX до 10 МБ — поля ниже заполнятся автоматически</p>
+                                        </div>
+                                        <div class="file-preview" style="display: none;">
+                                            <div class="file-icon">
+                                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                                </svg>
+                                            </div>
+                                            <div class="file-info">
+                                                <span class="file-name"></span>
+                                                <span class="file-size"></span>
+                                            </div>
+                                            <button type="button" class="file-remove">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="analysisIndicatorContainer"></div>
+                                    <div class="error-message"></div>
+                                </div>
+                            </div>
+
+                            <!-- Publication Info Section -->
+                            <div class="form-section" id="publicationInfoSection">
+                                <h3 class="form-section-title">
+                                    <span class="section-number">3</span>
                                     О публикации
                                 </h3>
 
@@ -203,58 +256,6 @@ include __DIR__ . '/../includes/header.php';
                                             </label>
                                         <?php endforeach; ?>
                                     </div>
-                                </div>
-                            </div>
-
-                            <!-- File Upload Section -->
-                            <div class="form-section">
-                                <h3 class="form-section-title">
-                                    <span class="section-number">3</span>
-                                    Файл публикации
-                                </h3>
-
-                                <div class="form-group">
-                                    <div class="file-upload-area" id="fileUploadArea">
-                                        <input type="file"
-                                               id="publication_file"
-                                               name="publication_file"
-                                               accept=".pdf,.doc,.docx"
-                                               class="file-input"
-                                               required>
-                                        <div class="file-upload-content">
-                                            <div class="upload-icon">
-                                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                                    <polyline points="17 8 12 3 7 8"></polyline>
-                                                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                                                </svg>
-                                            </div>
-                                            <p class="upload-text">
-                                                <strong>Перетащите файл сюда</strong><br>
-                                                или <span class="upload-link">выберите на компьютере</span>
-                                            </p>
-                                            <p class="upload-hint">PDF, DOC, DOCX до 10 МБ</p>
-                                        </div>
-                                        <div class="file-preview" style="display: none;">
-                                            <div class="file-icon">
-                                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                                </svg>
-                                            </div>
-                                            <div class="file-info">
-                                                <span class="file-name"></span>
-                                                <span class="file-size"></span>
-                                            </div>
-                                            <button type="button" class="file-remove">
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="error-message"></div>
                                 </div>
                             </div>
 

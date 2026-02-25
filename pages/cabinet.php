@@ -416,6 +416,18 @@ include __DIR__ . '/../includes/header.php';
                                         </a>
                                     <?php endif; ?>
 
+                                    <?php if ($pub['status'] === 'rejected' && isset($pub['moderation_type']) && $pub['moderation_type'] === 'auto_rejected'): ?>
+                                        <button class="btn btn-outline btn-appeal"
+                                                style="border-color: #f59e0b; color: #92400e;"
+                                                onclick="appealPublication(<?php echo $pub['id']; ?>)">
+                                            Обжаловать решение
+                                        </button>
+                                    <?php elseif ($pub['status'] === 'pending' && isset($pub['moderation_type']) && $pub['moderation_type'] === 'appealed'): ?>
+                                        <span style="color: #f59e0b; font-weight: 500;">
+                                            Апелляция на рассмотрении
+                                        </span>
+                                    <?php endif; ?>
+
                                     <?php if ($pub['certificate_status'] === 'ready' && $pubCert): ?>
                                         <a href="/ajax/download-certificate.php?id=<?php echo $pubCert['id']; ?>"
                                            class="btn btn-success btn-download">
@@ -657,6 +669,27 @@ document.addEventListener('keydown', function(e) {
         closeDiplomaPreview();
     }
 });
+
+// Appeal rejected publication
+function appealPublication(publicationId) {
+    if (!confirm('Подать апелляцию на решение модерации? Публикация будет отправлена на ручную проверку.')) {
+        return;
+    }
+
+    var csrfToken = '<?php echo generateCSRFToken(); ?>';
+
+    fetch('/ajax/appeal-publication.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'csrf_token=' + encodeURIComponent(csrfToken) + '&publication_id=' + publicationId
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        alert(data.message);
+        if (data.success) location.reload();
+    })
+    .catch(function() { alert('Ошибка при подаче апелляции'); });
+}
 </script>
 
 <?php

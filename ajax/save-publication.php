@@ -92,6 +92,29 @@ try {
         throw new Exception($uploadResult['error']);
     }
 
+    // Extract HTML content from uploaded file for inline display
+    $htmlContent = null;
+    try {
+        require_once __DIR__ . '/../classes/DocumentExtractor.php';
+        $extractor = new DocumentExtractor();
+        $fullFilePath = __DIR__ . '/../uploads/publications/' . $uploadResult['path'];
+        $htmlContent = $extractor->extractHtml($fullFilePath);
+
+        // Ensure content is valid UTF-8 (external tools may return other encodings)
+        if ($htmlContent && !mb_check_encoding($htmlContent, 'UTF-8')) {
+            $htmlContent = mb_convert_encoding($htmlContent, 'UTF-8', 'CP1251');
+        }
+
+        // Safety limit: truncate if content exceeds 1MB
+        if ($htmlContent && mb_strlen($htmlContent) > 1000000) {
+            $htmlContent = mb_substr($htmlContent, 0, 1000000)
+                . '<p><em>Содержание публикации сокращено из-за большого объёма.</em></p>';
+        }
+    } catch (Exception $extractError) {
+        error_log("Content extraction failed: " . $extractError->getMessage());
+        // $htmlContent remains null — publication is saved without inline content
+    }
+
     // Create publication
     $publicationData = [
         'user_id' => $userId,
@@ -102,6 +125,7 @@ try {
         'file_original_name' => $uploadResult['original_name'],
         'file_size' => $uploadResult['size'],
         'file_type' => $uploadResult['type'],
+        'content' => $htmlContent,
         'tag_ids' => array_map('intval', $tagIds),
         'status' => 'pending',
         'certificate_status' => 'pending'
@@ -129,12 +153,76 @@ try {
 
     $db->commit();
 
+    // === AI Moderation via Yandex GPT ===
+    $moderationStatus = 'pending';
+    $moderationMessage = 'Публикация отправлена на модерацию.';
+
+    try {
+        require_once __DIR__ . '/../config/config.php';
+        require_once __DIR__ . '/../classes/YandexGPTModerator.php';
+
+        $moderator = new YandexGPTModerator();
+        $moderationResult = $moderator->moderate(
+            trim($_POST['title']),
+            trim($_POST['annotation'])
+        );
+
+        if ($moderationResult['is_educational']) {
+            $publicationObj->approve($publicationId);
+            $publicationObj->update($publicationId, [
+                'moderation_type' => 'auto_approved',
+                'moderated_at' => date('Y-m-d H:i:s'),
+                'gpt_confidence' => $moderationResult['confidence'],
+            ]);
+            $moderationStatus = 'approved';
+            $moderationMessage = 'Публикация одобрена и размещена в журнале.';
+        } else {
+            $publicationObj->reject($publicationId, $moderationResult['reason']);
+            $publicationObj->update($publicationId, [
+                'moderation_type' => 'auto_rejected',
+                'moderated_at' => date('Y-m-d H:i:s'),
+                'gpt_confidence' => $moderationResult['confidence'],
+            ]);
+            $moderationStatus = 'rejected';
+            $moderationMessage = 'Публикация отклонена: ' . $moderationResult['reason'];
+        }
+
+        // Write to audit log
+        $database->insert('moderation_log', [
+            'publication_id' => $publicationId,
+            'action' => $moderationResult['is_educational'] ? 'auto_approved' : 'auto_rejected',
+            'reason' => $moderationResult['reason'],
+            'confidence' => $moderationResult['confidence'],
+            'gpt_raw_response' => $moderationResult['raw_response'] ?? null,
+        ]);
+
+    } catch (Exception $moderationError) {
+        // API failure — publication stays as 'pending' for manual review
+        error_log("YandexGPT moderation error for publication #{$publicationId}: " . $moderationError->getMessage());
+
+        try {
+            $database->insert('moderation_log', [
+                'publication_id' => $publicationId,
+                'action' => 'api_failure',
+                'reason' => $moderationError->getMessage(),
+            ]);
+            $publicationObj->update($publicationId, [
+                'moderation_type' => 'pending_manual',
+            ]);
+        } catch (Exception $logError) {
+            error_log("Failed to log moderation error: " . $logError->getMessage());
+        }
+    }
+    // === End AI Moderation ===
+
     echo json_encode([
         'success' => true,
         'publication_id' => $publicationId,
         'certificate_id' => $certificateId,
         'redirect_url' => '/pages/publication-certificate.php?id=' . $publicationId,
-        'message' => 'Публикация успешно создана'
+        'message' => 'Публикация успешно создана',
+        'moderation_status' => $moderationStatus,
+        'moderation_message' => $moderationMessage,
     ]);
 
 } catch (Exception $e) {

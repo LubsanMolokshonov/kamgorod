@@ -37,7 +37,7 @@ ob_start();
         <span class="badge" style="display:inline-block; background: #dcfce7; color: #16a34a; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 10px;">Бонус для участников</span>
         <h3 style="margin: 0 0 15px 0; color: #16a34a; font-size: 18px; font-weight: 600;">🎁 Презентация и подарок</h3>
         <p style="color: #4A5568; margin-bottom: 20px;">Скачайте презентацию вебинара и специальный подарок от спикера.</p>
-        <a href="https://disk.360.yandex.ru/d/zLDKwR2dmVUQ-g" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);">
+        <a href="https://clck.ru/3S2TAD" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);">
             Скачать материалы
         </a>
     </div>
@@ -97,9 +97,9 @@ ob_start();
     <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-radius: 16px; padding: 25px; margin: 30px 0; text-align: center; border-left: 4px solid #8b5cf6;">
         <span class="badge" style="display:inline-block; background: #ede9fe; color: #7c3aed; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 10px;">Следующий вебинар</span>
         <h3 style="margin: 0 0 10px 0; color: #7c3aed; font-size: 18px; font-weight: 600;">📅 Приглашаем на следующий вебинар</h3>
-        <p style="color: #4A5568; margin-bottom: 5px; font-weight: 600;">«Взаимодействие с семьями воспитанников через читательские марафоны»</p>
-        <p style="color: #718096; margin-bottom: 20px; font-size: 14px;">Продолжите повышение квалификации вместе с нами!</p>
-        <a href="https://fgos.pro/vebinar/vzaimodeystvie-s-semyami-vospitannikov-cherez-chitatelskie-marafony?<?php echo $utm; ?>" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);">
+        <p style="color: #4A5568; margin-bottom: 5px; font-weight: 600;">«Как сохранить ресурс и не потерять качество работы при росте требований?»</p>
+        <p style="color: #718096; margin-bottom: 20px; font-size: 14px;">5 марта 2026 в 14:00 МСК. Продолжите повышение квалификации вместе с нами!</p>
+        <a href="https://fgos.pro/vebinar/kak-sokhranit-resurs?<?php echo $utm; ?>" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);">
             Зарегистрироваться бесплатно
         </a>
     </div>

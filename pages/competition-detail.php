@@ -835,24 +835,28 @@ include __DIR__ . '/../includes/header.php';
     z-index: 2;
 }
 
-.price-label {
+.price-cta-container .price-label {
     font-size: 18px;
     font-weight: 600;
+    color: white;
     opacity: 0.9;
     margin-bottom: 16px;
 }
 
-.price-amount {
+.price-cta-container .price-amount {
     font-size: 72px;
     font-weight: 700;
+    color: white;
     margin-bottom: 20px;
     line-height: 1;
 }
 
-.price-note {
+.price-cta-container .price-note {
     font-size: 16px;
+    color: white;
     opacity: 0.95;
     margin-bottom: 32px;
+    font-style: normal;
 }
 
 .price-features {
@@ -887,6 +891,46 @@ include __DIR__ . '/../includes/header.php';
     transform: translateY(-4px) scale(1.05);
     box-shadow: 0 12px 32px rgba(0, 119, 255, 0.35);
     opacity: 1;
+}
+
+/* CTA Dark Section */
+.cta-dark-section {
+    padding: 60px 0;
+    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+}
+
+.cta-dark-title {
+    color: white;
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.cta-dark-subtitle {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 18px;
+    margin-bottom: 32px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.cta-dark-btn {
+    font-size: 18px;
+    padding: 20px 48px;
+}
+
+.cta-dark-features {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.cta-dark-features span {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
 }
 
 /* Steps Section */
@@ -1719,6 +1763,29 @@ include __DIR__ . '/../includes/header.php';
         padding: 16px 36px !important;
     }
 
+    /* CTA Dark Section - mobile */
+    .cta-dark-section {
+        padding: 40px 0;
+    }
+
+    .cta-dark-title {
+        font-size: 24px;
+    }
+
+    .cta-dark-subtitle {
+        font-size: 15px;
+        margin-bottom: 24px;
+    }
+
+    .cta-dark-btn {
+        font-size: 14px !important;
+        padding: 14px 28px !important;
+    }
+
+    .cta-dark-features {
+        gap: 16px;
+    }
+
     /* Оптимизация padding для всех основных секций */
     section[style*="padding"] {
         padding: 40px 0 !important;
@@ -1937,6 +2004,22 @@ include __DIR__ . '/../includes/header.php';
     </section>
     <?php endif; ?>
 
+    <!-- CTA #1: Ценовой баннер после «О конкурсе» -->
+    <section class="price-cta-section">
+        <div class="container">
+            <div class="price-cta-container">
+                <div class="price-cta-content">
+                    <p class="price-label">Стоимость участия</p>
+                    <div class="price-amount"><?php echo number_format($competition['price'], 0, ',', ' '); ?> ₽</div>
+                    <p class="price-note">При оплате 2 конкурсов — третий бесплатно!</p>
+                    <a href="/pages/registration.php?competition_id=<?php echo $competition['id']; ?>" class="btn-cta-large">
+                        Принять участие
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Goals Section - Цели конкурса -->
     <?php if (!empty($competition['goals'])): ?>
     <section class="features-section" style="background: #F5F9FF; padding: 60px 0;">
@@ -2021,6 +2104,18 @@ include __DIR__ . '/../includes/header.php';
     <!-- Awards Section - УДАЛЕНО -->
 
     <!-- Price CTA Section - УДАЛЕНО -->
+
+    <!-- CTA #2: Инлайн-кнопка после «Номинации» -->
+    <?php if (!empty($nominations)): ?>
+    <div class="container" style="text-align: center; padding: 40px 0 20px;">
+        <p style="font-size: 18px; color: #6B7B8D; margin-bottom: 20px;">
+            Выбрали подходящую номинацию?
+        </p>
+        <a href="/pages/registration.php?competition_id=<?php echo $competition['id']; ?>" class="btn-hero-cta">
+            Выбрать номинацию и участвовать
+        </a>
+    </div>
+    <?php endif; ?>
 
     <!-- Criteria Section -->
     <div class="container" style="margin-bottom: 40px;">
@@ -2172,6 +2267,24 @@ include __DIR__ . '/../includes/header.php';
                         <p>Скачайте диплом в формате PDF и используйте для своего портфолио</p>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA #3: Тёмный баннер после «Как принять участие» -->
+    <section class="cta-dark-section">
+        <div class="container" style="text-align: center;">
+            <h2 class="cta-dark-title">Готовы получить диплом?</h2>
+            <p class="cta-dark-subtitle">
+                Заполните форму за 2 минуты и получите диплом сразу после оплаты
+            </p>
+            <a href="/pages/registration.php?competition_id=<?php echo $competition['id']; ?>" class="btn-hero-cta cta-dark-btn">
+                Принять участие
+            </a>
+            <div class="cta-dark-features">
+                <span>&#10003; Дистанционно</span>
+                <span>&#10003; Диплом сразу</span>
+                <span>&#10003; Акция 2+1</span>
             </div>
         </div>
     </section>

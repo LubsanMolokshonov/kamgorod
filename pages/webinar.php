@@ -215,76 +215,6 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </section>
 
-<!-- FAQ Section -->
-<section class="webinar-faq-section">
-    <div class="container">
-        <div class="faq-section">
-            <h2>Часто задаваемые вопросы</h2>
-            <div class="faq-grid">
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <h3>Как получить ссылку на вебинар?</h3>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        После регистрации ссылка на трансляцию придёт на вашу электронную почту. Также мы отправим напоминание за 24 часа до начала вебинара.
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <h3>Вебинар бесплатный?</h3>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        Да, участие в вебинаре полностью бесплатное. Вам нужно только зарегистрироваться, и вы получите доступ к прямому эфиру и записи.
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <h3>Будет ли запись вебинара?</h3>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        Да, после окончания вебинара мы отправим вам ссылку на запись и презентацию спикера на электронную почту.
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <h3>Как получить сертификат участника?</h3>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        После вебинара вы сможете оформить именной сертификат участника на <?php echo $webinar['certificate_hours']; ?> часа. Стоимость оформления — <?php echo number_format($webinar['certificate_price'], 0, ',', ' '); ?> рублей. Ссылка на оформление придёт на вашу почту.
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <h3>Можно ли задать вопрос спикеру?</h3>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        Конечно! Во время прямого эфира вы можете задавать вопросы в чате. Спикер ответит на самые интересные вопросы в конце вебинара.
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <h3>Что нужно для участия в вебинаре?</h3>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        Вам понадобится только компьютер, планшет или смартфон с доступом в интернет. Вебинар проходит на удобной платформе, не требующей установки дополнительных программ.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
 <!-- Registration Form Section -->
 <section class="webinar-registration-section" id="registration-form">
     <div class="registration-wrapper"></div>
@@ -416,6 +346,76 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
             <?php endif; ?>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="webinar-faq-section">
+    <div class="container">
+        <div class="faq-section">
+            <h2>Часто задаваемые вопросы</h2>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Как получить ссылку на вебинар?</h3>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        После регистрации ссылка на трансляцию придёт на вашу электронную почту. Также мы отправим напоминание за 24 часа до начала вебинара.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Вебинар бесплатный?</h3>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        Да, участие в вебинаре полностью бесплатное. Вам нужно только зарегистрироваться, и вы получите доступ к прямому эфиру и записи.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Будет ли запись вебинара?</h3>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        Да, после окончания вебинара мы отправим вам ссылку на запись и презентацию спикера на электронную почту.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Как получить сертификат участника?</h3>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        После вебинара вы сможете оформить именной сертификат участника на <?php echo $webinar['certificate_hours']; ?> часа. Стоимость оформления — <?php echo number_format($webinar['certificate_price'], 0, ',', ' '); ?> рублей. Ссылка на оформление придёт на вашу почту.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Можно ли задать вопрос спикеру?</h3>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        Конечно! Во время прямого эфира вы можете задавать вопросы в чате. Спикер ответит на самые интересные вопросы в конце вебинара.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Что нужно для участия в вебинаре?</h3>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        Вам понадобится только компьютер, планшет или смартфон с доступом в интернет. Вебинар проходит на удобной платформе, не требующей установки дополнительных программ.
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>

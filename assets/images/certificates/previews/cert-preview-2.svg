@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 595 842">
+  <defs>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669"/>
+      <stop offset="100%" style="stop-color:#047857"/>
+    </linearGradient>
+    <linearGradient id="goldGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FBBF24"/>
+      <stop offset="100%" style="stop-color:#F59E0B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="595" height="842" fill="#ECFDF5"/>
+
+  <!-- Decorative top border -->
+  <rect x="0" y="0" width="595" height="8" fill="url(#greenGrad)"/>
+
+  <!-- Border frame -->
+  <rect x="25" y="25" width="545" height="792" fill="white" stroke="url(#greenGrad)" stroke-width="3" rx="12"/>
+
+  <!-- Inner decorative frame -->
+  <rect x="40" y="40" width="515" height="762" fill="none" stroke="#D1FAE5" stroke-width="2" rx="8"/>
+
+  <!-- Decorative corners -->
+  <g fill="url(#greenGrad)">
+    <circle cx="50" cy="50" r="8"/>
+    <circle cx="545" cy="50" r="8"/>
+    <circle cx="50" cy="792" r="8"/>
+    <circle cx="545" cy="792" r="8"/>
+  </g>
+
+  <!-- Header decoration -->
+  <rect x="150" y="60" width="295" height="4" fill="url(#greenGrad)" rx="2"/>
+
+  <!-- Title -->
+  <text x="297.5" y="110" text-anchor="middle" font-family="Georgia, serif" font-size="38" font-weight="bold" fill="#059669">СВИДЕТЕЛЬСТВО</text>
+  <text x="297.5" y="140" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#047857">о публикации в электронном журнале</text>
+
+  <!-- Medal/Seal -->
+  <g transform="translate(257, 160)">
+    <circle cx="40" cy="40" r="38" fill="url(#goldGrad2)"/>
+    <circle cx="40" cy="40" r="30" fill="white"/>
+    <text x="40" y="35" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#059669">ПУБЛИКАЦИЯ</text>
+    <text x="40" y="50" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#059669">2026</text>
+  </g>
+
+  <!-- Confirmation -->
+  <text x="297.5" y="270" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#6B7280">Настоящим подтверждается, что</text>
+
+  <!-- Author name area -->
+  <rect x="70" y="285" width="455" height="55" fill="#F0FDF4" stroke="#A7F3D0" stroke-width="1" rx="8"/>
+  <text x="297.5" y="320" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="bold" fill="#065F46">Иванова Мария Александровна</text>
+
+  <!-- Publication text -->
+  <text x="297.5" y="375" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#6B7280">разместил(а) авторский материал в интернет-издании</text>
+  <text x="297.5" y="400" text-anchor="middle" font-family="Georgia, serif" font-size="15" font-weight="bold" fill="#059669">«ФГОС-Практикум»</text>
+
+  <!-- Publication title box -->
+  <rect x="60" y="420" width="475" height="70" fill="white" stroke="#A7F3D0" stroke-width="1" rx="8"/>
+  <text x="297.5" y="448" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#6B7280">Название публикации:</text>
+  <text x="297.5" y="472" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#1F2937">«Игровые технологии на уроках математики в 5 классе»</text>
+
+  <!-- Info section -->
+  <g transform="translate(80, 520)">
+    <rect x="-10" y="-15" width="445" height="110" fill="#F0FDF4" rx="8"/>
+
+    <text x="0" y="5" font-family="Arial, sans-serif" font-size="11" fill="#6B7280">Образовательное учреждение:</text>
+    <text x="175" y="5" font-family="Arial, sans-serif" font-size="11" fill="#1F2937">МАОУ Гимназия №7, г. Пермь</text>
+
+    <text x="0" y="30" font-family="Arial, sans-serif" font-size="11" fill="#6B7280">Населенный пункт:</text>
+    <text x="175" y="30" font-family="Arial, sans-serif" font-size="11" fill="#1F2937">г. Пермь</text>
+
+    <text x="0" y="55" font-family="Arial, sans-serif" font-size="11" fill="#6B7280">Должность:</text>
+    <text x="175" y="55" font-family="Arial, sans-serif" font-size="11" fill="#1F2937">Учитель математики</text>
+
+    <text x="0" y="80" font-family="Arial, sans-serif" font-size="11" fill="#6B7280">Тип публикации:</text>
+    <text x="175" y="80" font-family="Arial, sans-serif" font-size="11" fill="#1F2937">Статья</text>
+  </g>
+
+  <!-- Certificate number -->
+  <text x="297.5" y="660" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#9CA3AF">Регистрационный номер: СВ-2026-000089</text>
+
+  <!-- QR code placeholder -->
+  <g transform="translate(450, 665)">
+    <rect x="0" y="0" width="65" height="65" fill="white" stroke="#A7F3D0" stroke-width="1" rx="4"/>
+    <rect x="8" y="8" width="49" height="49" fill="#D1FAE5" rx="2"/>
+    <rect x="14" y="14" width="14" height="14" fill="#059669" rx="1"/>
+    <rect x="36" y="14" width="14" height="14" fill="#059669" rx="1"/>
+    <rect x="14" y="36" width="14" height="14" fill="#059669" rx="1"/>
+    <rect x="30" y="30" width="8" height="8" fill="#059669"/>
+    <rect x="42" y="42" width="8" height="8" fill="#059669" rx="1"/>
+  </g>
+
+  <!-- Date and signature -->
+  <g transform="translate(80, 690)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="11" fill="#6B7280">Дата:</text>
+    <text x="40" y="0" font-family="Arial, sans-serif" font-size="11" fill="#1F2937">03.02.2026</text>
+  </g>
+
+  <g transform="translate(200, 690)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="11" fill="#6B7280">Директор</text>
+    <line x1="60" y1="2" x2="140" y2="2" stroke="#A7F3D0" stroke-width="1"/>
+  </g>
+
+  <!-- Footer -->
+  <rect x="25" y="740" width="545" height="77" fill="url(#greenGrad)" rx="0 0 12 12"/>
+  <text x="297.5" y="770" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">ООО «Едурегионлаб» | ИНН 5904368615 | Лицензия № Л035-01212-59/00203856</text>
+  <text x="297.5" y="790" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#A7F3D0">fgos.pro</text>
+</svg>

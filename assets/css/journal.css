@@ -112,6 +112,60 @@
     background: #f8fafc;
 }
 
+/* === Journal Hero Subtitle === */
+.journal-hero-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.15rem;
+    line-height: 1.6;
+    margin-top: 16px;
+    max-width: 520px;
+    font-weight: 400;
+}
+
+/* === Journal CTA Button (white on blue background) === */
+.btn-journal-cta {
+    display: inline-block;
+    background: #ffffff;
+    color: #0066EE;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 16px 36px;
+    border-radius: 60px;
+    text-decoration: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-journal-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+    background: #f0f6ff;
+}
+
+/* === Journal Hero Image — remove shadow for transparent-background images === */
+.journal-hero-image img {
+    border-radius: 0;
+    box-shadow: none;
+}
+
+@media (max-width: 768px) {
+    .journal-hero-subtitle {
+        font-size: 1rem;
+        max-width: 100%;
+    }
+
+    .btn-journal-cta {
+        font-size: 14px;
+        padding: 14px 28px;
+    }
+
+    .journal-hero-image img {
+        border-radius: 0;
+    }
+}
+
 /* === Journal Benefits Section === */
 .journal-benefits {
     padding: 80px 0;
@@ -316,62 +370,111 @@
     position: relative;
 }
 
-.certificate-image img {
-    width: 100%;
-    border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+/* === Certificate Stack (fan arrangement) === */
+.cert-stack {
+    position: relative;
+    width: 380px;
+    height: 500px;
+    perspective: 1000px;
 }
 
-.certificate-placeholder {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    border: 2px solid #e5e7eb;
+.cert-stack-item {
+    position: absolute;
+    width: 260px;
+    transition: all 0.4s ease;
     border-radius: 12px;
-    padding: 40px;
-    aspect-ratio: 0.707;
+    overflow: hidden;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+}
+
+/* Certificate card with template background */
+.cert-card {
+    width: 100%;
+    aspect-ratio: 595 / 842;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 12px;
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
 }
 
-.placeholder-content {
+.cert-card-body {
     text-align: center;
+    padding: 18% 12% 10%;
     width: 100%;
 }
 
-.placeholder-header {
-    font-size: 1.5rem;
+.cert-card-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.1em;
     font-weight: 700;
     color: #0077FF;
-    margin-bottom: 8px;
     letter-spacing: 2px;
+    margin-bottom: 1px;
 }
 
-.placeholder-text {
-    font-size: 1rem;
+.cert-card-subtitle {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 0.55em;
+    color: #0077FF;
+    letter-spacing: 1px;
+    margin-bottom: 6%;
+}
+
+.cert-card-label {
+    font-size: 0.42em;
     color: #6b7280;
-    margin-bottom: 30px;
+    font-style: italic;
+    margin-bottom: 2%;
 }
 
-.placeholder-line {
-    height: 12px;
-    background: #d1d5db;
-    border-radius: 6px;
-    margin: 0 auto 12px;
-    width: 80%;
+.cert-card-name {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 0.6em;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 4%;
+    line-height: 1.3;
 }
 
-.placeholder-line.short {
-    width: 50%;
+.cert-card-text {
+    font-size: 0.38em;
+    color: #6b7280;
+    line-height: 1.5;
+    margin-bottom: 4%;
 }
 
-.placeholder-qr {
-    width: 80px;
-    height: 80px;
-    background: #e5e7eb;
-    border-radius: 8px;
-    margin: 30px auto 0;
+.cert-card-work {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 0.42em;
+    color: #1f2937;
+    font-style: italic;
+    line-height: 1.4;
+    margin-bottom: 5%;
 }
+
+.cert-card-details {
+    font-size: 0.34em;
+    color: #6b7280;
+    line-height: 1.6;
+    text-align: left;
+    padding-left: 8%;
+}
+
+/* 4 certificates fanned out */
+.cert-stack-1 { left: 0; top: 60px; transform: rotate(-12deg); z-index: 1; }
+.cert-stack-2 { left: 25px; top: 35px; transform: rotate(-4deg); z-index: 2; }
+.cert-stack-3 { left: 55px; top: 15px; transform: rotate(4deg); z-index: 3; }
+.cert-stack-4 { left: 85px; top: 0; transform: rotate(12deg); z-index: 4; }
+
+/* Hover effect - fan out more */
+.cert-stack:hover .cert-stack-1 { transform: rotate(-18deg) translateX(-15px); }
+.cert-stack:hover .cert-stack-2 { transform: rotate(-6deg) translateX(-8px); }
+.cert-stack:hover .cert-stack-3 { transform: rotate(6deg) translateX(8px); }
+.cert-stack:hover .cert-stack-4 { transform: rotate(18deg) translateX(15px); }
 
 /* === Journal FAQ Section === */
 .journal-faq {
@@ -379,72 +482,6 @@
     background: #f8fafc;
 }
 
-.journal-faq .section-title {
-    text-align: center;
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 50px;
-    color: #1f2937;
-}
-
-.journal-faq .faq-list {
-    max-width: 700px;
-    margin: 0 auto;
-}
-
-.journal-faq .faq-item {
-    background: white;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.journal-faq .faq-question {
-    width: 100%;
-    padding: 20px 24px;
-    background: none;
-    border: none;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1rem;
-    font-weight: 500;
-    color: #1f2937;
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.2s;
-}
-
-.journal-faq .faq-question:hover {
-    background: #f8fafc;
-}
-
-.journal-faq .faq-icon {
-    font-size: 1.5rem;
-    color: #0077FF;
-    transition: transform 0.3s;
-}
-
-.journal-faq .faq-item.active .faq-icon {
-    transform: rotate(45deg);
-}
-
-.journal-faq .faq-answer {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s;
-}
-
-.journal-faq .faq-item.active .faq-answer {
-    max-height: 200px;
-}
-
-.journal-faq .faq-answer p {
-    padding: 0 24px 20px;
-    color: #6b7280;
-    line-height: 1.6;
-}
 
 /* === Journal CTA Section === */
 .journal-cta {
@@ -453,22 +490,38 @@
 }
 
 .journal-cta .cta-card {
-    background: linear-gradient(135deg, #0077FF 0%, #0088FF 100%);
+    background: linear-gradient(135deg, #0057D9 0%, #0077FF 50%, #3399FF 100%);
     color: white;
-    padding: 60px 40px;
+    padding: 64px 48px;
     border-radius: 24px;
     text-align: center;
     max-width: 800px;
     margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 100, 255, 0.2);
+}
+
+.journal-cta .cta-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
 }
 
 .journal-cta .cta-card h3 {
     font-size: 1.75rem;
     margin-bottom: 12px;
+    color: #ffffff;
 }
 
 .journal-cta .cta-card p {
-    opacity: 0.9;
+    color: rgba(255, 255, 255, 0.9);
     margin-bottom: 30px;
     font-size: 1.1rem;
 }
@@ -915,64 +968,6 @@ textarea.form-control {
 .publication-faq {
     padding: 60px 0;
     background: #f8fafc;
-}
-
-.faq-list {
-    max-width: 700px;
-    margin: 0 auto;
-}
-
-.faq-item {
-    background: white;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    overflow: hidden;
-}
-
-.faq-question {
-    width: 100%;
-    padding: 20px 24px;
-    background: none;
-    border: none;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1rem;
-    font-weight: 500;
-    color: #1f2937;
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.2s;
-}
-
-.faq-question:hover {
-    background: #f8fafc;
-}
-
-.faq-icon {
-    font-size: 1.5rem;
-    color: #0077FF;
-    transition: transform 0.3s;
-}
-
-.faq-item.active .faq-icon {
-    transform: rotate(45deg);
-}
-
-.faq-answer {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s;
-}
-
-.faq-item.active .faq-answer {
-    max-height: 200px;
-}
-
-.faq-answer p {
-    padding: 0 24px 20px;
-    color: #6b7280;
-    line-height: 1.6;
 }
 
 /* === Journal Catalog === */
@@ -1547,10 +1542,11 @@ textarea.form-control {
 .cta-card h3 {
     font-size: 1.5rem;
     margin-bottom: 12px;
+    color: #ffffff;
 }
 
 .cta-card p {
-    opacity: 0.9;
+    color: rgba(255, 255, 255, 0.9);
     margin-bottom: 24px;
 }
 
@@ -2541,8 +2537,18 @@ textarea.form-control {
 
     .certificate-image {
         order: -1;
-        max-width: 300px;
+        max-width: 350px;
         margin: 0 auto;
+    }
+
+    .cert-stack {
+        width: 300px;
+        height: 400px;
+        margin: 0 auto;
+    }
+
+    .cert-stack-item {
+        width: 210px;
     }
 
     .certificate-info {
@@ -2762,5 +2768,168 @@ textarea.form-control {
 
     .journal-preview {
         display: none;
+    }
+}
+
+/* === AI File Analysis Indicator === */
+.analysis-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    color: #0369a1;
+    font-size: 0.875rem;
+    margin-top: 12px;
+    animation: analysisPulse 2s ease-in-out infinite;
+}
+
+@keyframes analysisPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.analysis-success {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #ecfdf5;
+    border: 1px solid #86efac;
+    border-radius: 8px;
+    color: #065f46;
+    font-size: 0.875rem;
+    margin-top: 12px;
+}
+
+.analysis-success svg {
+    flex-shrink: 0;
+}
+
+/* === Publication Body Content === */
+.publication-body {
+    line-height: 1.8;
+    color: #374151;
+    font-size: 1.05rem;
+    margin-bottom: 32px;
+}
+
+.publication-body h1,
+.publication-body h2,
+.publication-body h3,
+.publication-body h4,
+.publication-body h5,
+.publication-body h6 {
+    color: #1f2937;
+    font-weight: 700;
+    margin-top: 32px;
+    margin-bottom: 16px;
+    line-height: 1.3;
+}
+
+.publication-body h1 { font-size: 1.75rem; }
+.publication-body h2 { font-size: 1.5rem; }
+.publication-body h3 { font-size: 1.25rem; }
+.publication-body h4 { font-size: 1.1rem; }
+
+.publication-body p {
+    margin-bottom: 16px;
+    text-align: justify;
+}
+
+.publication-body > *:first-child {
+    margin-top: 0;
+}
+
+.publication-body ul,
+.publication-body ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+}
+
+.publication-body li {
+    margin-bottom: 8px;
+}
+
+.publication-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+    overflow-x: auto;
+    display: block;
+}
+
+.publication-body table th,
+.publication-body table td {
+    border: 1px solid #e5e7eb;
+    padding: 10px 14px;
+    text-align: left;
+}
+
+.publication-body table th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.publication-body table tr:nth-child(even) {
+    background: #fafafa;
+}
+
+.publication-body strong {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.publication-body em {
+    font-style: italic;
+}
+
+.publication-body u {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.publication-body blockquote {
+    border-left: 4px solid #0077FF;
+    padding: 12px 20px;
+    margin: 20px 0;
+    background: #f8fafc;
+    border-radius: 0 8px 8px 0;
+    color: #4b5563;
+}
+
+.publication-body--empty {
+    text-align: center;
+    padding: 48px 24px;
+    background: #f8fafc;
+    border-radius: 16px;
+}
+
+.publication-body--empty p {
+    color: #9ca3af;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .publication-body {
+        font-size: 1rem;
+        line-height: 1.7;
+    }
+
+    .publication-body h1 { font-size: 1.5rem; }
+    .publication-body h2 { font-size: 1.3rem; }
+    .publication-body h3 { font-size: 1.15rem; }
+
+    .publication-body table {
+        font-size: 0.85rem;
+    }
+
+    .publication-body table th,
+    .publication-body table td {
+        padding: 8px 10px;
     }
 }

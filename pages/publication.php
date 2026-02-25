@@ -9,7 +9,6 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Publication.php';
 require_once __DIR__ . '/../classes/PublicationTag.php';
-require_once __DIR__ . '/../classes/FileUploader.php';
 
 $publicationObj = new Publication($db);
 
@@ -56,9 +55,6 @@ $tags = $publicationObj->getTags($publication['id']);
 
 // Get related publications
 $related = $publicationObj->getRelated($publication['id'], 4);
-
-// Format file size
-$fileSize = $publication['file_size'] ? FileUploader::formatSize($publication['file_size']) : '';
 
 // Page metadata
 $pageTitle = htmlspecialchars($publication['title']) . ' | ' . SITE_NAME;
@@ -131,14 +127,6 @@ include __DIR__ . '/../includes/header.php';
                                 </svg>
                                 <?php echo number_format($publication['views_count']); ?> просмотров
                             </span>
-                            <span class="meta-item">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                </svg>
-                                <?php echo number_format($publication['downloads_count']); ?> скачиваний
-                            </span>
                         </div>
                     </div>
 
@@ -162,46 +150,14 @@ include __DIR__ . '/../includes/header.php';
                     <p><?php echo nl2br(htmlspecialchars($publication['annotation'])); ?></p>
                 </div>
 
-                <!-- Download Section -->
-                <?php if ($publication['file_path']): ?>
-                    <div class="download-section">
-                        <div class="download-card">
-                            <div class="file-icon">
-                                <?php
-                                $ext = strtolower(pathinfo($publication['file_original_name'], PATHINFO_EXTENSION));
-                                $iconColor = $ext === 'pdf' ? '#E74C3C' : '#3498DB';
-                                ?>
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="<?php echo $iconColor; ?>" stroke-width="1.5">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                </svg>
-                            </div>
-                            <div class="file-details">
-                                <span class="file-name"><?php echo htmlspecialchars($publication['file_original_name']); ?></span>
-                                <span class="file-meta">
-                                    <?php echo strtoupper($ext); ?>
-                                    <?php if ($fileSize): ?>
-                                        • <?php echo $fileSize; ?>
-                                    <?php endif; ?>
-                                </span>
-                            </div>
-                            <a href="/ajax/download-publication.php?id=<?php echo $publication['id']; ?>"
-                               class="btn btn-primary download-btn">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                </svg>
-                                Скачать
-                            </a>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <!-- Content (if any) -->
-                <?php if ($publication['content']): ?>
+                <!-- Publication Content -->
+                <?php if (!empty($publication['content'])): ?>
                     <div class="publication-body">
-                        <?php echo nl2br(htmlspecialchars($publication['content'])); ?>
+                        <?php echo $publication['content']; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="publication-body publication-body--empty">
+                        <p>Содержание публикации недоступно для просмотра.</p>
                     </div>
                 <?php endif; ?>
 
