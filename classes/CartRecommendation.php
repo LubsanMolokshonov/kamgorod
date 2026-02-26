@@ -533,14 +533,13 @@ class CartRecommendation {
              JOIN audience_types at ON wat.audience_type_id = at.id
              WHERE w.is_active = 1
                AND at.slug IN ($audiencePlaceholders)
-               AND w.status IN ('scheduled', 'completed', 'videolecture')
+               AND w.status IN ('completed', 'videolecture')
                $excludeClause
              GROUP BY w.id
              ORDER BY
                CASE w.status
-                 WHEN 'scheduled' THEN 1
-                 WHEN 'videolecture' THEN 2
-                 WHEN 'completed' THEN 3
+                 WHEN 'videolecture' THEN 1
+                 WHEN 'completed' THEN 2
                END,
                w.scheduled_at DESC
              LIMIT $limitSafe",
@@ -548,12 +547,7 @@ class CartRecommendation {
         );
 
         return array_map(function ($row) {
-            $meta = 'Вебинар';
-            if ($row['status'] === 'videolecture') {
-                $meta = 'Видеолекция • ' . ($row['certificate_hours'] ?? 2) . ' ч.';
-            } elseif ($row['status'] === 'scheduled') {
-                $meta = 'Предстоящий вебинар';
-            }
+            $meta = 'Видеолекция • ' . ($row['certificate_hours'] ?? 2) . ' ч.';
 
             return [
                 'type' => 'webinar_browse',
