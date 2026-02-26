@@ -41,7 +41,7 @@ $templateData = [
     'nomination' => 'Лучшая методическая разработка',
     'work_title' => 'Инновационные методы обучения',
     'payment_url' => SITE_URL . '/pages/cart.php',
-    'competition_url' => SITE_URL . '/pages/competition-detail.php?slug=test',
+    'competition_url' => SITE_URL . '/konkursy/test',
     'unsubscribe_url' => SITE_URL . '/pages/unsubscribe.php?token=test123',
     'site_url' => SITE_URL,
     'site_name' => SITE_NAME ?? 'Каменный город',
@@ -86,7 +86,7 @@ foreach ($templates as $template => $description) {
         $htmlBody = ob_get_clean();
 
         $mail->isHTML(true);
-        $mail->Subject = '[ТЕСТ] ' . $subjects[$template];
+        $mail->Subject = mb_encode_mimeheader('[ТЕСТ] ' . $subjects[$template], 'UTF-8', 'B');
         $mail->Body = $htmlBody;
         $mail->AltBody = strip_tags($htmlBody);
 

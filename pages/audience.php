@@ -348,7 +348,7 @@ include __DIR__ . '/../includes/header.php';
                             </div>
 
                             <?php
-                            $compUrl = '/' . $audienceSlug . '/konkurs/' . urlencode($competition['slug']);
+                            $compUrl = '/konkursy/' . urlencode($competition['slug']);
                             ?>
                             <a href="<?php echo $compUrl; ?>"
                                class="btn btn-primary btn-block">

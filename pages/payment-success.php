@@ -211,6 +211,17 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
             <script>
+                // Сохранить заказ в localStorage для отложенного e-commerce трекинга
+                // (на случай если пользователь закроет вкладку до получения статуса succeeded)
+                try {
+                    var pendingOrders = JSON.parse(localStorage.getItem('pending_ecommerce_orders') || '[]');
+                    var orderNum = '<?php echo htmlspecialchars($orderNumber, ENT_QUOTES); ?>';
+                    if (pendingOrders.indexOf(orderNum) === -1) {
+                        pendingOrders.push(orderNum);
+                        localStorage.setItem('pending_ecommerce_orders', JSON.stringify(pendingOrders));
+                    }
+                } catch(e) {}
+
                 // Polling для проверки статуса
                 let pollCount = 0;
                 const maxPolls = 20; // 60 секунд максимум
@@ -302,23 +313,53 @@ include __DIR__ . '/../includes/header.php';
             <a href="/pages/cabinet.php" class="btn-cabinet">Перейти в личный кабинет</a>
 
             <div class="auto-redirect">
-                Автоматический переход в личный кабинет через <span id="countdown">5</span> секунд...
+                Автоматический переход в личный кабинет через <span id="countdown">15</span> секунд...
             </div>
 
             <script>
-                // Auto-redirect countdown
-                let countdown = 5;
-                const countdownElement = document.getElementById('countdown');
+            (function() {
+                var MAX_WAIT = 15;
+                var MIN_WAIT = 3;
+                var secondsLeft = MAX_WAIT;
+                var countdownEl = document.getElementById('countdown');
+                var cabinetLink = document.querySelector('.btn-cabinet');
+                var redirectScheduled = false;
 
-                const timer = setInterval(() => {
-                    countdown--;
-                    countdownElement.textContent = countdown;
+                // Заблокировать ссылку на ЛК на первые MIN_WAIT секунд
+                if (cabinetLink) {
+                    cabinetLink.style.pointerEvents = 'none';
+                    cabinetLink.style.opacity = '0.6';
+                    setTimeout(function() {
+                        cabinetLink.style.pointerEvents = '';
+                        cabinetLink.style.opacity = '';
+                    }, MIN_WAIT * 1000);
+                }
 
-                    if (countdown <= 0) {
+                function doRedirect() {
+                    window.location.href = '/pages/cabinet.php';
+                }
+
+                // Обратный отсчёт
+                var timer = setInterval(function() {
+                    secondsLeft--;
+                    if (countdownEl) countdownEl.textContent = secondsLeft;
+
+                    // Если Метрика загрузилась и прошло MIN_WAIT сек — ждём ещё 2 сек и редиректим
+                    if (!redirectScheduled && typeof ym === 'function' && secondsLeft <= (MAX_WAIT - MIN_WAIT)) {
+                        redirectScheduled = true;
+                        setTimeout(function() {
+                            clearInterval(timer);
+                            doRedirect();
+                        }, 2000);
+                    }
+
+                    // Максимальный fallback
+                    if (secondsLeft <= 0) {
                         clearInterval(timer);
-                        window.location.href = '/pages/cabinet.php';
+                        doRedirect();
                     }
                 }, 1000);
+            })();
             </script>
 
             <!-- E-commerce: Purchase event -->
@@ -334,6 +375,16 @@ include __DIR__ . '/../includes/header.php';
                         'price' => $item['is_free_promotion'] ? 0 : (float)($item['webinar_cert_price'] ?? $item['price']),
                         'brand' => 'Педпортал',
                         'category' => 'Вебинары',
+                        'quantity' => 1
+                    ];
+                } elseif (!empty($item['certificate_id'])) {
+                    // Свидетельство о публикации
+                    $ecomProducts[] = [
+                        'id' => 'pub-' . $item['publication_id'],
+                        'name' => $item['publication_title'] ?? '',
+                        'price' => $item['is_free_promotion'] ? 0 : (float)($item['price'] ?? 299),
+                        'brand' => 'Педпортал',
+                        'category' => 'Публикации',
                         'quantity' => 1
                     ];
                 } elseif (!empty($item['registration_id'])) {
@@ -366,6 +417,21 @@ include __DIR__ . '/../includes/header.php';
                     }
                 }
             });
+
+            // Очистить заказ из pending e-commerce трекинга (событие отправлено)
+            try {
+                var pendingOrders = JSON.parse(localStorage.getItem('pending_ecommerce_orders') || '[]');
+                var orderNum = '<?php echo htmlspecialchars($order['order_number'], ENT_QUOTES); ?>';
+                var idx = pendingOrders.indexOf(orderNum);
+                if (idx !== -1) {
+                    pendingOrders.splice(idx, 1);
+                    if (pendingOrders.length) {
+                        localStorage.setItem('pending_ecommerce_orders', JSON.stringify(pendingOrders));
+                    } else {
+                        localStorage.removeItem('pending_ecommerce_orders');
+                    }
+                }
+            } catch(e) {}
             </script>
 
         <?php endif; ?>

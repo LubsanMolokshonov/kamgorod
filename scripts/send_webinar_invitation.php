@@ -217,7 +217,7 @@ foreach ($users as $index => $user) {
         $textBody .= "Отписаться: {$unsubscribe_url}\n";
 
         $mail->isHTML(true);
-        $mail->Subject = $email_subject; // из шаблона
+        $mail->Subject = mb_encode_mimeheader($email_subject, 'UTF-8', 'B'); // из шаблона
         $mail->Body = $htmlBody;
         $mail->AltBody = $textBody;
 

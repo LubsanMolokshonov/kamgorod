@@ -13,22 +13,7 @@
  * @return string Clean URL for the competition
  */
 function getCompetitionUrl($slug, $audienceTypes = [], $contextAudience = null) {
-    // If competition has exactly one audience type, use URL with audience
-    if (count($audienceTypes) === 1) {
-        return '/' . $audienceTypes[0]['slug'] . '/konkurs/' . urlencode($slug);
-    }
-
-    // If we're in audience context and competition is available for this audience
-    if ($contextAudience) {
-        foreach ($audienceTypes as $type) {
-            if ($type['slug'] === $contextAudience) {
-                return '/' . $contextAudience . '/konkurs/' . urlencode($slug);
-            }
-        }
-    }
-
-    // Default: general competition URL
-    return '/konkurs/' . urlencode($slug);
+    return '/konkursy/' . urlencode($slug);
 }
 
 /**

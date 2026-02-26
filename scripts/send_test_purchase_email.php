@@ -192,7 +192,7 @@ try {
     $mail->addAddress($targetEmail, $mockUser['full_name']);
 
     $mail->isHTML(true);
-    $mail->Subject = 'Ваши документы по заказу ' . $mockOrder['order_number'] . ' (ТЕСТ)';
+    $mail->Subject = mb_encode_mimeheader('Ваши документы по заказу ' . $mockOrder['order_number'] . ' (ТЕСТ)', 'UTF-8', 'B');
     $mail->Body = $htmlBody;
     $mail->AltBody = $textBody;
 

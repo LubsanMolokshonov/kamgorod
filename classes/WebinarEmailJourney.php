@@ -55,6 +55,7 @@ class WebinarEmailJourney {
         $now = time();
 
         $scheduledCount = 0;
+        $lateRegistrationBroadcastScheduled = false;
         foreach ($touchpoints as $touchpoint) {
             // Calculate scheduled time based on webinar time
             // delay_minutes: negative = before webinar, positive = after start
@@ -73,8 +74,26 @@ class WebinarEmailJourney {
 
             // Skip if scheduled time is in the past (except for immediate emails)
             if ($delayMinutes !== 0 && strtotime($scheduledAt) < $now) {
-                $this->log("SKIP | Touchpoint {$touchpoint['code']} already passed for registration {$registrationId}");
-                continue;
+                // For broadcast touchpoints: if webinar is still ongoing, send immediately
+                $broadcastCodes = ['webinar_broadcast_link', 'webinar_reminder_15min'];
+                $webinarEnd = $webinarTime + ($duration * 60);
+
+                if (in_array($touchpoint['code'], $broadcastCodes) && $now < $webinarEnd) {
+                    // Skip reminder_15min if broadcast_link is already scheduled for this late registration
+                    if ($touchpoint['code'] === 'webinar_reminder_15min' && $lateRegistrationBroadcastScheduled) {
+                        $this->log("SKIP | Touchpoint {$touchpoint['code']} (broadcast_link already scheduled) for registration {$registrationId}");
+                        continue;
+                    }
+                    // Schedule for immediate delivery
+                    $scheduledAt = date('Y-m-d H:i:s');
+                    if ($touchpoint['code'] === 'webinar_broadcast_link') {
+                        $lateRegistrationBroadcastScheduled = true;
+                    }
+                    $this->log("LATE_REG | Touchpoint {$touchpoint['code']} scheduled NOW for registration {$registrationId}");
+                } else {
+                    $this->log("SKIP | Touchpoint {$touchpoint['code']} already passed for registration {$registrationId}");
+                    continue;
+                }
             }
 
             // Check for existing entry
@@ -268,7 +287,8 @@ class WebinarEmailJourney {
             $textBody = $this->renderTextTemplate($emailData, $templateData);
 
             $mail->isHTML(true);
-            $mail->Subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
+            $subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
+            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
             $mail->Body = $htmlBody;
             $mail->AltBody = $textBody;
 
@@ -427,8 +447,9 @@ class WebinarEmailJourney {
                 $text .= "Заполнить анкету обратной связи: https://clck.ru/3Rktcu\n\n";
                 $text .= "Получите именной сертификат на {$data['certificate_hours']} часа за {$data['certificate_price']} руб.\n";
                 $text .= "Оформить: {$data['certificate_url']}\n\n";
-                $text .= "Приглашаем на следующий вебинар «Взаимодействие с семьями воспитанников через читательские марафоны»:\n";
-                $text .= "https://fgos.pro/vebinar/vzaimodeystvie-s-semyami-vospitannikov-cherez-chitatelskie-marafony?utm_source=email&utm_campaign=pismoposle1veba\n";
+                $text .= "Приглашаем на следующий вебинар «Как сохранить ресурс и не потерять качество работы при росте требований?»:\n";
+                $text .= "5 марта 2026 в 14:00 МСК\n";
+                $text .= "https://fgos.pro/vebinar/kak-sokhranit-resurs?utm_source=email&utm_campaign=pismoposle1veba\n";
                 break;
         }
 
@@ -586,6 +607,92 @@ class WebinarEmailJourney {
 
         $this->log("RESCHEDULE | Webinar {$webinarId} | Updated {$updated} emails");
         return $updated;
+    }
+
+    /**
+     * Backfill missing touchpoints for upcoming webinars
+     * Finds registrations that are missing email_log entries for active touchpoints
+     * and creates them. This handles the case when a new touchpoint is added after
+     * users have already registered.
+     *
+     * @return int Number of backfilled entries
+     */
+    public function backfillMissingTouchpoints() {
+        $touchpoints = $this->getActiveTouchpoints();
+        $now = time();
+        $backfilled = 0;
+
+        // Get upcoming/live webinars (scheduled or live)
+        $webinars = $this->db->query(
+            "SELECT id, scheduled_at, duration_minutes, status
+             FROM webinars
+             WHERE status IN ('scheduled', 'live')
+               AND is_active = 1"
+        );
+
+        foreach ($webinars as $webinar) {
+            $webinarTime = strtotime($webinar['scheduled_at']);
+            $duration = (int)($webinar['duration_minutes'] ?? 60);
+            $webinarEnd = $webinarTime + ($duration * 60);
+
+            foreach ($touchpoints as $touchpoint) {
+                $delayMinutes = (int)$touchpoint['delay_minutes'];
+
+                // Calculate when this touchpoint should be sent
+                if ($delayMinutes === 0) {
+                    // Confirmation — skip backfill, it's handled at registration time
+                    continue;
+                }
+
+                $scheduledAt = date('Y-m-d H:i:s', $webinarTime + ($delayMinutes * 60));
+
+                // Skip touchpoints whose time has already passed
+                // (except broadcast codes if webinar is still ongoing)
+                if (strtotime($scheduledAt) < $now) {
+                    $broadcastCodes = ['webinar_broadcast_link', 'webinar_reminder_15min'];
+                    if (in_array($touchpoint['code'], $broadcastCodes) && $now < $webinarEnd) {
+                        $scheduledAt = date('Y-m-d H:i:s'); // send immediately
+                    } else {
+                        continue;
+                    }
+                }
+
+                // Find registrations missing this touchpoint
+                $missingRegistrations = $this->db->query(
+                    "SELECT wr.id, wr.email
+                     FROM webinar_registrations wr
+                     WHERE wr.webinar_id = ?
+                       AND wr.status = 'registered'
+                       AND wr.id NOT IN (
+                           SELECT wel.webinar_registration_id
+                           FROM webinar_email_log wel
+                           WHERE wel.touchpoint_id = ?
+                       )",
+                    [$webinar['id'], $touchpoint['id']]
+                );
+
+                foreach ($missingRegistrations as $reg) {
+                    if ($this->isUnsubscribed($reg['email'])) {
+                        continue;
+                    }
+
+                    $this->db->insert('webinar_email_log', [
+                        'webinar_registration_id' => $reg['id'],
+                        'touchpoint_id' => $touchpoint['id'],
+                        'email' => $reg['email'],
+                        'status' => 'pending',
+                        'scheduled_at' => $scheduledAt
+                    ]);
+                    $backfilled++;
+                }
+            }
+        }
+
+        if ($backfilled > 0) {
+            $this->log("BACKFILL | Created {$backfilled} missing email entries");
+        }
+
+        return $backfilled;
     }
 
     /**

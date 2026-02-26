@@ -53,6 +53,13 @@ try {
     echo date('Y-m-d H:i:s') . " - Starting webinar email processing...\n";
 
     $journey = new WebinarEmailJourney($db);
+
+    // Backfill missing touchpoints for existing registrations
+    $backfilled = $journey->backfillMissingTouchpoints();
+    if ($backfilled > 0) {
+        echo date('Y-m-d H:i:s') . " - Backfilled {$backfilled} missing email entries.\n";
+    }
+
     $results = $journey->processPendingEmails();
 
     echo date('Y-m-d H:i:s') . " - Completed. Sent: {$results['sent']}, Failed: {$results['failed']}, Skipped: {$results['skipped']}\n";

@@ -205,7 +205,7 @@ class EmailJourney {
                 'nomination' => $emailData['nomination'],
                 'work_title' => $emailData['work_title'],
                 'payment_url' => generateMagicUrl($emailData['user_id'], '/pages/cart.php'),
-                'competition_url' => SITE_URL . '/pages/competition-detail.php?slug=' . $emailData['competition_slug'],
+                'competition_url' => SITE_URL . '/konkursy/' . $emailData['competition_slug'],
                 'unsubscribe_url' => $unsubscribeUrl,
                 'site_url' => SITE_URL,
                 'site_name' => SITE_NAME ?? 'Каменный город',
@@ -216,7 +216,8 @@ class EmailJourney {
             $textBody = $this->renderTextTemplate($templateData);
 
             $mail->isHTML(true);
-            $mail->Subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
+            $subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
+            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
             $mail->Body = $htmlBody;
             $mail->AltBody = $textBody;
 

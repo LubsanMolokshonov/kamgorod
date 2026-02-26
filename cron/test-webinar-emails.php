@@ -81,7 +81,7 @@ foreach ($templates as $template => $description) {
         $htmlBody = ob_get_clean();
 
         $mail->isHTML(true);
-        $mail->Subject = '[ТЕСТ] ' . $description . ': ' . $webinar_title;
+        $mail->Subject = mb_encode_mimeheader('[ТЕСТ] ' . $description . ': ' . $webinar_title, 'UTF-8', 'B');
         $mail->Body = $htmlBody;
         $mail->AltBody = strip_tags($htmlBody);
 

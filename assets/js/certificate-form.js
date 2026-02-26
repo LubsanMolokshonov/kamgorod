@@ -122,7 +122,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
 
             if (result.success) {
-                window.location.href = result.redirect_url;
+                // E-commerce: Add to cart event
+                if (result.ecommerce) {
+                    window.dataLayer = window.dataLayer || [];
+                    window.dataLayer.push({
+                        "ecommerce": {
+                            "currencyCode": "RUB",
+                            "add": {
+                                "products": [{
+                                    "id": String(result.ecommerce.id),
+                                    "name": result.ecommerce.name,
+                                    "price": parseFloat(result.ecommerce.price),
+                                    "brand": "Педпортал",
+                                    "category": result.ecommerce.category,
+                                    "quantity": 1
+                                }]
+                            }
+                        }
+                    });
+                }
+                // Задержка для отправки dataLayer перед редиректом
+                setTimeout(function() { window.location.href = result.redirect_url; }, 300);
             } else {
                 alert(result.message || 'Произошла ошибка');
                 resetButton();

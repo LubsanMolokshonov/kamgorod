@@ -517,7 +517,8 @@ class PublicationEmailChain {
             $textBody = $this->renderTextTemplate($emailData['touchpoint_code'], $templateData);
 
             $mail->isHTML(true);
-            $mail->Subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
+            $subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
+            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
             $mail->Body = $htmlBody;
             $mail->AltBody = $textBody;
 

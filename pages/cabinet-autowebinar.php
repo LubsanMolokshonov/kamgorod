@@ -115,6 +115,12 @@ include __DIR__ . '/../includes/header.php';
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 Смотреть запись вебинара
             </a>
+            <?php if (!empty($webinar['materials_url'])): ?>
+                <a href="<?php echo htmlspecialchars($webinar['materials_url']); ?>" target="_blank" rel="noopener" class="btn-download-materials">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Скачать презентацию с полезными материалами
+                </a>
+            <?php endif; ?>
         </div>
 
         <!-- Step 2: Quiz -->
@@ -336,6 +342,25 @@ include __DIR__ . '/../includes/header.php';
 
 .btn-watch-recording:hover {
     background: #059669;
+}
+
+.btn-download-materials {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #7c3aed;
+    color: #fff;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+    margin-top: 10px;
+}
+
+.btn-download-materials:hover {
+    background: #6d28d9;
 }
 
 /* Quiz */

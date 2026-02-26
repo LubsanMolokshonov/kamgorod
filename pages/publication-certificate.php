@@ -352,4 +352,23 @@ include __DIR__ . '/../includes/header.php';
 }
 </style>
 
+<!-- E-commerce: Detail (просмотр товара — свидетельство о публикации) -->
+<script>
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+    "ecommerce": {
+        "currencyCode": "RUB",
+        "detail": {
+            "products": [{
+                "id": "pub-<?php echo $publicationId; ?>",
+                "name": "<?php echo htmlspecialchars($publication['title'], ENT_QUOTES); ?>",
+                "price": 299,
+                "brand": "Педпортал",
+                "category": "Публикации"
+            }]
+        }
+    }
+});
+</script>
+
 <?php include __DIR__ . '/../includes/footer.php'; ?>

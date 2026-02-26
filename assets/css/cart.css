@@ -309,6 +309,211 @@
     }
 }
 
+/* Add More Button — secondary style when recommendations are shown */
+.add-more-btn-secondary {
+    opacity: 0.6;
+    font-size: 14px;
+    padding: 12px 24px;
+}
+
+/* === Smart Recommendations Section === */
+.recommendations-section {
+    margin-bottom: 32px;
+}
+
+.recommendations-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.recommendations-header h3 {
+    font-size: 20px;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.promo-hint {
+    color: #10b981;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 0;
+}
+
+.recommendations-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.recommendation-card {
+    background: white;
+    border-radius: var(--border-radius-card);
+    box-shadow: var(--shadow-card);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.recommendation-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* "Will be free" highlight */
+.rec-card-will-be-free {
+    border-color: #10b981;
+    background: linear-gradient(135deg, #f0fff4 0%, #ffffff 100%);
+}
+
+/* Type badges */
+.rec-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    align-self: flex-start;
+}
+
+.rec-type-competition .rec-badge {
+    background: #EDE9FE;
+    color: #6D28D9;
+}
+
+.rec-type-webinar .rec-badge {
+    background: #DBEAFE;
+    color: #1D4ED8;
+}
+
+.rec-type-publication .rec-badge {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.rec-title {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-dark);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.rec-meta {
+    font-size: 13px;
+    color: var(--text-medium);
+}
+
+.rec-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    gap: 12px;
+}
+
+.rec-price {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary-purple);
+    white-space: nowrap;
+}
+
+.rec-price-free s {
+    color: var(--text-medium);
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.rec-free-badge {
+    background: #10b981;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.rec-btn {
+    padding: 8px 16px;
+    border-radius: var(--border-radius-button);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    white-space: nowrap;
+    border: none;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.rec-btn-add {
+    background: var(--primary-purple);
+    color: white;
+}
+
+.rec-btn-add:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.rec-btn-add:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.rec-btn-link {
+    background: transparent;
+    color: var(--primary-purple);
+    border: 1px solid var(--primary-purple);
+}
+
+.rec-btn-link:hover {
+    background: var(--bg-light);
+    color: var(--primary-purple);
+    text-decoration: none;
+}
+
+/* Responsive: 2 columns on tablet, 1 on mobile */
+@media (max-width: 900px) {
+    .recommendations-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .recommendations-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .recommendations-header {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .rec-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rec-btn {
+        text-align: center;
+    }
+}
+
 /* Loading State */
 .cart-loading {
     text-align: center;

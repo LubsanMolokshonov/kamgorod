@@ -54,11 +54,31 @@ if ($webinarCertificateId) {
 
 // Handle certificate removal
 if ($certificateId) {
+    // Получить данные свидетельства для e-commerce перед удалением
+    $certEcommerce = null;
+    $stmt = $db->prepare("
+        SELECT pc.id, pc.publication_id, pc.price, p.title as publication_title
+        FROM publication_certificates pc
+        JOIN publications p ON pc.publication_id = p.id
+        WHERE pc.id = ?
+    ");
+    $stmt->execute([$certificateId]);
+    $certData = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($certData) {
+        $certEcommerce = [
+            'id' => 'pub-' . $certData['publication_id'],
+            'name' => $certData['publication_title'],
+            'price' => $certData['price'] ?? 299,
+            'category' => 'Публикации'
+        ];
+    }
+
     if (removeCertificateFromCart($certificateId)) {
         echo json_encode([
             'success' => true,
             'message' => 'Свидетельство удалено из корзины',
-            'cart_count' => getCartCount()
+            'cart_count' => getCartCount(),
+            'ecommerce' => $certEcommerce
         ]);
     } else {
         echo json_encode([

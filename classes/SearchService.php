@@ -304,7 +304,7 @@ class SearchService {
                 'price' => number_format((float)$comp['price'], 0, ',', ' ') . ' ₽',
                 'category' => $comp['category'],
                 'categoryLabel' => Competition::getCategoryLabel($comp['category']),
-                'url' => '/pages/competition-detail.php?slug=' . urlencode($comp['slug']),
+                'url' => '/konkursy/' . urlencode($comp['slug']),
                 'highlight' => $this->highlightMatch($comp['title'], $query)
             ];
         }

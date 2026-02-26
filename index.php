@@ -302,7 +302,7 @@ include __DIR__ . '/includes/header.php';
         <!-- Таб: Конкурсы -->
         <div id="tab-competitions" class="activity-content active">
             <?php foreach ($recentCompetitions as $competition): ?>
-            <a href="/konkurs/<?php echo $competition['slug']; ?>" class="competition-card">
+            <a href="/konkursy/<?php echo $competition['slug']; ?>" class="competition-card">
                 <div class="competition-category"><?php echo htmlspecialchars($competition['category_name']); ?></div>
                 <h3 class="competition-title"><?php echo htmlspecialchars($competition['title']); ?></h3>
                 <p class="competition-description">

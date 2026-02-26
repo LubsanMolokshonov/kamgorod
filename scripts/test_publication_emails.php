@@ -112,7 +112,7 @@ foreach ($templates as $i => $tpl) {
         $mail->addAddress($testEmail, 'Тест');
 
         $mail->isHTML(true);
-        $mail->Subject = "[ТЕСТ {$num}/8] " . $tpl['subject'];
+        $mail->Subject = mb_encode_mimeheader("[ТЕСТ {$num}/8] " . $tpl['subject'], 'UTF-8', 'B');
         $mail->Body = $htmlBody;
 
         $mail->send();

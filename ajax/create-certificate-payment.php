@@ -108,7 +108,13 @@ try {
         'success' => true,
         'redirect_url' => '/pages/cart.php',
         'certificate_id' => $certificate['id'],
-        'message' => 'Свидетельство добавлено в корзину'
+        'message' => 'Свидетельство добавлено в корзину',
+        'ecommerce' => [
+            'id' => 'pub-' . $publicationId,
+            'name' => $publication['title'],
+            'price' => 299,
+            'category' => 'Публикации'
+        ]
     ]);
 
 } catch (Throwable $e) {

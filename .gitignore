@@ -38,4 +38,4 @@ Thumbs.db
 # Uploaded certificates and publications
 /uploads/webinars/certificates/*.pdf
 /uploads/publications/certificates/*.pdf
-/uploads/publications/20*/**/*.pdf
+/uploads/publications/20*/**

@@ -89,6 +89,50 @@
     window.dataLayer = window.dataLayer || [];
     </script>
 
+    <!-- Deferred E-commerce Purchase Tracking -->
+    <!-- Догоняет purchase события для заказов, где пользователь закрыл вкладку до подтверждения оплаты -->
+    <script>
+    (function() {
+        try {
+            var pendingOrders = JSON.parse(localStorage.getItem('pending_ecommerce_orders') || '[]');
+            if (!pendingOrders.length) return;
+
+            var remaining = [];
+            var processed = 0;
+            var total = pendingOrders.length;
+
+            pendingOrders.forEach(function(orderNum) {
+                fetch('/api/get-ecommerce-data.php?order_number=' + encodeURIComponent(orderNum))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.success && data.ecommerce) {
+                            // Отправить purchase событие в dataLayer
+                            window.dataLayer.push({ "ecommerce": data.ecommerce });
+                        } else if (data.error === 'Order not succeeded') {
+                            // Заказ ещё обрабатывается — оставить в списке для следующей попытки
+                            remaining.push(orderNum);
+                        }
+                        // Для других ошибок (not found, access denied) — убрать из списка
+                    })
+                    .catch(function() {
+                        // Сетевая ошибка — оставить для повторной попытки
+                        remaining.push(orderNum);
+                    })
+                    .finally(function() {
+                        processed++;
+                        if (processed === total) {
+                            if (remaining.length) {
+                                localStorage.setItem('pending_ecommerce_orders', JSON.stringify(remaining));
+                            } else {
+                                localStorage.removeItem('pending_ecommerce_orders');
+                            }
+                        }
+                    });
+            });
+        } catch(e) {}
+    })();
+    </script>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="/assets/js/main.js"></script>
     <script src="/assets/js/search.js"></script>

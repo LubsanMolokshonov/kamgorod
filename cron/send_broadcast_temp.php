@@ -41,7 +41,7 @@ include BASE_PATH . "/includes/email-templates/webinar_broadcast_link.php";
 $htmlBody = ob_get_clean();
 
 $mail->isHTML(true);
-$mail->Subject = "Через 1 час начало! Ссылка на вебинар внутри";
+$mail->Subject = mb_encode_mimeheader("Через 1 час начало! Ссылка на вебинар внутри", 'UTF-8', 'B');
 $mail->Body = $htmlBody;
 $mail->AltBody = strip_tags($htmlBody);
 

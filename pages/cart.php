@@ -121,8 +121,9 @@ if (isCartEmpty()) {
 // Page metadata
 $pageTitle = 'Корзина | ' . SITE_NAME;
 $pageDescription = 'Ваша корзина покупок';
-$additionalCSS = ['/assets/css/cart.css'];
-$additionalJS = ['/assets/js/cart.js'];
+$cacheBust = filemtime(__DIR__ . '/../assets/css/cart.css');
+$additionalCSS = ['/assets/css/cart.css?v=' . $cacheBust];
+$additionalJS = ['/assets/js/cart.js?v=' . filemtime(__DIR__ . '/../assets/js/cart.js')];
 
 // Include header
 include __DIR__ . '/../includes/header.php';
@@ -212,9 +213,20 @@ include __DIR__ . '/../includes/header.php';
                 <?php endforeach; ?>
             </div>
 
+            <!-- Smart Recommendations (loaded via AJAX) -->
+            <div id="recommendations-section" class="recommendations-section" style="display:none;">
+                <div class="recommendations-header">
+                    <h3>Рекомендуем для вас</h3>
+                    <p id="promo-hint" class="promo-hint"></p>
+                </div>
+                <div id="recommendations-grid" class="recommendations-grid">
+                    <!-- Filled dynamically via JS -->
+                </div>
+            </div>
+
             <!-- Add More Button -->
             <div class="add-more-section">
-                <a href="/index.php?from=cart" class="add-more-btn">
+                <a href="/index.php?from=cart" class="add-more-btn add-more-btn-secondary">
                     + Добавить ещё мероприятие
                 </a>
             </div>

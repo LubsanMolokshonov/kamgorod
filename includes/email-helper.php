@@ -72,7 +72,7 @@ function sendPaymentSuccessEmail($userId, $orderId) {
 
         // Content
         $mail->isHTML(true);
-        $mail->Subject = 'Ваши документы по заказу ' . $order['order_number'];
+        $mail->Subject = mb_encode_mimeheader('Ваши документы по заказу ' . $order['order_number'], 'UTF-8', 'B');
 
         // Build email body
         $htmlBody = buildSuccessEmailBody($order, $user, $attachments);
@@ -449,7 +449,7 @@ function sendPaymentFailureEmail($userId, $orderId) {
 
         // Content
         $mail->isHTML(true);
-        $mail->Subject = 'Проблема с оплатой заказа ' . $order['order_number'];
+        $mail->Subject = mb_encode_mimeheader('Проблема с оплатой заказа ' . $order['order_number'], 'UTF-8', 'B');
 
         $siteUrl = SITE_URL;
         $cartLink = generateMagicUrl($user['id'], '/pages/cart.php');
@@ -529,7 +529,7 @@ function testEmailConfig($testEmail) {
         $mail->addAddress($testEmail);
 
         $mail->isHTML(true);
-        $mail->Subject = 'Тест настройки email';
+        $mail->Subject = mb_encode_mimeheader('Тест настройки email', 'UTF-8', 'B');
         $mail->Body = '<h1>Email работает!</h1><p>Настройка SMTP успешно завершена.</p>';
         $mail->AltBody = 'Email работает! Настройка SMTP успешно завершена.';
 

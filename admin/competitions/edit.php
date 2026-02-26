@@ -317,7 +317,7 @@ include __DIR__ . '/../includes/header.php';
         <a href="/admin/index.php" class="btn btn-secondary">
             Отмена
         </a>
-        <a href="/pages/competition-detail.php?slug=<?php echo htmlspecialchars($competition['slug']); ?>"
+        <a href="/konkursy/<?php echo htmlspecialchars($competition['slug']); ?>"
            class="btn btn-outline"
            target="_blank">
             👁️ Просмотр на сайте

@@ -209,7 +209,7 @@ header('Content-Type: text/html; charset=UTF-8');
 
             echo "<div style='margin-top: 30px;'>";
             echo "<a href='check_status.php' class='btn'>🔍 Проверить статус</a>";
-            echo "<a href='/pages/competition-detail.php?slug=muzykalnaya-palitra-dou&v=" . time() . "' class='btn'>Открыть конкурс</a>";
+            echo "<a href='/konkursy/muzykalnaya-palitra-dou?v=" . time() . "' class='btn'>Открыть конкурс</a>";
             echo "<a href='/index.php' class='btn'>Главная</a>";
             echo "</div>";
 

@@ -29,11 +29,17 @@ RewriteRule ^konkursy/vneurochnaya/?$ competitions.php?category=extracurricular 
 RewriteRule ^konkursy/proekty/?$ competitions.php?category=student_projects [L,QSA]
 RewriteRule ^konkursy/tvorchestvo/?$ competitions.php?category=creative [L,QSA]
 
-# Детальная страница конкурса с указанием типа аудитории
-RewriteRule ^(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/konkurs/([a-z0-9-]+)/?$ pages/competition-detail.php?audience=$1&slug=$2 [L,QSA]
+# Детальная страница конкурса (единый формат)
+RewriteRule ^konkursy/([a-z0-9-]+)/?$ pages/competition-detail.php?slug=$1 [L,QSA]
 
-# Детальная страница конкурса (общая, без аудитории)
-RewriteRule ^konkurs/([a-z0-9-]+)/?$ pages/competition-detail.php?slug=$1 [L,QSA]
+# 301-редиректы со старых URL конкурсов
+RewriteRule ^konkurs/([a-z0-9-]+)/?$ /konkursy/$1 [R=301,L]
+RewriteRule ^(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/konkurs/([a-z0-9-]+)/?$ /konkursy/$2 [R=301,L]
+
+# 301-редирект с прямого доступа к competition-detail.php (только реальные запросы, не внутренние rewrite)
+RewriteCond %{THE_REQUEST} \s/pages/competition-detail\.php
+RewriteCond %{QUERY_STRING} slug=([a-z0-9-]+)
+RewriteRule ^pages/competition-detail\.php$ /konkursy/%1? [R=301,L]
 
 # ================================================
 # ВЕБИНАРЫ

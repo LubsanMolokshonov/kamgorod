@@ -20,6 +20,7 @@ services:
       - DB_PASS=pedagogy_pass
     networks:
       - pedagogy_network
+      - mail_network
     restart: unless-stopped
 
   # MySQL Database
@@ -61,6 +62,9 @@ services:
 networks:
   pedagogy_network:
     driver: bridge
+  mail_network:
+    external: true
+    name: docker-mailserver_mail_network
 
 volumes:
   db_data:
