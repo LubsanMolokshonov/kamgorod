@@ -445,6 +445,12 @@
     font-weight: 600;
 }
 
+.rec-price-from {
+    font-size: 15px;
+    color: var(--text-medium);
+    font-weight: 500;
+}
+
 .rec-btn {
     padding: 8px 16px;
     border-radius: var(--border-radius-button);

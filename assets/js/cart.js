@@ -89,23 +89,33 @@ function buildRecommendationCard(rec, willBeFree) {
     var typeLabels = {
         'competition': 'Конкурс',
         'webinar_certificate': 'Сертификат вебинара',
-        'publication_certificate': 'Свидетельство публикации'
+        'publication_certificate': 'Свидетельство публикации',
+        'webinar_browse': 'Вебинар',
+        'publication_cta': 'Публикация',
+        'webinar_listing_cta': 'Вебинар'
     };
     var typeClasses = {
         'competition': 'rec-type-competition',
         'webinar_certificate': 'rec-type-webinar',
-        'publication_certificate': 'rec-type-publication'
+        'publication_certificate': 'rec-type-publication',
+        'webinar_browse': 'rec-type-webinar',
+        'publication_cta': 'rec-type-publication',
+        'webinar_listing_cta': 'rec-type-webinar'
     };
 
     var badgeLabel = typeLabels[rec.type] || '';
     var typeClass = typeClasses[rec.type] || '';
     var freeClass = willBeFree ? ' rec-card-will-be-free' : '';
 
-    var priceHtml = '<span class="rec-price">' + formatPrice(rec.price) + ' ₽</span>';
-    if (willBeFree) {
+    var priceHtml;
+    if (rec.type === 'publication_cta' || rec.type === 'webinar_listing_cta') {
+        priceHtml = '<span class="rec-price rec-price-from">от ' + formatPrice(rec.price) + ' ₽</span>';
+    } else if (willBeFree) {
         priceHtml = '<span class="rec-price rec-price-free">' +
                     '<s>' + formatPrice(rec.price) + ' ₽</s> ' +
                     '<span class="rec-free-badge">БЕСПЛАТНО</span></span>';
+    } else {
+        priceHtml = '<span class="rec-price">' + formatPrice(rec.price) + ' ₽</span>';
     }
 
     var buttonHtml;
@@ -120,10 +130,24 @@ function buildRecommendationCard(rec, willBeFree) {
         buttonHtml = '<button class="rec-btn rec-btn-add" ' + dataAttrs + '>' +
                      '+ В корзину</button>';
     } else {
-        // Link button for competitions
-        var url = '/konkursy/' + encodeURIComponent(rec.slug);
+        // Browse link — route depends on type
+        var url, btnText;
+        if (rec.type === 'webinar_browse') {
+            url = '/vebinar/' + encodeURIComponent(rec.slug);
+            btnText = 'Подробнее &rarr;';
+        } else if (rec.type === 'publication_cta') {
+            url = '/opublikovat/';
+            btnText = 'Опубликовать &rarr;';
+        } else if (rec.type === 'webinar_listing_cta') {
+            url = '/vebinary/';
+            btnText = 'Все вебинары &rarr;';
+        } else {
+            // Default: competition
+            url = '/konkursy/' + encodeURIComponent(rec.slug);
+            btnText = 'Подробнее &rarr;';
+        }
         buttonHtml = '<a href="' + url + '" class="rec-btn rec-btn-link">' +
-                     'Подробнее &rarr;</a>';
+                     btnText + '</a>';
     }
 
     var card = '<div class="recommendation-card ' + typeClass + freeClass + '">' +

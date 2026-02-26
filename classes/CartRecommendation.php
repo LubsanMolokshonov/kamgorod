@@ -41,13 +41,19 @@ class CartRecommendation {
 
     /**
      * Get personalized recommendations for the cart page.
+     * Uses priority-based slot allocation for maximum type diversity.
+     *
+     * Algorithm:
+     * 1. Determine which product categories are in the cart
+     * 2. Prioritize categories NOT in cart (cross-selling), then categories in cart
+     * 3. Fill each slot with cascading fallbacks (quick-add cert → browse → CTA)
      *
      * @param array $allItems Cart items (same format as in cart.php: type, id, raw_data, ...)
      * @param int|null $userId Current user ID (for webinar/publication lookups)
-     * @param int $limit Max total recommendations
+     * @param int $limit Max total recommendations (default 3 for diverse cross-selling)
      * @return array Array of recommendation cards
      */
-    public function getRecommendations(array $allItems, ?int $userId, int $limit = 6): array {
+    public function getRecommendations(array $allItems, ?int $userId, int $limit = 3): array {
         $audienceSlugs = $this->detectAudienceTypes($allItems);
 
         // Collect IDs of items already in cart to exclude
@@ -55,57 +61,73 @@ class CartRecommendation {
         $excludeWebinarIds = [];
         $excludePublicationIds = [];
 
+        // Detect which product categories are already in the cart
+        $cartHasCompetition = false;
+        $cartHasWebinar = false;
+        $cartHasPublication = false;
+
         foreach ($allItems as $item) {
             $raw = $item['raw_data'] ?? [];
             if ($item['type'] === 'registration') {
                 $excludeCompetitionIds[] = (int)($raw['competition_id'] ?? 0);
+                $cartHasCompetition = true;
             } elseif ($item['type'] === 'webinar_certificate') {
                 $excludeWebinarIds[] = (int)($raw['webinar_id'] ?? 0);
+                $cartHasWebinar = true;
             } elseif ($item['type'] === 'certificate') {
                 $excludePublicationIds[] = (int)($raw['publication_id'] ?? 0);
+                $cartHasPublication = true;
             }
         }
 
-        $perType = max(1, intval(ceil($limit / 3)));
+        // Phase 1: Determine slot priorities (cross-sell categories first)
+        $notInCart = [];
+        $inCart = [];
+
+        if (!$cartHasCompetition) $notInCart[] = 'competition'; else $inCart[] = 'competition';
+        if (!$cartHasWebinar)     $notInCart[] = 'webinar';      else $inCart[] = 'webinar';
+        if (!$cartHasPublication)  $notInCart[] = 'publication';   else $inCart[] = 'publication';
+
+        $slotPriority = array_merge($notInCart, $inCart);
+
+        // Build exactly $limit slots, cycling through priorities if needed
+        $slots = [];
+        for ($i = 0; $i < $limit; $i++) {
+            $slots[] = $slotPriority[$i % count($slotPriority)];
+        }
+
+        // Phase 2: Fill each slot using cascading fallbacks
         $recommendations = [];
+        $usedCompetitionIds = $excludeCompetitionIds;
+        $usedWebinarIds = $excludeWebinarIds;
+        $usedPublicationIds = $excludePublicationIds;
 
-        // 1. Competition recommendations (always available, no user required)
-        try {
-            $competitions = $this->getCompetitionRecommendations($audienceSlugs, $excludeCompetitionIds, $perType);
-        } catch (\Throwable $e) {
-            error_log("Cart recommendations (competitions) error: " . $e->getMessage());
-            $competitions = [];
-        }
-        $recommendations = array_merge($recommendations, $competitions);
+        foreach ($slots as $category) {
+            $card = null;
 
-        // 2. Webinar certificate recommendations (require logged-in user)
-        $webinars = [];
-        if ($userId) {
-            try {
-                $webinars = $this->getWebinarRecommendations($audienceSlugs, $excludeWebinarIds, $userId, $perType);
-            } catch (\Throwable $e) {
-                error_log("Cart recommendations (webinars) error: " . $e->getMessage());
-                $webinars = [];
+            if ($category === 'competition') {
+                $card = $this->fillCompetitionSlot($audienceSlugs, $usedCompetitionIds);
+                if ($card) {
+                    $usedCompetitionIds[] = $card['id'];
+                }
+            } elseif ($category === 'webinar') {
+                $card = $this->fillWebinarSlot($audienceSlugs, $usedWebinarIds, $userId);
+                if ($card && $card['id'] > 0) {
+                    $usedWebinarIds[] = $card['id'];
+                }
+            } elseif ($category === 'publication') {
+                $card = $this->fillPublicationSlot($audienceSlugs, $usedPublicationIds, $userId);
+                if ($card && $card['id'] > 0) {
+                    $usedPublicationIds[] = $card['id'];
+                }
             }
-            $recommendations = array_merge($recommendations, $webinars);
-        }
 
-        // 3. Publication certificate recommendations (require logged-in user)
-        $publications = [];
-        if ($userId) {
-            try {
-                $publications = $this->getPublicationRecommendations($audienceSlugs, $excludePublicationIds, $userId, $perType);
-            } catch (\Throwable $e) {
-                error_log("Cart recommendations (publications) error: " . $e->getMessage());
-                $publications = [];
+            if ($card) {
+                $recommendations[] = $card;
             }
-            $recommendations = array_merge($recommendations, $publications);
         }
 
-        // Interleave: take 1 from each type in round-robin
-        $recommendations = $this->interleave($competitions, $webinars, $publications);
-
-        return array_slice($recommendations, 0, $limit);
+        return $recommendations;
     }
 
     /**
@@ -397,25 +419,185 @@ class CartRecommendation {
         }, $rows);
     }
 
-    /**
-     * Interleave recommendations from different sources in round-robin order.
-     */
-    private function interleave(array ...$sources): array {
-        $result = [];
-        $maxLen = 0;
-        foreach ($sources as $source) {
-            $maxLen = max($maxLen, count($source));
-        }
+    // ── Slot-filling helpers with cascading fallbacks ──
 
-        for ($i = 0; $i < $maxLen; $i++) {
-            foreach ($sources as $source) {
-                if (isset($source[$i])) {
-                    $result[] = $source[$i];
+    /**
+     * Fill a competition slot. Competitions are always available (browse).
+     */
+    private function fillCompetitionSlot(array $audienceSlugs, array $excludeIds): ?array {
+        try {
+            $results = $this->getCompetitionRecommendations($audienceSlugs, $excludeIds, 1);
+            return $results[0] ?? null;
+        } catch (\Throwable $e) {
+            error_log("Cart rec (competition slot) error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Fill a webinar slot with cascading fallback:
+     *   1. Webinar certificate quick-add (if user logged in and has registrations)
+     *   2. Webinar browse matching audience
+     *   3. Webinar browse without audience filter (any videolecture)
+     *   4. Static webinar listing CTA (last resort)
+     */
+    private function fillWebinarSlot(array $audienceSlugs, array $excludeIds, ?int $userId): ?array {
+        // Priority 1: Quick-add certificate
+        if ($userId) {
+            try {
+                $certs = $this->getWebinarRecommendations($audienceSlugs, $excludeIds, $userId, 1);
+                if (!empty($certs)) {
+                    return $certs[0];
                 }
+            } catch (\Throwable $e) {
+                error_log("Cart rec (webinar cert slot) error: " . $e->getMessage());
             }
         }
 
-        return $result;
+        // Priority 2: Webinar browse matching audience
+        try {
+            $browse = $this->getWebinarBrowseRecommendations($audienceSlugs, $excludeIds, 1);
+            if (!empty($browse)) {
+                return $browse[0];
+            }
+        } catch (\Throwable $e) {
+            error_log("Cart rec (webinar browse slot) error: " . $e->getMessage());
+        }
+
+        // Priority 3: Webinar browse without audience filter
+        try {
+            $allAudience = ['dou', 'nachalnaya-shkola', 'srednyaya-starshaya-shkola', 'spo'];
+            $browse = $this->getWebinarBrowseRecommendations($allAudience, $excludeIds, 1);
+            if (!empty($browse)) {
+                return $browse[0];
+            }
+        } catch (\Throwable $e) {
+            error_log("Cart rec (webinar browse fallback) error: " . $e->getMessage());
+        }
+
+        // Priority 4: Static CTA to webinar listing (last resort)
+        $cta = $this->getWebinarListingCTA();
+        return $cta[0];
+    }
+
+    /**
+     * Fill a publication slot with cascading fallback:
+     *   1. Publication certificate quick-add (if user has published works)
+     *   2. Static "publish your work" CTA
+     */
+    private function fillPublicationSlot(array $audienceSlugs, array $excludeIds, ?int $userId): ?array {
+        // Priority 1: Quick-add certificate
+        if ($userId) {
+            try {
+                $certs = $this->getPublicationRecommendations($audienceSlugs, $excludeIds, $userId, 1);
+                if (!empty($certs)) {
+                    return $certs[0];
+                }
+            } catch (\Throwable $e) {
+                error_log("Cart rec (publication cert slot) error: " . $e->getMessage());
+            }
+        }
+
+        // Priority 2: Static CTA
+        $cta = $this->getPublicationCTA();
+        return $cta[0];
+    }
+
+    // ── New recommendation sources ──
+
+    /**
+     * Get webinar browse recommendations (available for ALL users).
+     * Returns webinars matching audience type for browsing, not certificate purchase.
+     */
+    private function getWebinarBrowseRecommendations(array $audienceSlugs, array $excludeWebinarIds, int $limit): array {
+        if (empty($audienceSlugs)) {
+            return [];
+        }
+
+        $limitSafe = intval($limit);
+        $audiencePlaceholders = implode(',', array_fill(0, count($audienceSlugs), '?'));
+        $params = $audienceSlugs;
+
+        $excludeClause = '';
+        if (!empty($excludeWebinarIds)) {
+            $excludePlaceholders = implode(',', array_fill(0, count($excludeWebinarIds), '?'));
+            $excludeClause = "AND w.id NOT IN ($excludePlaceholders)";
+            $params = array_merge($params, $excludeWebinarIds);
+        }
+
+        $rows = $this->db->query(
+            "SELECT w.id, w.title, w.slug, w.certificate_price, w.status,
+                    w.certificate_hours
+             FROM webinars w
+             JOIN webinar_audience_types wat ON w.id = wat.webinar_id
+             JOIN audience_types at ON wat.audience_type_id = at.id
+             WHERE w.is_active = 1
+               AND at.slug IN ($audiencePlaceholders)
+               AND w.status IN ('scheduled', 'completed', 'videolecture')
+               $excludeClause
+             GROUP BY w.id
+             ORDER BY
+               CASE w.status
+                 WHEN 'scheduled' THEN 1
+                 WHEN 'videolecture' THEN 2
+                 WHEN 'completed' THEN 3
+               END,
+               w.scheduled_at DESC
+             LIMIT $limitSafe",
+            $params
+        );
+
+        return array_map(function ($row) {
+            $meta = 'Вебинар';
+            if ($row['status'] === 'videolecture') {
+                $meta = 'Видеолекция • ' . ($row['certificate_hours'] ?? 2) . ' ч.';
+            } elseif ($row['status'] === 'scheduled') {
+                $meta = 'Предстоящий вебинар';
+            }
+
+            return [
+                'type' => 'webinar_browse',
+                'id' => (int)$row['id'],
+                'title' => $row['title'],
+                'slug' => $row['slug'],
+                'price' => (float)($row['certificate_price'] ?? 200),
+                'meta' => $meta,
+                'quick_add' => false,
+                'add_data' => null,
+            ];
+        }, $rows);
+    }
+
+    /**
+     * Get a static "publish your work" CTA card.
+     */
+    private function getPublicationCTA(): array {
+        return [[
+            'type' => 'publication_cta',
+            'id' => 0,
+            'title' => 'Опубликуйте свою работу',
+            'slug' => '',
+            'price' => 299.0,
+            'meta' => 'Бесплатная публикация + свидетельство за 299 ₽',
+            'quick_add' => false,
+            'add_data' => null,
+        ]];
+    }
+
+    /**
+     * Get a static "browse webinars" CTA card.
+     */
+    private function getWebinarListingCTA(): array {
+        return [[
+            'type' => 'webinar_listing_cta',
+            'id' => 0,
+            'title' => 'Примите участие в вебинаре',
+            'slug' => '',
+            'price' => 200.0,
+            'meta' => 'Бесплатное участие + сертификат за 200 ₽',
+            'quick_add' => false,
+            'add_data' => null,
+        ]];
     }
 
     /**
