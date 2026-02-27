@@ -4,7 +4,8 @@
 
 /* === Journal Landing Page Hero === */
 .journal-hero-main {
-    background: linear-gradient(135deg, #0077FF 0%, #0088FF 50%, #3399FF 100%);
+    background: transparent;
+    margin-top: 80px;
     padding: 80px 0 100px;
     position: relative;
     overflow: hidden;
@@ -14,11 +15,17 @@
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    opacity: 0.5;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translateX(-50%);
+    width: calc(100% - 40px);
+    max-width: 1440px;
+    height: 100%;
+    background: linear-gradient(135deg, #0077FF 0%, #0088FF 50%, #3399FF 100%);
+    border-radius: 0 0 60px 60px;
+    z-index: 0;
+    opacity: 1;
 }
 
 /* Journal Hero Image - override homepage hero styles */
@@ -48,6 +55,12 @@
 @media (max-width: 768px) {
     .journal-hero-main {
         padding: 50px 0 70px;
+    }
+
+    .journal-hero-main::before {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0 0 40px 40px;
     }
 
     .journal-hero-image img {
@@ -1033,22 +1046,28 @@ textarea.form-control {
 .search-form {
     display: flex;
     gap: 8px;
+    position: relative;
 }
 
-.search-input {
+.search-form .search-input {
     flex: 1;
     padding: 10px 14px;
+    padding-right: 14px;
     border: 2px solid #e5e7eb;
     border-radius: 10px;
     font-size: 0.95rem;
+    width: auto;
 }
 
-.search-input:focus {
+.search-form .search-input:focus {
     outline: none;
     border-color: #0077FF;
 }
 
-.search-btn {
+.search-form .search-btn {
+    position: static;
+    width: auto;
+    height: auto;
     padding: 10px 14px;
     background: #0077FF;
     color: white;
@@ -1548,6 +1567,18 @@ textarea.form-control {
 .cta-card p {
     color: rgba(255, 255, 255, 0.9);
     margin-bottom: 24px;
+}
+
+.cta-card .btn-primary {
+    background: #ffffff;
+    color: #0077FF;
+    font-weight: 600;
+}
+
+.cta-card .btn-primary:hover {
+    background: #f0f4ff;
+    color: #0057D9;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 /* Sidebar */
