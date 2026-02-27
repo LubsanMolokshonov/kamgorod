@@ -50,6 +50,7 @@
                 <div class="footer-column">
                     <h4>Контакты</h4>
                     <p>
+                        Тех. поддержка: <a href="tel:+79223044413">+7 (922) 304-44-13</a><br>
                         Email: <a href="mailto:info@fgos.pro">info@fgos.pro</a><br>
                         Работаем ежедневно с 9:00 до 21:00
                     </p>
