@@ -382,11 +382,18 @@ class WebinarEmailJourney {
         $dates = $startUtc->format('Ymd\THis\Z') . '/' . $endUtc->format('Ymd\THis\Z');
         $title = $emailData['webinar_title'] ?? '';
         $details = 'Вебинар на ФГОС-Практикум. Страница: ' . SITE_URL . '/vebinar/' . ($emailData['webinar_slug'] ?? '');
+        $broadcastUrl = $emailData['broadcast_url'] ?? '';
+        if ($broadcastUrl) {
+            $details .= '
+
+Ссылка на вебинарную комнату: ' . $broadcastUrl;
+        }
 
         return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
             . '&text=' . rawurlencode($title)
             . '&dates=' . $dates
-            . '&details=' . rawurlencode($details);
+            . '&details=' . rawurlencode($details)
+            . ($broadcastUrl ? '&location=' . rawurlencode($broadcastUrl) : '');
     }
 
     /**
