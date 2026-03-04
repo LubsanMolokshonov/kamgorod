@@ -11,28 +11,38 @@
                 <div class="footer-column">
                     <h4>Конкурсы</h4>
                     <p>
-                        <a href="/konkursy/metodika">Методические разработки</a><br>
-                        <a href="/konkursy/vneurochnaya">Внеурочная деятельность</a><br>
-                        <a href="/konkursy/proekty">Проекты учащихся</a><br>
-                        <a href="/konkursy/tvorchestvo">Творческие конкурсы</a>
+                        <a href="/konkursy/metodika/">Методические разработки</a><br>
+                        <a href="/konkursy/vneurochnaya/">Внеурочная деятельность</a><br>
+                        <a href="/konkursy/proekty/">Проекты учащихся</a><br>
+                        <a href="/konkursy/tvorchestvo/">Творческие конкурсы</a>
+                    </p>
+                </div>
+
+                <div class="footer-column">
+                    <h4>Олимпиады</h4>
+                    <p>
+                        <a href="/olimpiady/">Все олимпиады</a><br>
+                        <a href="/olimpiady/pedagogi/dou/">Для педагогов ДОУ</a><br>
+                        <a href="/olimpiady/shkolnikam/">Для школьников</a><br>
+                        <a href="/olimpiady/doshkolnikam/">Для дошкольников</a>
                     </p>
                 </div>
 
                 <div class="footer-column">
                     <h4>Вебинары</h4>
                     <p>
-                        <a href="/pages/webinars.php">Все вебинары</a><br>
-                        <a href="/pages/webinars.php?upcoming=1">Ближайшие вебинары</a><br>
-                        <a href="/pages/webinars.php?archive=1">Архив записей</a>
+                        <a href="/vebinary/">Все вебинары</a><br>
+                        <a href="/vebinary/predstoyashchie/">Ближайшие вебинары</a><br>
+                        <a href="/vebinary/zapisi/">Архив записей</a>
                     </p>
                 </div>
 
                 <div class="footer-column">
                     <h4>Публикации</h4>
                     <p>
-                        <a href="/pages/journal.php">Журнал публикаций</a><br>
-                        <a href="/pages/submit-publication.php">Опубликовать материал</a><br>
-                        <a href="/pages/publication-certificate.php">Получить сертификат</a>
+                        <a href="/zhurnal/">Журнал публикаций</a><br>
+                        <a href="/opublikovat/">Опубликовать материал</a><br>
+                        <a href="/sertifikat-publikacii/">Получить сертификат</a>
                     </p>
                 </div>
 

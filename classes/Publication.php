@@ -179,6 +179,23 @@ class Publication {
             $params[] = $filters['user_id'];
         }
 
+        // Audience filters (v2)
+        if (!empty($filters['category_id'])) {
+            $sql .= " JOIN publication_audience_categories pac ON p.id = pac.publication_id";
+            $wheres[] = "pac.category_id = ?";
+            $params[] = $filters['category_id'];
+        }
+        if (!empty($filters['audience_type_id'])) {
+            $sql .= " JOIN publication_audience_types pat ON p.id = pat.publication_id";
+            $wheres[] = "pat.audience_type_id = ?";
+            $params[] = $filters['audience_type_id'];
+        }
+        if (!empty($filters['specialization_id'])) {
+            $sql .= " JOIN publication_specializations ps ON p.id = ps.publication_id";
+            $wheres[] = "ps.specialization_id = ?";
+            $params[] = $filters['specialization_id'];
+        }
+
         $sql .= " WHERE " . implode(" AND ", $wheres);
 
         // Sorting
@@ -308,27 +325,45 @@ class Publication {
      * @return array Publications
      */
     public function search($query, $filters = [], $limit = 20, $offset = 0) {
-        $sql = "SELECT p.*, pt.name as type_name, u.full_name as author_name,
+        $sql = "SELECT DISTINCT p.*, pt.name as type_name, u.full_name as author_name,
                        MATCH(p.title, p.annotation) AGAINST(? IN NATURAL LANGUAGE MODE) as relevance
                 FROM publications p
                 LEFT JOIN publication_types pt ON p.publication_type_id = pt.id
-                LEFT JOIN users u ON p.user_id = u.id
-                WHERE p.status = 'published'
-                AND MATCH(p.title, p.annotation) AGAINST(? IN NATURAL LANGUAGE MODE)";
+                LEFT JOIN users u ON p.user_id = u.id";
 
+        $wheres = ["p.status = 'published'", "MATCH(p.title, p.annotation) AGAINST(? IN NATURAL LANGUAGE MODE)"];
         $params = [$query, $query];
 
         // Apply filters
         if (!empty($filters['tag_id'])) {
-            $sql .= " AND p.id IN (SELECT publication_id FROM publication_tag_relations WHERE tag_id = ?)";
+            $sql .= " JOIN publication_tag_relations ptr ON p.id = ptr.publication_id";
+            $wheres[] = "ptr.tag_id = ?";
             $params[] = $filters['tag_id'];
         }
 
         if (!empty($filters['type_id'])) {
-            $sql .= " AND p.publication_type_id = ?";
+            $wheres[] = "p.publication_type_id = ?";
             $params[] = $filters['type_id'];
         }
 
+        // Audience filters (v2)
+        if (!empty($filters['category_id'])) {
+            $sql .= " JOIN publication_audience_categories pac ON p.id = pac.publication_id";
+            $wheres[] = "pac.category_id = ?";
+            $params[] = $filters['category_id'];
+        }
+        if (!empty($filters['audience_type_id'])) {
+            $sql .= " JOIN publication_audience_types pat ON p.id = pat.publication_id";
+            $wheres[] = "pat.audience_type_id = ?";
+            $params[] = $filters['audience_type_id'];
+        }
+        if (!empty($filters['specialization_id'])) {
+            $sql .= " JOIN publication_specializations ps ON p.id = ps.publication_id";
+            $wheres[] = "ps.specialization_id = ?";
+            $params[] = $filters['specialization_id'];
+        }
+
+        $sql .= " WHERE " . implode(" AND ", $wheres);
         $sql .= " ORDER BY relevance DESC LIMIT ? OFFSET ?";
         $params[] = $limit;
         $params[] = $offset;
@@ -543,6 +578,23 @@ class Publication {
         if (!empty($filters['type_id'])) {
             $wheres[] = "p.publication_type_id = ?";
             $params[] = $filters['type_id'];
+        }
+
+        // Audience filters (v2)
+        if (!empty($filters['category_id'])) {
+            $sql .= " JOIN publication_audience_categories pac ON p.id = pac.publication_id";
+            $wheres[] = "pac.category_id = ?";
+            $params[] = $filters['category_id'];
+        }
+        if (!empty($filters['audience_type_id'])) {
+            $sql .= " JOIN publication_audience_types pat ON p.id = pat.publication_id";
+            $wheres[] = "pat.audience_type_id = ?";
+            $params[] = $filters['audience_type_id'];
+        }
+        if (!empty($filters['specialization_id'])) {
+            $sql .= " JOIN publication_specializations ps ON p.id = ps.publication_id";
+            $wheres[] = "ps.specialization_id = ?";
+            $params[] = $filters['specialization_id'];
         }
 
         $sql .= " WHERE " . implode(" AND ", $wheres);

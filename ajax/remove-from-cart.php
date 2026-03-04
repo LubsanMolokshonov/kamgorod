@@ -14,6 +14,43 @@ require_once __DIR__ . '/../includes/session.php';
 $registrationId = $_POST['registration_id'] ?? null;
 $certificateId = $_POST['certificate_id'] ?? null;
 $webinarCertificateId = $_POST['webinar_certificate_id'] ?? null;
+$olympiadRegistrationId = $_POST['olympiad_registration_id'] ?? null;
+
+// Handle olympiad registration removal
+if ($olympiadRegistrationId) {
+    $olympEcommerce = null;
+    $stmt = $db->prepare("
+        SELECT r.id, r.olympiad_id, o.title as olympiad_title, o.diploma_price
+        FROM olympiad_registrations r
+        JOIN olympiads o ON r.olympiad_id = o.id
+        WHERE r.id = ?
+    ");
+    $stmt->execute([$olympiadRegistrationId]);
+    $olympData = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($olympData) {
+        $olympEcommerce = [
+            'id' => 'olymp-' . $olympData['olympiad_id'],
+            'name' => $olympData['olympiad_title'],
+            'price' => $olympData['diploma_price'] ?? 169,
+            'category' => 'Олимпиады'
+        ];
+    }
+
+    if (removeOlympiadRegistrationFromCart($olympiadRegistrationId)) {
+        echo json_encode([
+            'success' => true,
+            'message' => 'Диплом олимпиады удалён из корзины',
+            'cart_count' => getCartCount(),
+            'ecommerce' => $olympEcommerce
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Диплом олимпиады не найден в корзине'
+        ]);
+    }
+    exit;
+}
 
 // Handle webinar certificate removal
 if ($webinarCertificateId) {

@@ -36,6 +36,8 @@ require_once __DIR__ . '/../../classes/Registration.php';
 require_once __DIR__ . '/../../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../../classes/Diploma.php';
+require_once __DIR__ . '/../../classes/OlympiadRegistration.php';
+require_once __DIR__ . '/../../classes/OlympiadDiploma.php';
 require_once __DIR__ . '/../../classes/EmailJourney.php';
 require_once __DIR__ . '/../../classes/PublicationEmailChain.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
@@ -213,6 +215,31 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                     $supResult = $diplomaObj->generate($item['registration_id'], 'supervisor');
                     if ($supResult['success']) {
                         logWebhook('INFO', $paymentId, "Diploma (supervisor) generated for registration {$item['registration_id']}", '');
+                    }
+                }
+            }
+        }
+
+        // Mark olympiad registrations as paid and generate olympiad diplomas
+        $olympRegObj = new OlympiadRegistration($GLOBALS['db']);
+        $olympDiplomaObj = new OlympiadDiploma($GLOBALS['db']);
+        foreach ($orderItems as $item) {
+            if (!empty($item['olympiad_registration_id'])) {
+                $olympRegObj->update($item['olympiad_registration_id'], ['status' => 'paid']);
+                logWebhook('INFO', $paymentId, "Olympiad registration {$item['olympiad_registration_id']} marked as paid", '');
+
+                // Generate participant diploma
+                $result = $olympDiplomaObj->generate($item['olympiad_registration_id'], 'participant');
+                if ($result['success']) {
+                    logWebhook('INFO', $paymentId, "Olympiad diploma (participant) generated for reg {$item['olympiad_registration_id']}", '');
+                }
+
+                // Generate supervisor diploma if supervisor exists
+                $olympReg = $olympRegObj->getById($item['olympiad_registration_id']);
+                if ($olympReg && !empty($olympReg['has_supervisor']) && !empty($olympReg['supervisor_name'])) {
+                    $supResult = $olympDiplomaObj->generate($item['olympiad_registration_id'], 'supervisor');
+                    if ($supResult['success']) {
+                        logWebhook('INFO', $paymentId, "Olympiad diploma (supervisor) generated for reg {$item['olympiad_registration_id']}", '');
                     }
                 }
             }

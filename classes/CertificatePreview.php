@@ -294,7 +294,7 @@ class CertificatePreview
      */
     private function createText($text, $x, $y, $size, $fontWeight, $color, $fontFamily, $anchor = 'middle')
     {
-        $escapedText = htmlspecialchars($text, ENT_XML1, 'UTF-8');
+        $escapedText = htmlspecialchars(html_entity_decode($text, ENT_QUOTES, 'UTF-8'), ENT_XML1, 'UTF-8');
         return sprintf(
             '<text x="%s" y="%s" font-family="%s" font-size="%d" font-weight="%s" fill="%s" text-anchor="%s">%s</text>' . "\n",
             $x, $y, $fontFamily, $size, $fontWeight, $color, $anchor, $escapedText

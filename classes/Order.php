@@ -19,7 +19,7 @@ class Order {
      * @param array $certificatesData Optional array of certificate data
      * @param float $grandTotal Optional grand total including certificates
      */
-    public function createFromCart($userId, $cartData, $certificatesData = [], $grandTotal = null, $webinarCertificatesData = []) {
+    public function createFromCart($userId, $cartData, $certificatesData = [], $grandTotal = null, $webinarCertificatesData = [], $olympiadRegistrationsData = []) {
         $orderNumber = self::generateOrderNumber();
 
         // Use totals from cartData (already includes all items with unified 2+1 promotion)
@@ -71,6 +71,18 @@ class Order {
                     'webinar_certificate_id' => $webCert['id'],
                     'price' => $webCert['price'] ?? 200,
                     'is_free_promotion' => !empty($webCert['is_free']) ? 1 : 0
+                ]);
+            }
+        }
+
+        // Create order items for olympiad registrations (with promotion support)
+        if ($orderId && !empty($olympiadRegistrationsData)) {
+            foreach ($olympiadRegistrationsData as $olympReg) {
+                $this->db->insert('order_items', [
+                    'order_id' => $orderId,
+                    'olympiad_registration_id' => $olympReg['id'],
+                    'price' => $olympReg['diploma_price'] ?? OLYMPIAD_DIPLOMA_PRICE,
+                    'is_free_promotion' => !empty($olympReg['is_free']) ? 1 : 0
                 ]);
             }
         }
@@ -148,7 +160,10 @@ class Order {
                     wc.webinar_id, wc.full_name as webinar_cert_name,
                     wc.certificate_number as webinar_cert_number,
                     wc.hours as webinar_cert_hours, wc.price as webinar_cert_price,
-                    w.title as webinar_title
+                    w.title as webinar_title,
+                    olr.olympiad_id, olr.placement as olympiad_placement,
+                    olr.score as olympiad_score,
+                    ol.title as olympiad_title
              FROM order_items oi
              LEFT JOIN registrations r ON oi.registration_id = r.id
              LEFT JOIN competitions c ON r.competition_id = c.id
@@ -156,6 +171,8 @@ class Order {
              LEFT JOIN publications p ON pc.publication_id = p.id
              LEFT JOIN webinar_certificates wc ON oi.webinar_certificate_id = wc.id
              LEFT JOIN webinars w ON wc.webinar_id = w.id
+             LEFT JOIN olympiad_registrations olr ON oi.olympiad_registration_id = olr.id
+             LEFT JOIN olympiads ol ON olr.olympiad_id = ol.id
              WHERE oi.order_id = ?",
             [$orderId]
         );

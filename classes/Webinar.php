@@ -143,11 +143,25 @@ class Webinar {
         $params = [];
         $where = ['w.is_active = 1'];
 
-        // Join audience types if filtering
+        // Join audience category if filtering (Level 0)
+        if (!empty($filters['category_id'])) {
+            $sql .= " JOIN webinar_audience_categories wac ON w.id = wac.webinar_id";
+            $where[] = "wac.category_id = ?";
+            $params[] = $filters['category_id'];
+        }
+
+        // Join audience types if filtering (Level 1)
         if (!empty($filters['audience_type_id'])) {
             $sql .= " JOIN webinar_audience_types wat ON w.id = wat.webinar_id";
             $where[] = "wat.audience_type_id = ?";
             $params[] = $filters['audience_type_id'];
+        }
+
+        // Join specializations if filtering (Level 2)
+        if (!empty($filters['specialization_id'])) {
+            $sql .= " JOIN webinar_specializations ws ON w.id = ws.webinar_id";
+            $where[] = "ws.specialization_id = ?";
+            $params[] = $filters['specialization_id'];
         }
 
         // Status filter
@@ -250,6 +264,66 @@ class Webinar {
             $this->db->insert('webinar_audience_types', [
                 'webinar_id' => $webinarId,
                 'audience_type_id' => $typeId
+            ]);
+        }
+    }
+
+    // ==================== Специализации ====================
+
+    /**
+     * Получить специализации для вебинара
+     */
+    public function getSpecializations($webinarId) {
+        return $this->db->query(
+            "SELECT s.*
+             FROM audience_specializations s
+             JOIN webinar_specializations ws ON s.id = ws.specialization_id
+             WHERE ws.webinar_id = ? AND s.is_active = 1
+             ORDER BY s.specialization_type ASC, s.display_order ASC",
+            [$webinarId]
+        );
+    }
+
+    /**
+     * Установить специализации для вебинара
+     */
+    public function setSpecializations($webinarId, $specializationIds) {
+        $this->db->delete('webinar_specializations', 'webinar_id = ?', [$webinarId]);
+
+        foreach ($specializationIds as $specId) {
+            $this->db->insert('webinar_specializations', [
+                'webinar_id' => $webinarId,
+                'specialization_id' => $specId
+            ]);
+        }
+    }
+
+    // ==================== Категории аудитории ====================
+
+    /**
+     * Получить категории аудитории для вебинара (Level 0)
+     */
+    public function getAudienceCategories($webinarId) {
+        return $this->db->query(
+            "SELECT ac.*
+             FROM audience_categories ac
+             JOIN webinar_audience_categories wac ON ac.id = wac.category_id
+             WHERE wac.webinar_id = ? AND ac.is_active = 1
+             ORDER BY ac.display_order ASC",
+            [$webinarId]
+        );
+    }
+
+    /**
+     * Установить категории аудитории для вебинара
+     */
+    public function setAudienceCategories($webinarId, $categoryIds) {
+        $this->db->delete('webinar_audience_categories', 'webinar_id = ?', [$webinarId]);
+
+        foreach ($categoryIds as $catId) {
+            $this->db->insert('webinar_audience_categories', [
+                'webinar_id' => $webinarId,
+                'category_id' => $catId
             ]);
         }
     }

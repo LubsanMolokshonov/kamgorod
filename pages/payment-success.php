@@ -265,7 +265,7 @@ include __DIR__ . '/../includes/header.php';
             <div class="success-icon">✅</div>
             <h1>Оплата успешно завершена!</h1>
             <p style="font-size: 18px; color: var(--text-medium);">
-                Спасибо за участие в конкурсах!
+                Спасибо за покупку!
             </p>
 
             <div class="order-details">
@@ -289,25 +289,38 @@ include __DIR__ . '/../includes/header.php';
                 </div>
                 <?php endif; ?>
 
-                <h3 style="margin-top: 24px;">Участие в конкурсах:</h3>
+                <h3 style="margin-top: 24px;">Ваши покупки:</h3>
                 <ul class="items-list">
                     <?php foreach ($order['items'] as $item): ?>
                         <li>
-                            <strong><?php echo htmlspecialchars($item['competition_title']); ?></strong><br>
-                            <small style="color: var(--text-medium);">
-                                Номинация: <?php echo htmlspecialchars($item['nomination']); ?>
-                                <?php if ($item['is_free_promotion']): ?>
-                                    <span style="color: #10b981; font-weight: 600;"> • БЕСПЛАТНО (акция 2+1)</span>
-                                <?php endif; ?>
-                            </small>
+                            <?php if (!empty($item['olympiad_registration_id'])): ?>
+                                <strong><?php echo htmlspecialchars($item['olympiad_title']); ?></strong><br>
+                                <small style="color: var(--text-medium);">
+                                    Диплом олимпиады • <?php echo $item['olympiad_placement'] == '1' ? '1 место' : ($item['olympiad_placement'] == '2' ? '2 место' : '3 место'); ?>
+                                </small>
+                            <?php elseif (!empty($item['webinar_certificate_id'])): ?>
+                                <strong><?php echo htmlspecialchars($item['webinar_title']); ?></strong><br>
+                                <small style="color: var(--text-medium);">Сертификат участника вебинара</small>
+                            <?php elseif (!empty($item['certificate_id'])): ?>
+                                <strong><?php echo htmlspecialchars($item['publication_title']); ?></strong><br>
+                                <small style="color: var(--text-medium);">Свидетельство о публикации</small>
+                            <?php elseif (!empty($item['registration_id'])): ?>
+                                <strong><?php echo htmlspecialchars($item['competition_title']); ?></strong><br>
+                                <small style="color: var(--text-medium);">
+                                    Номинация: <?php echo htmlspecialchars($item['nomination']); ?>
+                                </small>
+                            <?php endif; ?>
+                            <?php if ($item['is_free_promotion']): ?>
+                                <small><span style="color: #10b981; font-weight: 600;"> • БЕСПЛАТНО (акция 2+1)</span></small>
+                            <?php endif; ?>
                         </li>
                     <?php endforeach; ?>
                 </ul>
             </div>
 
             <p style="margin-top: 24px;">
-                <strong>Дипломы будут доступны в личном кабинете</strong> после подведения итогов конкурса.
-                Вы также получите уведомление на email <strong><?php echo htmlspecialchars($order['email']); ?></strong>
+                <strong>Дипломы и сертификаты доступны для скачивания в личном кабинете.</strong>
+                Подтверждение оплаты отправлено на email <strong><?php echo htmlspecialchars($order['email']); ?></strong>
             </p>
 
             <a href="/pages/cabinet.php" class="btn-cabinet">Перейти в личный кабинет</a>
@@ -385,6 +398,16 @@ include __DIR__ . '/../includes/header.php';
                         'price' => $item['is_free_promotion'] ? 0 : (float)($item['price'] ?? 299),
                         'brand' => 'Педпортал',
                         'category' => 'Публикации',
+                        'quantity' => 1
+                    ];
+                } elseif (!empty($item['olympiad_registration_id'])) {
+                    // Олимпиада
+                    $ecomProducts[] = [
+                        'id' => 'olymp-' . ($item['olympiad_id'] ?? ''),
+                        'name' => $item['olympiad_title'] ?? '',
+                        'price' => $item['is_free_promotion'] ? 0 : (float)$item['price'],
+                        'brand' => 'Педпортал',
+                        'category' => 'Олимпиады',
                         'quantity' => 1
                     ];
                 } elseif (!empty($item['registration_id'])) {

@@ -8,33 +8,6 @@
 class CartRecommendation {
     private $db;
 
-    /**
-     * Static mapping: publication_tag direction slug => audience_type slugs
-     * Based on seed data in migration 017_seed_publication_data.sql
-     */
-    private static $tagToAudience = [
-        'preschool'         => ['dou'],
-        'primary-school'    => ['nachalnaya-shkola'],
-        'secondary-school'  => ['srednyaya-starshaya-shkola'],
-        'high-school'       => ['srednyaya-starshaya-shkola'],
-        'extra-education'   => ['dou', 'nachalnaya-shkola', 'srednyaya-starshaya-shkola', 'spo'],
-        'special-education' => ['dou', 'nachalnaya-shkola', 'srednyaya-starshaya-shkola', 'spo'],
-        'educational-work'  => ['dou', 'nachalnaya-shkola', 'srednyaya-starshaya-shkola', 'spo'],
-        'psychology'        => ['dou', 'nachalnaya-shkola', 'srednyaya-starshaya-shkola', 'spo'],
-        'innovations'       => ['dou', 'nachalnaya-shkola', 'srednyaya-starshaya-shkola', 'spo'],
-        'health'            => ['dou', 'nachalnaya-shkola', 'srednyaya-starshaya-shkola', 'spo'],
-    ];
-
-    /**
-     * Reverse mapping: audience_type slug => publication_tag direction slugs
-     */
-    private static $audienceToTags = [
-        'dou' => ['preschool', 'extra-education', 'special-education', 'educational-work', 'psychology', 'innovations', 'health'],
-        'nachalnaya-shkola' => ['primary-school', 'extra-education', 'special-education', 'educational-work', 'psychology', 'innovations', 'health'],
-        'srednyaya-starshaya-shkola' => ['secondary-school', 'high-school', 'extra-education', 'special-education', 'educational-work', 'psychology', 'innovations', 'health'],
-        'spo' => ['extra-education', 'special-education', 'educational-work', 'psychology', 'innovations', 'health'],
-    ];
-
     public function __construct($pdo) {
         $this->db = new Database($pdo);
     }
@@ -213,19 +186,18 @@ class CartRecommendation {
             }
         }
 
-        // Publications → publication_tags → static mapping to audience_types
+        // Publications → audience_types via publication_audience_types
         if (!empty($publicationIds)) {
             $placeholders = implode(',', array_fill(0, count($publicationIds), '?'));
             $rows = $this->db->query(
-                "SELECT DISTINCT pt.slug
-                 FROM publication_tags pt
-                 JOIN publication_tag_relations ptr ON pt.id = ptr.tag_id
-                 WHERE ptr.publication_id IN ($placeholders) AND pt.tag_type = 'direction'",
+                "SELECT DISTINCT at.slug
+                 FROM audience_types at
+                 JOIN publication_audience_types pat ON at.id = pat.audience_type_id
+                 WHERE pat.publication_id IN ($placeholders) AND at.is_active = 1",
                 $publicationIds
             );
             foreach ($rows as $row) {
-                $mapped = self::$tagToAudience[$row['slug']] ?? [];
-                $audienceSlugs = array_merge($audienceSlugs, $mapped);
+                $audienceSlugs[] = $row['slug'];
             }
         }
 
@@ -354,23 +326,14 @@ class CartRecommendation {
      * Finds user's published works without a certificate.
      */
     private function getPublicationRecommendations(array $audienceSlugs, array $excludePublicationIds, int $userId, int $limit): array {
-        // Convert audience slugs to publication tag slugs
-        $tagSlugs = [];
-        foreach ($audienceSlugs as $slug) {
-            $tags = self::$audienceToTags[$slug] ?? [];
-            $tagSlugs = array_merge($tagSlugs, $tags);
-        }
-        $tagSlugs = array_unique($tagSlugs);
-
-        if (empty($tagSlugs)) {
+        if (empty($audienceSlugs)) {
             return [];
         }
 
         $limitSafe = intval($limit);
-        $tagPlaceholders = implode(',', array_fill(0, count($tagSlugs), '?'));
-        $params = [];
+        $audiencePlaceholders = implode(',', array_fill(0, count($audienceSlugs), '?'));
+        $params = $audienceSlugs;
         $params[] = $userId;
-        $params = array_merge($params, $tagSlugs);
 
         $excludeClause = '';
         if (!empty($excludePublicationIds)) {
@@ -384,14 +347,13 @@ class CartRecommendation {
                     u.organization, u.position, u.city
              FROM publications p
              JOIN users u ON p.user_id = u.id
-             JOIN publication_tag_relations ptr ON p.id = ptr.publication_id
-             JOIN publication_tags pt ON ptr.tag_id = pt.id
+             JOIN publication_audience_types pat ON p.id = pat.publication_id
+             JOIN audience_types at ON pat.audience_type_id = at.id
              LEFT JOIN publication_certificates pc ON p.id = pc.publication_id
              WHERE p.status = 'published'
+               AND at.slug IN ($audiencePlaceholders)
                AND p.user_id = ?
                AND pc.id IS NULL
-               AND pt.tag_type = 'direction'
-               AND pt.slug IN ($tagPlaceholders)
                $excludeClause
              GROUP BY p.id
              ORDER BY p.published_at DESC

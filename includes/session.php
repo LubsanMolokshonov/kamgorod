@@ -134,6 +134,53 @@ function removeWebinarCertificateFromCart($webinarCertificateId) {
 }
 
 /**
+ * Add olympiad registration to cart
+ */
+function addOlympiadRegistrationToCart($registrationId) {
+    initSession();
+
+    if (!isset($_SESSION['cart_olympiad_registrations'])) {
+        $_SESSION['cart_olympiad_registrations'] = [];
+    }
+
+    if (!in_array($registrationId, $_SESSION['cart_olympiad_registrations'])) {
+        $_SESSION['cart_olympiad_registrations'][] = $registrationId;
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Get olympiad registrations from cart
+ */
+function getCartOlympiadRegistrations() {
+    initSession();
+    return $_SESSION['cart_olympiad_registrations'] ?? [];
+}
+
+/**
+ * Remove olympiad registration from cart
+ */
+function removeOlympiadRegistrationFromCart($registrationId) {
+    initSession();
+
+    if (!isset($_SESSION['cart_olympiad_registrations'])) {
+        return false;
+    }
+
+    $key = array_search($registrationId, $_SESSION['cart_olympiad_registrations']);
+
+    if ($key !== false) {
+        unset($_SESSION['cart_olympiad_registrations'][$key]);
+        $_SESSION['cart_olympiad_registrations'] = array_values($_SESSION['cart_olympiad_registrations']);
+        return true;
+    }
+
+    return false;
+}
+
+/**
  * Remove item from cart
  */
 function removeFromCart($registrationId) {
@@ -162,20 +209,21 @@ function clearCart() {
     $_SESSION['cart'] = [];
     $_SESSION['cart_certificates'] = [];
     $_SESSION['cart_webinar_certificates'] = [];
+    $_SESSION['cart_olympiad_registrations'] = [];
 }
 
 /**
  * Get cart count (registrations + certificates)
  */
 function getCartCount() {
-    return count(getCart()) + count(getCartCertificates()) + count(getCartWebinarCertificates());
+    return count(getCart()) + count(getCartCertificates()) + count(getCartWebinarCertificates()) + count(getCartOlympiadRegistrations());
 }
 
 /**
  * Check if cart is empty
  */
 function isCartEmpty() {
-    return count(getCart()) === 0 && count(getCartCertificates()) === 0 && count(getCartWebinarCertificates()) === 0;
+    return count(getCart()) === 0 && count(getCartCertificates()) === 0 && count(getCartWebinarCertificates()) === 0 && count(getCartOlympiadRegistrations()) === 0;
 }
 
 /**
@@ -223,6 +271,15 @@ function getCartTotal() {
                 $total += (float)($webCert['price'] ?? 200);
             }
         }
+    }
+
+    // Add olympiad registrations total
+    $olympiadRegistrations = getCartOlympiadRegistrations();
+    if (!empty($olympiadRegistrations)) {
+        require_once __DIR__ . '/../classes/OlympiadRegistration.php';
+        $olympRegObj = new OlympiadRegistration($db);
+        $olympCartData = $olympRegObj->calculateCartTotal($olympiadRegistrations);
+        $total += $olympCartData['total'];
     }
 
     return $total;

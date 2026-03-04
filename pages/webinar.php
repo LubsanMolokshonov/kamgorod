@@ -30,7 +30,7 @@ $webinar = $webinarObj->getBySlug($slug);
 if (!$webinar) {
     http_response_code(404);
     include __DIR__ . '/../includes/header.php';
-    echo '<div class="container" style="padding: 100px 0; text-align: center;"><h1>Вебинар не найден</h1><p>Возможно, он был удален или перемещен.</p><a href="/pages/webinars.php" class="btn btn-primary">Все вебинары</a></div>';
+    echo '<div class="container" style="padding: 100px 0; text-align: center;"><h1>Вебинар не найден</h1><p>Возможно, он был удален или перемещен.</p><a href="/vebinary/" class="btn btn-primary">Все вебинары</a></div>';
     include __DIR__ . '/../includes/footer.php';
     exit;
 }

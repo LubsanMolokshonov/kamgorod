@@ -126,7 +126,7 @@ try {
         // The 0.47 factor is calibrated for proper display
         $fontSizePercent = ($fontSize / 210) * 100 * 0.47;
 
-        $escapedText = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        $escapedText = htmlspecialchars(html_entity_decode($text, ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
 
         return sprintf(
             '<div class="diploma-field" style="left: %.2f%%; top: %.2f%%; width: %.2f%%; font-size: %.3fvw; font-weight: %s; text-align: %s; color: %s;">%s</div>',

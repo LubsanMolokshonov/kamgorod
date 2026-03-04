@@ -9,17 +9,36 @@ require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/classes/Database.php';
 require_once __DIR__ . '/classes/Competition.php';
 require_once __DIR__ . '/classes/AudienceType.php';
+require_once __DIR__ . '/classes/AudienceCategory.php';
 require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/url-helper.php';
+require_once __DIR__ . '/includes/seo-url.php';
+
+// Маппинг cc (URL slug) → category (internal key) для SEO URL из .htaccess
+if (isset($_GET['cc'])) {
+    $ccMap = defined('COMPETITION_CATEGORY_URL_REVERSE') ? COMPETITION_CATEGORY_URL_REVERSE : [];
+    $_GET['category'] = $ccMap[$_GET['cc']] ?? 'all';
+}
+
+// Get filters from URL
+$category = $_GET['category'] ?? 'all';
+$selectedCategory = $_GET['ac'] ?? '';
+$selectedType = $_GET['at'] ?? '';
+$selectedSpec = $_GET['as'] ?? '';
+
+// 301-редирект со старых query-param URL на чистые SEO URL
+redirectToSeoUrl('konkursy', [
+    'category' => $category !== 'all' ? $category : '',
+    'ac' => $selectedCategory,
+    'at' => $selectedType,
+    'as' => $selectedSpec,
+]);
 
 // Page metadata
 $pageTitle = 'Конкурсы для педагогов и школьников 2025-2026 | ' . SITE_NAME;
 $pageDescription = 'Всероссийские и международные конкурсы для учителей, педагогов и школьников. Получите диплом участника после оплаты!';
-
-// Get filters from URL
-$category = $_GET['category'] ?? 'all';
-$audienceFilter = $_GET['audience'] ?? '';
-$specializationFilter = $_GET['specialization'] ?? '';
+$additionalCSS = ['/assets/css/audience-filter.css?v=' . time()];
+$additionalJS = ['/assets/js/audience-filter.js?v=' . time()];
 
 // Pagination settings
 $perPage = 21;
@@ -30,27 +49,41 @@ if ($category !== 'all' && !in_array($category, $validCategories)) {
     $category = 'all';
 }
 
-// Get audience types for selection
+// Audience segmentation (3-level)
+$audienceCatObj = new AudienceCategory($db);
 $audienceTypeObj = new AudienceType($db);
-$audienceTypes = $audienceTypeObj->getAll();
+$audienceCategories = $audienceCatObj->getAll();
 
-// Get specializations if audience type is selected
-$specializations = [];
-if (!empty($audienceFilter)) {
-    $selectedAudienceType = $audienceTypeObj->getBySlug($audienceFilter);
-    if ($selectedAudienceType) {
-        $specializations = $audienceTypeObj->getSpecializations($selectedAudienceType['id']);
+// Resolve selected audience hierarchy
+$selectedCategoryData = null;
+$audienceTypes = [];
+$selectedTypeData = null;
+$audienceSpecializations = [];
+
+if ($selectedCategory) {
+    $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory);
+    if ($selectedCategoryData) {
+        $audienceTypes = $audienceCatObj->getAudienceTypes($selectedCategoryData['id']);
+    }
+}
+if ($selectedType) {
+    $selectedTypeData = $audienceTypeObj->getBySlug($selectedType);
+    if ($selectedTypeData) {
+        $audienceSpecializations = $audienceTypeObj->getSpecializations($selectedTypeData['id']);
     }
 }
 
 // Get competitions with filters
 $competitionObj = new Competition($db);
 $filters = [];
-if (!empty($audienceFilter)) {
-    $filters['audience_type'] = $audienceFilter;
+if ($selectedCategoryData) {
+    $filters['audience_category'] = $selectedCategoryData['id'];
 }
-if (!empty($specializationFilter)) {
-    $filters['specialization'] = $specializationFilter;
+if (!empty($selectedType)) {
+    $filters['audience_type'] = $selectedType;
+}
+if (!empty($selectedSpec)) {
+    $filters['specialization'] = $selectedSpec;
 }
 if ($category !== 'all') {
     $filters['category'] = $category;
@@ -183,200 +216,29 @@ include __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- Секция выбора аудитории -->
-<div class="container mt-40">
-    <div class="audience-cards-grid">
-        <?php foreach ($audienceTypes as $type): ?>
-        <a href="/<?php echo $type['slug']; ?>" class="audience-card">
-            <h3><?php echo htmlspecialchars($type['name']); ?></h3>
-            <p><?php echo htmlspecialchars($type['description']); ?></p>
-            <span class="audience-card-arrow">→</span>
+<!-- Unified Audience Filter -->
+<div class="container mt-40" id="competitions">
+    <?php
+    $audienceFilterBaseUrl = '/konkursy';
+    $extraPathPrefix = getSectionPathPrefix('konkursy', ['category' => $category]);
+    include __DIR__ . '/includes/audience-filter.php';
+    ?>
+
+    <!-- Категория конкурса -->
+    <div class="af-categories" style="margin-top: 8px; margin-bottom: 24px;">
+        <a href="<?php echo buildSeoUrl('konkursy', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+           class="af-pill<?php echo $category === 'all' ? ' active' : ''; ?>">Все конкурсы</a>
+        <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
+        <a href="<?php echo buildSeoUrl('konkursy', ['category' => $cat, 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+           class="af-pill<?php echo $category === $cat ? ' active' : ''; ?>">
+            <?php echo htmlspecialchars($label); ?>
         </a>
         <?php endforeach; ?>
     </div>
-</div>
-
-<!-- Competitions Section with Sidebar -->
-<div class="container" id="competitions">
-    <!-- Мобильные фильтры (чипы) -->
-    <div class="mobile-filters">
-        <div class="mobile-filters-scroll">
-            <!-- Кнопка сортировки/фильтра -->
-            <button class="filter-chip filter-chip-icon" data-filter="sort">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-            </button>
-            <!-- Тип учреждения -->
-            <button class="filter-chip <?php echo !empty($audienceFilter) ? 'active' : ''; ?>" data-filter="audience">
-                <span class="filter-chip-text">Тип учреждения</span>
-                <?php if (!empty($audienceFilter)): ?>
-                <span class="filter-chip-clear" data-clear="audience">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </span>
-                <?php endif; ?>
-            </button>
-            <!-- Специализация -->
-            <button class="filter-chip <?php echo !empty($specializationFilter) ? 'active' : ''; ?>" data-filter="specialization" id="specializationChip" style="<?php echo empty($audienceFilter) ? 'display:none;' : ''; ?>">
-                <span class="filter-chip-text">Специализация</span>
-                <?php if (!empty($specializationFilter)): ?>
-                <span class="filter-chip-clear" data-clear="specialization">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </span>
-                <?php endif; ?>
-            </button>
-            <!-- Категория -->
-            <button class="filter-chip <?php echo $category !== 'all' ? 'active' : ''; ?>" data-filter="category">
-                <span class="filter-chip-text">Категория</span>
-                <?php if ($category !== 'all'): ?>
-                <span class="filter-chip-clear" data-clear="category">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </span>
-                <?php endif; ?>
-            </button>
-        </div>
-    </div>
-
-    <!-- Попап фильтра "Тип учреждения" -->
-    <div class="filter-popup" id="audiencePopup">
-        <div class="filter-popup-overlay"></div>
-        <div class="filter-popup-content">
-            <div class="filter-popup-header">
-                <span class="filter-popup-title">Тип учреждения</span>
-                <button class="filter-popup-cancel">Отмена</button>
-            </div>
-            <div class="filter-popup-body">
-                <label class="filter-popup-option">
-                    <input type="radio" name="mobile_audience" value="" <?php echo empty($audienceFilter) ? 'checked' : ''; ?>>
-                    <span>Все</span>
-                </label>
-                <?php foreach ($audienceTypes as $type): ?>
-                <label class="filter-popup-option">
-                    <input type="radio" name="mobile_audience" value="<?php echo $type['slug']; ?>" <?php echo $audienceFilter === $type['slug'] ? 'checked' : ''; ?>>
-                    <span><?php echo htmlspecialchars($type['name']); ?></span>
-                </label>
-                <?php endforeach; ?>
-            </div>
-            <div class="filter-popup-footer">
-                <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Попап фильтра "Специализация" -->
-    <div class="filter-popup" id="specializationPopup">
-        <div class="filter-popup-overlay"></div>
-        <div class="filter-popup-content">
-            <div class="filter-popup-header">
-                <span class="filter-popup-title">Специализация</span>
-                <button class="filter-popup-cancel">Отмена</button>
-            </div>
-            <div class="filter-popup-body" id="mobileSpecializationList">
-                <label class="filter-popup-option">
-                    <input type="radio" name="mobile_specialization" value="" <?php echo empty($specializationFilter) ? 'checked' : ''; ?>>
-                    <span>Все специализации</span>
-                </label>
-                <?php foreach ($specializations as $spec): ?>
-                <label class="filter-popup-option">
-                    <input type="radio" name="mobile_specialization" value="<?php echo $spec['slug']; ?>" <?php echo $specializationFilter === $spec['slug'] ? 'checked' : ''; ?>>
-                    <span><?php echo htmlspecialchars($spec['name']); ?></span>
-                </label>
-                <?php endforeach; ?>
-            </div>
-            <div class="filter-popup-footer">
-                <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Попап фильтра "Категория" -->
-    <div class="filter-popup" id="categoryPopup">
-        <div class="filter-popup-overlay"></div>
-        <div class="filter-popup-content">
-            <div class="filter-popup-header">
-                <span class="filter-popup-title">Категория конкурса</span>
-                <button class="filter-popup-cancel">Отмена</button>
-            </div>
-            <div class="filter-popup-body">
-                <label class="filter-popup-option">
-                    <input type="radio" name="mobile_category" value="all" <?php echo $category === 'all' ? 'checked' : ''; ?>>
-                    <span>Все конкурсы</span>
-                </label>
-                <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
-                <label class="filter-popup-option">
-                    <input type="radio" name="mobile_category" value="<?php echo $cat; ?>" <?php echo $category === $cat ? 'checked' : ''; ?>>
-                    <span><?php echo htmlspecialchars($label); ?></span>
-                </label>
-                <?php endforeach; ?>
-            </div>
-            <div class="filter-popup-footer">
-                <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
-            </div>
-        </div>
-    </div>
 
     <div class="competitions-layout">
-        <!-- Сайдбар с фильтрами -->
-        <aside class="sidebar-filters">
-            <div class="sidebar-section">
-                <h4>Тип учреждения</h4>
-                <div class="filter-checkboxes">
-                    <label class="filter-checkbox">
-                        <input type="radio" name="audience" value="" <?php echo empty($audienceFilter) ? 'checked' : ''; ?>>
-                        <span class="checkbox-label">Все</span>
-                    </label>
-                    <?php foreach ($audienceTypes as $type): ?>
-                    <label class="filter-checkbox">
-                        <input type="radio" name="audience" value="<?php echo $type['slug']; ?>" <?php echo $audienceFilter === $type['slug'] ? 'checked' : ''; ?>>
-                        <span class="checkbox-label"><?php echo htmlspecialchars($type['name']); ?></span>
-                    </label>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-            <!-- Специализации (динамически подгружаются) -->
-            <div class="sidebar-section" id="specializationSection" style="<?php echo empty($specializations) ? 'display:none;' : ''; ?>">
-                <h4>Специализация</h4>
-                <div class="filter-checkboxes" id="specializationList">
-                    <label class="filter-checkbox">
-                        <input type="radio" name="specialization" value="" <?php echo empty($specializationFilter) ? 'checked' : ''; ?>>
-                        <span class="checkbox-label">Все специализации</span>
-                    </label>
-                    <?php foreach ($specializations as $spec): ?>
-                    <label class="filter-checkbox">
-                        <input type="radio" name="specialization" value="<?php echo $spec['slug']; ?>" <?php echo $specializationFilter === $spec['slug'] ? 'checked' : ''; ?>>
-                        <span class="checkbox-label"><?php echo htmlspecialchars($spec['name']); ?></span>
-                    </label>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-            <div class="sidebar-section">
-                <h4>Категория конкурса</h4>
-                <div class="filter-checkboxes">
-                    <label class="filter-checkbox">
-                        <input type="checkbox" name="category" value="all" <?php echo $category === 'all' ? 'checked' : ''; ?>>
-                        <span class="checkbox-label">Все конкурсы</span>
-                    </label>
-                    <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
-                    <label class="filter-checkbox">
-                        <input type="checkbox" name="category" value="<?php echo $cat; ?>" <?php echo $category === $cat ? 'checked' : ''; ?>>
-                        <span class="checkbox-label"><?php echo htmlspecialchars($label); ?></span>
-                    </label>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-        </aside>
-
         <!-- Контент с карточками -->
-        <div class="content-area">
+        <div class="content-area" style="max-width: 100%; flex: 1;">
             <?php include __DIR__ . '/includes/catalog-search.php'; ?>
 
             <div class="competitions-count mb-20">
@@ -725,378 +587,61 @@ window.dataLayer.push({
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const categoryCheckboxes = document.querySelectorAll('input[name="category"]');
-    const allCategoryCheckbox = document.querySelector('input[name="category"][value="all"]');
-    const audienceRadios = document.querySelectorAll('input[name="audience"]');
-    const specializationSection = document.getElementById('specializationSection');
-    const specializationList = document.getElementById('specializationList');
-    const loadMoreBtn = document.getElementById('loadMoreBtn');
-    const competitionsGrid = document.getElementById('competitionsGrid');
-    const loadMoreContainer = document.getElementById('loadMoreContainer');
+    var loadMoreBtn = document.getElementById('loadMoreBtn');
+    var competitionsGrid = document.getElementById('competitionsGrid');
+    var loadMoreContainer = document.getElementById('loadMoreContainer');
+    var categoryLabels = <?php echo json_encode(COMPETITION_CATEGORIES, JSON_UNESCAPED_UNICODE); ?>;
+    var allCompetitions = <?php echo json_encode(array_slice($allCompetitions, $perPage), JSON_UNESCAPED_UNICODE); ?>;
+    var perPage = <?php echo $perPage; ?>;
+    var currentOffset = 0;
 
-    // Функция применения фильтров (переход на страницу с параметрами)
-    function applyFilters() {
-        const selectedAudience = document.querySelector('input[name="audience"]:checked');
-        const selectedSpec = document.querySelector('input[name="specialization"]:checked');
-        const checkedCategories = Array.from(categoryCheckboxes)
-            .filter(cb => cb.checked && cb.value !== 'all')
-            .map(cb => cb.value);
-
-        let url = '/konkursy';
-        const params = [];
-
-        if (selectedAudience && selectedAudience.value) {
-            params.push('audience=' + selectedAudience.value);
-        }
-        if (selectedSpec && selectedSpec.value) {
-            params.push('specialization=' + selectedSpec.value);
-        }
-        if (checkedCategories.length === 1) {
-            params.push('category=' + checkedCategories[0]);
-        }
-
-        if (params.length > 0) {
-            url += '?' + params.join('&');
-        }
-        url += '#competitions';
-
-        window.location.href = url;
-    }
-
-    // Логика чекбоксов категорий - автоприменение при изменении
-    categoryCheckboxes.forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            if (this.value === 'all' && this.checked) {
-                categoryCheckboxes.forEach(function(cb) {
-                    if (cb.value !== 'all') cb.checked = false;
-                });
-            } else if (this.value !== 'all' && this.checked) {
-                if (allCategoryCheckbox) allCategoryCheckbox.checked = false;
-            }
-
-            const anyChecked = Array.from(categoryCheckboxes).some(cb => cb.checked);
-            if (!anyChecked && allCategoryCheckbox) {
-                allCategoryCheckbox.checked = true;
-            }
-
-            // Автоматически применить фильтры
-            applyFilters();
-        });
-    });
-
-    // Загрузка специализаций и автоприменение при выборе типа учреждения
-    audienceRadios.forEach(function(radio) {
-        radio.addEventListener('change', function() {
-            const audienceSlug = this.value;
-
-            if (!audienceSlug) {
-                // Скрыть секцию специализаций и применить фильтры
-                specializationSection.style.display = 'none';
-                applyFilters();
-                return;
-            }
-
-            // Загрузить специализации через AJAX, потом применить фильтры
-            fetch('/ajax/get-specializations.php?audience=' + encodeURIComponent(audienceSlug))
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.specializations.length > 0) {
-                        // Построить HTML для специализаций
-                        let html = '<label class="filter-checkbox">' +
-                            '<input type="radio" name="specialization" value="" checked>' +
-                            '<span class="checkbox-label">Все специализации</span>' +
-                            '</label>';
-
-                        data.specializations.forEach(function(spec) {
-                            html += '<label class="filter-checkbox">' +
-                                '<input type="radio" name="specialization" value="' + spec.slug + '">' +
-                                '<span class="checkbox-label">' + spec.name + '</span>' +
-                                '</label>';
-                        });
-
-                        specializationList.innerHTML = html;
-                        specializationSection.style.display = 'block';
-
-                        // Добавить обработчики на новые radio кнопки специализаций
-                        document.querySelectorAll('input[name="specialization"]').forEach(function(specRadio) {
-                            specRadio.addEventListener('change', applyFilters);
-                        });
-                    } else {
-                        specializationSection.style.display = 'none';
-                    }
-                    // Применить фильтры после загрузки специализаций
-                    applyFilters();
-                })
-                .catch(error => {
-                    console.error('Ошибка загрузки специализаций:', error);
-                    specializationSection.style.display = 'none';
-                    applyFilters();
-                });
-        });
-    });
-
-    // Обработчик для существующих radio специализаций (при загрузке страницы с уже выбранной аудиторией)
-    document.querySelectorAll('input[name="specialization"]').forEach(function(specRadio) {
-        specRadio.addEventListener('change', applyFilters);
-    });
-
-    // ========================================
-    // МОБИЛЬНЫЕ ФИЛЬТРЫ (Ozon Style)
-    // ========================================
-
-    const filterChips = document.querySelectorAll('.filter-chip');
-    const filterPopups = document.querySelectorAll('.filter-popup');
-    const specializationChip = document.getElementById('specializationChip');
-    const mobileSpecializationList = document.getElementById('mobileSpecializationList');
-
-    // Функция открытия попапа
-    function openPopup(popupId) {
-        const popup = document.getElementById(popupId);
-        if (popup) {
-            popup.classList.add('show');
-            document.body.classList.add('popup-open');
-            setTimeout(() => {
-                popup.querySelector('.filter-popup-content').style.transform = 'translateY(0)';
-            }, 10);
-        }
-    }
-
-    // Функция закрытия попапа
-    function closePopup(popup) {
-        popup.classList.remove('show');
-        document.body.classList.remove('popup-open');
-    }
-
-    // Функция сброса конкретного фильтра
-    function clearFilter(filterType) {
-        // Получаем текущие параметры URL
-        const urlParams = new URLSearchParams(window.location.search);
-
-        if (filterType === 'audience') {
-            urlParams.delete('audience');
-            urlParams.delete('specialization'); // При сбросе типа учреждения сбрасываем и специализацию
-        } else if (filterType === 'specialization') {
-            urlParams.delete('specialization');
-        } else if (filterType === 'category') {
-            urlParams.delete('category');
-        }
-
-        // Переходим на страницу с обновленными параметрами
-        let url = '/konkursy';
-        const paramsString = urlParams.toString();
-        if (paramsString) {
-            url += '?' + paramsString;
-        }
-        url += '#competitions';
-        window.location.href = url;
-    }
-
-    // Обработчик клика на крестики сброса
-    document.querySelectorAll('.filter-chip-clear').forEach(function(clearBtn) {
-        clearBtn.addEventListener('click', function(e) {
-            e.stopPropagation(); // Не открывать попап
-            const filterType = this.dataset.clear;
-            clearFilter(filterType);
-        });
-    });
-
-    // Функция применения мобильных фильтров
-    function applyMobileFilters() {
-        const selectedAudience = document.querySelector('input[name="mobile_audience"]:checked');
-        const selectedSpec = document.querySelector('input[name="mobile_specialization"]:checked');
-        const selectedCategory = document.querySelector('input[name="mobile_category"]:checked');
-
-        let url = '/konkursy';
-        const params = [];
-
-        if (selectedAudience && selectedAudience.value) {
-            params.push('audience=' + selectedAudience.value);
-        }
-        if (selectedSpec && selectedSpec.value) {
-            params.push('specialization=' + selectedSpec.value);
-        }
-        if (selectedCategory && selectedCategory.value && selectedCategory.value !== 'all') {
-            params.push('category=' + selectedCategory.value);
-        }
-
-        if (params.length > 0) {
-            url += '?' + params.join('&');
-        }
-        url += '#competitions';
-
-        window.location.href = url;
-    }
-
-    // Обработчик клика на чипы
-    filterChips.forEach(function(chip) {
-        chip.addEventListener('click', function() {
-            const filterType = this.dataset.filter;
-            let popupId = '';
-
-            if (filterType === 'audience') {
-                popupId = 'audiencePopup';
-            } else if (filterType === 'specialization') {
-                popupId = 'specializationPopup';
-            } else if (filterType === 'category') {
-                popupId = 'categoryPopup';
-            }
-
-            if (popupId) {
-                openPopup(popupId);
-            }
-        });
-    });
-
-    // Обработчик закрытия попапов
-    filterPopups.forEach(function(popup) {
-        // Закрытие по клику на оверлей
-        const overlay = popup.querySelector('.filter-popup-overlay');
-        if (overlay) {
-            overlay.addEventListener('click', function() {
-                closePopup(popup);
-            });
-        }
-
-        // Закрытие по кнопке "Отмена"
-        const cancelBtn = popup.querySelector('.filter-popup-cancel');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', function() {
-                closePopup(popup);
-            });
-        }
-
-        // Кнопка "Закрыть" - применяет фильтры
-        const applyBtn = popup.querySelector('.filter-popup-apply');
-        if (applyBtn) {
-            applyBtn.addEventListener('click', function() {
-                closePopup(popup);
-                applyMobileFilters();
-            });
-        }
-    });
-
-    // Обработчик выбора типа учреждения в мобильном попапе
-    document.querySelectorAll('input[name="mobile_audience"]').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-            const audienceSlug = this.value;
-
-            if (!audienceSlug) {
-                // Скрыть чип специализации
-                if (specializationChip) {
-                    specializationChip.style.display = 'none';
-                }
-                return;
-            }
-
-            // Загрузить специализации через AJAX
-            fetch('/ajax/get-specializations.php?audience=' + encodeURIComponent(audienceSlug))
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.specializations.length > 0) {
-                        // Показать чип специализации
-                        if (specializationChip) {
-                            specializationChip.style.display = 'flex';
-                        }
-
-                        // Обновить список специализаций в попапе
-                        if (mobileSpecializationList) {
-                            let html = '<label class="filter-popup-option">' +
-                                '<input type="radio" name="mobile_specialization" value="" checked>' +
-                                '<span>Все специализации</span>' +
-                                '</label>';
-
-                            data.specializations.forEach(function(spec) {
-                                html += '<label class="filter-popup-option">' +
-                                    '<input type="radio" name="mobile_specialization" value="' + spec.slug + '">' +
-                                    '<span>' + spec.name + '</span>' +
-                                    '</label>';
-                            });
-
-                            mobileSpecializationList.innerHTML = html;
-                        }
-                    } else {
-                        // Скрыть чип специализации
-                        if (specializationChip) {
-                            specializationChip.style.display = 'none';
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка загрузки специализаций:', error);
-                    if (specializationChip) {
-                        specializationChip.style.display = 'none';
-                    }
-                });
-        });
-    });
-
-    // Загрузка больше конкурсов
-    if (loadMoreBtn) {
+    // Загрузка больше конкурсов (клиентская пагинация)
+    if (loadMoreBtn && allCompetitions.length > 0) {
         loadMoreBtn.addEventListener('click', function() {
-            const offset = parseInt(this.dataset.offset);
-            const btn = this;
+            var btn = this;
+            var batch = allCompetitions.slice(currentOffset, currentOffset + perPage);
+            if (batch.length === 0) return;
 
-            // Получить текущие фильтры
-            const selectedAudience = document.querySelector('input[name="audience"]:checked');
-            const selectedSpec = document.querySelector('input[name="specialization"]:checked');
-            const checkedCategories = Array.from(categoryCheckboxes)
-                .filter(cb => cb.checked && cb.value !== 'all')
-                .map(cb => cb.value);
-
-            // Построить URL
-            let url = '/ajax/get-competitions.php?offset=' + offset + '&limit=21';
-
-            if (selectedAudience && selectedAudience.value) {
-                url += '&audience=' + encodeURIComponent(selectedAudience.value);
-            }
-            if (selectedSpec && selectedSpec.value) {
-                url += '&specialization=' + encodeURIComponent(selectedSpec.value);
-            }
-            if (checkedCategories.length === 1) {
-                url += '&category=' + encodeURIComponent(checkedCategories[0]);
-            }
-
-            // Показать загрузку
             btn.disabled = true;
             btn.textContent = 'Загрузка...';
 
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Добавить новые карточки
-                        competitionsGrid.insertAdjacentHTML('beforeend', data.html);
+            var html = '';
+            batch.forEach(function(comp) {
+                var price = new Intl.NumberFormat('ru-RU').format(comp.price);
+                var desc = comp.description ? comp.description.substring(0, 150) + '...' : '';
+                var slug = comp.slug || '';
+                html += '<div class="competition-card" data-category="' + (comp.category || '') + '" data-competition-id="' + comp.id + '">' +
+                    '<span class="competition-category">' + (categoryLabels[comp.category] || comp.category || '') + '</span>' +
+                    '<h3>' + (comp.title || '') + '</h3>' +
+                    '<p>' + desc + '</p>' +
+                    '<div class="competition-price">' + price + ' ₽ <span>/ участие</span></div>' +
+                    '<a href="/konkursy/' + slug + '" class="btn btn-primary btn-block">Принять участие</a>' +
+                    '</div>';
+            });
 
-                        // Обновить offset
-                        btn.dataset.offset = data.nextOffset;
+            competitionsGrid.insertAdjacentHTML('beforeend', html);
+            currentOffset += perPage;
 
-                        // Скрыть кнопку если больше нет конкурсов
-                        if (!data.hasMore) {
-                            loadMoreContainer.style.display = 'none';
-                        } else {
-                            btn.disabled = false;
-                            btn.textContent = 'Показать больше конкурсов';
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка загрузки конкурсов:', error);
-                    btn.disabled = false;
-                    btn.textContent = 'Показать больше конкурсов';
-                });
+            if (currentOffset >= allCompetitions.length) {
+                loadMoreContainer.style.display = 'none';
+            } else {
+                btn.disabled = false;
+                btn.textContent = 'Показать больше конкурсов';
+            }
         });
     }
 
     // E-commerce: Click на конкурс
     document.querySelectorAll('.competition-card a.btn').forEach(function(link) {
-        link.addEventListener('click', function(e) {
-            const card = this.closest('.competition-card');
-            const productData = {
+        link.addEventListener('click', function() {
+            var card = this.closest('.competition-card');
+            if (!card) return;
+            var productData = {
                 "id": card.dataset.competitionId,
-                "name": card.querySelector('h3').textContent,
-                "price": parseFloat(card.querySelector('.competition-price').textContent.replace(/[^\d]/g, '')),
+                "name": card.querySelector('h3') ? card.querySelector('h3').textContent : '',
+                "price": parseFloat((card.querySelector('.competition-price') ? card.querySelector('.competition-price').textContent : '0').replace(/[^\d]/g, '')),
                 "brand": "Педпортал",
-                "category": card.querySelector('.competition-category').textContent.trim()
+                "category": card.querySelector('.competition-category') ? card.querySelector('.competition-category').textContent.trim() : ''
             };
 
             window.dataLayer = window.dataLayer || [];
@@ -1104,7 +649,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 "ecommerce": {
                     "currencyCode": "RUB",
                     "click": {
-                        "actionField": {"list": "Главная страница"},
+                        "actionField": {"list": "Каталог конкурсов"},
                         "products": [productData]
                     }
                 }

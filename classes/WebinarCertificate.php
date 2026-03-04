@@ -396,7 +396,7 @@ HTML;
         $color = $position['color'] ?? '#000000';
         $maxWidth = $position['max_width'] ?? 180;
 
-        $escapedText = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        $escapedText = htmlspecialchars(html_entity_decode($text, ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
         $width = $maxWidth . 'mm';
         $leftPos = $textAlign === 'center' ? ($x - ($maxWidth / 2)) . 'mm' : $x . 'mm';
 

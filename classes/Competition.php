@@ -6,9 +6,25 @@
 
 class Competition {
     private $db;
+    private $v2Ready = null;
 
     public function __construct($pdo) {
         $this->db = new Database($pdo);
+    }
+
+    /**
+     * Проверить, применена ли миграция v2
+     */
+    private function isV2() {
+        if ($this->v2Ready === null) {
+            try {
+                $this->db->queryOne("SELECT 1 FROM audience_categories LIMIT 1");
+                $this->v2Ready = true;
+            } catch (\Exception $e) {
+                $this->v2Ready = false;
+            }
+        }
+        return $this->v2Ready;
     }
 
     /**
@@ -289,15 +305,73 @@ class Competition {
      * @return array Массив специализаций
      */
     public function getSpecializations($competitionId) {
+        if ($this->isV2()) {
+            return $this->db->query(
+                "SELECT s.*
+                 FROM audience_specializations s
+                 JOIN competition_specializations cs ON s.id = cs.specialization_id
+                 WHERE cs.competition_id = ? AND s.is_active = 1
+                 ORDER BY s.specialization_type ASC, s.display_order ASC",
+                [$competitionId]
+            );
+        }
+
         return $this->db->query(
-            "SELECT s.*, at.name as audience_type_name, at.slug as audience_type_slug
+            "SELECT s.*
              FROM audience_specializations s
              JOIN competition_specializations cs ON s.id = cs.specialization_id
-             JOIN audience_types at ON s.audience_type_id = at.id
              WHERE cs.competition_id = ? AND s.is_active = 1
              ORDER BY s.display_order ASC",
             [$competitionId]
         );
+    }
+
+    /**
+     * Получить категории аудитории для конкурса (Level 0)
+     */
+    public function getAudienceCategories($competitionId) {
+        return $this->db->query(
+            "SELECT ac.*
+             FROM audience_categories ac
+             JOIN competition_audience_categories cac ON ac.id = cac.category_id
+             WHERE cac.competition_id = ? AND ac.is_active = 1
+             ORDER BY ac.display_order ASC",
+            [$competitionId]
+        );
+    }
+
+    /**
+     * Привязать конкурс к категориям аудитории
+     */
+    public function setAudienceCategories($competitionId, $categoryIds) {
+        $this->db->delete('competition_audience_categories', 'competition_id = ?', [$competitionId]);
+
+        foreach ($categoryIds as $catId) {
+            $this->db->insert('competition_audience_categories', [
+                'competition_id' => $competitionId,
+                'category_id' => $catId
+            ]);
+        }
+    }
+
+    /**
+     * Получить конкурсы по категории аудитории (Level 0)
+     */
+    public function getByAudienceCategory($categoryId, $category = 'all') {
+        $sql = "SELECT DISTINCT c.* FROM competitions c
+                JOIN competition_audience_categories cac ON c.id = cac.competition_id
+                WHERE c.is_active = 1 AND cac.category_id = ?";
+
+        $params = [$categoryId];
+
+        if ($category !== 'all') {
+            $sql .= " AND c.category = ?";
+            $params[] = $category;
+        }
+
+        $sql .= " ORDER BY c.display_order ASC, c.created_at DESC";
+
+        return $this->db->query($sql, $params);
     }
 
     /**
@@ -361,6 +435,13 @@ class Competition {
         $joins = [];
         $wheres = ["c.is_active = 1"];
         $params = [];
+
+        // Фильтр по категории аудитории (Level 0)
+        if (!empty($filters['audience_category'])) {
+            $joins[] = "LEFT JOIN competition_audience_categories cac ON c.id = cac.competition_id";
+            $wheres[] = "cac.category_id = ?";
+            $params[] = $filters['audience_category'];
+        }
 
         // Фильтр по типу аудитории
         if (!empty($filters['audience_type'])) {

@@ -12,6 +12,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Registration.php';
 require_once __DIR__ . '/../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../classes/WebinarCertificate.php';
+require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Check if cart exists
@@ -80,6 +81,24 @@ if (isCartEmpty()) {
                 'price' => (float)($webCert['price'] ?? 200),
                 'is_free' => false,
                 'raw_data' => $webCert
+            ];
+        }
+    }
+
+    // Get olympiad registrations
+    $olympRegObj = new OlympiadRegistration($db);
+    $olympiadRegistrations = getCartOlympiadRegistrations();
+    foreach ($olympiadRegistrations as $olympRegId) {
+        $olympReg = $olympRegObj->getById($olympRegId);
+        if ($olympReg) {
+            $allItems[] = [
+                'type' => 'olympiad_registration',
+                'id' => $olympReg['id'],
+                'name' => $olympReg['olympiad_title'],
+                'meta' => 'Диплом олимпиады • ' . ($olympReg['placement'] == '1' ? '1 место' : ($olympReg['placement'] == '2' ? '2 место' : '3 место')),
+                'price' => (float)($olympReg['diploma_price'] ?? OLYMPIAD_DIPLOMA_PRICE),
+                'is_free' => false,
+                'raw_data' => $olympReg
             ];
         }
     }
@@ -203,6 +222,8 @@ include __DIR__ . '/../includes/header.php';
                                     data-registration-id="<?php echo $item['id']; ?>"
                                 <?php elseif ($item['type'] === 'webinar_certificate'): ?>
                                     data-webinar-certificate-id="<?php echo $item['id']; ?>"
+                                <?php elseif ($item['type'] === 'olympiad_registration'): ?>
+                                    data-olympiad-registration-id="<?php echo $item['id']; ?>"
                                 <?php else: ?>
                                     data-certificate-id="<?php echo $item['id']; ?>"
                                 <?php endif; ?>
@@ -324,6 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const registrationId = this.dataset.registrationId;
             const certificateId = this.dataset.certificateId;
             const webinarCertificateId = this.dataset.webinarCertificateId;
+            const olympiadRegistrationId = this.dataset.olympiadRegistrationId;
 
             const formData = new FormData();
             if (registrationId) {
@@ -332,6 +354,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('certificate_id', certificateId);
             } else if (webinarCertificateId) {
                 formData.append('webinar_certificate_id', webinarCertificateId);
+            } else if (olympiadRegistrationId) {
+                formData.append('olympiad_registration_id', olympiadRegistrationId);
             }
 
             fetch('/ajax/remove-from-cart.php', {

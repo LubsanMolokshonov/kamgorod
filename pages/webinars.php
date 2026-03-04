@@ -2,33 +2,90 @@
 /**
  * Webinars Catalog Page
  * Каталог вебинаров
+ * v2: Unified 3-level audience segmentation
  */
 
 require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/../classes/Database.php";
 require_once __DIR__ . "/../classes/Webinar.php";
+require_once __DIR__ . "/../classes/AudienceCategory.php";
+require_once __DIR__ . "/../classes/AudienceType.php";
+require_once __DIR__ . "/../includes/seo-url.php";
 
-$database = new Database($db);
 $webinarObj = new Webinar($db);
 
-$status = $_GET["status"] ?? "";
-$audienceTypeId = intval($_GET["audience_type"] ?? 0);
+// Маппинг sc (URL slug) → status (internal key) для SEO URL из .htaccess
+if (isset($_GET['sc'])) {
+    $scMap = defined('WEBINAR_STATUS_URL_REVERSE') ? WEBINAR_STATUS_URL_REVERSE : [];
+    $_GET['status'] = $scMap[$_GET['sc']] ?? '';
+}
 
+// Get unified audience filters
+$selectedCategory = $_GET['ac'] ?? '';
+$selectedType = $_GET['at'] ?? '';
+$selectedSpec = $_GET['as'] ?? '';
+$status = $_GET["status"] ?? "";
+
+// 301-редирект со старых query-param URL на чистые SEO URL
+redirectToSeoUrl('vebinary', [
+    'status' => $status,
+    'ac' => $selectedCategory,
+    'at' => $selectedType,
+    'as' => $selectedSpec,
+]);
+
+// Audience segmentation (3-level)
+$audienceCatObj = new AudienceCategory($db);
+$audienceTypeObj = new AudienceType($db);
+$audienceCategories = $audienceCatObj->getAll();
+
+// Resolve selected audience hierarchy
+$selectedCategoryData = null;
+$audienceTypes = [];
+$selectedTypeData = null;
+$audienceSpecializations = [];
+
+if ($selectedCategory) {
+    $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory);
+    if ($selectedCategoryData) {
+        $audienceTypes = $audienceCatObj->getAudienceTypes($selectedCategoryData['id']);
+    }
+}
+if ($selectedType) {
+    $selectedTypeData = $audienceTypeObj->getBySlug($selectedType);
+    if ($selectedTypeData) {
+        $audienceSpecializations = $audienceTypeObj->getSpecializations($selectedTypeData['id']);
+    }
+}
+
+// Build filters
 $filters = [];
 if ($status) {
     $filters["status"] = $status;
 }
-if ($audienceTypeId) {
-    $filters["audience_type_id"] = $audienceTypeId;
+if ($selectedCategoryData) {
+    $filters['category_id'] = $selectedCategoryData['id'];
 }
+if ($selectedTypeData) {
+    $filters['audience_type_id'] = $selectedTypeData['id'];
+}
+if (!empty($selectedSpec)) {
+    require_once __DIR__ . "/../classes/AudienceSpecialization.php";
+    $specObj = new AudienceSpecialization($db);
+    $selectedSpecData = $specObj->getBySlug($selectedSpec);
+    if ($selectedSpecData) {
+        $filters['specialization_id'] = $selectedSpecData['id'];
+    }
+}
+
 $webinars = $webinarObj->getAll($filters, 50);
 $totalWebinars = count($webinars);
 $counts = $webinarObj->countByStatus();
-$audienceTypes = $database->query("SELECT * FROM audience_types WHERE is_active = 1 ORDER BY display_order");
 
 $pageTitle = "Вебинары для педагогов | Каменный город";
 $pageDescription = "Участвуйте в вебинарах от ведущих экспертов в сфере образования. Получайте сертификаты для портфолио и повышения квалификации.";
-$additionalCSS = ["/assets/css/webinars.css?v=" . time()];
+$additionalCSS = ["/assets/css/webinars.css?v=" . time(), "/assets/css/audience-filter.css?v=" . time()];
+$additionalJS = ["/assets/js/audience-filter.js?v=" . time()];
 
 include __DIR__ . "/../includes/header.php";
 ?>
@@ -127,126 +184,25 @@ include __DIR__ . "/../includes/header.php";
 
 <section class="webinars-grid-section" id="webinars-catalog">
     <div class="container">
-        <!-- Мобильные фильтры (чипы) -->
-        <div class="mobile-filters">
-            <div class="mobile-filters-scroll">
-                <button class="filter-chip <?php echo !empty($status) ? 'active' : ''; ?>" data-filter="status">
-                    <span class="filter-chip-text">Тип вебинара</span>
-                    <?php if (!empty($status)): ?>
-                    <span class="filter-chip-clear" data-clear="status">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
-                    </span>
-                    <?php endif; ?>
-                </button>
-                <button class="filter-chip <?php echo $audienceTypeId ? 'active' : ''; ?>" data-filter="audience">
-                    <span class="filter-chip-text">Тип учреждения</span>
-                    <?php if ($audienceTypeId): ?>
-                    <span class="filter-chip-clear" data-clear="audience">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
-                    </span>
-                    <?php endif; ?>
-                </button>
-            </div>
+        <?php
+        $audienceFilterBaseUrl = '/vebinary';
+        $extraPathPrefix = getSectionPathPrefix('vebinary', ['status' => $status]);
+        include __DIR__ . '/../includes/audience-filter.php';
+        ?>
+
+        <!-- Тип вебинара -->
+        <div class="af-categories" style="margin-top: 8px; margin-bottom: 24px;">
+            <a href="<?php echo buildSeoUrl('vebinary', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+               class="af-pill<?php echo empty($status) ? ' active' : ''; ?>">Все вебинары</a>
+            <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+               class="af-pill<?php echo $status === 'upcoming' ? ' active' : ''; ?>">Предстоящие (<?php echo $counts["upcoming"]; ?>)</a>
+            <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'videolecture', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+               class="af-pill<?php echo $status === 'videolecture' ? ' active' : ''; ?>">Видеолекции (<?php echo $counts["autowebinars"]; ?>)</a>
         </div>
 
-        <!-- Попап фильтра "Тип вебинара" -->
-        <div class="filter-popup" id="statusPopup">
-            <div class="filter-popup-overlay"></div>
-            <div class="filter-popup-content">
-                <div class="filter-popup-header">
-                    <span class="filter-popup-title">Тип вебинара</span>
-                    <button class="filter-popup-cancel">Отмена</button>
-                </div>
-                <div class="filter-popup-body">
-                    <label class="filter-popup-option">
-                        <input type="radio" name="mobile_status" value="" <?php echo empty($status) ? 'checked' : ''; ?>>
-                        <span>Все вебинары</span>
-                    </label>
-                    <label class="filter-popup-option">
-                        <input type="radio" name="mobile_status" value="upcoming" <?php echo $status === 'upcoming' ? 'checked' : ''; ?>>
-                        <span>Предстоящие (<?php echo $counts["upcoming"]; ?>)</span>
-                    </label>
-                    <label class="filter-popup-option">
-                        <input type="radio" name="mobile_status" value="videolecture" <?php echo $status === 'videolecture' ? 'checked' : ''; ?>>
-                        <span>Видеолекции (<?php echo $counts["autowebinars"]; ?>)</span>
-                    </label>
-                </div>
-                <div class="filter-popup-footer">
-                    <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Попап фильтра "Тип учреждения" -->
-        <div class="filter-popup" id="audiencePopup">
-            <div class="filter-popup-overlay"></div>
-            <div class="filter-popup-content">
-                <div class="filter-popup-header">
-                    <span class="filter-popup-title">Тип учреждения</span>
-                    <button class="filter-popup-cancel">Отмена</button>
-                </div>
-                <div class="filter-popup-body">
-                    <label class="filter-popup-option">
-                        <input type="radio" name="mobile_audience_type" value="" <?php echo !$audienceTypeId ? 'checked' : ''; ?>>
-                        <span>Все</span>
-                    </label>
-                    <?php foreach ($audienceTypes as $type): ?>
-                    <label class="filter-popup-option">
-                        <input type="radio" name="mobile_audience_type" value="<?php echo $type["id"]; ?>" <?php echo $audienceTypeId == $type["id"] ? 'checked' : ''; ?>>
-                        <span><?php echo htmlspecialchars($type["name"]); ?></span>
-                    </label>
-                    <?php endforeach; ?>
-                </div>
-                <div class="filter-popup-footer">
-                    <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="webinars-layout">
-            <!-- Сайдбар с фильтрами -->
-            <aside class="sidebar-filters">
-                <div class="sidebar-section">
-                    <h4>Тип вебинара</h4>
-                    <div class="filter-checkboxes">
-                        <label class="filter-checkbox">
-                            <input type="radio" name="status" value="" <?php echo empty($status) ? 'checked' : ''; ?>>
-                            <span class="checkbox-label">Все</span>
-                        </label>
-                        <label class="filter-checkbox">
-                            <input type="radio" name="status" value="upcoming" <?php echo $status === 'upcoming' ? 'checked' : ''; ?>>
-                            <span class="checkbox-label">Предстоящие (<?php echo $counts["upcoming"]; ?>)</span>
-                        </label>
-                        <label class="filter-checkbox">
-                            <input type="radio" name="status" value="videolecture" <?php echo $status === 'videolecture' ? 'checked' : ''; ?>>
-                            <span class="checkbox-label">Видеолекции (<?php echo $counts["autowebinars"]; ?>)</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="sidebar-section">
-                    <h4>Тип учреждения</h4>
-                    <div class="filter-checkboxes">
-                        <label class="filter-checkbox">
-                            <input type="radio" name="audience_type" value="" <?php echo !$audienceTypeId ? 'checked' : ''; ?>>
-                            <span class="checkbox-label">Все</span>
-                        </label>
-                        <?php foreach ($audienceTypes as $type): ?>
-                        <label class="filter-checkbox">
-                            <input type="radio" name="audience_type" value="<?php echo $type["id"]; ?>" <?php echo $audienceTypeId == $type["id"] ? 'checked' : ''; ?>>
-                            <span class="checkbox-label"><?php echo htmlspecialchars($type["name"]); ?></span>
-                        </label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </aside>
-
+        <div class="webinars-layout" style="display: block;">
             <!-- Контент с карточками -->
-            <div class="content-area">
+            <div class="content-area" style="max-width: 100%;">
                 <div class="webinars-count">
                     Найдено вебинаров: <strong><?php echo $totalWebinars; ?></strong>
                 </div>
@@ -326,150 +282,5 @@ include __DIR__ . "/../includes/header.php";
 </section>
 
 <script src="/assets/js/webinars.js?v=<?php echo time(); ?>"></script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // ========================================
-    // ДЕСКТОПНЫЕ ФИЛЬТРЫ (сайдбар)
-    // ========================================
-
-    function applyFilters() {
-        var selectedStatus = document.querySelector('input[name="status"]:checked');
-        var selectedAudience = document.querySelector('input[name="audience_type"]:checked');
-
-        var url = '/vebinary';
-        var params = [];
-
-        if (selectedStatus && selectedStatus.value) {
-            params.push('status=' + selectedStatus.value);
-        }
-        if (selectedAudience && selectedAudience.value) {
-            params.push('audience_type=' + selectedAudience.value);
-        }
-
-        if (params.length > 0) {
-            url += '?' + params.join('&');
-        }
-
-        window.location.href = url;
-    }
-
-    // Автоприменение при клике на радиокнопки в сайдбаре
-    document.querySelectorAll('input[name="status"]').forEach(function(radio) {
-        radio.addEventListener('change', applyFilters);
-    });
-    document.querySelectorAll('input[name="audience_type"]').forEach(function(radio) {
-        radio.addEventListener('change', applyFilters);
-    });
-
-    // ========================================
-    // МОБИЛЬНЫЕ ФИЛЬТРЫ (Ozon Style)
-    // ========================================
-
-    var filterChips = document.querySelectorAll('.filter-chip');
-    var filterPopups = document.querySelectorAll('.filter-popup');
-
-    // Открытие попапа
-    function openPopup(popupId) {
-        var popup = document.getElementById(popupId);
-        if (popup) {
-            popup.classList.add('show');
-            document.body.classList.add('popup-open');
-        }
-    }
-
-    // Закрытие попапа
-    function closePopup(popup) {
-        popup.classList.remove('show');
-        document.body.classList.remove('popup-open');
-    }
-
-    // Сброс конкретного фильтра
-    function clearFilter(filterType) {
-        var urlParams = new URLSearchParams(window.location.search);
-
-        if (filterType === 'status') {
-            urlParams.delete('status');
-        } else if (filterType === 'audience') {
-            urlParams.delete('audience_type');
-        }
-
-        var url = '/vebinary';
-        var paramsString = urlParams.toString();
-        if (paramsString) {
-            url += '?' + paramsString;
-        }
-        window.location.href = url;
-    }
-
-    // Обработчик клика на крестики сброса
-    document.querySelectorAll('.filter-chip-clear').forEach(function(clearBtn) {
-        clearBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            var filterType = this.dataset.clear;
-            clearFilter(filterType);
-        });
-    });
-
-    // Применение мобильных фильтров
-    function applyMobileFilters() {
-        var selectedStatus = document.querySelector('input[name="mobile_status"]:checked');
-        var selectedAudience = document.querySelector('input[name="mobile_audience_type"]:checked');
-
-        var url = '/vebinary';
-        var params = [];
-
-        if (selectedStatus && selectedStatus.value) {
-            params.push('status=' + selectedStatus.value);
-        }
-        if (selectedAudience && selectedAudience.value) {
-            params.push('audience_type=' + selectedAudience.value);
-        }
-
-        if (params.length > 0) {
-            url += '?' + params.join('&');
-        }
-
-        window.location.href = url;
-    }
-
-    // Клик на чипы — открытие попапов
-    filterChips.forEach(function(chip) {
-        chip.addEventListener('click', function() {
-            var filterType = this.dataset.filter;
-            if (filterType === 'status') {
-                openPopup('statusPopup');
-            } else if (filterType === 'audience') {
-                openPopup('audiencePopup');
-            }
-        });
-    });
-
-    // Обработчики попапов: оверлей, отмена, применить
-    filterPopups.forEach(function(popup) {
-        var overlay = popup.querySelector('.filter-popup-overlay');
-        if (overlay) {
-            overlay.addEventListener('click', function() {
-                closePopup(popup);
-            });
-        }
-
-        var cancelBtn = popup.querySelector('.filter-popup-cancel');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', function() {
-                closePopup(popup);
-            });
-        }
-
-        var applyBtn = popup.querySelector('.filter-popup-apply');
-        if (applyBtn) {
-            applyBtn.addEventListener('click', function() {
-                closePopup(popup);
-                applyMobileFilters();
-            });
-        }
-    });
-});
-</script>
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

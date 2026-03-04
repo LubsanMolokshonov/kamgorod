@@ -14,6 +14,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Registration.php';
 require_once __DIR__ . '/../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../classes/WebinarCertificate.php';
+require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../includes/session.php';
@@ -44,6 +45,7 @@ try {
     $registrationObj = new Registration($db);
     $certObj = new PublicationCertificate($db);
     $webCertObj = new WebinarCertificate($db);
+    $olympRegObj = new OlympiadRegistration($db);
     $userObj = new User($db);
     $orderObj = new Order($db);
 
@@ -51,6 +53,7 @@ try {
     $registrations = getCart();
     $certificates = getCartCertificates();
     $webinarCertificates = getCartWebinarCertificates();
+    $olympiadRegistrations = getCartOlympiadRegistrations();
 
     // Collect ALL items into one array for unified promotion calculation
     $allItems = [];
@@ -100,6 +103,23 @@ try {
                 'price' => (float)($webCert['price'] ?? 200),
                 'is_free' => false,
                 'raw_data' => $webCert
+            ];
+        }
+    }
+
+    // Get olympiad registrations
+    $olympiadRegsData = [];
+    foreach ($olympiadRegistrations as $olympRegId) {
+        $olympReg = $olympRegObj->getById($olympRegId);
+        if ($olympReg) {
+            $olympiadRegsData[] = $olympReg;
+            $allItems[] = [
+                'type' => 'olympiad_registration',
+                'id' => $olympReg['id'],
+                'name' => $olympReg['olympiad_title'],
+                'price' => (float)($olympReg['diploma_price'] ?? OLYMPIAD_DIPLOMA_PRICE),
+                'is_free' => false,
+                'raw_data' => $olympReg
             ];
         }
     }
@@ -228,6 +248,19 @@ try {
             $webCertObj->generate($webCert['id']);
         }
 
+        // Mark all olympiad registrations as paid and generate diplomas
+        if (!empty($olympiadRegsData)) {
+            require_once __DIR__ . '/../classes/OlympiadDiploma.php';
+            $olympDiplomaObj = new OlympiadDiploma($db);
+            foreach ($olympiadRegsData as $olympReg) {
+                $olympRegObj->update($olympReg['id'], ['status' => 'paid']);
+                $olympDiplomaObj->generate($olympReg['id'], 'participant');
+                if (!empty($olympReg['has_supervisor']) && !empty($olympReg['supervisor_name'])) {
+                    $olympDiplomaObj->generate($olympReg['id'], 'supervisor');
+                }
+            }
+        }
+
         // Generate auto-login token and set cookie (30 days)
         if ($userId) {
             $sessionToken = $userObj->generateSessionToken($userId);
@@ -291,6 +324,13 @@ try {
             $userEmail = $user['email'];
             $userName = $user['full_name'];
         }
+    } elseif (!empty($olympiadRegsData)) {
+        $userId = $olympiadRegsData[0]['user_id'];
+        $user = $userObj->getById($userId);
+        if ($user) {
+            $userEmail = $user['email'];
+            $userName = $user['full_name'];
+        }
     }
 
     if (!$userId || !$userEmail) {
@@ -318,7 +358,16 @@ try {
             $webinarCertsWithPromotion[] = $wcData;
         }
     }
-    $orderId = $orderObj->createFromCart($userId, $cartData, $certificatesWithPromotion, $grandTotal, $webinarCertsWithPromotion);
+    // Collect olympiad registrations with promotion info
+    $olympiadRegsWithPromotion = [];
+    foreach ($allItems as $item) {
+        if ($item['type'] === 'olympiad_registration') {
+            $oData = $item['raw_data'];
+            $oData['is_free'] = $item['is_free'];
+            $olympiadRegsWithPromotion[] = $oData;
+        }
+    }
+    $orderId = $orderObj->createFromCart($userId, $cartData, $certificatesWithPromotion, $grandTotal, $webinarCertsWithPromotion, $olympiadRegsWithPromotion);
 
     if (!$orderId) {
         throw new Exception('Не удалось создать заказ');
@@ -343,6 +392,8 @@ try {
                 $description = 'Свидетельство о публикации: ' . mb_substr($item['name'], 0, 100);
             } elseif ($item['type'] === 'webinar_certificate') {
                 $description = 'Сертификат вебинара: ' . mb_substr($item['name'], 0, 100);
+            } elseif ($item['type'] === 'olympiad_registration') {
+                $description = 'Диплом олимпиады: ' . mb_substr($item['name'], 0, 100);
             } else {
                 $description = mb_substr($item['name'], 0, 128);
             }
@@ -387,6 +438,7 @@ try {
                 'user_email' => $userEmail,
                 'certificate_ids' => !empty($certificates) ? implode(',', $certificates) : null,
                 'webinar_certificate_ids' => !empty($webinarCertificates) ? implode(',', $webinarCertificates) : null,
+                'olympiad_registration_ids' => !empty($olympiadRegistrations) ? implode(',', $olympiadRegistrations) : null,
             ],
         ],
         $orderNumber // Idempotency key

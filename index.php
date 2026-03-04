@@ -11,6 +11,7 @@ require_once __DIR__ . '/classes/Competition.php';
 require_once __DIR__ . '/classes/Webinar.php';
 require_once __DIR__ . '/classes/Publication.php';
 require_once __DIR__ . '/classes/AudienceType.php';
+require_once __DIR__ . '/classes/Olympiad.php';
 require_once __DIR__ . '/includes/session.php';
 
 // Page metadata
@@ -39,6 +40,10 @@ try {
 }
 
 $audienceTypes = $audienceTypeObj->getAll();
+
+$olympiadObj = new Olympiad($db);
+$totalOlympiads = $olympiadObj->count();
+$totalOlympiadParticipants = $olympiadObj->getTotalParticipants();
 
 include __DIR__ . '/includes/header.php';
 ?>
@@ -170,6 +175,18 @@ include __DIR__ . '/includes/header.php';
                     <div class="benefit-card-stats">
                         <span class="stats-number"><?php echo $totalCompetitions; ?>+</span>
                         <span class="stats-label">активных конкурсов</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Карточка: Олимпиады -->
+            <a href="/olimpiady" class="homepage-benefit-card homepage-benefit-card--link" data-service="olympiads">
+                <div class="benefit-card-content">
+                    <h3>Всероссийские олимпиады</h3>
+                    <p>Бесплатное участие для педагогов и учеников. Тест из 10 вопросов, диплом за 30 секунд</p>
+                    <div class="benefit-card-stats">
+                        <span class="stats-number"><?php echo $totalOlympiads; ?>+</span>
+                        <span class="stats-label">олимпиад</span>
                     </div>
                 </div>
             </a>

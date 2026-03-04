@@ -14,6 +14,8 @@ require_once __DIR__ . '/../classes/Webinar.php';
 require_once __DIR__ . '/../classes/WebinarRegistration.php';
 require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../classes/WebinarQuiz.php';
+require_once __DIR__ . '/../classes/OlympiadQuiz.php';
+require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Auto-login via cookie if session doesn't exist
@@ -79,9 +81,21 @@ foreach ($userWebinarCerts as $wc) {
     $webinarCertsByRegId[$wc['registration_id']] = $wc;
 }
 
+// Get user's olympiad results and registrations
+$olympQuizObj = new OlympiadQuiz($db);
+$olympRegObj = new OlympiadRegistration($db);
+$userOlympiadResults = $olympQuizObj->getResultsByUser($_SESSION['user_id']);
+$userOlympiadRegs = $olympRegObj->getByUser($_SESSION['user_id']);
+
+// Index olympiad registrations by olympiad_id for quick lookup
+$olympRegsByResultId = [];
+foreach ($userOlympiadRegs as $reg) {
+    $olympRegsByResultId[$reg['olympiad_result_id']] = $reg;
+}
+
 // Current tab
 $activeTab = $_GET['tab'] ?? 'diplomas';
-if (!in_array($activeTab, ['diplomas', 'publications', 'webinars'])) {
+if (!in_array($activeTab, ['diplomas', 'publications', 'webinars', 'olympiads'])) {
     $activeTab = 'diplomas';
 }
 
@@ -128,16 +142,127 @@ include __DIR__ . '/../includes/header.php';
                     <span class="tab-count"><?php echo count($userWebinars); ?></span>
                 <?php endif; ?>
             </a>
+            <a href="?tab=olympiads" class="cabinet-tab <?php echo $activeTab === 'olympiads' ? 'active' : ''; ?>">
+                <span class="tab-icon">🏅</span>
+                Олимпиады
+                <?php if (!empty($userOlympiadResults)): ?>
+                    <span class="tab-count"><?php echo count($userOlympiadResults); ?></span>
+                <?php endif; ?>
+            </a>
         </div>
 
-        <?php if ($activeTab === 'webinars'): ?>
+        <?php if ($activeTab === 'olympiads'): ?>
+            <!-- Olympiads Tab -->
+            <?php if (empty($userOlympiadResults)): ?>
+                <div class="empty-cabinet">
+                    <div class="empty-icon">🏅</div>
+                    <h2>У вас пока нет результатов олимпиад</h2>
+                    <p>Пройдите бесплатную олимпиаду и получите диплом</p>
+                    <a href="/olimpiady" class="btn btn-primary">
+                        Перейти к олимпиадам
+                    </a>
+                </div>
+            <?php else: ?>
+                <div class="registrations-section">
+                    <h2>Ваши олимпиады (<?php echo count($userOlympiadResults); ?>)</h2>
+
+                    <div class="registrations-grid">
+                        <?php foreach ($userOlympiadResults as $result):
+                            $placementLabels = ['1' => '1 место', '2' => '2 место', '3' => '3 место'];
+                            $placementColors = ['1' => '#f59e0b', '2' => '#9ca3af', '3' => '#cd7f32'];
+                            $placementLabel = $placementLabels[$result['placement']] ?? 'Участник';
+                            $placementColor = $placementColors[$result['placement']] ?? '#6b7280';
+                            $hasPlace = in_array($result['placement'], ['1', '2', '3']);
+
+                            // Check if diploma was ordered
+                            $olympReg = $olympRegsByResultId[$result['id']] ?? null;
+                            $diplomaPaid = $olympReg && in_array($olympReg['status'], ['paid', 'diploma_ready']);
+                        ?>
+                            <div class="registration-card">
+                                <div class="card-header">
+                                    <h3><?php echo htmlspecialchars($result['olympiad_title']); ?></h3>
+                                    <span class="status-badge" style="background-color: <?php echo $placementColor; ?>">
+                                        <?php echo $placementLabel; ?>
+                                    </span>
+                                </div>
+
+                                <div class="card-body">
+                                    <div class="info-row">
+                                        <span class="label">Результат:</span>
+                                        <span class="value"><?php echo $result['score']; ?> из <?php echo $result['total_questions']; ?> баллов</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="label">Дата прохождения:</span>
+                                        <span class="value"><?php echo date('d.m.Y H:i', strtotime($result['completed_at'])); ?></span>
+                                    </div>
+                                    <?php if ($diplomaPaid): ?>
+                                    <div class="info-row">
+                                        <span class="label">Диплом:</span>
+                                        <span class="value" style="color: #10b981;">Оплачен</span>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="card-actions">
+                                    <?php if ($diplomaPaid && $olympReg): ?>
+                                        <a href="/ajax/download-olympiad-diploma.php?id=<?php echo $olympReg['id']; ?>&type=participant"
+                                           class="btn btn-success btn-download">
+                                            Скачать диплом
+                                        </a>
+                                        <?php if (!empty($olympReg['has_supervisor']) && !empty($olympReg['supervisor_name'])): ?>
+                                            <a href="/ajax/download-olympiad-diploma.php?id=<?php echo $olympReg['id']; ?>&type=supervisor"
+                                               class="btn btn-success btn-download">
+                                                Диплом руководителя
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php elseif ($hasPlace): ?>
+                                        <a href="/olimpiada-diplom/<?php echo $result['id']; ?>"
+                                           class="btn btn-primary">
+                                            Оформить диплом (<?php echo OLYMPIAD_DIPLOMA_PRICE; ?> ₽)
+                                        </a>
+                                    <?php endif; ?>
+                                    <a href="/olimpiada-test/<?php echo $result['olympiad_id']; ?>"
+                                       class="btn btn-outline" style="border-color: #d1d5db; color: #6b7280;">
+                                        Пройти повторно
+                                    </a>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Info Section -->
+                <div class="info-section">
+                    <h3>Об олимпиадах</h3>
+                    <ul>
+                        <li>
+                            <strong>Участие бесплатное:</strong> Вы можете проходить олимпиады неограниченное количество раз
+                        </li>
+                        <li>
+                            <strong>Диплом:</strong> Доступен для скачивания сразу после оплаты в формате PDF
+                        </li>
+                        <li>
+                            <strong>Места:</strong> 9-10 баллов — 1 место, 8 баллов — 2 место, 7 баллов — 3 место
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Actions -->
+                <div class="cabinet-actions">
+                    <a href="/olimpiady" class="btn btn-primary">
+                        Пройти другие олимпиады
+                    </a>
+                </div>
+            <?php endif; ?>
+
+        <?php elseif ($activeTab === 'webinars'): ?>
             <!-- Webinars Tab -->
             <?php if (empty($userWebinars)): ?>
                 <div class="empty-cabinet">
                     <div class="empty-icon">📺</div>
                     <h2>У вас пока нет регистраций на вебинары</h2>
                     <p>Зарегистрируйтесь на бесплатные вебинары и получите сертификаты</p>
-                    <a href="/pages/webinars.php" class="btn btn-primary">
+                    <a href="/vebinary/" class="btn btn-primary">
                         Посмотреть вебинары
                     </a>
                 </div>
@@ -312,7 +437,7 @@ include __DIR__ . '/../includes/header.php';
 
                 <!-- Actions -->
                 <div class="cabinet-actions">
-                    <a href="/pages/webinars.php" class="btn btn-primary">
+                    <a href="/vebinary/" class="btn btn-primary">
                         Смотреть другие вебинары
                     </a>
                 </div>
@@ -325,7 +450,7 @@ include __DIR__ . '/../includes/header.php';
                     <div class="empty-icon">📄</div>
                     <h2>У вас пока нет публикаций</h2>
                     <p>Опубликуйте свой материал и получите свидетельство</p>
-                    <a href="/pages/submit-publication.php" class="btn btn-primary">
+                    <a href="/opublikovat/" class="btn btn-primary">
                         Опубликовать статью
                     </a>
                 </div>
@@ -434,7 +559,7 @@ include __DIR__ . '/../includes/header.php';
                                             📥 Скачать свидетельство
                                         </a>
                                     <?php elseif ($pub['certificate_status'] === 'pending' || $pub['certificate_status'] === 'none'): ?>
-                                        <a href="/pages/publication-certificate.php?id=<?php echo $pub['id']; ?>"
+                                        <a href="/sertifikat-publikacii?id=<?php echo $pub['id']; ?>"
                                            class="btn btn-primary">
                                             💳 Оформить свидетельство
                                         </a>
@@ -463,10 +588,10 @@ include __DIR__ . '/../includes/header.php';
 
                 <!-- Actions -->
                 <div class="cabinet-actions">
-                    <a href="/pages/submit-publication.php" class="btn btn-primary">
+                    <a href="/opublikovat/" class="btn btn-primary">
                         Опубликовать ещё одну статью
                     </a>
-                    <a href="/pages/journal.php" class="btn btn-outline">
+                    <a href="/zhurnal/" class="btn btn-outline">
                         Перейти к журналу
                     </a>
                 </div>

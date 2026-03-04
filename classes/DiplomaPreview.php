@@ -191,11 +191,14 @@ class DiplomaPreview
     // Path to chairman stamp image
     const CHAIRMAN_STAMP_PATH = '/assets/images/diplomas/stamp-brehach.png';
 
-    public function __construct($templateId, $data, $recipientType = 'participant')
+    private $eventType;
+
+    public function __construct($templateId, $data, $recipientType = 'participant', $eventType = 'contest')
     {
         $this->templateId = $templateId;
         $this->data = $data;
         $this->recipientType = $recipientType;
+        $this->eventType = $eventType;
     }
 
     /**
@@ -265,23 +268,31 @@ class DiplomaPreview
             $svg .= $this->createTextElement($competitionType, $this->fieldPositions['competition_type']);
         }
 
-        // 6.5. Competition name (название конкурса из БД)
+        // 6.5. Competition/olympiad name (название из БД)
         $competitionName = $this->data['competition_name'] ?? '';
         if (!empty($competitionName)) {
             $svg .= $this->createTextElement('«' . $competitionName . '»', $this->fieldPositions['competition_name']);
         }
 
-        // 7. Work title in quotes (if exists) - NEW LOGIC
-        $workTitle = $this->data['work_title'] ?? '';
-        if (!empty($workTitle)) {
-            $svg .= $this->createTextElement('«' . $workTitle . '»', $this->fieldPositions['work_title_quoted']);
-        }
+        if ($this->eventType === 'olympiad') {
+            // 7. Placement line for olympiad (I место / II место / III место)
+            $placement = $this->data['placement'] ?? '';
+            if (!empty($placement) && $this->recipientType !== 'supervisor') {
+                $svg .= $this->createTextElement($this->getPlacementText($placement), $this->fieldPositions['work_title_quoted']);
+            }
+        } else {
+            // 7. Work title in quotes (if exists) - contests only
+            $workTitle = $this->data['work_title'] ?? '';
+            if (!empty($workTitle)) {
+                $svg .= $this->createTextElement('«' . $workTitle . '»', $this->fieldPositions['work_title_quoted']);
+            }
 
-        // 8. Nomination line - always show if nomination exists - NEW FIELD
-        $nomination = $this->data['nomination'] ?? '';
-        if (!empty($nomination)) {
-            $nominationText = 'в номинации «' . $nomination . '»';
-            $svg .= $this->createTextElement($nominationText, $this->fieldPositions['nomination_line']);
+            // 8. Nomination line - contests only
+            $nomination = $this->data['nomination'] ?? '';
+            if (!empty($nomination)) {
+                $nominationText = 'в номинации «' . $nomination . '»';
+                $svg .= $this->createTextElement($nominationText, $this->fieldPositions['nomination_line']);
+            }
         }
 
         // 9. Organization
@@ -367,7 +378,7 @@ class DiplomaPreview
         $text = $this->truncateText($text, $maxLength);
 
         // Escape text for XML
-        $escapedText = htmlspecialchars($text, ENT_XML1, 'UTF-8');
+        $escapedText = htmlspecialchars(html_entity_decode($text, ENT_QUOTES, 'UTF-8'), ENT_XML1, 'UTF-8');
 
         // Use DejaVu Sans for Cyrillic support (matches PDF)
         return sprintf(
@@ -387,6 +398,16 @@ class DiplomaPreview
 
         $placement = $this->data['placement'] ?? '';
 
+        if ($this->eventType === 'olympiad') {
+            if (in_array($placement, ['1', 1])) {
+                return 'ПОБЕДИТЕЛЯ';
+            }
+            if (in_array($placement, ['2', '3', 2, 3])) {
+                return 'ПРИЗЁРА';
+            }
+            return 'УЧАСТНИКА';
+        }
+
         if (in_array($placement, ['1', '2', '3', 1, 2, 3])) {
             return 'ПОБЕДИТЕЛЯ';
         }
@@ -399,6 +420,17 @@ class DiplomaPreview
      */
     private function getAchievementText()
     {
+        if ($this->eventType === 'olympiad') {
+            if ($this->recipientType === 'supervisor') {
+                return 'за подготовку участника олимпиады';
+            }
+            $placement = $this->data['placement'] ?? '';
+            if (in_array($placement, ['1', 1])) {
+                return 'за высокие достижения в олимпиаде';
+            }
+            return 'за достижения в олимпиаде';
+        }
+
         if ($this->recipientType === 'supervisor') {
             return 'за подготовку участника конкурса';
         }
@@ -446,7 +478,7 @@ class DiplomaPreview
     }
 
     /**
-     * Get competition type in uppercase with "КОНКУРС" suffix
+     * Get competition type in uppercase with suffix ("КОНКУРС" or "ОЛИМПИАДА")
      */
     private function getCompetitionType()
     {
@@ -454,7 +486,8 @@ class DiplomaPreview
         if (empty($type)) {
             return '';
         }
-        return mb_strtoupper($type, 'UTF-8') . ' КОНКУРС';
+        $suffix = $this->eventType === 'olympiad' ? ' ОЛИМПИАДА' : ' КОНКУРС';
+        return mb_strtoupper($type, 'UTF-8') . $suffix;
     }
 
     /**
@@ -473,6 +506,19 @@ class DiplomaPreview
         }
 
         return date('d.m.Y', $timestamp);
+    }
+
+    /**
+     * Get placement text for olympiad diploma
+     */
+    private function getPlacementText($placement)
+    {
+        $labels = [
+            '1' => 'I место (Победитель)',
+            '2' => 'II место (Призёр)',
+            '3' => 'III место (Призёр)'
+        ];
+        return $labels[$placement] ?? '';
     }
 
     /**

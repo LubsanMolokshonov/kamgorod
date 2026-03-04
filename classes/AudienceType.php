@@ -1,39 +1,94 @@
 <?php
 /**
  * AudienceType Class
- * Управление типами аудитории (ДОУ, Начальная школа, Средняя/старшая школа, СПО)
+ * Управление типами аудитории (Level 1)
+ * ДОУ, Начальная школа, Средняя/старшая школа, СПО, ДО, типы для детей
+ * Обратно совместим: работает и до, и после миграции 040/041
  */
 
 class AudienceType {
     private $db;
+    private $v2Ready = null;
 
     public function __construct($pdo) {
         $this->db = new Database($pdo);
     }
 
     /**
+     * Проверить, применена ли миграция v2 (audience_categories существует)
+     */
+    private function isV2() {
+        if ($this->v2Ready === null) {
+            try {
+                $this->db->queryOne("SELECT 1 FROM audience_categories LIMIT 1");
+                $this->v2Ready = true;
+            } catch (\Exception $e) {
+                $this->v2Ready = false;
+            }
+        }
+        return $this->v2Ready;
+    }
+
+    /**
      * Получить все активные типы аудитории
-     *
-     * @param bool $activeOnly Если true, возвращает только активные типы
-     * @return array Массив типов аудитории
      */
     public function getAll($activeOnly = true) {
-        $sql = "SELECT * FROM audience_types";
-        if ($activeOnly) {
-            $sql .= " WHERE is_active = 1";
+        if ($this->isV2()) {
+            $sql = "SELECT at.*, ac.name as category_name, ac.slug as category_slug
+                    FROM audience_types at
+                    LEFT JOIN audience_categories ac ON at.category_id = ac.id";
+        } else {
+            $sql = "SELECT * FROM audience_types at";
         }
-        $sql .= " ORDER BY display_order ASC, name ASC";
+        if ($activeOnly) {
+            $sql .= " WHERE at.is_active = 1";
+        }
+        $sql .= " ORDER BY at.display_order ASC, at.name ASC";
 
         return $this->db->query($sql);
     }
 
     /**
+     * Получить типы аудитории по категории
+     */
+    public function getByCategory($categoryId, $activeOnly = true) {
+        $sql = "SELECT * FROM audience_types WHERE category_id = ?";
+        if ($activeOnly) {
+            $sql .= " AND is_active = 1";
+        }
+        $sql .= " ORDER BY display_order ASC, name ASC";
+
+        return $this->db->query($sql, [$categoryId]);
+    }
+
+    /**
+     * Получить типы по slug категории
+     */
+    public function getByCategorySlug($categorySlug, $activeOnly = true) {
+        $sql = "SELECT at.* FROM audience_types at
+                JOIN audience_categories ac ON at.category_id = ac.id
+                WHERE ac.slug = ?";
+        if ($activeOnly) {
+            $sql .= " AND at.is_active = 1 AND ac.is_active = 1";
+        }
+        $sql .= " ORDER BY at.display_order ASC, at.name ASC";
+
+        return $this->db->query($sql, [$categorySlug]);
+    }
+
+    /**
      * Получить тип аудитории по slug
-     *
-     * @param string $slug Slug типа аудитории (например, 'dou', 'nachalnaya-shkola')
-     * @return array|null Данные типа аудитории или null
      */
     public function getBySlug($slug) {
+        if ($this->isV2()) {
+            return $this->db->queryOne(
+                "SELECT at.*, ac.name as category_name, ac.slug as category_slug
+                 FROM audience_types at
+                 LEFT JOIN audience_categories ac ON at.category_id = ac.id
+                 WHERE at.slug = ? AND at.is_active = 1",
+                [$slug]
+            );
+        }
         return $this->db->queryOne(
             "SELECT * FROM audience_types WHERE slug = ? AND is_active = 1",
             [$slug]
@@ -42,11 +97,17 @@ class AudienceType {
 
     /**
      * Получить тип аудитории по ID
-     *
-     * @param int $id ID типа аудитории
-     * @return array|null Данные типа аудитории или null
      */
     public function getById($id) {
+        if ($this->isV2()) {
+            return $this->db->queryOne(
+                "SELECT at.*, ac.name as category_name, ac.slug as category_slug
+                 FROM audience_types at
+                 LEFT JOIN audience_categories ac ON at.category_id = ac.id
+                 WHERE at.id = ?",
+                [$id]
+            );
+        }
         return $this->db->queryOne(
             "SELECT * FROM audience_types WHERE id = ?",
             [$id]
@@ -55,47 +116,97 @@ class AudienceType {
 
     /**
      * Получить специализации для типа аудитории
-     *
-     * @param int $audienceTypeId ID типа аудитории
-     * @param bool $activeOnly Если true, возвращает только активные специализации
-     * @return array Массив специализаций
+     * v2: через junction-таблицу, fallback: через прямой FK
      */
     public function getSpecializations($audienceTypeId, $activeOnly = true) {
+        if ($this->isV2()) {
+            $sql = "SELECT s.*, ats.display_order as junction_order
+                    FROM audience_specializations s
+                    JOIN audience_type_specializations ats ON s.id = ats.specialization_id
+                    WHERE ats.audience_type_id = ?";
+            if ($activeOnly) {
+                $sql .= " AND s.is_active = 1";
+            }
+            $sql .= " ORDER BY s.specialization_type ASC, ats.display_order ASC, s.display_order ASC, s.name ASC";
+            return $this->db->query($sql, [$audienceTypeId]);
+        }
+
+        // Fallback: прямой FK
         $sql = "SELECT * FROM audience_specializations WHERE audience_type_id = ?";
         if ($activeOnly) {
             $sql .= " AND is_active = 1";
         }
         $sql .= " ORDER BY display_order ASC, name ASC";
-
         return $this->db->query($sql, [$audienceTypeId]);
     }
 
     /**
+     * Получить только предметные специализации
+     */
+    public function getSubjectSpecializations($audienceTypeId) {
+        if (!$this->isV2()) {
+            return $this->getSpecializations($audienceTypeId);
+        }
+        return $this->db->query(
+            "SELECT s.*, ats.display_order as junction_order
+             FROM audience_specializations s
+             JOIN audience_type_specializations ats ON s.id = ats.specialization_id
+             WHERE ats.audience_type_id = ? AND s.is_active = 1 AND s.specialization_type = 'subject'
+             ORDER BY ats.display_order ASC, s.display_order ASC, s.name ASC",
+            [$audienceTypeId]
+        );
+    }
+
+    /**
+     * Получить только роли
+     */
+    public function getRoleSpecializations($audienceTypeId) {
+        if (!$this->isV2()) {
+            return [];
+        }
+        return $this->db->query(
+            "SELECT s.*, ats.display_order as junction_order
+             FROM audience_specializations s
+             JOIN audience_type_specializations ats ON s.id = ats.specialization_id
+             WHERE ats.audience_type_id = ? AND s.is_active = 1 AND s.specialization_type = 'role'
+             ORDER BY ats.display_order ASC, s.display_order ASC, s.name ASC",
+            [$audienceTypeId]
+        );
+    }
+
+    /**
      * Создать новый тип аудитории
-     *
-     * @param array $data Данные нового типа
-     * @return int ID созданного типа
      */
     public function create($data) {
-        return $this->db->insert('audience_types', [
+        $insertData = [
             'slug' => $data['slug'],
             'name' => $data['name'],
             'description' => $data['description'] ?? '',
             'display_order' => $data['display_order'] ?? 0,
             'is_active' => $data['is_active'] ?? 1
-        ]);
+        ];
+
+        if ($this->isV2()) {
+            $insertData['category_id'] = $data['category_id'] ?? null;
+        }
+
+        if (isset($data['target_participants_genitive'])) {
+            $insertData['target_participants_genitive'] = $data['target_participants_genitive'];
+        }
+
+        return $this->db->insert('audience_types', $insertData);
     }
 
     /**
      * Обновить тип аудитории
-     *
-     * @param int $id ID типа для обновления
-     * @param array $data Новые данные
-     * @return int Количество затронутых строк
      */
     public function update($id, $data) {
         $updateData = [];
-        $allowedFields = ['slug', 'name', 'description', 'display_order', 'is_active'];
+        $allowedFields = ['slug', 'name', 'description', 'target_participants_genitive', 'display_order', 'is_active'];
+
+        if ($this->isV2()) {
+            $allowedFields[] = 'category_id';
+        }
 
         foreach ($allowedFields as $field) {
             if (isset($data[$field])) {
@@ -112,9 +223,6 @@ class AudienceType {
 
     /**
      * Удалить тип аудитории
-     *
-     * @param int $id ID типа для удаления
-     * @return int Количество удаленных строк
      */
     public function delete($id) {
         return $this->db->delete('audience_types', 'id = ?', [$id]);
@@ -122,9 +230,6 @@ class AudienceType {
 
     /**
      * Подсчитать количество конкурсов для типа аудитории
-     *
-     * @param int $audienceTypeId ID типа аудитории
-     * @return int Количество конкурсов
      */
     public function getCompetitionCount($audienceTypeId) {
         $result = $this->db->queryOne(

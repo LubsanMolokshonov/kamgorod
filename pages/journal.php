@@ -2,6 +2,7 @@
 /**
  * Journal Landing & Catalog Page
  * Педагогический онлайн-журнал с каталогом публикаций
+ * v2: Unified 3-level audience segmentation
  */
 
 session_start();
@@ -10,23 +11,65 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Publication.php';
 require_once __DIR__ . '/../classes/PublicationType.php';
 require_once __DIR__ . '/../classes/PublicationTag.php';
+require_once __DIR__ . '/../classes/AudienceCategory.php';
+require_once __DIR__ . '/../classes/AudienceType.php';
+require_once __DIR__ . '/../includes/seo-url.php';
 
-$database = new Database($db);
 $publicationObj = new Publication($db);
 $typeObj = new PublicationType($db);
 $tagObj = new PublicationTag($db);
 
-// Get filters from URL
+// Get unified audience filters
+$selectedCategory = $_GET['ac'] ?? '';
+$selectedType = $_GET['at'] ?? '';
+$selectedSpec = $_GET['as'] ?? '';
+
+// Get other filters from URL
 $tagSlug = $_GET['tag'] ?? null;
 $typeSlug = $_GET['type'] ?? null;
 $sort = $_GET['sort'] ?? 'date';
 $search = $_GET['q'] ?? '';
+
+// 301-редирект со старых query-param URL на чистые SEO URL
+redirectToSeoUrl('zhurnal', [
+    'ac' => $selectedCategory,
+    'at' => $selectedType,
+    'as' => $selectedSpec,
+    'tag' => $tagSlug,
+    'type' => $typeSlug,
+    'sort' => $sort !== 'date' ? $sort : '',
+    'q' => $search,
+]);
 $page = max(1, intval($_GET['page'] ?? 1));
 $perPage = 12;
 $offset = ($page - 1) * $perPage;
 
+// Audience segmentation (3-level)
+$audienceCatObj = new AudienceCategory($db);
+$audienceTypeObj = new AudienceType($db);
+$audienceCategories = $audienceCatObj->getAll();
+
+// Resolve selected audience hierarchy
+$selectedCategoryData = null;
+$audienceTypes = [];
+$selectedTypeData = null;
+$audienceSpecializations = [];
+
+if ($selectedCategory) {
+    $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory);
+    if ($selectedCategoryData) {
+        $audienceTypes = $audienceCatObj->getAudienceTypes($selectedCategoryData['id']);
+    }
+}
+if ($selectedType) {
+    $selectedTypeData = $audienceTypeObj->getBySlug($selectedType);
+    if ($selectedTypeData) {
+        $audienceSpecializations = $audienceTypeObj->getSpecializations($selectedTypeData['id']);
+    }
+}
+
 // Check if we're showing landing (no filters) or catalog
-$showLanding = empty($tagSlug) && empty($typeSlug) && empty($search) && $page === 1;
+$showLanding = empty($tagSlug) && empty($typeSlug) && empty($search) && empty($selectedCategory) && $page === 1;
 
 // Get current tag/type for display
 $currentTag = null;
@@ -47,6 +90,20 @@ if ($currentTag) {
 if ($currentType) {
     $filters['type_id'] = $currentType['id'];
 }
+if ($selectedCategoryData) {
+    $filters['category_id'] = $selectedCategoryData['id'];
+}
+if ($selectedTypeData) {
+    $filters['audience_type_id'] = $selectedTypeData['id'];
+}
+if (!empty($selectedSpec)) {
+    require_once __DIR__ . '/../classes/AudienceSpecialization.php';
+    $specObj = new AudienceSpecialization($db);
+    $selectedSpecData = $specObj->getBySlug($selectedSpec);
+    if ($selectedSpecData) {
+        $filters['specialization_id'] = $selectedSpecData['id'];
+    }
+}
 
 // Get publications
 if ($search) {
@@ -59,8 +116,7 @@ if ($search) {
 
 $totalPages = ceil($totalCount / $perPage);
 
-// Get all tags and types for filters
-$directions = $tagObj->getDirections();
+// Get subject tags and types for filters (directions replaced by audience filter)
 $subjects = $tagObj->getSubjects();
 $types = $typeObj->getWithCounts();
 
@@ -76,7 +132,8 @@ $pageTitle .= ' | ' . SITE_NAME;
 
 $pageDescription = $currentTag['meta_description'] ?? 'Бесплатная публикация статей, методических разработок и материалов в электронном педагогическом журнале. Получите свидетельство о публикации с QR-кодом.';
 
-$additionalCSS = ['/assets/css/journal.css?v=' . time()];
+$additionalCSS = ['/assets/css/journal.css?v=' . time(), '/assets/css/audience-filter.css?v=' . time()];
+$additionalJS = ['/assets/js/audience-filter.js?v=' . time()];
 
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -441,12 +498,26 @@ include __DIR__ . '/../includes/header.php';
             </a>
         </div>
 
+        <!-- Unified Audience Filter -->
+        <?php
+        $audienceFilterBaseUrl = '/zhurnal';
+        $extraPathPrefix = '';
+        $extraQueryParams = '';
+        if ($tagSlug) $extraQueryParams .= '&tag=' . urlencode($tagSlug);
+        if ($typeSlug) $extraQueryParams .= '&type=' . urlencode($typeSlug);
+        if ($search) $extraQueryParams .= '&q=' . urlencode($search);
+        include __DIR__ . '/../includes/audience-filter.php';
+        ?>
+
         <div class="journal-layout">
             <!-- Sidebar Filters -->
             <aside class="journal-sidebar">
                 <!-- Search -->
                 <div class="sidebar-section">
                     <form action="/zhurnal" method="GET" class="search-form">
+                        <?php if ($selectedCategory): ?><input type="hidden" name="ac" value="<?php echo htmlspecialchars($selectedCategory); ?>"><?php endif; ?>
+                        <?php if ($selectedType): ?><input type="hidden" name="at" value="<?php echo htmlspecialchars($selectedType); ?>"><?php endif; ?>
+                        <?php if ($selectedSpec): ?><input type="hidden" name="as" value="<?php echo htmlspecialchars($selectedSpec); ?>"><?php endif; ?>
                         <input type="text"
                                name="q"
                                value="<?php echo htmlspecialchars($search); ?>"
@@ -461,44 +532,19 @@ include __DIR__ . '/../includes/header.php';
                     </form>
                 </div>
 
-                <!-- Directions -->
-                <div class="sidebar-section">
-                    <h3 class="sidebar-title">Направления</h3>
-                    <ul class="filter-list">
-                        <li>
-                            <a href="/zhurnal#catalog" class="filter-link <?php echo !$currentTag ? 'active' : ''; ?>">
-                                Все направления
-                            </a>
-                        </li>
-                        <?php foreach ($directions as $tag): ?>
-                            <li>
-                                <a href="/zhurnal?tag=<?php echo urlencode($tag['slug']); ?>#catalog"
-                                   class="filter-link <?php echo $tagSlug === $tag['slug'] ? 'active' : ''; ?>"
-                                   style="--tag-color: <?php echo $tag['color'] ?? '#3498DB'; ?>">
-                                    <span class="tag-dot"></span>
-                                    <?php echo htmlspecialchars($tag['name']); ?>
-                                    <?php if ($tag['publications_count'] > 0): ?>
-                                        <span class="count"><?php echo $tag['publications_count']; ?></span>
-                                    <?php endif; ?>
-                                </a>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-
                 <!-- Types -->
                 <div class="sidebar-section">
                     <h3 class="sidebar-title">Типы публикаций</h3>
                     <ul class="filter-list">
                         <li>
-                            <a href="/zhurnal<?php echo $tagSlug ? '?tag=' . urlencode($tagSlug) : ''; ?>#catalog"
+                            <a href="<?php echo buildUrl(['type' => null]); ?>"
                                class="filter-link <?php echo !$currentType ? 'active' : ''; ?>">
                                 Все типы
                             </a>
                         </li>
                         <?php foreach ($types as $type): ?>
                             <li>
-                                <a href="/zhurnal?type=<?php echo urlencode($type['slug']); ?><?php echo $tagSlug ? '&tag=' . urlencode($tagSlug) : ''; ?>#catalog"
+                                <a href="<?php echo buildUrl(['type' => $type['slug']]); ?>"
                                    class="filter-link <?php echo $typeSlug === $type['slug'] ? 'active' : ''; ?>">
                                     <?php echo htmlspecialchars($type['name']); ?>
                                     <?php if ($type['publications_count'] > 0): ?>
@@ -519,7 +565,7 @@ include __DIR__ . '/../includes/header.php';
                     <ul class="filter-list collapsed">
                         <?php foreach ($subjects as $tag): ?>
                             <li>
-                                <a href="/zhurnal?tag=<?php echo urlencode($tag['slug']); ?>#catalog"
+                                <a href="<?php echo buildUrl(['tag' => $tag['slug']]); ?>"
                                    class="filter-link <?php echo $tagSlug === $tag['slug'] ? 'active' : ''; ?>">
                                     <?php echo htmlspecialchars($tag['name']); ?>
                                     <?php if ($tag['publications_count'] > 0): ?>
@@ -704,11 +750,14 @@ document.querySelectorAll('.collapsible .sidebar-title').forEach(title => {
 </script>
 
 <?php
-// Helper function to build URL with current filters
+// Helper function to build URL with current filters (SEO-friendly)
 function buildUrl($params = []) {
-    global $tagSlug, $typeSlug, $sort, $search, $page;
+    global $tagSlug, $typeSlug, $sort, $search, $page, $selectedCategory, $selectedType, $selectedSpec;
 
     $current = [];
+    if ($selectedCategory) $current['ac'] = $selectedCategory;
+    if ($selectedType) $current['at'] = $selectedType;
+    if ($selectedSpec) $current['as'] = $selectedSpec;
     if ($tagSlug) $current['tag'] = $tagSlug;
     if ($typeSlug) $current['type'] = $typeSlug;
     if ($sort !== 'date') $current['sort'] = $sort;
@@ -716,13 +765,34 @@ function buildUrl($params = []) {
 
     $merged = array_merge($current, $params);
 
+    // Remove null values (allows unsetting params)
+    $merged = array_filter($merged, function($v) { return $v !== null && $v !== ''; });
+
     // Remove page if it's 1
     if (isset($merged['page']) && $merged['page'] == 1) {
         unset($merged['page']);
     }
 
-    $query = http_build_query($merged);
-    return '/zhurnal' . ($query ? '?' . $query : '') . '#catalog';
+    // Build path: /zhurnal/[ac]/[at]/[as]/
+    $path = '/zhurnal';
+    $ac = $merged['ac'] ?? '';
+    $at = $merged['at'] ?? '';
+    $as = $merged['as'] ?? '';
+    if ($ac) {
+        $path .= '/' . rawurlencode($ac);
+        if ($at) {
+            $path .= '/' . rawurlencode($at);
+            if ($as) {
+                $path .= '/' . rawurlencode($as);
+            }
+        }
+    }
+    $path .= '/';
+
+    // Remaining params as query string (exclude audience from query)
+    $queryParams = array_diff_key($merged, array_flip(['ac', 'at', 'as']));
+    $query = http_build_query($queryParams);
+    return $path . ($query ? '?' . $query : '') . '#catalog';
 }
 ?>
 

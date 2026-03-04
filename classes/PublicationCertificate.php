@@ -305,13 +305,13 @@ class PublicationCertificate {
      * @return string HTML
      */
     private function buildCertificateHTML($certificate, $positions) {
-        $authorName = htmlspecialchars($certificate['author_name'] ?? '', ENT_QUOTES, 'UTF-8');
-        $organization = htmlspecialchars($certificate['organization'] ?? '', ENT_QUOTES, 'UTF-8');
-        $city = htmlspecialchars($certificate['city'] ?? '', ENT_QUOTES, 'UTF-8');
-        $position = htmlspecialchars($certificate['position'] ?? '', ENT_QUOTES, 'UTF-8');
-        $pubTitle = htmlspecialchars('«' . ($certificate['publication_title'] ?? '') . '»', ENT_QUOTES, 'UTF-8');
-        $direction = htmlspecialchars($certificate['direction'] ?? '', ENT_QUOTES, 'UTF-8');
-        $certNumber = htmlspecialchars($certificate['certificate_number'] ?? '', ENT_QUOTES, 'UTF-8');
+        $authorName = htmlspecialchars(html_entity_decode($certificate['author_name'] ?? '', ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
+        $organization = htmlspecialchars(html_entity_decode($certificate['organization'] ?? '', ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
+        $city = htmlspecialchars(html_entity_decode($certificate['city'] ?? '', ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
+        $position = htmlspecialchars(html_entity_decode($certificate['position'] ?? '', ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
+        $pubTitle = htmlspecialchars('«' . html_entity_decode($certificate['publication_title'] ?? '', ENT_QUOTES, 'UTF-8') . '»', ENT_QUOTES, 'UTF-8');
+        $direction = htmlspecialchars(html_entity_decode($certificate['direction'] ?? '', ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
+        $certNumber = htmlspecialchars(html_entity_decode($certificate['certificate_number'] ?? '', ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
         $pubDate = !empty($certificate['publication_date'])
             ? date('d.m.Y', strtotime($certificate['publication_date']))
             : date('d.m.Y');
@@ -421,7 +421,7 @@ HTML;
         $color = $position['color'] ?? '#000000';
         $maxWidth = $position['max_width'] ?? 180;
 
-        $escapedText = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        $escapedText = htmlspecialchars(html_entity_decode($text, ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
         $width = $maxWidth . 'mm';
         $leftPos = $textAlign === 'center' ? ($x - ($maxWidth / 2)) . 'mm' : $x . 'mm';
 

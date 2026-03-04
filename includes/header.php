@@ -93,6 +93,7 @@ initSession();
 
                 <nav class="main-nav" id="mainNav">
                     <a href="/konkursy">Конкурсы</a>
+                    <a href="/olimpiady">Олимпиады</a>
                     <a href="/vebinary">Вебинары</a>
                     <div class="nav-dropdown">
                         <a href="/zhurnal" class="nav-dropdown-trigger">Журнал</a>

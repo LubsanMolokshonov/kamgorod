@@ -86,6 +86,65 @@ if (!defined('COMPETITION_CATEGORIES')) {
     ]);
 }
 
+// Маппинги URL-слагов для SEO-friendly URL
+// internal key → URL slug
+if (!defined('COMPETITION_CATEGORY_URL_MAP')) {
+    define('COMPETITION_CATEGORY_URL_MAP', [
+        'methodology' => 'metodika',
+        'extracurricular' => 'vneurochnaya',
+        'student_projects' => 'proekty',
+        'creative' => 'tvorchestvo'
+    ]);
+}
+// URL slug → internal key
+if (!defined('COMPETITION_CATEGORY_URL_REVERSE')) {
+    define('COMPETITION_CATEGORY_URL_REVERSE', [
+        'metodika' => 'methodology',
+        'vneurochnaya' => 'extracurricular',
+        'proekty' => 'student_projects',
+        'tvorchestvo' => 'creative'
+    ]);
+}
+if (!defined('WEBINAR_STATUS_URL_MAP')) {
+    define('WEBINAR_STATUS_URL_MAP', [
+        'upcoming' => 'predstoyashchie',
+        'recordings' => 'zapisi',
+        'videolecture' => 'videolektsii'
+    ]);
+}
+if (!defined('WEBINAR_STATUS_URL_REVERSE')) {
+    define('WEBINAR_STATUS_URL_REVERSE', [
+        'predstoyashchie' => 'upcoming',
+        'zapisi' => 'recordings',
+        'videolektsii' => 'videolecture'
+    ]);
+}
+
+// Audience Categories (Level 0) — основные группы аудитории
+if (!defined('AUDIENCE_CATEGORIES')) {
+    define('AUDIENCE_CATEGORIES', [
+        'pedagogi' => 'Педагогам',
+        'doshkolnikam' => 'Дошкольникам',
+        'shkolnikam' => 'Школьникам',
+        'studentam-spo' => 'Студентам СПО'
+    ]);
+}
+
+// @deprecated Используйте audience_categories/audience_types из БД. Оставлено для обратной совместимости.
+if (!defined('OLYMPIAD_AUDIENCES')) {
+    define('OLYMPIAD_AUDIENCES', [
+        'pedagogues_dou' => 'Для педагогов ДОУ',
+        'pedagogues_school' => 'Для педагогов школ',
+        'pedagogues_ovz' => 'Для педагогов, работающих с детьми с ОВЗ',
+        'students' => 'Для школьников',
+        'preschoolers' => 'Для дошкольников',
+        'logopedists' => 'Для логопедов'
+    ]);
+}
+
+// Olympiad Diploma Price
+if (!defined('OLYMPIAD_DIPLOMA_PRICE')) define('OLYMPIAD_DIPLOMA_PRICE', 169);
+
 // File Upload Paths
 if (!defined('UPLOADS_DIR')) define('UPLOADS_DIR', BASE_PATH . '/uploads/diplomas/');
 if (!defined('TEMPLATES_DIR')) define('TEMPLATES_DIR', BASE_PATH . '/assets/images/diplomas/templates/');

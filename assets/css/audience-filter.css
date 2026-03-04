@@ -1,0 +1,173 @@
+/* ===========================
+   Unified Audience Filter
+   3-level: Category → Type → Specialization
+   =========================== */
+
+.audience-filter {
+    margin-bottom: 24px;
+}
+
+/* Level 0: Category tabs */
+.af-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.af-tab {
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text-dark, #2C3E50);
+    background: white;
+    border: 2px solid #E2E8F0;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.af-tab:hover {
+    border-color: var(--primary-purple, #0077FF);
+    color: var(--primary-purple, #0077FF);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 119, 255, 0.15);
+}
+
+.af-tab.active {
+    background: var(--primary-purple, #0077FF);
+    color: white;
+    border-color: var(--primary-purple, #0077FF);
+    box-shadow: 0 4px 16px rgba(0, 119, 255, 0.3);
+}
+
+/* Level 1: Type pills */
+.af-types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 16px;
+    animation: afFadeIn 0.3s ease;
+}
+
+.af-pill {
+    display: inline-block;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    color: #64748B;
+    background: white;
+    border: 1.5px solid #E2E8F0;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.af-pill:hover {
+    border-color: var(--primary-purple, #0077FF);
+    color: var(--primary-purple, #0077FF);
+}
+
+.af-pill.active {
+    background: #E8F1FF;
+    color: var(--primary-purple, #0077FF);
+    border-color: var(--primary-purple, #0077FF);
+}
+
+/* Level 2: Specialization chips */
+.af-specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 8px;
+    animation: afFadeIn 0.3s ease;
+}
+
+.af-chip {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    color: #64748B;
+    background: white;
+    border: 1px solid #E2E8F0;
+    transition: all 0.25s ease;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.af-chip:hover {
+    border-color: var(--primary-purple, #0077FF);
+    color: var(--primary-purple, #0077FF);
+}
+
+.af-chip.active {
+    background: #E8F1FF;
+    color: var(--primary-purple, #0077FF);
+    border-color: var(--primary-purple, #0077FF);
+}
+
+/* Role specialization visual marker */
+.af-chip--role {
+    border-style: dashed;
+}
+
+.af-chip--role.active {
+    border-style: solid;
+}
+
+@keyframes afFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===========================
+   Responsive: horizontal scroll on mobile
+   =========================== */
+@media (max-width: 768px) {
+    .af-categories,
+    .af-types,
+    .af-specs {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 4px 0;
+        margin-left: -16px;
+        margin-right: -16px;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .af-categories::-webkit-scrollbar,
+    .af-types::-webkit-scrollbar,
+    .af-specs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .af-tab {
+        padding: 10px 18px;
+        font-size: 13px;
+    }
+
+    .af-pill {
+        padding: 7px 16px;
+        font-size: 12px;
+    }
+
+    .af-chip {
+        padding: 5px 12px;
+        font-size: 11px;
+    }
+}
