@@ -69,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle = 'Вход / Регистрация | ' . SITE_NAME;
 $pageDescription = 'Войдите в личный кабинет или зарегистрируйтесь';
 $additionalCSS = ['/assets/css/login.css?v=' . time()];
+$noindex = true;
 
 // Include header
 include __DIR__ . '/../includes/header.php';

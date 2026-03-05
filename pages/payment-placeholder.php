@@ -14,6 +14,7 @@ $registrationObj = new Registration($db);
 $cartData = $registrationObj->calculateCartTotal($_SESSION['cart'] ?? []);
 
 $pageTitle = 'Оплата | ' . SITE_NAME;
+$noindex = true;
 include __DIR__ . '/../includes/header.php';
 ?>
 

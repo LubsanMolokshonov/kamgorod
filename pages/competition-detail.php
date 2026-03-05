@@ -39,6 +39,25 @@ $specializations = $competitionObj->getSpecializations($competition['id']);
 $pageTitle = htmlspecialchars($competition['title']) . ' | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr($competition['description'], 0, 150));
 
+// JSON-LD Event
+$jsonLd = [
+    '@context' => 'https://schema.org',
+    '@type' => 'Event',
+    'name' => $competition['title'],
+    'description' => mb_substr(strip_tags($competition['description']), 0, 300),
+    'url' => SITE_URL . '/konkursy/' . $competition['slug'] . '/',
+    'eventAttendanceMode' => 'https://schema.org/OnlineEventAttendanceMode',
+    'eventStatus' => 'https://schema.org/EventScheduled',
+    'organizer' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL],
+    'offers' => [
+        '@type' => 'Offer',
+        'price' => $competition['price'],
+        'priceCurrency' => 'RUB',
+        'availability' => 'https://schema.org/InStock'
+    ]
+];
+$ogType = 'article';
+
 // Calculate deadline: today + 2 days
 $deadline = new DateTime();
 $deadline->modify('+2 days');

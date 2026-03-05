@@ -85,6 +85,7 @@ $display = $placement ? $placementData[$placement] : $noPlaceData;
 // Page metadata
 $pageTitle = 'Результат олимпиады — ' . htmlspecialchars($olympiadTitle) . ' | ' . SITE_NAME;
 $pageDescription = 'Результат олимпиады «' . htmlspecialchars($olympiadTitle) . '». Оформите диплом с указанием места.';
+$noindex = true;
 
 include __DIR__ . '/../includes/header.php';
 ?>

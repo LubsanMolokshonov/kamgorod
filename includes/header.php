@@ -10,6 +10,23 @@ initSession();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $pageTitle ?? 'Педагогический портал'; ?></title>
     <meta name="description" content="<?php echo $pageDescription ?? 'Всероссийские конкурсы для педагогов и школьников'; ?>">
+<?php if (!empty($noindex)): ?>
+    <meta name="robots" content="noindex, nofollow">
+<?php endif; ?>
+<?php $canonicalUrl = $canonicalUrl ?? (SITE_URL . strtok($_SERVER['REQUEST_URI'], '?')); ?>
+    <link rel="canonical" href="<?php echo $canonicalUrl; ?>">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="<?php echo htmlspecialchars($pageTitle ?? SITE_NAME); ?>">
+    <meta property="og:description" content="<?php echo htmlspecialchars($pageDescription ?? ''); ?>">
+    <meta property="og:url" content="<?php echo $canonicalUrl; ?>">
+    <meta property="og:type" content="<?php echo $ogType ?? 'website'; ?>">
+    <meta property="og:site_name" content="<?php echo SITE_NAME; ?>">
+    <meta property="og:locale" content="ru_RU">
+<?php if (!empty($ogImage)): ?>
+    <meta property="og:image" content="<?php echo $ogImage; ?>">
+<?php endif; ?>
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/assets/css/main.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="/assets/css/search.css?v=<?php echo time(); ?>">
@@ -38,6 +55,12 @@ initSession();
             <link rel="stylesheet" href="<?php echo $css; ?>">
         <?php endforeach; ?>
     <?php endif; ?>
+
+<?php if (!empty($jsonLd)): ?>
+    <script type="application/ld+json">
+<?php echo json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT); ?>
+    </script>
+<?php endif; ?>
 </head>
 <body>
     <header class="header">

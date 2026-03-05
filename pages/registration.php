@@ -49,6 +49,7 @@ $pageTitle = 'Регистрация на конкурс: ' . htmlspecialchars($
 $pageDescription = 'Заполните форму регистрации для участия в конкурсе';
 $additionalCSS = ['/assets/css/form.css?v=' . time()];
 $additionalJS = ['/assets/js/diploma-preview.js?v=' . time(), '/assets/js/form-validation.js?v=' . time()];
+$noindex = true;
 
 // Include header
 include __DIR__ . '/../includes/header.php';

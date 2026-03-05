@@ -49,6 +49,7 @@ $csrfToken = generateCSRFToken();
 // Page metadata
 $pageTitle = htmlspecialchars($olympiad['title']) . ' — Тестирование | ' . SITE_NAME;
 $pageDescription = 'Пройдите олимпиаду «' . htmlspecialchars($olympiad['title']) . '» и получите диплом с указанием места.';
+$noindex = true;
 
 include __DIR__ . '/../includes/header.php';
 ?>

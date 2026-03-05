@@ -45,6 +45,16 @@ $olympiadObj = new Olympiad($db);
 $totalOlympiads = $olympiadObj->count();
 $totalOlympiadParticipants = $olympiadObj->getTotalParticipants();
 
+// JSON-LD Organization
+$jsonLd = [
+    '@context' => 'https://schema.org',
+    '@type' => 'Organization',
+    'name' => SITE_NAME,
+    'url' => SITE_URL,
+    'description' => $pageDescription,
+    'logo' => SITE_URL . '/assets/images/logo.svg'
+];
+
 include __DIR__ . '/includes/header.php';
 ?>
 

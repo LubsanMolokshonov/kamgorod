@@ -80,6 +80,7 @@ $videoUrl = $webinar['video_url'] ?: 'https://clck.ru/3RmQ2D';
 $pageTitle = 'Видеолекция: ' . $webinar['title'] . ' | ' . SITE_NAME;
 $pageDescription = 'Просмотрите запись вебинара, пройдите тест и получите сертификат';
 $additionalCSS = ['/assets/css/cabinet.css'];
+$noindex = true;
 
 include __DIR__ . '/../includes/header.php';
 ?>

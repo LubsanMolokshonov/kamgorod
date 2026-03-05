@@ -19,6 +19,7 @@ if ($orderNumber) {
 }
 
 $pageTitle = 'Ошибка оплаты | ' . SITE_NAME;
+$noindex = true;
 include __DIR__ . '/../includes/header.php';
 ?>
 

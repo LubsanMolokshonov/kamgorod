@@ -7,9 +7,27 @@
 
 class CartRecommendation {
     private $db;
+    private $pdo;
+    private $v2Ready = null;
 
     public function __construct($pdo) {
         $this->db = new Database($pdo);
+        $this->pdo = $pdo;
+    }
+
+    /**
+     * Проверить, применена ли миграция v2 (3-уровневая сегментация).
+     */
+    private function isV2(): bool {
+        if ($this->v2Ready === null) {
+            try {
+                $this->db->queryOne("SELECT 1 FROM audience_type_specializations LIMIT 1");
+                $this->v2Ready = true;
+            } catch (\Exception $e) {
+                $this->v2Ready = false;
+            }
+        }
+        return $this->v2Ready;
     }
 
     /**
@@ -27,7 +45,8 @@ class CartRecommendation {
      * @return array Array of recommendation cards
      */
     public function getRecommendations(array $allItems, ?int $userId, int $limit = 3): array {
-        $audienceSlugs = $this->detectAudienceTypes($allItems);
+        $context = $this->detectAudienceContext($allItems, $userId);
+        $audienceSlugs = $context['type_slugs'];
 
         // Collect IDs of items already in cart to exclude
         $excludeCompetitionIds = [];
@@ -43,6 +62,9 @@ class CartRecommendation {
             $raw = $item['raw_data'] ?? [];
             if ($item['type'] === 'registration') {
                 $excludeCompetitionIds[] = (int)($raw['competition_id'] ?? 0);
+                $cartHasCompetition = true;
+            } elseif ($item['type'] === 'olympiad_registration') {
+                // Олимпиады аналогичны конкурсам для кросс-селлинга
                 $cartHasCompetition = true;
             } elseif ($item['type'] === 'webinar_certificate') {
                 $excludeWebinarIds[] = (int)($raw['webinar_id'] ?? 0);
@@ -79,17 +101,17 @@ class CartRecommendation {
             $card = null;
 
             if ($category === 'competition') {
-                $card = $this->fillCompetitionSlot($audienceSlugs, $usedCompetitionIds);
+                $card = $this->fillCompetitionSlot($audienceSlugs, $usedCompetitionIds, $context);
                 if ($card) {
                     $usedCompetitionIds[] = $card['id'];
                 }
             } elseif ($category === 'webinar') {
-                $card = $this->fillWebinarSlot($audienceSlugs, $usedWebinarIds, $userId);
+                $card = $this->fillWebinarSlot($audienceSlugs, $usedWebinarIds, $userId, $context);
                 if ($card && $card['id'] > 0) {
                     $usedWebinarIds[] = $card['id'];
                 }
             } elseif ($category === 'publication') {
-                $card = $this->fillPublicationSlot($audienceSlugs, $usedPublicationIds, $userId);
+                $card = $this->fillPublicationSlot($audienceSlugs, $usedPublicationIds, $userId, $context);
                 if ($card && $card['id'] > 0) {
                     $usedPublicationIds[] = $card['id'];
                 }
@@ -144,6 +166,7 @@ class CartRecommendation {
         $competitionIds = [];
         $webinarIds = [];
         $publicationIds = [];
+        $olympiadIds = [];
 
         foreach ($allItems as $item) {
             $raw = $item['raw_data'] ?? [];
@@ -153,6 +176,8 @@ class CartRecommendation {
                 $webinarIds[] = (int)$raw['webinar_id'];
             } elseif ($item['type'] === 'certificate' && !empty($raw['publication_id'])) {
                 $publicationIds[] = (int)$raw['publication_id'];
+            } elseif ($item['type'] === 'olympiad_registration' && !empty($raw['olympiad_id'])) {
+                $olympiadIds[] = (int)$raw['olympiad_id'];
             }
         }
 
@@ -201,6 +226,21 @@ class CartRecommendation {
             }
         }
 
+        // Olympiads → audience_types via olympiad_audience_types
+        if (!empty($olympiadIds)) {
+            $placeholders = implode(',', array_fill(0, count($olympiadIds), '?'));
+            $rows = $this->db->query(
+                "SELECT DISTINCT at.slug
+                 FROM audience_types at
+                 JOIN olympiad_audience_types oat ON at.id = oat.audience_type_id
+                 WHERE oat.olympiad_id IN ($placeholders) AND at.is_active = 1",
+                $olympiadIds
+            );
+            foreach ($rows as $row) {
+                $audienceSlugs[] = $row['slug'];
+            }
+        }
+
         $audienceSlugs = array_unique($audienceSlugs);
 
         // Fallback: if nothing detected, return all 4 types
@@ -212,16 +252,240 @@ class CartRecommendation {
     }
 
     /**
+     * Обнаружить полный контекст аудитории из корзины и профиля пользователя.
+     * Возвращает 3-уровневый контекст для ранжирования рекомендаций.
+     *
+     * @param array $allItems Товары в корзине
+     * @param int|null $userId ID пользователя
+     * @return array{type_slugs: string[], specialization_ids: int[], cart_specialization_ids: int[], user_specialization_ids: int[]}
+     */
+    private function detectAudienceContext(array $allItems, ?int $userId): array {
+        $typeSlugs = $this->detectAudienceTypes($allItems);
+
+        $context = [
+            'type_slugs' => $typeSlugs,
+            'specialization_ids' => [],
+            'cart_specialization_ids' => [],
+            'user_specialization_ids' => [],
+        ];
+
+        if (!$this->isV2()) {
+            return $context;
+        }
+
+        // Извлечь специализации из товаров корзины (батч-запросы)
+        $cartSpecIds = $this->detectSpecializationsFromCart($allItems);
+        $context['cart_specialization_ids'] = $cartSpecIds;
+
+        // Получить специализации из профиля пользователя
+        $userSpecIds = [];
+        if ($userId) {
+            $userSpecIds = $this->getUserSpecializationIds($userId);
+
+            // Если корзина не дала type_slugs (фоллбэк), попробовать из профиля
+            if ($typeSlugs === ['dou', 'nachalnaya-shkola', 'srednyaya-starshaya-shkola', 'spo']) {
+                $userTypeSlug = $this->getUserAudienceTypeSlug($userId);
+                if ($userTypeSlug) {
+                    $context['type_slugs'] = [$userTypeSlug];
+                }
+            }
+        }
+        $context['user_specialization_ids'] = array_values(array_diff($userSpecIds, $cartSpecIds));
+
+        // Объединить все специализации
+        $context['specialization_ids'] = array_values(array_unique(array_merge($cartSpecIds, $userSpecIds)));
+
+        return $context;
+    }
+
+    /**
+     * Извлечь ID специализаций из товаров в корзине (батч-запросы).
+     */
+    private function detectSpecializationsFromCart(array $allItems): array {
+        $competitionIds = [];
+        $webinarIds = [];
+        $publicationIds = [];
+        $olympiadIds = [];
+
+        foreach ($allItems as $item) {
+            $raw = $item['raw_data'] ?? [];
+            if ($item['type'] === 'registration' && !empty($raw['competition_id'])) {
+                $competitionIds[] = (int)$raw['competition_id'];
+            } elseif ($item['type'] === 'webinar_certificate' && !empty($raw['webinar_id'])) {
+                $webinarIds[] = (int)$raw['webinar_id'];
+            } elseif ($item['type'] === 'certificate' && !empty($raw['publication_id'])) {
+                $publicationIds[] = (int)$raw['publication_id'];
+            } elseif ($item['type'] === 'olympiad_registration' && !empty($raw['olympiad_id'])) {
+                $olympiadIds[] = (int)$raw['olympiad_id'];
+            }
+        }
+
+        $specIds = [];
+
+        if (!empty($competitionIds)) {
+            $placeholders = implode(',', array_fill(0, count($competitionIds), '?'));
+            $rows = $this->db->query(
+                "SELECT DISTINCT specialization_id FROM competition_specializations WHERE competition_id IN ($placeholders)",
+                $competitionIds
+            );
+            foreach ($rows as $row) {
+                $specIds[] = (int)$row['specialization_id'];
+            }
+        }
+
+        if (!empty($webinarIds)) {
+            $placeholders = implode(',', array_fill(0, count($webinarIds), '?'));
+            $rows = $this->db->query(
+                "SELECT DISTINCT specialization_id FROM webinar_specializations WHERE webinar_id IN ($placeholders)",
+                $webinarIds
+            );
+            foreach ($rows as $row) {
+                $specIds[] = (int)$row['specialization_id'];
+            }
+        }
+
+        if (!empty($publicationIds)) {
+            $placeholders = implode(',', array_fill(0, count($publicationIds), '?'));
+            $rows = $this->db->query(
+                "SELECT DISTINCT specialization_id FROM publication_specializations WHERE publication_id IN ($placeholders)",
+                $publicationIds
+            );
+            foreach ($rows as $row) {
+                $specIds[] = (int)$row['specialization_id'];
+            }
+        }
+
+        if (!empty($olympiadIds)) {
+            $placeholders = implode(',', array_fill(0, count($olympiadIds), '?'));
+            $rows = $this->db->query(
+                "SELECT DISTINCT specialization_id FROM olympiad_specializations WHERE olympiad_id IN ($placeholders)",
+                $olympiadIds
+            );
+            foreach ($rows as $row) {
+                $specIds[] = (int)$row['specialization_id'];
+            }
+        }
+
+        return array_values(array_unique($specIds));
+    }
+
+    /**
+     * Получить ID специализаций из профиля пользователя.
+     */
+    private function getUserSpecializationIds(?int $userId): array {
+        if (!$userId) {
+            return [];
+        }
+
+        try {
+            $rows = $this->db->query(
+                "SELECT specialization_id FROM user_specializations WHERE user_id = ?",
+                [$userId]
+            );
+            return array_map(fn($r) => (int)$r['specialization_id'], $rows);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Получить слаг типа аудитории из профиля пользователя (фоллбэк).
+     */
+    private function getUserAudienceTypeSlug(?int $userId): ?string {
+        if (!$userId) {
+            return null;
+        }
+
+        try {
+            $row = $this->db->queryOne(
+                "SELECT at.slug
+                 FROM users u
+                 JOIN audience_types at ON u.institution_type_id = at.id
+                 WHERE u.id = ? AND at.is_active = 1",
+                [$userId]
+            );
+            return $row['slug'] ?? null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Построить LEFT JOIN подзапрос для весового скоринга по специализациям.
+     * Возвращает фрагменты SQL и параметры, или пустые значения если скоринг не нужен.
+     *
+     * @param string $junctionTable Таблица связи (competition_specializations, webinar_specializations, ...)
+     * @param string $entityIdColumn Название FK-колонки (competition_id, webinar_id, ...)
+     * @param string $entityAlias Алиас основной таблицы в запросе (c, w, p)
+     * @param array $context Контекст аудитории из detectAudienceContext()
+     * @return array{join_sql: string, join_params: int[], select_expr: string, order_expr: string}
+     */
+    private function buildSpecScoreJoin(string $junctionTable, string $entityIdColumn, string $entityAlias, array $context): array {
+        $empty = ['join_sql' => '', 'join_params' => [], 'select_expr' => '', 'order_expr' => ''];
+
+        if (empty($context['specialization_ids'])) {
+            return $empty;
+        }
+
+        $cartIds = $context['cart_specialization_ids'] ?? [];
+        $userIds = $context['user_specialization_ids'] ?? [];
+        $allIds = $context['specialization_ids'];
+
+        $allPlaceholders = implode(',', array_fill(0, count($allIds), '?'));
+
+        // Построить CASE для взвешенного подсчёта
+        $params = [];
+        $caseParts = [];
+
+        if (!empty($cartIds)) {
+            $cartPlaceholders = implode(',', array_fill(0, count($cartIds), '?'));
+            $caseParts[] = "WHEN jt.specialization_id IN ($cartPlaceholders) THEN 2";
+            $params = array_merge($params, $cartIds);
+        }
+        if (!empty($userIds)) {
+            $userPlaceholders = implode(',', array_fill(0, count($userIds), '?'));
+            $caseParts[] = "WHEN jt.specialization_id IN ($userPlaceholders) THEN 1";
+            $params = array_merge($params, $userIds);
+        }
+
+        // Если нет разделения на cart/user — просто считаем совпадения
+        $scoreExpr = empty($caseParts)
+            ? 'COUNT(*)'
+            : 'SUM(CASE ' . implode(' ', $caseParts) . ' ELSE 0 END)';
+
+        $joinSql = "LEFT JOIN (
+            SELECT jt.$entityIdColumn, $scoreExpr AS match_score
+            FROM $junctionTable jt
+            WHERE jt.specialization_id IN ($allPlaceholders)
+            GROUP BY jt.$entityIdColumn
+        ) spec_match ON $entityAlias.id = spec_match.$entityIdColumn";
+
+        // Параметры: сначала CASE-значения, потом WHERE IN
+        $joinParams = array_merge($params, $allIds);
+
+        return [
+            'join_sql' => $joinSql,
+            'join_params' => $joinParams,
+            'select_expr' => ', COALESCE(spec_match.match_score, 0) AS spec_score',
+            'order_expr' => 'spec_score DESC, ',
+        ];
+    }
+
+    /**
      * Get competition recommendations matching audience.
      */
-    private function getCompetitionRecommendations(array $audienceSlugs, array $excludeIds, int $limit): array {
+    private function getCompetitionRecommendations(array $audienceSlugs, array $excludeIds, int $limit, array $context = []): array {
         if (empty($audienceSlugs)) {
             return [];
         }
 
         $limitSafe = intval($limit);
         $audiencePlaceholders = implode(',', array_fill(0, count($audienceSlugs), '?'));
-        $params = $audienceSlugs;
+
+        // Скоринг по специализациям (v2)
+        $score = $this->buildSpecScoreJoin('competition_specializations', 'competition_id', 'c', $context);
+
+        $params = array_merge($score['join_params'], $audienceSlugs);
 
         $excludeClause = '';
         if (!empty($excludeIds)) {
@@ -232,14 +496,16 @@ class CartRecommendation {
 
         $rows = $this->db->query(
             "SELECT c.id, c.title, c.slug, c.price, c.category
+                    {$score['select_expr']}
              FROM competitions c
+             {$score['join_sql']}
              JOIN competition_audience_types cat ON c.id = cat.competition_id
              JOIN audience_types at ON cat.audience_type_id = at.id
              WHERE c.is_active = 1
                AND at.slug IN ($audiencePlaceholders)
                $excludeClause
              GROUP BY c.id
-             ORDER BY c.display_order ASC
+             ORDER BY {$score['order_expr']}c.display_order ASC
              LIMIT $limitSafe",
             $params
         );
@@ -262,14 +528,18 @@ class CartRecommendation {
      * Get webinar certificate recommendations for logged-in user.
      * Finds webinars where user has a registration but no certificate yet.
      */
-    private function getWebinarRecommendations(array $audienceSlugs, array $excludeWebinarIds, int $userId, int $limit): array {
+    private function getWebinarRecommendations(array $audienceSlugs, array $excludeWebinarIds, int $userId, int $limit, array $context = []): array {
         if (empty($audienceSlugs)) {
             return [];
         }
 
         $limitSafe = intval($limit);
         $audiencePlaceholders = implode(',', array_fill(0, count($audienceSlugs), '?'));
-        $params = $audienceSlugs;
+
+        // Скоринг по специализациям (v2)
+        $score = $this->buildSpecScoreJoin('webinar_specializations', 'webinar_id', 'w', $context);
+
+        $params = array_merge($score['join_params'], $audienceSlugs);
         $params[] = $userId;
 
         $excludeClause = '';
@@ -283,7 +553,9 @@ class CartRecommendation {
             "SELECT w.id, w.title, w.slug, w.certificate_price,
                     wr.id as registration_id, wr.full_name,
                     wr.organization, wr.position, wr.city
+                    {$score['select_expr']}
              FROM webinars w
+             {$score['join_sql']}
              JOIN webinar_registrations wr ON w.id = wr.webinar_id
              JOIN webinar_audience_types wat ON w.id = wat.webinar_id
              JOIN audience_types at ON wat.audience_type_id = at.id
@@ -296,7 +568,7 @@ class CartRecommendation {
                AND (w.status = 'completed' OR w.status = 'videolecture')
                $excludeClause
              GROUP BY w.id, wr.id
-             ORDER BY w.scheduled_at DESC
+             ORDER BY {$score['order_expr']}w.scheduled_at DESC
              LIMIT $limitSafe",
             $params
         );
@@ -325,14 +597,18 @@ class CartRecommendation {
      * Get publication certificate recommendations for logged-in user.
      * Finds user's published works without a certificate.
      */
-    private function getPublicationRecommendations(array $audienceSlugs, array $excludePublicationIds, int $userId, int $limit): array {
+    private function getPublicationRecommendations(array $audienceSlugs, array $excludePublicationIds, int $userId, int $limit, array $context = []): array {
         if (empty($audienceSlugs)) {
             return [];
         }
 
         $limitSafe = intval($limit);
         $audiencePlaceholders = implode(',', array_fill(0, count($audienceSlugs), '?'));
-        $params = $audienceSlugs;
+
+        // Скоринг по специализациям (v2)
+        $score = $this->buildSpecScoreJoin('publication_specializations', 'publication_id', 'p', $context);
+
+        $params = array_merge($score['join_params'], $audienceSlugs);
         $params[] = $userId;
 
         $excludeClause = '';
@@ -345,7 +621,9 @@ class CartRecommendation {
         $rows = $this->db->query(
             "SELECT p.id, p.title, p.slug, u.full_name as author_name,
                     u.organization, u.position, u.city
+                    {$score['select_expr']}
              FROM publications p
+             {$score['join_sql']}
              JOIN users u ON p.user_id = u.id
              JOIN publication_audience_types pat ON p.id = pat.publication_id
              JOIN audience_types at ON pat.audience_type_id = at.id
@@ -356,7 +634,7 @@ class CartRecommendation {
                AND pc.id IS NULL
                $excludeClause
              GROUP BY p.id
-             ORDER BY p.published_at DESC
+             ORDER BY {$score['order_expr']}p.published_at DESC
              LIMIT $limitSafe",
             $params
         );
@@ -386,9 +664,9 @@ class CartRecommendation {
     /**
      * Fill a competition slot. Competitions are always available (browse).
      */
-    private function fillCompetitionSlot(array $audienceSlugs, array $excludeIds): ?array {
+    private function fillCompetitionSlot(array $audienceSlugs, array $excludeIds, array $context = []): ?array {
         try {
-            $results = $this->getCompetitionRecommendations($audienceSlugs, $excludeIds, 1);
+            $results = $this->getCompetitionRecommendations($audienceSlugs, $excludeIds, 1, $context);
             return $results[0] ?? null;
         } catch (\Throwable $e) {
             error_log("Cart rec (competition slot) error: " . $e->getMessage());
@@ -403,11 +681,11 @@ class CartRecommendation {
      *   3. Webinar browse without audience filter (any videolecture)
      *   4. Static webinar listing CTA (last resort)
      */
-    private function fillWebinarSlot(array $audienceSlugs, array $excludeIds, ?int $userId): ?array {
-        // Priority 1: Quick-add certificate
+    private function fillWebinarSlot(array $audienceSlugs, array $excludeIds, ?int $userId, array $context = []): ?array {
+        // Priority 1: Quick-add certificate (с учётом специализаций)
         if ($userId) {
             try {
-                $certs = $this->getWebinarRecommendations($audienceSlugs, $excludeIds, $userId, 1);
+                $certs = $this->getWebinarRecommendations($audienceSlugs, $excludeIds, $userId, 1, $context);
                 if (!empty($certs)) {
                     return $certs[0];
                 }
@@ -416,9 +694,9 @@ class CartRecommendation {
             }
         }
 
-        // Priority 2: Webinar browse matching audience
+        // Priority 2: Webinar browse matching audience (с учётом специализаций)
         try {
-            $browse = $this->getWebinarBrowseRecommendations($audienceSlugs, $excludeIds, 1);
+            $browse = $this->getWebinarBrowseRecommendations($audienceSlugs, $excludeIds, 1, $context);
             if (!empty($browse)) {
                 return $browse[0];
             }
@@ -426,7 +704,7 @@ class CartRecommendation {
             error_log("Cart rec (webinar browse slot) error: " . $e->getMessage());
         }
 
-        // Priority 3: Webinar browse without audience filter
+        // Priority 3: Webinar browse without audience filter (без скоринга)
         try {
             $allAudience = ['dou', 'nachalnaya-shkola', 'srednyaya-starshaya-shkola', 'spo'];
             $browse = $this->getWebinarBrowseRecommendations($allAudience, $excludeIds, 1);
@@ -447,11 +725,11 @@ class CartRecommendation {
      *   1. Publication certificate quick-add (if user has published works)
      *   2. Static "publish your work" CTA
      */
-    private function fillPublicationSlot(array $audienceSlugs, array $excludeIds, ?int $userId): ?array {
-        // Priority 1: Quick-add certificate
+    private function fillPublicationSlot(array $audienceSlugs, array $excludeIds, ?int $userId, array $context = []): ?array {
+        // Priority 1: Quick-add certificate (с учётом специализаций)
         if ($userId) {
             try {
-                $certs = $this->getPublicationRecommendations($audienceSlugs, $excludeIds, $userId, 1);
+                $certs = $this->getPublicationRecommendations($audienceSlugs, $excludeIds, $userId, 1, $context);
                 if (!empty($certs)) {
                     return $certs[0];
                 }
@@ -471,14 +749,18 @@ class CartRecommendation {
      * Get webinar browse recommendations (available for ALL users).
      * Returns webinars matching audience type for browsing, not certificate purchase.
      */
-    private function getWebinarBrowseRecommendations(array $audienceSlugs, array $excludeWebinarIds, int $limit): array {
+    private function getWebinarBrowseRecommendations(array $audienceSlugs, array $excludeWebinarIds, int $limit, array $context = []): array {
         if (empty($audienceSlugs)) {
             return [];
         }
 
         $limitSafe = intval($limit);
         $audiencePlaceholders = implode(',', array_fill(0, count($audienceSlugs), '?'));
-        $params = $audienceSlugs;
+
+        // Скоринг по специализациям (v2)
+        $score = $this->buildSpecScoreJoin('webinar_specializations', 'webinar_id', 'w', $context);
+
+        $params = array_merge($score['join_params'], $audienceSlugs);
 
         $excludeClause = '';
         if (!empty($excludeWebinarIds)) {
@@ -490,7 +772,9 @@ class CartRecommendation {
         $rows = $this->db->query(
             "SELECT w.id, w.title, w.slug, w.certificate_price, w.status,
                     w.certificate_hours
+                    {$score['select_expr']}
              FROM webinars w
+             {$score['join_sql']}
              JOIN webinar_audience_types wat ON w.id = wat.webinar_id
              JOIN audience_types at ON wat.audience_type_id = at.id
              WHERE w.is_active = 1
@@ -498,7 +782,7 @@ class CartRecommendation {
                AND w.status IN ('completed', 'videolecture')
                $excludeClause
              GROUP BY w.id
-             ORDER BY
+             ORDER BY {$score['order_expr']}
                CASE w.status
                  WHEN 'videolecture' THEN 1
                  WHEN 'completed' THEN 2

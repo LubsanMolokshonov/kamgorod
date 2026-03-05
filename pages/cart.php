@@ -143,6 +143,7 @@ $pageDescription = 'Ваша корзина покупок';
 $cacheBust = filemtime(__DIR__ . '/../assets/css/cart.css');
 $additionalCSS = ['/assets/css/cart.css?v=' . $cacheBust];
 $additionalJS = ['/assets/js/cart.js?v=' . filemtime(__DIR__ . '/../assets/js/cart.js')];
+$noindex = true;
 
 // Include header
 include __DIR__ . '/../includes/header.php';

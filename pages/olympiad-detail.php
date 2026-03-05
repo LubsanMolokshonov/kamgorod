@@ -46,6 +46,18 @@ $diplomaPrice = $olympiad['diploma_price'] ?? 169;
 $pageTitle = htmlspecialchars($olympiad['title']) . ' | Олимпиады | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr($olympiad['description'], 0, 150));
 
+// JSON-LD Quiz
+$jsonLd = [
+    '@context' => 'https://schema.org',
+    '@type' => 'Quiz',
+    'name' => $olympiad['title'],
+    'description' => mb_substr(strip_tags($olympiad['description']), 0, 300),
+    'url' => SITE_URL . '/olimpiady/' . $olympiad['slug'] . '/',
+    'educationalLevel' => $olympiad['grade'] ?? '',
+    'provider' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL]
+];
+$ogType = 'article';
+
 // Include header
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -200,7 +212,7 @@ include __DIR__ . '/../includes/header.php';
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
 }
 
-.diploma-fan-item img {
+.diploma-fan-item img:not(.dp-stamp) {
     width: 100%;
     height: auto;
     display: block;
@@ -238,6 +250,369 @@ include __DIR__ . '/../includes/header.php';
 
 .diploma-fan:hover .fan-3 {
     transform: rotate(18deg) translateX(15px);
+}
+
+/* Diploma Preview Overlay */
+.diploma-preview {
+    position: relative;
+    width: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    aspect-ratio: 595 / 842;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.diploma-preview-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 12%;
+    box-sizing: border-box;
+}
+
+.dp-title {
+    margin-top: 38%;
+    font-size: 1.6em;
+    font-weight: bold;
+    color: #0077FF;
+    text-align: center;
+    line-height: 1.1;
+    letter-spacing: 0.05em;
+}
+
+.dp-subtitle {
+    margin-top: 1.2%;
+    font-size: 0.85em;
+    font-weight: bold;
+    color: #000;
+    text-align: center;
+    letter-spacing: 0.03em;
+}
+
+.dp-award {
+    margin-top: 2%;
+    font-size: 0.6em;
+    color: #000;
+    text-align: center;
+}
+
+.dp-name {
+    margin-top: 1.2%;
+    font-size: 0.95em;
+    font-weight: bold;
+    color: #000;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.dp-achievement {
+    margin-top: 1.5%;
+    font-size: 0.5em;
+    font-style: italic;
+    color: #000;
+    text-align: center;
+}
+
+.dp-type {
+    margin-top: 1.2%;
+    font-size: 0.6em;
+    font-weight: bold;
+    color: #0077FF;
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+
+.dp-olympiad-name {
+    margin-top: 0.8%;
+    font-size: 0.5em;
+    color: #000;
+    text-align: center;
+    line-height: 1.3;
+    max-width: 90%;
+}
+
+.dp-place {
+    margin-top: 1.2%;
+    font-size: 0.6em;
+    font-weight: bold;
+    color: #0077FF;
+    text-align: center;
+}
+
+/* Bottom signature area */
+.dp-bottom-block {
+    position: absolute;
+    bottom: 12%;
+    left: 13%;
+    right: 10%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.dp-date {
+    font-size: 0.5em;
+    color: #333;
+}
+
+.dp-signature-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.dp-chairman-label {
+    font-size: 0.45em;
+    color: #333;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.dp-chairman-name {
+    font-size: 0.5em;
+    font-weight: bold;
+    color: #000;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.dp-stamp {
+    width: 45%;
+    height: auto;
+    opacity: 0.85;
+    margin-top: -4px;
+}
+
+/* Scale font sizes relative to container width */
+.diploma-fan-item .diploma-preview {
+    font-size: clamp(6px, 1.8vw, 12px);
+}
+
+@media (max-width: 992px) {
+    .diploma-fan-item .diploma-preview {
+        font-size: clamp(5px, 2.5vw, 11px);
+    }
+}
+
+/* ---- Benefits Section (after hero) ---- */
+.olympiad-benefits-section {
+    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+    padding: 0 0 80px;
+    margin-top: 0;
+}
+
+.olympiad-benefits-section .container {
+    max-width: 1440px;
+    padding: 0 80px;
+}
+
+.olympiad-benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin: 0;
+}
+
+.olympiad-benefit-card {
+    background: white;
+    border-radius: 24px;
+    padding: 28px 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.olympiad-benefit-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.olympiad-benefit-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2C3E50;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.olympiad-benefit-card p {
+    font-size: 14px;
+    color: #64748B;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ---- About Olympiad Section ---- */
+.olympiad-about-section {
+    padding: 60px 0;
+    background: white;
+}
+
+.olympiad-about-section .od-section-title {
+    margin-bottom: 48px;
+}
+
+.olympiad-about-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 480px;
+    gap: 48px;
+    align-items: start;
+}
+
+.olympiad-about-description {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.olympiad-about-description .description-text {
+    font-size: 17px;
+    line-height: 1.7;
+    color: #64748B;
+    padding-right: 20px;
+}
+
+.olympiad-about-description .description-text p {
+    margin-bottom: 16px;
+    line-height: 1.7;
+}
+
+.olympiad-about-description .description-text h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1E293B;
+    margin-top: 28px;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.olympiad-about-description .description-text h3:first-child {
+    margin-top: 0;
+}
+
+.olympiad-about-description .description-text ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px 0;
+}
+
+.olympiad-about-description .description-text ul li {
+    position: relative;
+    padding-left: 24px;
+    margin-bottom: 8px;
+    line-height: 1.7;
+    color: #64748B;
+}
+
+.olympiad-about-description .description-text ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 11px;
+    width: 8px;
+    height: 8px;
+    background: #0077FF;
+    border-radius: 50%;
+}
+
+.olympiad-about-description .description-text strong {
+    color: #334155;
+    font-weight: 600;
+}
+
+.olympiad-about-info-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.olympiad-info-card {
+    background: white;
+    border: 2px solid var(--light-purple, #E8F1FF);
+    border-radius: 20px;
+    padding: 20px 24px;
+    transition: all 0.3s ease;
+}
+
+.olympiad-info-card:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 20px rgba(0, 119, 255, 0.15);
+    border-color: var(--primary-purple, #0077FF);
+}
+
+.olympiad-info-card-highlight {
+    background: linear-gradient(135deg, #E8F1FF 0%, #D4E4FF 100%);
+    border-color: var(--primary-purple, #0077FF);
+    border-width: 2px;
+}
+
+.olympiad-info-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.olympiad-info-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.olympiad-info-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-dark, #2C3E50);
+    margin: 0;
+}
+
+.olympiad-info-card-content {
+    padding-left: 52px;
+}
+
+.olympiad-info-card-content .award-text {
+    font-size: 15px;
+    color: #64748B;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.olympiad-info-card-content .year-text {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-dark, #2C3E50);
+    margin: 0;
+}
+
+.olympiad-info-card-content .price-display {
+    margin-bottom: 8px;
+}
+
+.olympiad-info-card-content .price-amount {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary-purple, #0077FF);
+    display: block;
+}
+
+.olympiad-info-card-content .price-note {
+    font-size: 13px;
+    color: #64748B;
+    margin: 0;
+    font-style: italic;
 }
 
 /* ---- Screen 2: License ---- */
@@ -548,6 +923,24 @@ include __DIR__ . '/../includes/header.php';
    Responsive Styles
    ===================== */
 @media (max-width: 1024px) {
+    .olympiad-benefits-section .container {
+        padding: 0 40px;
+    }
+
+    .olympiad-benefits-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    .olympiad-about-wrapper {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .olympiad-about-description .description-text {
+        padding-right: 0;
+    }
+
     .olympiad-hero-detail .container {
         padding: 80px 40px 60px;
         gap: 30px;
@@ -626,6 +1019,91 @@ include __DIR__ . '/../includes/header.php';
 @media (max-width: 640px) {
     .olympiad-landing {
         margin-top: -80px;
+    }
+
+    .olympiad-benefits-section {
+        padding: 0 0 40px;
+    }
+
+    .olympiad-benefits-section .container {
+        padding: 0 16px;
+    }
+
+    .olympiad-benefits-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .olympiad-benefit-card {
+        padding: 18px 14px;
+    }
+
+    .olympiad-benefit-card h3 {
+        font-size: 15px;
+        line-height: 1.3;
+    }
+
+    .olympiad-benefit-card p {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .olympiad-about-section {
+        padding: 40px 0;
+    }
+
+    .olympiad-about-section .od-section-title {
+        font-size: 32px;
+        margin-bottom: 32px;
+    }
+
+    .olympiad-about-wrapper {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .olympiad-about-description .description-text {
+        font-size: 14px;
+        padding-right: 0;
+    }
+
+    .olympiad-about-description .description-text h3 {
+        font-size: 17px;
+        margin-top: 22px;
+        margin-bottom: 10px;
+    }
+
+    .olympiad-about-description .description-text ul li {
+        font-size: 14px;
+    }
+
+    .olympiad-about-description .description-text ul li::before {
+        top: 9px;
+        width: 6px;
+        height: 6px;
+    }
+
+    .olympiad-info-card {
+        padding: 16px 18px;
+        border-radius: 16px;
+    }
+
+    .olympiad-info-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+    }
+
+    .olympiad-info-card-title {
+        font-size: 16px;
+    }
+
+    .olympiad-info-card-content {
+        padding-left: 48px;
+    }
+
+    .olympiad-info-card-content .price-amount {
+        font-size: 28px;
     }
 
     .olympiad-hero-detail {
@@ -876,17 +1354,89 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
             <!-- Right side: diploma fan -->
+            <?php
+            $olympiadTitleShort = mb_strlen($olympiad['title']) > 50
+                ? mb_substr($olympiad['title'], 0, 47) . '...'
+                : $olympiad['title'];
+            $sampleDiplomas = [
+                [
+                    'template' => 1,
+                    'subtitle' => 'ПОБЕДИТЕЛЯ',
+                    'name' => 'Иванова Мария Петровна',
+                    'achievement' => 'за высокие достижения в олимпиаде',
+                    'place' => 'I место (Победитель)',
+                ],
+                [
+                    'template' => 2,
+                    'subtitle' => 'ПРИЗЁРА',
+                    'name' => 'Смирнов Алексей Николаевич',
+                    'achievement' => 'за достижения в олимпиаде',
+                    'place' => 'II место (Призёр)',
+                ],
+                [
+                    'template' => 3,
+                    'subtitle' => 'ПРИЗЁРА',
+                    'name' => 'Козлова Елена Сергеевна',
+                    'achievement' => 'за достижения в олимпиаде',
+                    'place' => 'III место (Призёр)',
+                ],
+            ];
+            ?>
             <div class="olympiad-hero-right">
                 <div class="diploma-fan">
-                    <div class="diploma-fan-item fan-1">
-                        <img src="/assets/images/diplomas/templates/backgrounds/template-1.png" alt="Диплом олимпиады вариант 1">
+                    <?php foreach ($sampleDiplomas as $i => $sample): ?>
+                    <div class="diploma-fan-item fan-<?php echo $i + 1; ?>">
+                        <div class="diploma-preview" style="background-image: url('/assets/images/diplomas/templates/backgrounds/template-<?php echo $sample['template']; ?>.png')">
+                            <div class="diploma-preview-content">
+                                <div class="dp-title">ДИПЛОМ</div>
+                                <div class="dp-subtitle"><?php echo $sample['subtitle']; ?></div>
+                                <div class="dp-award">награждается</div>
+                                <div class="dp-name"><?php echo $sample['name']; ?></div>
+                                <div class="dp-achievement"><?php echo $sample['achievement']; ?></div>
+                                <div class="dp-type">ВСЕРОССИЙСКАЯ ОЛИМПИАДА</div>
+                                <div class="dp-olympiad-name">&laquo;<?php echo htmlspecialchars($olympiadTitleShort); ?>&raquo;</div>
+                                <div class="dp-place"><?php echo $sample['place']; ?></div>
+                            </div>
+                            <div class="dp-bottom-block">
+                                <div class="dp-date"><?php echo date('d.m.Y'); ?></div>
+                                <div class="dp-signature-area">
+                                    <div class="dp-chairman-label">Председатель Оргкомитета</div>
+                                    <div class="dp-chairman-name">Брехач Р.А.</div>
+                                    <img src="/assets/images/diplomas/stamp-brehach.png" alt="" class="dp-stamp">
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="diploma-fan-item fan-2">
-                        <img src="/assets/images/diplomas/templates/backgrounds/template-2.png" alt="Диплом олимпиады вариант 2">
-                    </div>
-                    <div class="diploma-fan-item fan-3">
-                        <img src="/assets/images/diplomas/templates/backgrounds/template-3.png" alt="Диплом олимпиады вариант 3">
-                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================
+         Benefits Section (after hero)
+         ============================ -->
+    <section class="olympiad-benefits-section">
+        <div class="container">
+            <div class="olympiad-benefits-grid">
+                <div class="olympiad-benefit-card">
+                    <h3>Дистанционный формат</h3>
+                    <p>Участвуйте из любой точки России без необходимости выезда</p>
+                </div>
+
+                <div class="olympiad-benefit-card">
+                    <h3>Быстрый результат</h3>
+                    <p>Узнайте результат сразу после прохождения — без ожидания и очередей</p>
+                </div>
+
+                <div class="olympiad-benefit-card">
+                    <h3>Официальный документ</h3>
+                    <p>Диплом от издания с регистрацией СМИ для вашего портфолио</p>
+                </div>
+
+                <div class="olympiad-benefit-card">
+                    <h3>Бесплатное участие</h3>
+                    <p>Пройдите олимпиаду бесплатно — оплата только за оформление диплома</p>
                 </div>
             </div>
         </div>
@@ -994,13 +1544,93 @@ include __DIR__ . '/../includes/header.php';
     </section>
 
     <!-- ============================
-         Screen 4: SEO Content
+         Screen 4: About Olympiad
          ============================ -->
-    <?php if (!empty($olympiad['seo_content'])): ?>
-    <section class="olympiad-seo-section">
+    <?php if (!empty($olympiad['seo_content']) || !empty($olympiad['description'])): ?>
+    <section class="olympiad-about-section">
         <div class="container">
-            <div class="olympiad-seo-content">
-                <?php echo $olympiad['seo_content']; ?>
+            <h2 class="od-section-title">Об олимпиаде</h2>
+
+            <div class="olympiad-about-wrapper">
+                <!-- Left column: Description -->
+                <div class="olympiad-about-description">
+                    <div class="description-text">
+                        <?php
+                        $aboutContent = !empty($olympiad['seo_content']) ? $olympiad['seo_content'] : htmlspecialchars($olympiad['description']);
+                        echo $aboutContent;
+                        ?>
+                    </div>
+                </div>
+
+                <!-- Right column: Info cards -->
+                <div class="olympiad-about-info-cards">
+
+                    <!-- Format -->
+                    <div class="olympiad-info-card">
+                        <div class="olympiad-info-card-header">
+                            <div class="olympiad-info-icon" style="background: linear-gradient(135deg, #0077FF 0%, #0066DD 100%);">
+                                <svg fill="white" viewBox="0 0 20 20" width="24" height="24">
+                                    <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <h3 class="olympiad-info-card-title">Формат</h3>
+                        </div>
+                        <div class="olympiad-info-card-content">
+                            <p class="award-text">Дистанционный, онлайн-тестирование из 10 вопросов</p>
+                        </div>
+                    </div>
+
+                    <!-- Awards -->
+                    <div class="olympiad-info-card">
+                        <div class="olympiad-info-card-header">
+                            <div class="olympiad-info-icon" style="background: linear-gradient(135deg, #F4C430 0%, #D4A420 100%);">
+                                <svg fill="white" viewBox="0 0 20 20" width="24" height="24">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                            </div>
+                            <h3 class="olympiad-info-card-title">Награды</h3>
+                        </div>
+                        <div class="olympiad-info-card-content">
+                            <p class="award-text">Диплом I, II, III степени в электронном виде</p>
+                        </div>
+                    </div>
+
+                    <!-- Academic Year -->
+                    <?php $academicYear = $olympiad['academic_year'] ?? '2025-2026'; ?>
+                    <div class="olympiad-info-card">
+                        <div class="olympiad-info-card-header">
+                            <div class="olympiad-info-icon" style="background: linear-gradient(135deg, #C62828 0%, #EF5350 100%);">
+                                <svg fill="white" viewBox="0 0 20 20" width="24" height="24">
+                                    <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <h3 class="olympiad-info-card-title">Учебный год</h3>
+                        </div>
+                        <div class="olympiad-info-card-content">
+                            <p class="year-text"><?php echo htmlspecialchars($academicYear); ?></p>
+                        </div>
+                    </div>
+
+                    <!-- Price -->
+                    <div class="olympiad-info-card olympiad-info-card-highlight">
+                        <div class="olympiad-info-card-header">
+                            <div class="olympiad-info-icon" style="background: linear-gradient(135deg, #0077FF 0%, #0066DD 100%);">
+                                <svg fill="white" viewBox="0 0 20 20" width="24" height="24">
+                                    <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <h3 class="olympiad-info-card-title">Стоимость диплома</h3>
+                        </div>
+                        <div class="olympiad-info-card-content">
+                            <div class="price-display">
+                                <span class="price-amount"><?php echo (int)$diplomaPrice; ?> ₽</span>
+                            </div>
+                            <p class="price-note">Участие бесплатное, оплата только за оформление диплома</p>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
     </section>

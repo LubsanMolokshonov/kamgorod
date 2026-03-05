@@ -50,10 +50,9 @@
                     <h4>Помощь</h4>
                     <p>
                         <a href="/svedeniya/">Сведения об организации</a><br>
-                        <a href="/pages/faq.php">Частые вопросы</a><br>
                         <a href="/pages/contacts.php">Контакты</a><br>
-                        <a href="/pages/terms.php">Пользовательское соглашение</a><br>
-                        <a href="/pages/privacy.php">Политика конфиденциальности</a>
+                        <a href="/polzovatelskoe-soglashenie/">Пользовательское соглашение</a><br>
+                        <a href="/politika-konfidencialnosti/">Политика конфиденциальности</a>
                     </p>
                 </div>
 

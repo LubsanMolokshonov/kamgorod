@@ -39,6 +39,7 @@ $pageTitle = 'Опубликовать статью и получить свид
 $pageDescription = 'Опубликуйте свою педагогическую статью в электронном журнале и получите официальное свидетельство о публикации для аттестации';
 $additionalCSS = ['/assets/css/journal.css?v=' . time()];
 $additionalJS = ['/assets/js/publication-form.js?v=' . time()];
+$noindex = true;
 
 include __DIR__ . '/../includes/header.php';
 ?>

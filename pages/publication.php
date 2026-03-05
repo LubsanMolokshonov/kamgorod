@@ -62,6 +62,19 @@ $pageDescription = htmlspecialchars(mb_substr($publication['annotation'], 0, 160
 
 $additionalCSS = ['/assets/css/journal.css?v=' . time()];
 
+// JSON-LD Article
+$jsonLd = [
+    '@context' => 'https://schema.org',
+    '@type' => 'Article',
+    'headline' => $publication['title'],
+    'description' => mb_substr(strip_tags($publication['annotation']), 0, 300),
+    'url' => SITE_URL . '/publikaciya/' . $publication['slug'] . '/',
+    'author' => ['@type' => 'Person', 'name' => $publication['author_name'] ?? ''],
+    'datePublished' => $publication['published_at'],
+    'publisher' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL]
+];
+$ogType = 'article';
+
 include __DIR__ . '/../includes/header.php';
 ?>
 

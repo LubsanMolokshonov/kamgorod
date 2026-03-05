@@ -88,6 +88,7 @@ $pageTitle       = 'Оформить диплом олимпиады: ' . htmlsp
 $pageDescription = 'Оформите диплом олимпиады за 30 секунд';
 $additionalCSS   = ['/assets/css/form.css?v=' . time()];
 $additionalJS    = ['/assets/js/form-validation.js?v=' . time()];
+$noindex = true;
 
 // Include header
 include __DIR__ . '/../includes/header.php';

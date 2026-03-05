@@ -19,6 +19,8 @@ require_once __DIR__ . '/../classes/Registration.php';
 require_once __DIR__ . '/../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../classes/CartRecommendation.php';
+require_once __DIR__ . '/../classes/OlympiadRegistration.php';
+require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Only accept GET
@@ -76,6 +78,21 @@ try {
                 'id' => $webCert['id'],
                 'price' => (float)($webCert['price'] ?? 200),
                 'raw_data' => $webCert,
+            ];
+        }
+    }
+
+    // Olympiad registrations
+    $olympiadRegistrations = getCartOlympiadRegistrations();
+    $olympRegObj = new OlympiadRegistration($db);
+    foreach ($olympiadRegistrations as $olympRegId) {
+        $olympReg = $olympRegObj->getById($olympRegId);
+        if ($olympReg) {
+            $allItems[] = [
+                'type' => 'olympiad_registration',
+                'id' => $olympReg['id'],
+                'price' => (float)($olympReg['diploma_price'] ?? 169),
+                'raw_data' => $olympReg,
             ];
         }
     }

@@ -63,6 +63,7 @@ if ($paymentStatus === 'failed' || $paymentStatus === 'canceled') {
 }
 
 $pageTitle = 'Оплата заказа | ' . SITE_NAME;
+$noindex = true;
 include __DIR__ . '/../includes/header.php';
 ?>
 

@@ -103,6 +103,7 @@ if (!in_array($activeTab, ['diplomas', 'publications', 'webinars', 'olympiads'])
 $pageTitle = 'Личный кабинет | ' . SITE_NAME;
 $pageDescription = 'Ваши регистрации и дипломы';
 $additionalCSS = ['/assets/css/cabinet.css', '/assets/css/journal.css?v=' . time()];
+$noindex = true;
 
 // Include header
 include __DIR__ . '/../includes/header.php';

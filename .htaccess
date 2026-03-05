@@ -5,13 +5,17 @@
 RewriteEngine On
 RewriteBase /
 
-# HTTPS Redirect (uncomment when SSL is installed)
-# RewriteCond %{HTTPS} off
-# RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+# HTTPS Redirect
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
 # ================================================
 # ГЛАВНАЯ СТРАНИЦА
 # ================================================
+
+# SEO files
+RewriteRule ^robots\.txt$ robots.php [L]
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
 
 # Главная страница портала
 RewriteRule ^$ index.php [L]
@@ -62,8 +66,6 @@ RewriteRule ^olimpiady/?$ olympiads.php [L,QSA]
 RewriteRule ^olimpiady/pedagogam-dou/?$ /olimpiady/pedagogi/dou/ [R=301,L]
 RewriteRule ^olimpiady/pedagogam-shkol/?$ /olimpiady/pedagogi/ [R=301,L]
 RewriteRule ^olimpiady/pedagogam-ovz/?$ /olimpiady/pedagogi/ [R=301,L]
-RewriteRule ^olimpiady/shkolnikam/?$ /olimpiady/shkolnikam/ [R=301,L]
-RewriteRule ^olimpiady/doshkolnikam/?$ /olimpiady/doshkolnikam/ [R=301,L]
 RewriteRule ^olimpiady/logopedy/?$ /olimpiady/pedagogi/ [R=301,L]
 
 # Аудитория олимпиад (3 уровня): /olimpiady/pedagogi/dou/logopediya/

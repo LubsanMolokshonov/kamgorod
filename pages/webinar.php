@@ -58,6 +58,23 @@ $pageTitle = ($webinar['meta_title'] ?: 'Вебинар: ' . $webinar['title']) 
 $pageDescription = $webinar['meta_description'] ?: $webinar['short_description'];
 $additionalCSS = ['/assets/css/webinars.css?v=' . time()];
 
+// JSON-LD Event
+$jsonLd = [
+    '@context' => 'https://schema.org',
+    '@type' => 'Event',
+    'name' => $webinar['title'],
+    'description' => $webinar['short_description'] ?: mb_substr(strip_tags($webinar['description']), 0, 300),
+    'url' => SITE_URL . '/vebinar/' . $webinar['slug'] . '/',
+    'startDate' => $webinar['scheduled_at'],
+    'eventAttendanceMode' => 'https://schema.org/OnlineEventAttendanceMode',
+    'organizer' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL],
+    'performer' => ['@type' => 'Person', 'name' => $webinar['speaker_name'] ?? '']
+];
+if (!empty($webinar['cover_image'])) {
+    $ogImage = SITE_URL . $webinar['cover_image'];
+}
+$ogType = 'article';
+
 include __DIR__ . '/../includes/header.php';
 ?>
 

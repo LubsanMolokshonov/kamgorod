@@ -98,6 +98,7 @@ $templates = $db->query(
 $pageTitle = 'Сертификат участника вебинара | ' . SITE_NAME;
 $pageDescription = 'Оформите сертификат участника вебинара';
 $additionalCSS = ['/assets/css/form.css?v=' . time()];
+$noindex = true;
 
 include __DIR__ . '/../includes/header.php';
 ?>
