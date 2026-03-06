@@ -35,6 +35,9 @@ RewriteRule ^konkursy/(metodika|vneurochnaya|proekty|tvorchestvo)/(pedagogi|dosh
 RewriteRule ^konkursy/(metodika|vneurochnaya|proekty|tvorchestvo)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ competitions.php?cc=$1&ac=$2 [L,QSA]
 
 # Категории конкурсов (без аудитории)
+
+# АБ-тест: копия страницы конкурсов
+RewriteRule ^konkursyb/?$ competitions-b.php [L,QSA]
 RewriteRule ^konkursy/metodika/?$ competitions.php?category=methodology [L,QSA]
 RewriteRule ^konkursy/vneurochnaya/?$ competitions.php?category=extracurricular [L,QSA]
 RewriteRule ^konkursy/proekty/?$ competitions.php?category=student_projects [L,QSA]

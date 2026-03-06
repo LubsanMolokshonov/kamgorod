@@ -101,6 +101,7 @@ $competitions = array_slice($allCompetitions, 0, $perPage);
 $hasMore = $totalCompetitions > $perPage;
 
 // Include header
+
 include __DIR__ . '/includes/header.php';
 ?>
 

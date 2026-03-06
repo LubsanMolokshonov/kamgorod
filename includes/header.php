@@ -56,6 +56,21 @@ initSession();
     <noscript><div><img src="https://mc.yandex.ru/watch/106465857" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
     <!-- /Yandex.Metrika counter -->
 
+    <!-- Varioqub experiments -->
+    <script type="text/javascript">
+    (function(e, x, pe, r, i, me, nt){
+    e[i]=e[i]||function(){(e[i].a=e[i].a||[]).push(arguments)},
+    me=x.createElement(pe),me.async=1,me.src=r,nt=x.getElementsByTagName(pe)[0],me.addEventListener('error',(function(){function cb(t){t=t[t.length-1],'function'==typeof t&&t({flags:{}})};Array.isArray(e[i].a)&&e[i].a.forEach(cb);e[i]=function(){cb(arguments)}})),nt.parentNode.insertBefore(me,nt)})
+    (window, document, 'script', 'https://abt.s3.yandex.net/expjs/latest/exp.js', 'ymab');
+    ymab('metrika.106465857', 'init'/*,{clientFeatures},{callback}*/);
+    </script>
+
+    <?php if (isset($earlyHeadScripts)): ?>
+        <?php foreach ($earlyHeadScripts as $script): ?>
+            <?php echo $script; ?>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
     <?php if (isset($additionalCSS)): ?>
         <?php foreach ($additionalCSS as $css): ?>
             <link rel="stylesheet" href="<?php echo $css; ?>">

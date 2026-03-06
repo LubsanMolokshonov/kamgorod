@@ -43,7 +43,16 @@ $migrations = [
     '023_create_webinar_quiz.sql',
     '024_add_neuroset_autowebinar.sql',
     '025_add_bulling_autowebinar.sql',
-    '026_add_autowebinar_email_chain.sql'
+    '026_add_autowebinar_email_chain.sql',
+    '027_rename_autowebinar_to_videolecture.sql',
+    '028_fix_certificate_templates.sql',
+    '029_update_certificate_templates_backgrounds.sql',
+    '030_add_moderation_tracking.sql',
+    '031_fix_file_type_column_length.sql',
+    '032_add_resource_webinar.sql',
+    '033_add_publication_email_chain.sql',
+    '034_convert_chitatelskie_to_videolecture.sql',
+    '035_create_webinar_audience_types.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';
