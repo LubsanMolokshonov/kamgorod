@@ -23,7 +23,19 @@ $olympiadObj = new Olympiad($db);
 $olympiad = $olympiadObj->getBySlug($slug);
 
 if (!$olympiad) {
-    header('Location: /olimpiady');
+    http_response_code(404);
+    $pageTitle = 'Олимпиада не найдена | ' . SITE_NAME;
+    $pageDescription = 'Запрашиваемая олимпиада не найдена';
+    $noindex = true;
+    include __DIR__ . '/../includes/header.php';
+    ?>
+    <div class="container" style="padding: 80px 0; text-align: center;">
+        <h1>Олимпиада не найдена</h1>
+        <p style="color: #6b7280; margin: 12px 0 24px;">Возможно, она была удалена или перемещена.</p>
+        <a href="/olimpiady" class="btn btn-primary">Все олимпиады</a>
+    </div>
+    <?php
+    include __DIR__ . '/../includes/footer.php';
     exit;
 }
 

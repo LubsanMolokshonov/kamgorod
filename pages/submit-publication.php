@@ -37,8 +37,8 @@ $totalPublications = $countResult['total'] ?? 0;
 // Page metadata
 $pageTitle = 'Опубликовать статью и получить свидетельство | ' . SITE_NAME;
 $pageDescription = 'Опубликуйте свою педагогическую статью в электронном журнале и получите официальное свидетельство о публикации для аттестации';
-$additionalCSS = ['/assets/css/journal.css?v=' . time()];
-$additionalJS = ['/assets/js/publication-form.js?v=' . time()];
+$additionalCSS = ['/assets/css/journal.css?v=' . filemtime(__DIR__ . '/../assets/css/journal.css')];
+$additionalJS = ['/assets/js/publication-form.js?v=' . filemtime(__DIR__ . '/../assets/js/publication-form.js')];
 $noindex = true;
 
 include __DIR__ . '/../includes/header.php';

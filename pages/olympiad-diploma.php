@@ -86,8 +86,8 @@ $csrfToken = generateCSRFToken();
 
 $pageTitle       = 'Оформить диплом олимпиады: ' . htmlspecialchars($result['olympiad_title']) . ' | ' . SITE_NAME;
 $pageDescription = 'Оформите диплом олимпиады за 30 секунд';
-$additionalCSS   = ['/assets/css/form.css?v=' . time()];
-$additionalJS    = ['/assets/js/form-validation.js?v=' . time()];
+$additionalCSS   = ['/assets/css/form.css?v=' . filemtime(__DIR__ . '/../assets/css/form.css')];
+$additionalJS    = ['/assets/js/form-validation.js?v=' . filemtime(__DIR__ . '/../assets/js/form-validation.js')];
 $noindex = true;
 
 // Include header

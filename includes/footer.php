@@ -144,12 +144,12 @@
     </script>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="/assets/js/main.js"></script>
-    <script src="/assets/js/search.js"></script>
-    <script src="/assets/js/hero-parallax.js"></script>
+    <script src="/assets/js/main.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/main.js'); ?>" defer></script>
+    <script src="/assets/js/search.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/search.js'); ?>" defer></script>
+    <script src="/assets/js/hero-parallax.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/hero-parallax.js'); ?>" defer></script>
     <?php if (isset($additionalJS)): ?>
         <?php foreach ($additionalJS as $js): ?>
-            <script src="<?php echo $js; ?>"></script>
+            <script src="<?php echo $js; ?>" defer></script>
         <?php endforeach; ?>
     <?php endif; ?>
 </body>

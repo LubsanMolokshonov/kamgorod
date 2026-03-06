@@ -25,11 +25,18 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Competition.php';
+require_once __DIR__ . '/../classes/Olympiad.php';
 require_once __DIR__ . '/../classes/SearchService.php';
 
 try {
     $query = isset($_GET['q']) ? trim($_GET['q']) : '';
     $limit = isset($_GET['limit']) ? min((int)$_GET['limit'], 20) : 8;
+    $context = isset($_GET['context']) ? trim($_GET['context']) : 'all';
+
+    // Валидация контекста
+    if (!in_array($context, ['all', 'competitions', 'olympiads'])) {
+        $context = 'all';
+    }
 
     // Минимальная длина запроса
     if (mb_strlen($query) < 2) {
@@ -44,13 +51,14 @@ try {
     }
 
     $searchService = new SearchService($db);
-    $results = $searchService->search($query, $limit);
+    $results = $searchService->searchUnified($query, $limit, $context);
 
     echo json_encode([
         'success' => true,
         'results' => $results,
         'count' => count($results),
         'query' => $query,
+        'context' => $context,
         'engine' => $searchService->isTNTAvailable() && $searchService->indexExists() ? 'tnt' : 'mysql'
     ], JSON_UNESCAPED_UNICODE);
 

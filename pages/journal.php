@@ -132,8 +132,8 @@ $pageTitle .= ' | ' . SITE_NAME;
 
 $pageDescription = $currentTag['meta_description'] ?? 'Бесплатная публикация статей, методических разработок и материалов в электронном педагогическом журнале. Получите свидетельство о публикации с QR-кодом.';
 
-$additionalCSS = ['/assets/css/journal.css?v=' . time(), '/assets/css/audience-filter.css?v=' . time()];
-$additionalJS = ['/assets/js/audience-filter.js?v=' . time()];
+$additionalCSS = ['/assets/css/journal.css?v=' . filemtime(__DIR__ . '/../assets/css/journal.css'), '/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/../assets/css/audience-filter.css')];
+$additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/../assets/js/audience-filter.js')];
 
 include __DIR__ . '/../includes/header.php';
 ?>

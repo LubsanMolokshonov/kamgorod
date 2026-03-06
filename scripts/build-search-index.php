@@ -6,8 +6,8 @@
  *   php scripts/build-search-index.php
  *
  * Рекомендуется запускать после:
- *   - Добавления новых конкурсов
- *   - Обновления данных конкурсов
+ *   - Добавления новых конкурсов или олимпиад
+ *   - Обновления данных конкурсов или олимпиад
  *   - Установки TNTSearch (composer install)
  */
 
@@ -25,6 +25,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Competition.php';
+require_once __DIR__ . '/../classes/Olympiad.php';
 require_once __DIR__ . '/../classes/SearchService.php';
 
 try {
@@ -42,21 +43,29 @@ try {
 
     echo "TNTSearch найден. Начинаю индексацию...\n\n";
 
-    // Построение индекса
+    // --- Индекс конкурсов ---
+    echo "1. Индексация конкурсов...\n";
     $startTime = microtime(true);
-    $result = $searchService->buildIndex();
+    $searchService->buildIndex();
     $endTime = microtime(true);
 
-    if ($result) {
-        echo "Индекс успешно построен!\n";
-        echo "Время: " . round($endTime - $startTime, 2) . " сек.\n\n";
+    $competitionObj = new Competition($db);
+    $competitions = $competitionObj->getActiveCompetitions();
+    echo "   Проиндексировано конкурсов: " . count($competitions) . "\n";
+    echo "   Время: " . round($endTime - $startTime, 2) . " сек.\n\n";
 
-        // Статистика
-        $competitionObj = new Competition($db);
-        $competitions = $competitionObj->getActiveCompetitions();
-        echo "Проиндексировано конкурсов: " . count($competitions) . "\n";
-        echo "Путь к индексу: " . BASE_PATH . "/database/search/\n";
-    }
+    // --- Индекс олимпиад ---
+    echo "2. Индексация олимпиад...\n";
+    $startOly = microtime(true);
+    $searchService->buildOlympiadIndex();
+    $endOly = microtime(true);
+
+    $olympiadObj = new Olympiad($db);
+    $olympiads = $olympiadObj->getActiveOlympiads();
+    echo "   Проиндексировано олимпиад: " . count($olympiads) . "\n";
+    echo "   Время: " . round($endOly - $startOly, 2) . " сек.\n\n";
+
+    echo "Путь к индексам: " . BASE_PATH . "/database/search/\n";
 
     echo "\n=================================\n";
     echo "Готово!\n";

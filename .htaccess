@@ -5,8 +5,10 @@
 RewriteEngine On
 RewriteBase /
 
-# HTTPS Redirect
+# HTTPS Redirect (пропускает localhost)
 RewriteCond %{HTTPS} off
+RewriteCond %{HTTP_HOST} !^localhost [NC]
+RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
 RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
 # ================================================
@@ -177,6 +179,9 @@ RewriteRule ^svedeniya/dostupnaya-sreda/?$ pages/svedeniya/dostupnaya-sreda.php 
 RewriteRule ^o-portale/?$ pages/about.php [L,QSA]
 RewriteRule ^polzovatelskoe-soglashenie/?$ pages/terms.php [L,QSA]
 RewriteRule ^politika-konfidencialnosti/?$ pages/privacy.php [L,QSA]
+
+# Кастомная 404 страница
+ErrorDocument 404 /pages/404.php
 
 # Prevent direct access to sensitive files
 <FilesMatch "\.(env|sql|md|log)$">

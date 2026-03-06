@@ -85,8 +85,8 @@ $initialPreviewUri = $initialPreview->getDataUri();
 // Page metadata
 $pageTitle = 'Оформление свидетельства о публикации | ' . SITE_NAME;
 $pageDescription = 'Оформите свидетельство о публикации в электронном журнале';
-$additionalCSS = ['/assets/css/form.css?v=' . time()];
-$additionalJS = ['/assets/js/certificate-form.js?v=' . time()];
+$additionalCSS = ['/assets/css/form.css?v=' . filemtime(__DIR__ . '/../assets/css/form.css')];
+$additionalJS = ['/assets/js/certificate-form.js?v=' . filemtime(__DIR__ . '/../assets/js/certificate-form.js')];
 $noindex = true;
 
 include __DIR__ . '/../includes/header.php';

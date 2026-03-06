@@ -24,7 +24,19 @@ $competitionObj = new Competition($db);
 $competition = $competitionObj->getBySlug($slug);
 
 if (!$competition) {
-    header('Location: /konkursy');
+    http_response_code(404);
+    $pageTitle = 'Конкурс не найден | ' . SITE_NAME;
+    $pageDescription = 'Запрашиваемый конкурс не найден';
+    $noindex = true;
+    include __DIR__ . '/../includes/header.php';
+    ?>
+    <div class="container" style="padding: 80px 0; text-align: center;">
+        <h1>Конкурс не найден</h1>
+        <p style="color: #6b7280; margin: 12px 0 24px;">Возможно, он был удален или перемещен.</p>
+        <a href="/konkursy" class="btn btn-primary">Все конкурсы</a>
+    </div>
+    <?php
+    include __DIR__ . '/../includes/footer.php';
     exit;
 }
 

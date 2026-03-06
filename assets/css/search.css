@@ -616,3 +616,34 @@
         max-height: 350px;
     }
 }
+
+/* ===========================
+   Result Type Badges
+   =========================== */
+.search-result-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+.search-result-type--competition {
+    background: #E8F5E9;
+    color: #2E7D32;
+}
+
+.search-result-type--olympiad {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+/* Olympiad icon variant */
+.search-result-icon--olympiad {
+    background: #E3F2FD;
+    color: #1565C0;
+}

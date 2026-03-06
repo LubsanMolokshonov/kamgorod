@@ -102,7 +102,7 @@ if (!in_array($activeTab, ['diplomas', 'publications', 'webinars', 'olympiads'])
 // Page metadata
 $pageTitle = 'Личный кабинет | ' . SITE_NAME;
 $pageDescription = 'Ваши регистрации и дипломы';
-$additionalCSS = ['/assets/css/cabinet.css', '/assets/css/journal.css?v=' . time()];
+$additionalCSS = ['/assets/css/cabinet.css?v=' . filemtime(__DIR__ . '/../assets/css/cabinet.css'), '/assets/css/journal.css?v=' . filemtime(__DIR__ . '/../assets/css/journal.css')];
 $noindex = true;
 
 // Include header

@@ -47,8 +47,8 @@ if (isset($_SESSION['user_id'])) {
 // Page metadata
 $pageTitle = 'Регистрация на конкурс: ' . htmlspecialchars($competition['title']) . ' | ' . SITE_NAME;
 $pageDescription = 'Заполните форму регистрации для участия в конкурсе';
-$additionalCSS = ['/assets/css/form.css?v=' . time()];
-$additionalJS = ['/assets/js/diploma-preview.js?v=' . time(), '/assets/js/form-validation.js?v=' . time()];
+$additionalCSS = ['/assets/css/form.css?v=' . filemtime(__DIR__ . '/../assets/css/form.css')];
+$additionalJS = ['/assets/js/diploma-preview.js?v=' . filemtime(__DIR__ . '/../assets/js/diploma-preview.js'), '/assets/js/form-validation.js?v=' . filemtime(__DIR__ . '/../assets/js/form-validation.js')];
 $noindex = true;
 
 // Include header

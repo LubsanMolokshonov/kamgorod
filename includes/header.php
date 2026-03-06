@@ -27,9 +27,15 @@ initSession();
     <meta property="og:image" content="<?php echo $ogImage; ?>">
 <?php endif; ?>
 
+    <!-- Preconnect -->
+    <link rel="preconnect" href="https://code.jquery.com" crossorigin>
+    <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
+    <link rel="dns-prefetch" href="https://code.jquery.com">
+    <link rel="dns-prefetch" href="https://mc.yandex.ru">
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="stylesheet" href="/assets/css/main.css?v=<?php echo time(); ?>">
-    <link rel="stylesheet" href="/assets/css/search.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="/assets/css/main.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/main.css'); ?>">
+    <link rel="stylesheet" href="/assets/css/search.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/search.css'); ?>">
 
     <!-- Yandex.Metrika counter -->
     <script type="text/javascript">
@@ -83,9 +89,9 @@ initSession();
                         <input type="text"
                                class="search-input"
                                id="searchInput"
-                               placeholder="Найти конкурс..."
+                               placeholder="Найти конкурс или олимпиаду..."
                                autocomplete="off"
-                               aria-label="Поиск конкурсов">
+                               aria-label="Поиск конкурсов и олимпиад">
                         <button type="button" class="search-clear" id="searchClear" aria-label="Очистить">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

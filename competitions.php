@@ -37,8 +37,8 @@ redirectToSeoUrl('konkursy', [
 // Page metadata
 $pageTitle = 'Конкурсы для педагогов и школьников 2025-2026 | ' . SITE_NAME;
 $pageDescription = 'Всероссийские и международные конкурсы для учителей, педагогов и школьников. Получите диплом участника после оплаты!';
-$additionalCSS = ['/assets/css/audience-filter.css?v=' . time()];
-$additionalJS = ['/assets/js/audience-filter.js?v=' . time()];
+$additionalCSS = ['/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/assets/css/audience-filter.css')];
+$additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/assets/js/audience-filter.js')];
 
 // Pagination settings
 $perPage = 21;
@@ -239,7 +239,12 @@ include __DIR__ . '/includes/header.php';
     <div class="competitions-layout">
         <!-- Контент с карточками -->
         <div class="content-area" style="max-width: 100%; flex: 1;">
-            <?php include __DIR__ . '/includes/catalog-search.php'; ?>
+            <?php
+            $catalogSearchPlaceholder = 'Поиск конкурсов и олимпиад...';
+            $catalogSearchContext = 'competitions';
+            $catalogSearchAriaLabel = 'Поиск по конкурсам';
+            include __DIR__ . '/includes/catalog-search.php';
+            ?>
 
             <div class="competitions-count mb-20">
                 Найдено конкурсов: <strong id="totalCount"><?php echo $totalCompetitions; ?></strong>

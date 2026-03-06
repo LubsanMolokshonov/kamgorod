@@ -81,8 +81,8 @@ $totalParticipants = $olympiadObj->getTotalParticipants();
 // Page metadata
 $pageTitle = 'Олимпиады для педагогов и учеников 2025-2026 | ' . SITE_NAME;
 $pageDescription = 'Всероссийские бесплатные олимпиады для педагогов и школьников. Проверьте свои знания и получите диплом за 30 секунд!';
-$additionalCSS = ['/assets/css/audience-filter.css?v=' . time()];
-$additionalJS = ['/assets/js/audience-filter.js?v=' . time()];
+$additionalCSS = ['/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/assets/css/audience-filter.css')];
+$additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/assets/js/audience-filter.js')];
 
 // Include header
 include __DIR__ . '/includes/header.php';
@@ -285,86 +285,50 @@ include __DIR__ . '/includes/header.php';
 
 .olympiad-card {
     background: white;
-    border-radius: 24px;
-    padding: 28px 24px;
-    box-shadow: 0 4px 20px rgba(0, 119, 255, 0.08);
-    transition: all 0.3s ease;
+    border-radius: var(--border-radius-card, 32px);
+    padding: 32px;
+    box-shadow: var(--shadow-card, 6px 6px 10px rgba(0,119,255,0.1));
+    transition: transform 0.2s ease-in-out;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    border: 2px solid transparent;
+    height: 100%;
 }
 
 .olympiad-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 40px rgba(0, 119, 255, 0.15);
-    border-color: rgba(0, 119, 255, 0.15);
+    transform: translateY(-8px);
+    box-shadow: 8px 8px 20px rgba(67,61,136,0.15);
 }
 
-.olympiad-card-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.olympiad-audience-badge {
+.olympiad-category {
     display: inline-block;
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    color: white;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
-
-.olympiad-subject-tag {
-    display: inline-block;
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
+    background: var(--light-purple, #E8F1FF);
     color: var(--primary-purple, #0077FF);
-    background: #E8F1FF;
-    border: 1px solid rgba(0, 119, 255, 0.15);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    text-transform: uppercase;
 }
 
 .olympiad-card h3 {
-    font-size: 18px;
-    font-weight: 600;
     color: var(--text-dark, #2C3E50);
-    line-height: 1.4;
-    margin: 0;
-}
-
-.olympiad-card-desc {
-    font-size: 14px;
-    color: #64748B;
-    line-height: 1.6;
-    margin: 0;
-    flex: 1;
-}
-
-.btn-olympiad-start {
-    display: block;
-    text-align: center;
-    background: var(--primary-purple, #0077FF);
-    color: white;
-    font-size: 14px;
+    margin-bottom: 12px;
+    font-size: 22px;
     font-weight: 600;
-    padding: 14px 24px;
-    border-radius: 16px;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
+    line-height: 1.4;
 }
 
-.btn-olympiad-start:hover {
-    background: var(--dark-purple, #0066DD);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 119, 255, 0.3);
-    opacity: 1;
+.olympiad-card p {
+    color: var(--text-medium, #4A5568);
+    font-size: 15px;
+    margin-bottom: 20px;
+    flex-grow: 1;
+    line-height: 1.6;
+}
+
+.olympiad-card .btn {
+    margin-top: auto;
 }
 
 /* Trust Section */
@@ -706,23 +670,21 @@ include __DIR__ . '/includes/header.php';
     }
 
     .olympiad-card {
-        padding: 20px 18px;
-        gap: 12px;
-        border-radius: 18px;
+        padding: 24px 20px;
+        border-radius: 24px;
     }
 
     .olympiad-card h3 {
-        font-size: 16px;
+        font-size: 18px;
     }
 
-    .olympiad-card-desc {
-        font-size: 13px;
+    .olympiad-card p {
+        font-size: 14px;
     }
 
-    .btn-olympiad-start {
-        font-size: 13px;
-        padding: 12px 20px;
-        border-radius: 12px;
+    .olympiad-card .btn {
+        font-size: 14px;
+        padding: 12px 24px;
     }
 
     .section-title-center {
@@ -876,6 +838,13 @@ include __DIR__ . '/includes/header.php';
 <!-- Olympiad Cards Catalog -->
 <section class="olympiad-catalog">
     <div class="container">
+        <?php
+        $catalogSearchPlaceholder = 'Поиск олимпиад и конкурсов...';
+        $catalogSearchContext = 'olympiads';
+        $catalogSearchAriaLabel = 'Поиск по олимпиадам';
+        include __DIR__ . '/includes/catalog-search.php';
+        ?>
+
         <div class="olympiad-count">
             Найдено олимпиад: <strong><?php echo count($olympiads); ?></strong>
         </div>
@@ -889,31 +858,28 @@ include __DIR__ . '/includes/header.php';
             <div class="olympiad-grid">
                 <?php foreach ($olympiads as $olympiad):
                     $olympiadAudienceTypes = $olympiadObj->getAudienceTypes($olympiad['id']);
+                    // Первый тег аудитории
+                    $firstTag = '';
+                    if (!empty($olympiadAudienceTypes)) {
+                        $firstTag = $olympiadAudienceTypes[0]['name'];
+                    } elseif (!empty($olympiad['target_audience'])) {
+                        $firstTag = Olympiad::getAudienceLabel($olympiad['target_audience']);
+                    }
                 ?>
                 <div class="olympiad-card">
-                    <div class="olympiad-card-badges">
-                        <?php foreach ($olympiadAudienceTypes as $oat): ?>
-                        <span class="olympiad-audience-badge" style="background: #0077FF;">
-                            <?php echo htmlspecialchars($oat['name']); ?>
-                        </span>
-                        <?php endforeach; ?>
-                        <?php if (empty($olympiadAudienceTypes) && !empty($olympiad['target_audience'])): ?>
-                        <span class="olympiad-audience-badge" style="background: #0077FF;">
-                            <?php echo htmlspecialchars(Olympiad::getAudienceLabel($olympiad['target_audience'])); ?>
-                        </span>
-                        <?php endif; ?>
-                        <?php if (!empty($olympiad['subject'])): ?>
-                        <span class="olympiad-subject-tag"><?php echo htmlspecialchars($olympiad['subject']); ?></span>
-                        <?php endif; ?>
-                    </div>
+                    <?php if ($firstTag): ?>
+                    <span class="olympiad-category">
+                        <?php echo htmlspecialchars($firstTag); ?>
+                    </span>
+                    <?php endif; ?>
 
                     <h3><?php echo htmlspecialchars($olympiad['title']); ?></h3>
 
-                    <p class="olympiad-card-desc">
-                        <?php echo htmlspecialchars(mb_substr($olympiad['description'], 0, 120) . (mb_strlen($olympiad['description']) > 120 ? '...' : '')); ?>
+                    <p>
+                        <?php echo htmlspecialchars(mb_substr($olympiad['description'], 0, 150) . (mb_strlen($olympiad['description']) > 150 ? '...' : '')); ?>
                     </p>
 
-                    <a href="/olimpiady/<?php echo htmlspecialchars($olympiad['slug']); ?>" class="btn-olympiad-start">
+                    <a href="/olimpiady/<?php echo htmlspecialchars($olympiad['slug']); ?>" class="btn btn-primary btn-block">
                         Пройти бесплатно
                     </a>
                 </div>

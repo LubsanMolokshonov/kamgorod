@@ -281,6 +281,6 @@ include __DIR__ . "/../includes/header.php";
     </div>
 </section>
 
-<script src="/assets/js/webinars.js?v=<?php echo time(); ?>"></script>
+<script src="/assets/js/webinars.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/webinars.js'); ?>" defer></script>
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

@@ -1,6 +1,6 @@
 <?php
 /**
- * SearchService - Умный поиск конкурсов
+ * SearchService - Умный поиск конкурсов и олимпиад
  * Использует TNTSearch с fallback на MySQL FULLTEXT/LIKE
  */
 
@@ -14,6 +14,7 @@ class SearchService {
     private $tnt;
     private $indexPath;
     private $indexName = 'competitions.index';
+    private $olympiadIndexName = 'olympiads.index';
     private $tntAvailable = false;
 
     public function __construct($pdo) {
@@ -57,8 +58,12 @@ class SearchService {
         }
     }
 
+    // ========================================
+    // Индексация конкурсов
+    // ========================================
+
     /**
-     * Создать/обновить поисковый индекс
+     * Создать/обновить поисковый индекс конкурсов
      */
     public function buildIndex() {
         if (!$this->tntAvailable) {
@@ -131,6 +136,88 @@ class SearchService {
             return false;
         }
     }
+
+    // ========================================
+    // Индексация олимпиад
+    // ========================================
+
+    /**
+     * Создать/обновить поисковый индекс олимпиад
+     */
+    public function buildOlympiadIndex() {
+        if (!$this->tntAvailable) {
+            throw new Exception('TNTSearch не доступен. Установите через: composer require teamtnt/tntsearch');
+        }
+
+        $indexer = $this->tnt->createIndex($this->olympiadIndexName);
+        $indexer->setPrimaryKey('id');
+
+        $indexer->query('
+            SELECT
+                id,
+                title,
+                description,
+                subject,
+                slug
+            FROM olympiads
+            WHERE is_active = 1
+        ');
+
+        $indexer->run();
+
+        return true;
+    }
+
+    /**
+     * Добавить олимпиаду в индекс
+     */
+    public function indexOlympiad($olympiadId) {
+        if (!$this->tntAvailable || !file_exists($this->indexPath . $this->olympiadIndexName)) {
+            return false;
+        }
+
+        try {
+            $this->tnt->selectIndex($this->olympiadIndexName);
+            $index = $this->tnt->getIndex();
+
+            $olympiad = $this->db->queryOne(
+                "SELECT id, title, description, subject, slug
+                 FROM olympiads WHERE id = ?",
+                [$olympiadId]
+            );
+
+            if ($olympiad) {
+                $index->update($olympiadId, $olympiad);
+                return true;
+            }
+        } catch (Exception $e) {
+            // Ошибка индексации
+        }
+
+        return false;
+    }
+
+    /**
+     * Удалить олимпиаду из индекса
+     */
+    public function removeOlympiadFromIndex($olympiadId) {
+        if (!$this->tntAvailable || !file_exists($this->indexPath . $this->olympiadIndexName)) {
+            return false;
+        }
+
+        try {
+            $this->tnt->selectIndex($this->olympiadIndexName);
+            $index = $this->tnt->getIndex();
+            $index->delete($olympiadId);
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    // ========================================
+    // Поиск конкурсов
+    // ========================================
 
     /**
      * Поиск конкурсов
@@ -280,17 +367,207 @@ class SearchService {
         );
     }
 
+    // ========================================
+    // Поиск олимпиад
+    // ========================================
+
     /**
-     * Подготовить запрос для FULLTEXT
+     * Поиск олимпиад
+     *
+     * @param string $query Поисковый запрос
+     * @param int $limit Лимит результатов
+     * @return array Результаты поиска
      */
-    private function prepareFulltextQuery($query) {
-        // Убираем спецсимволы
-        $query = preg_replace('/[+\-><\(\)~*\"@]+/', ' ', $query);
-        return trim($query);
+    public function searchOlympiads($query, $limit = 10) {
+        $query = trim($query);
+
+        if (mb_strlen($query) < 2) {
+            return [];
+        }
+
+        // Попытка поиска через TNTSearch
+        if ($this->tntAvailable && file_exists($this->indexPath . $this->olympiadIndexName)) {
+            try {
+                return $this->searchOlympiadsWithTNT($query, $limit);
+            } catch (Exception $e) {
+                // Fallback на MySQL
+            }
+        }
+
+        // Fallback на MySQL FULLTEXT/LIKE
+        return $this->searchOlympiadsWithMySQL($query, $limit);
     }
 
     /**
-     * Форматировать результаты для frontend
+     * Поиск олимпиад через TNTSearch
+     */
+    private function searchOlympiadsWithTNT($query, $limit) {
+        $this->tnt->selectIndex($this->olympiadIndexName);
+
+        $this->tnt->fuzziness = true;
+        $this->tnt->fuzzy_prefix_length = 2;
+        $this->tnt->fuzzy_max_expansions = 50;
+        $this->tnt->fuzzy_distance = 2;
+
+        $results = $this->tnt->search($query, $limit);
+
+        if (empty($results['ids'])) {
+            return [];
+        }
+
+        $ids = implode(',', array_map('intval', $results['ids']));
+
+        $olympiads = $this->db->query(
+            "SELECT o.* FROM olympiads o
+             WHERE o.id IN ({$ids}) AND o.is_active = 1
+             ORDER BY FIELD(o.id, {$ids})"
+        );
+
+        return $this->formatOlympiadResults($olympiads, $query);
+    }
+
+    /**
+     * Fallback поиск олимпиад через MySQL
+     */
+    private function searchOlympiadsWithMySQL($query, $limit) {
+        $olympiads = $this->tryOlympiadFulltextSearch($query, $limit);
+
+        if (empty($olympiads)) {
+            $olympiads = $this->olympiadLikeSearch($query, $limit);
+        }
+
+        return $this->formatOlympiadResults($olympiads, $query);
+    }
+
+    /**
+     * FULLTEXT поиск олимпиад
+     */
+    private function tryOlympiadFulltextSearch($query, $limit) {
+        try {
+            $searchQuery = $this->prepareFulltextQuery($query);
+
+            return $this->db->query(
+                "SELECT o.*,
+                        MATCH(o.title, o.description, o.subject)
+                        AGAINST (? IN NATURAL LANGUAGE MODE) as relevance
+                 FROM olympiads o
+                 WHERE o.is_active = 1
+                   AND MATCH(o.title, o.description, o.subject)
+                       AGAINST (? IN NATURAL LANGUAGE MODE)
+                 ORDER BY relevance DESC
+                 LIMIT ?",
+                [$searchQuery, $searchQuery, $limit]
+            );
+        } catch (Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * LIKE поиск олимпиад
+     */
+    private function olympiadLikeSearch($query, $limit) {
+        $words = preg_split('/\s+/', $query);
+        $likePatterns = [];
+        $params = [];
+
+        foreach ($words as $word) {
+            if (mb_strlen($word) >= 2) {
+                $pattern = '%' . $word . '%';
+                $likePatterns[] = "(o.title LIKE ? OR o.description LIKE ? OR o.subject LIKE ?)";
+                $params[] = $pattern;
+                $params[] = $pattern;
+                $params[] = $pattern;
+            }
+        }
+
+        if (empty($likePatterns)) {
+            $pattern = '%' . $query . '%';
+            $likePatterns[] = "(o.title LIKE ? OR o.description LIKE ? OR o.subject LIKE ?)";
+            $params[] = $pattern;
+            $params[] = $pattern;
+            $params[] = $pattern;
+        }
+
+        $whereClause = implode(' OR ', $likePatterns);
+
+        return $this->db->query(
+            "SELECT o.*,
+                    CASE
+                        WHEN o.title LIKE ? THEN 3
+                        WHEN o.description LIKE ? THEN 2
+                        WHEN o.subject LIKE ? THEN 1
+                        ELSE 0
+                    END as relevance
+             FROM olympiads o
+             WHERE o.is_active = 1 AND ({$whereClause})
+             ORDER BY
+                CASE WHEN o.title LIKE ? THEN 0 ELSE 1 END,
+                o.title ASC
+             LIMIT ?",
+            array_merge(
+                ['%' . $query . '%', '%' . $query . '%', '%' . $query . '%'],
+                $params,
+                ['%' . $query . '%', $limit]
+            )
+        );
+    }
+
+    // ========================================
+    // Единый поиск (конкурсы + олимпиады)
+    // ========================================
+
+    /**
+     * Единый поиск по конкурсам и олимпиадам с приоритизацией
+     *
+     * @param string $query Поисковый запрос
+     * @param int $limit Общий лимит результатов
+     * @param string $context 'all' | 'competitions' | 'olympiads'
+     * @return array Результаты с полем 'type'
+     */
+    public function searchUnified($query, $limit = 10, $context = 'all') {
+        $query = trim($query);
+
+        if (mb_strlen($query) < 2) {
+            return [];
+        }
+
+        $competitions = $this->search($query, $limit);
+        $olympiads = $this->searchOlympiads($query, $limit);
+
+        return $this->mergeResults($competitions, $olympiads, $limit, $context);
+    }
+
+    /**
+     * Объединить и приоритизировать результаты
+     */
+    private function mergeResults($competitions, $olympiads, $limit, $context) {
+        switch ($context) {
+            case 'competitions':
+                $merged = array_merge($competitions, $olympiads);
+                break;
+            case 'olympiads':
+                $merged = array_merge($olympiads, $competitions);
+                break;
+            default: // 'all'
+                $merged = [];
+                $maxLen = max(count($competitions), count($olympiads));
+                for ($i = 0; $i < $maxLen; $i++) {
+                    if (isset($competitions[$i])) $merged[] = $competitions[$i];
+                    if (isset($olympiads[$i]))     $merged[] = $olympiads[$i];
+                }
+                break;
+        }
+
+        return array_slice($merged, 0, $limit);
+    }
+
+    // ========================================
+    // Форматирование результатов
+    // ========================================
+
+    /**
+     * Форматировать результаты конкурсов для frontend
      */
     private function formatResults($competitions, $query) {
         $results = [];
@@ -298,6 +575,7 @@ class SearchService {
         foreach ($competitions as $comp) {
             $results[] = [
                 'id' => (int)$comp['id'],
+                'type' => 'competition',
                 'title' => $comp['title'],
                 'slug' => $comp['slug'],
                 'description' => $this->truncateText($comp['description'], 100),
@@ -310,6 +588,43 @@ class SearchService {
         }
 
         return $results;
+    }
+
+    /**
+     * Форматировать результаты олимпиад для frontend
+     */
+    private function formatOlympiadResults($olympiads, $query) {
+        $results = [];
+
+        foreach ($olympiads as $oly) {
+            $results[] = [
+                'id' => (int)$oly['id'],
+                'type' => 'olympiad',
+                'title' => $oly['title'],
+                'slug' => $oly['slug'],
+                'description' => $this->truncateText($oly['description'], 100),
+                'price' => 'Бесплатно',
+                'category' => $oly['subject'] ?? '',
+                'categoryLabel' => $oly['subject'] ?? 'Олимпиада',
+                'url' => '/olimpiady/' . urlencode($oly['slug']),
+                'highlight' => $this->highlightMatch($oly['title'], $query)
+            ];
+        }
+
+        return $results;
+    }
+
+    // ========================================
+    // Утилиты
+    // ========================================
+
+    /**
+     * Подготовить запрос для FULLTEXT
+     */
+    private function prepareFulltextQuery($query) {
+        // Убираем спецсимволы
+        $query = preg_replace('/[+\-><\(\)~*\"@]+/', ' ', $query);
+        return trim($query);
     }
 
     /**
@@ -347,9 +662,16 @@ class SearchService {
     }
 
     /**
-     * Проверить существование индекса
+     * Проверить существование индекса конкурсов
      */
     public function indexExists() {
         return file_exists($this->indexPath . $this->indexName);
+    }
+
+    /**
+     * Проверить существование индекса олимпиад
+     */
+    public function olympiadIndexExists() {
+        return file_exists($this->indexPath . $this->olympiadIndexName);
     }
 }

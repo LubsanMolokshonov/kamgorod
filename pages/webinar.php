@@ -56,7 +56,7 @@ $isAutowebinar = $webinar['status'] === 'videolecture';
 // Page meta
 $pageTitle = ($webinar['meta_title'] ?: 'Вебинар: ' . $webinar['title']) . ' | Каменный город';
 $pageDescription = $webinar['meta_description'] ?: $webinar['short_description'];
-$additionalCSS = ['/assets/css/webinars.css?v=' . time()];
+$additionalCSS = ['/assets/css/webinars.css?v=' . filemtime(__DIR__ . '/../assets/css/webinars.css')];
 
 // JSON-LD Event
 $jsonLd = [
@@ -439,7 +439,7 @@ include __DIR__ . '/../includes/header.php';
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
 
-<script src="/assets/js/webinars.js?v=<?php echo time(); ?>"></script>
+<script src="/assets/js/webinars.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/webinars.js'); ?>" defer></script>
 
 <script>
 // FAQ accordion - inline for guaranteed execution

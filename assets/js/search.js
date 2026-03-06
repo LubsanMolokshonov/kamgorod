@@ -1,6 +1,68 @@
 /**
+ * Утилиты для отображения типа результата (конкурс/олимпиада)
+ */
+var SearchUtils = (function() {
+    'use strict';
+
+    function getResultIcon(item) {
+        if (item.type === 'olympiad') {
+            return '<div class="search-result-icon search-result-icon--olympiad">' +
+                   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none">' +
+                   '<path d="M12 3L1 9L5 11.18V17.18L12 21L19 17.18V11.18L21 10.09V17H23V9L12 3ZM18.82 9L12 12.72L5.18 9L12 5.28L18.82 9ZM17 15.99L12 18.72L7 15.99V12.27L12 15L17 12.27V15.99Z" ' +
+                   'fill="currentColor"/>' +
+                   '</svg>' +
+                   '</div>';
+        }
+        return '<div class="search-result-icon">' +
+               '<svg width="18" height="18" viewBox="0 0 24 24" fill="none">' +
+               '<path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" ' +
+               'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+               '</svg>' +
+               '</div>';
+    }
+
+    function getResultTypeBadge(item) {
+        if (item.type === 'olympiad') {
+            return '<span class="search-result-type search-result-type--olympiad">Олимпиада</span>';
+        }
+        return '<span class="search-result-type search-result-type--competition">Конкурс</span>';
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function buildResultHtml(item, index) {
+        return '<a href="' + escapeHtml(item.url) + '" ' +
+               'class="search-result-item" ' +
+               'data-index="' + index + '" ' +
+               'role="option">' +
+               getResultIcon(item) +
+               '<div class="search-result-content">' +
+               '<div class="search-result-title">' + item.highlight + '</div>' +
+               '<div class="search-result-meta">' +
+               getResultTypeBadge(item) +
+               '<span class="search-result-category">' + escapeHtml(item.categoryLabel) + '</span>' +
+               '<span class="search-result-price">' + escapeHtml(item.price) + '</span>' +
+               '</div>' +
+               '</div>' +
+               '</a>';
+    }
+
+    return {
+        getResultIcon: getResultIcon,
+        getResultTypeBadge: getResultTypeBadge,
+        escapeHtml: escapeHtml,
+        buildResultHtml: buildResultHtml
+    };
+})();
+
+/**
  * Header Search Component
- * Умный поиск конкурсов с debounce, keyboard navigation и подсветкой результатов
+ * Умный поиск конкурсов и олимпиад с debounce, keyboard navigation и подсветкой результатов
  */
 
 (function() {
@@ -11,7 +73,8 @@
         minQueryLength: 2,
         debounceDelay: 300,
         maxResults: 8,
-        endpoint: '/ajax/search-competitions.php'
+        endpoint: '/ajax/search-competitions.php',
+        context: 'all'
     };
 
     // DOM Elements
@@ -168,7 +231,7 @@
     function performSearch(query) {
         showLoading();
 
-        var url = CONFIG.endpoint + '?q=' + encodeURIComponent(query) + '&limit=' + CONFIG.maxResults;
+        var url = CONFIG.endpoint + '?q=' + encodeURIComponent(query) + '&limit=' + CONFIG.maxResults + '&context=' + CONFIG.context;
 
         fetch(url)
             .then(function(response) {
@@ -201,24 +264,7 @@
         activeIndex = -1;
 
         var html = results.map(function(item, index) {
-            return '<a href="' + escapeHtml(item.url) + '" ' +
-                   'class="search-result-item" ' +
-                   'data-index="' + index + '" ' +
-                   'role="option">' +
-                   '<div class="search-result-icon">' +
-                   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none">' +
-                   '<path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" ' +
-                   'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-                   '</svg>' +
-                   '</div>' +
-                   '<div class="search-result-content">' +
-                   '<div class="search-result-title">' + item.highlight + '</div>' +
-                   '<div class="search-result-meta">' +
-                   '<span class="search-result-category">' + escapeHtml(item.categoryLabel) + '</span>' +
-                   '<span class="search-result-price">' + escapeHtml(item.price) + '</span>' +
-                   '</div>' +
-                   '</div>' +
-                   '</a>';
+            return SearchUtils.buildResultHtml(item, index);
         }).join('');
 
         searchResultsInner.innerHTML = html;
@@ -374,16 +420,6 @@
         }
     }
 
-    /**
-     * Escape HTML
-     */
-    function escapeHtml(text) {
-        if (!text) return '';
-        var div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
     // Инициализация при загрузке DOM
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
@@ -404,7 +440,7 @@
 
 /**
  * Catalog Search Component
- * Поиск в каталоге конкурсов (на страницах списка)
+ * Поиск в каталоге конкурсов/олимпиад (на страницах списка)
  */
 (function() {
     'use strict';
@@ -413,7 +449,8 @@
         minQueryLength: 2,
         debounceDelay: 300,
         maxResults: 10,
-        endpoint: '/ajax/search-competitions.php'
+        endpoint: '/ajax/search-competitions.php',
+        context: 'competitions'
     };
 
     var catalogInput, catalogResults, catalogLoading, catalogEmpty,
@@ -435,6 +472,11 @@
 
         if (!catalogInput || !catalogResults) {
             return;
+        }
+
+        // Читаем контекст из data-атрибута
+        if (catalogSearch) {
+            CONFIG.context = catalogSearch.getAttribute('data-context') || 'competitions';
         }
 
         bindEvents();
@@ -514,7 +556,7 @@
     function performSearch(query) {
         showLoading();
 
-        var url = CONFIG.endpoint + '?q=' + encodeURIComponent(query) + '&limit=' + CONFIG.maxResults;
+        var url = CONFIG.endpoint + '?q=' + encodeURIComponent(query) + '&limit=' + CONFIG.maxResults + '&context=' + CONFIG.context;
 
         fetch(url)
             .then(function(response) {
@@ -543,23 +585,7 @@
         activeIndex = -1;
 
         var html = results.map(function(item, index) {
-            return '<a href="' + escapeHtml(item.url) + '" ' +
-                   'class="search-result-item" ' +
-                   'data-index="' + index + '">' +
-                   '<div class="search-result-icon">' +
-                   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none">' +
-                   '<path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" ' +
-                   'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-                   '</svg>' +
-                   '</div>' +
-                   '<div class="search-result-content">' +
-                   '<div class="search-result-title">' + item.highlight + '</div>' +
-                   '<div class="search-result-meta">' +
-                   '<span class="search-result-category">' + escapeHtml(item.categoryLabel) + '</span>' +
-                   '<span class="search-result-price">' + escapeHtml(item.price) + '</span>' +
-                   '</div>' +
-                   '</div>' +
-                   '</a>';
+            return SearchUtils.buildResultHtml(item, index);
         }).join('');
 
         catalogResultsInner.innerHTML = html;
@@ -660,13 +686,6 @@
 
     function hideEmpty() {
         catalogEmpty.classList.remove('show');
-    }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        var div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     }
 
     if (document.readyState === 'loading') {

@@ -60,7 +60,7 @@ $related = $publicationObj->getRelated($publication['id'], 4);
 $pageTitle = htmlspecialchars($publication['title']) . ' | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr($publication['annotation'], 0, 160));
 
-$additionalCSS = ['/assets/css/journal.css?v=' . time()];
+$additionalCSS = ['/assets/css/journal.css?v=' . filemtime(__DIR__ . '/../assets/css/journal.css')];
 
 // JSON-LD Article
 $jsonLd = [
