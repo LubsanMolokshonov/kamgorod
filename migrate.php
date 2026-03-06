@@ -52,7 +52,17 @@ $migrations = [
     '032_add_resource_webinar.sql',
     '033_add_publication_email_chain.sql',
     '034_convert_chitatelskie_to_videolecture.sql',
-    '035_create_webinar_audience_types.sql'
+    '035_create_webinar_audience_types.sql',
+    '036_create_olympiads.sql',
+    '037_add_olympiad_to_order_items.sql',
+    '038_seed_olympiads.sql',
+    '039_fix_olympiad_encoding.sql',
+    '040_audience_segmentation_v2_schema.sql',
+    '041_audience_segmentation_v2_data.sql',
+    '042_add_nastavnik_webinar.sql',
+    '043_publication_audience_tables.sql',
+    '044_seed_publication_audience_data.sql',
+    '045_convert_resurs_to_videolecture.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';
