@@ -40,6 +40,7 @@ require_once __DIR__ . '/../../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../../classes/OlympiadDiploma.php';
 require_once __DIR__ . '/../../classes/EmailJourney.php';
 require_once __DIR__ . '/../../classes/PublicationEmailChain.php';
+require_once __DIR__ . '/../../classes/User.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -249,6 +250,20 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
         $GLOBALS['db']->commit();
 
         logWebhook('SUCCESS', $paymentId, "Order {$orderNumber} marked as succeeded", '');
+
+        // Sync user specializations from purchased events (additive)
+        try {
+            $specIds = $orderObj->getSpecializationIdsForOrder($orderId);
+            if (!empty($specIds)) {
+                $userObj = new User($GLOBALS['db']);
+                $added = $userObj->addSpecializations($userId, $specIds);
+                if ($added > 0) {
+                    logWebhook('INFO', $paymentId, "Added {$added} specializations to user {$userId} from order {$orderNumber}", '');
+                }
+            }
+        } catch (Exception $e) {
+            logWebhook('WARNING', $paymentId, "Specialization sync failed: " . $e->getMessage(), '');
+        }
 
         // Cancel email journey for paid registrations
         try {

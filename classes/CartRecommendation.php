@@ -50,13 +50,13 @@ class CartRecommendation {
 
         // Collect IDs of items already in cart to exclude
         $excludeCompetitionIds = [];
+        $excludeOlympiadIds = [];
         $excludeWebinarIds = [];
-        $excludePublicationIds = [];
 
         // Detect which product categories are already in the cart
         $cartHasCompetition = false;
+        $cartHasOlympiad = false;
         $cartHasWebinar = false;
-        $cartHasPublication = false;
 
         foreach ($allItems as $item) {
             $raw = $item['raw_data'] ?? [];
@@ -64,14 +64,11 @@ class CartRecommendation {
                 $excludeCompetitionIds[] = (int)($raw['competition_id'] ?? 0);
                 $cartHasCompetition = true;
             } elseif ($item['type'] === 'olympiad_registration') {
-                // Олимпиады аналогичны конкурсам для кросс-селлинга
-                $cartHasCompetition = true;
+                $excludeOlympiadIds[] = (int)($raw['olympiad_id'] ?? 0);
+                $cartHasOlympiad = true;
             } elseif ($item['type'] === 'webinar_certificate') {
                 $excludeWebinarIds[] = (int)($raw['webinar_id'] ?? 0);
                 $cartHasWebinar = true;
-            } elseif ($item['type'] === 'certificate') {
-                $excludePublicationIds[] = (int)($raw['publication_id'] ?? 0);
-                $cartHasPublication = true;
             }
         }
 
@@ -80,8 +77,8 @@ class CartRecommendation {
         $inCart = [];
 
         if (!$cartHasCompetition) $notInCart[] = 'competition'; else $inCart[] = 'competition';
+        if (!$cartHasOlympiad)    $notInCart[] = 'olympiad';     else $inCart[] = 'olympiad';
         if (!$cartHasWebinar)     $notInCart[] = 'webinar';      else $inCart[] = 'webinar';
-        if (!$cartHasPublication)  $notInCart[] = 'publication';   else $inCart[] = 'publication';
 
         $slotPriority = array_merge($notInCart, $inCart);
 
@@ -94,8 +91,8 @@ class CartRecommendation {
         // Phase 2: Fill each slot using cascading fallbacks
         $recommendations = [];
         $usedCompetitionIds = $excludeCompetitionIds;
+        $usedOlympiadIds = $excludeOlympiadIds;
         $usedWebinarIds = $excludeWebinarIds;
-        $usedPublicationIds = $excludePublicationIds;
 
         foreach ($slots as $category) {
             $card = null;
@@ -105,15 +102,15 @@ class CartRecommendation {
                 if ($card) {
                     $usedCompetitionIds[] = $card['id'];
                 }
+            } elseif ($category === 'olympiad') {
+                $card = $this->fillOlympiadSlot($audienceSlugs, $usedOlympiadIds, $context);
+                if ($card) {
+                    $usedOlympiadIds[] = $card['id'];
+                }
             } elseif ($category === 'webinar') {
                 $card = $this->fillWebinarSlot($audienceSlugs, $usedWebinarIds, $userId, $context);
                 if ($card && $card['id'] > 0) {
                     $usedWebinarIds[] = $card['id'];
-                }
-            } elseif ($category === 'publication') {
-                $card = $this->fillPublicationSlot($audienceSlugs, $usedPublicationIds, $userId, $context);
-                if ($card && $card['id'] > 0) {
-                    $usedPublicationIds[] = $card['id'];
                 }
             }
 
@@ -672,6 +669,87 @@ class CartRecommendation {
             error_log("Cart rec (competition slot) error: " . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Fill an olympiad slot. Olympiads are always available (browse).
+     */
+    private function fillOlympiadSlot(array $audienceSlugs, array $excludeIds, array $context = []): ?array {
+        try {
+            $results = $this->getOlympiadRecommendations($audienceSlugs, $excludeIds, 1, $context);
+            return $results[0] ?? null;
+        } catch (\Throwable $e) {
+            error_log("Cart rec (olympiad slot) error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Get olympiad recommendations matching audience.
+     */
+    private function getOlympiadRecommendations(array $audienceSlugs, array $excludeIds, int $limit, array $context = []): array {
+        if (empty($audienceSlugs)) {
+            return [];
+        }
+
+        $limitSafe = intval($limit);
+        $audiencePlaceholders = implode(',', array_fill(0, count($audienceSlugs), '?'));
+
+        // Скоринг по специализациям (v2)
+        $score = $this->buildSpecScoreJoin('olympiad_specializations', 'olympiad_id', 'o', $context);
+
+        $params = array_merge($score['join_params'], $audienceSlugs);
+
+        $excludeClause = '';
+        if (!empty($excludeIds)) {
+            $excludePlaceholders = implode(',', array_fill(0, count($excludeIds), '?'));
+            $excludeClause = "AND o.id NOT IN ($excludePlaceholders)";
+            $params = array_merge($params, $excludeIds);
+        }
+
+        $rows = $this->db->query(
+            "SELECT o.id, o.title, o.slug, o.diploma_price, o.target_audience
+                    {$score['select_expr']}
+             FROM olympiads o
+             {$score['join_sql']}
+             JOIN olympiad_audience_types oat ON o.id = oat.olympiad_id
+             JOIN audience_types at ON oat.audience_type_id = at.id
+             WHERE o.is_active = 1
+               AND at.slug IN ($audiencePlaceholders)
+               $excludeClause
+             GROUP BY o.id
+             ORDER BY {$score['order_expr']}o.display_order ASC
+             LIMIT $limitSafe",
+            $params
+        );
+
+        return array_map(function ($row) {
+            return [
+                'type' => 'olympiad',
+                'id' => (int)$row['id'],
+                'title' => $row['title'],
+                'slug' => $row['slug'],
+                'price' => (float)($row['diploma_price'] ?? 169),
+                'meta' => $this->getOlympiadAudienceLabel($row['target_audience'] ?? ''),
+                'quick_add' => false,
+                'add_data' => null,
+            ];
+        }, $rows);
+    }
+
+    /**
+     * Get human-readable audience label for olympiad.
+     */
+    private function getOlympiadAudienceLabel(string $audience): string {
+        $labels = [
+            'pedagogues_dou' => 'Для педагогов ДОУ',
+            'pedagogues_school' => 'Для педагогов школ',
+            'pedagogues_ovz' => 'Для педагогов ОВЗ',
+            'students' => 'Для школьников',
+            'preschoolers' => 'Для дошкольников',
+            'logopedists' => 'Для логопедов',
+        ];
+        return $labels[$audience] ?? 'Олимпиада';
     }
 
     /**

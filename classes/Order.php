@@ -302,4 +302,51 @@ class Order {
             throw $e;
         }
     }
+
+    /**
+     * Получить все ID специализаций из мероприятий в заказе.
+     * Объединяет specialization_id из 4 junction-таблиц.
+     *
+     * @param int $orderId
+     * @return int[]
+     */
+    public function getSpecializationIdsForOrder($orderId): array
+    {
+        $rows = $this->db->query("
+            SELECT DISTINCT s.specialization_id
+            FROM (
+                SELECT cs.specialization_id
+                FROM order_items oi
+                JOIN registrations r ON oi.registration_id = r.id
+                JOIN competition_specializations cs ON r.competition_id = cs.competition_id
+                WHERE oi.order_id = ? AND oi.registration_id IS NOT NULL
+
+                UNION
+
+                SELECT os.specialization_id
+                FROM order_items oi
+                JOIN olympiad_registrations olr ON oi.olympiad_registration_id = olr.id
+                JOIN olympiad_specializations os ON olr.olympiad_id = os.olympiad_id
+                WHERE oi.order_id = ? AND oi.olympiad_registration_id IS NOT NULL
+
+                UNION
+
+                SELECT ws.specialization_id
+                FROM order_items oi
+                JOIN webinar_certificates wc ON oi.webinar_certificate_id = wc.id
+                JOIN webinar_specializations ws ON wc.webinar_id = ws.webinar_id
+                WHERE oi.order_id = ? AND oi.webinar_certificate_id IS NOT NULL
+
+                UNION
+
+                SELECT ps.specialization_id
+                FROM order_items oi
+                JOIN publication_certificates pc ON oi.certificate_id = pc.id
+                JOIN publication_specializations ps ON pc.publication_id = ps.publication_id
+                WHERE oi.order_id = ? AND oi.certificate_id IS NOT NULL
+            ) s
+        ", [$orderId, $orderId, $orderId, $orderId]);
+
+        return array_map(fn($r) => (int)$r['specialization_id'], $rows);
+    }
 }

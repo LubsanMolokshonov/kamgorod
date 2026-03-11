@@ -155,6 +155,34 @@ class User {
     }
 
     /**
+     * Добавить специализации пользователю (аддитивно, без удаления существующих).
+     * Используется для автоматического обогащения профиля при оплате заказов.
+     */
+    public function addSpecializations($userId, array $specializationIds): int
+    {
+        if (!$this->isV2() || empty($specializationIds)) {
+            return 0;
+        }
+
+        $added = 0;
+        foreach ($specializationIds as $specId) {
+            $specId = (int)$specId;
+            if ($specId <= 0) continue;
+
+            try {
+                $this->db->execute(
+                    "INSERT IGNORE INTO user_specializations (user_id, specialization_id) VALUES (?, ?)",
+                    [$userId, $specId]
+                );
+                $added++;
+            } catch (\Exception $e) {
+                // FK violation (invalid specialization_id) — skip
+            }
+        }
+        return $added;
+    }
+
+    /**
      * Получить полный профиль аудитории пользователя
      */
     public function getAudienceProfile($userId) {

@@ -97,6 +97,9 @@ try {
     // Add certificate to cart
     addCertificateToCart($certificate['id']);
 
+    // Sync specializations to user profile for recommendations
+    syncUserSpecializations($db, $publication['user_id'], 'publication_specializations', 'publication_id', $publicationId);
+
     // Set user session
     $_SESSION['user_id'] = $publication['user_id'];
     $user = $userObj->getById($publication['user_id']);

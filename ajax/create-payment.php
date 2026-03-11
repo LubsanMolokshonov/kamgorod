@@ -261,6 +261,60 @@ try {
             }
         }
 
+        // Sync user specializations from purchased events (additive)
+        if ($userId) {
+            try {
+                $dbObj = new Database($db);
+                $specIds = [];
+
+                $competitionIds = [];
+                $olympiadIds = [];
+                $webinarIds = [];
+                $publicationIds = [];
+
+                foreach ($allItems as $item) {
+                    $raw = $item['raw_data'] ?? [];
+                    if ($item['type'] === 'registration' && !empty($raw['competition_id'])) {
+                        $competitionIds[] = (int)$raw['competition_id'];
+                    } elseif ($item['type'] === 'olympiad_registration' && !empty($raw['olympiad_id'])) {
+                        $olympiadIds[] = (int)$raw['olympiad_id'];
+                    } elseif ($item['type'] === 'webinar_certificate' && !empty($raw['webinar_id'])) {
+                        $webinarIds[] = (int)$raw['webinar_id'];
+                    } elseif ($item['type'] === 'certificate' && !empty($raw['publication_id'])) {
+                        $publicationIds[] = (int)$raw['publication_id'];
+                    }
+                }
+
+                if (!empty($competitionIds)) {
+                    $ph = implode(',', array_fill(0, count($competitionIds), '?'));
+                    $rows = $dbObj->query("SELECT DISTINCT specialization_id FROM competition_specializations WHERE competition_id IN ($ph)", $competitionIds);
+                    foreach ($rows as $r) $specIds[] = (int)$r['specialization_id'];
+                }
+                if (!empty($olympiadIds)) {
+                    $ph = implode(',', array_fill(0, count($olympiadIds), '?'));
+                    $rows = $dbObj->query("SELECT DISTINCT specialization_id FROM olympiad_specializations WHERE olympiad_id IN ($ph)", $olympiadIds);
+                    foreach ($rows as $r) $specIds[] = (int)$r['specialization_id'];
+                }
+                if (!empty($webinarIds)) {
+                    $ph = implode(',', array_fill(0, count($webinarIds), '?'));
+                    $rows = $dbObj->query("SELECT DISTINCT specialization_id FROM webinar_specializations WHERE webinar_id IN ($ph)", $webinarIds);
+                    foreach ($rows as $r) $specIds[] = (int)$r['specialization_id'];
+                }
+                if (!empty($publicationIds)) {
+                    $ph = implode(',', array_fill(0, count($publicationIds), '?'));
+                    $rows = $dbObj->query("SELECT DISTINCT specialization_id FROM publication_specializations WHERE publication_id IN ($ph)", $publicationIds);
+                    foreach ($rows as $r) $specIds[] = (int)$r['specialization_id'];
+                }
+
+                $specIds = array_unique($specIds);
+                if (!empty($specIds)) {
+                    $userObj->addSpecializations($userId, $specIds);
+                }
+            } catch (Exception $e) {
+                error_log("Specialization sync failed (local): " . $e->getMessage());
+            }
+        }
+
         // Generate auto-login token and set cookie (30 days)
         if ($userId) {
             $sessionToken = $userObj->generateSessionToken($userId);

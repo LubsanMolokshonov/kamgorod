@@ -85,6 +85,9 @@ try {
     // Add to cart
     addWebinarCertificateToCart($certificateId);
 
+    // Sync specializations to user profile for recommendations
+    syncUserSpecializations($db, $userId, 'webinar_specializations', 'webinar_id', $registration['webinar_id'] ?? 0);
+
     echo json_encode([
         'success' => true,
         'message' => 'Сертификат добавлен в корзину',

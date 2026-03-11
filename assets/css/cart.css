@@ -394,6 +394,11 @@
     color: #1D4ED8;
 }
 
+.rec-type-olympiad .rec-badge {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
 .rec-type-publication .rec-badge {
     background: #D1FAE5;
     color: #065F46;

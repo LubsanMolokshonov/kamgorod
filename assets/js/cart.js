@@ -88,18 +88,16 @@ function loadRecommendations() {
 function buildRecommendationCard(rec, willBeFree) {
     var typeLabels = {
         'competition': 'Конкурс',
+        'olympiad': 'Олимпиада',
         'webinar_certificate': 'Сертификат вебинара',
-        'publication_certificate': 'Свидетельство публикации',
         'webinar_browse': 'Вебинар',
-        'publication_cta': 'Публикация',
         'webinar_listing_cta': 'Вебинар'
     };
     var typeClasses = {
         'competition': 'rec-type-competition',
+        'olympiad': 'rec-type-olympiad',
         'webinar_certificate': 'rec-type-webinar',
-        'publication_certificate': 'rec-type-publication',
         'webinar_browse': 'rec-type-webinar',
-        'publication_cta': 'rec-type-publication',
         'webinar_listing_cta': 'rec-type-webinar'
     };
 
@@ -108,7 +106,7 @@ function buildRecommendationCard(rec, willBeFree) {
     var freeClass = willBeFree ? ' rec-card-will-be-free' : '';
 
     var priceHtml;
-    if (rec.type === 'publication_cta' || rec.type === 'webinar_listing_cta') {
+    if (rec.type === 'webinar_listing_cta') {
         priceHtml = '<span class="rec-price rec-price-from">от ' + formatPrice(rec.price) + ' ₽</span>';
     } else if (willBeFree) {
         priceHtml = '<span class="rec-price rec-price-free">' +
@@ -132,12 +130,12 @@ function buildRecommendationCard(rec, willBeFree) {
     } else {
         // Browse link — route depends on type
         var url, btnText;
-        if (rec.type === 'webinar_browse') {
+        if (rec.type === 'olympiad') {
+            url = '/olimpiady/' + encodeURIComponent(rec.slug);
+            btnText = 'Подробнее &rarr;';
+        } else if (rec.type === 'webinar_browse') {
             url = '/vebinar/' + encodeURIComponent(rec.slug);
             btnText = 'Подробнее &rarr;';
-        } else if (rec.type === 'publication_cta') {
-            url = '/opublikovat/';
-            btnText = 'Опубликовать &rarr;';
         } else if (rec.type === 'webinar_listing_cta') {
             url = '/vebinary/';
             btnText = 'Все вебинары &rarr;';

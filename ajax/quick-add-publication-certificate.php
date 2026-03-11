@@ -87,6 +87,9 @@ try {
     // Add to cart
     addCertificateToCart($certificateId);
 
+    // Sync specializations to user profile for recommendations
+    syncUserSpecializations($db, $userId, 'publication_specializations', 'publication_id', $publicationId);
+
     echo json_encode([
         'success' => true,
         'message' => 'Свидетельство добавлено в корзину',

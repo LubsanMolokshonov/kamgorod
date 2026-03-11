@@ -313,6 +313,40 @@ function clearUserSession() {
 }
 
 /**
+ * Sync specializations from an event to user profile (additive).
+ * Called when adding items to cart so recommendations work immediately.
+ *
+ * @param PDO $pdo Database connection
+ * @param int $userId User ID
+ * @param string $junctionTable e.g. 'competition_specializations'
+ * @param string $entityColumn e.g. 'competition_id'
+ * @param int $entityId The event ID
+ */
+function syncUserSpecializations($pdo, $userId, $junctionTable, $entityColumn, $entityId) {
+    if (!$userId || !$entityId) return;
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT specialization_id FROM {$junctionTable} WHERE {$entityColumn} = ?"
+        );
+        $stmt->execute([$entityId]);
+        $specIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($specIds)) {
+            $insert = $pdo->prepare(
+                "INSERT IGNORE INTO user_specializations (user_id, specialization_id) VALUES (?, ?)"
+            );
+            foreach ($specIds as $specId) {
+                $insert->execute([$userId, $specId]);
+            }
+        }
+    } catch (Exception $e) {
+        // Non-critical, don't break cart flow
+        error_log("syncUserSpecializations error: " . $e->getMessage());
+    }
+}
+
+/**
  * Generate CSRF token
  */
 function generateCSRFToken() {

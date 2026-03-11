@@ -62,7 +62,8 @@ $migrations = [
     '042_add_nastavnik_webinar.sql',
     '043_publication_audience_tables.sql',
     '044_seed_publication_audience_data.sql',
-    '045_convert_resurs_to_videolecture.sql'
+    '045_convert_resurs_to_videolecture.sql',
+    '046_backfill_user_specializations.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';

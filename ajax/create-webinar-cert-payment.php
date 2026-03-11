@@ -92,6 +92,9 @@ try {
     // Add to cart
     addWebinarCertificateToCart($certificate['id']);
 
+    // Sync specializations to user profile for recommendations
+    syncUserSpecializations($db, $registration['user_id'], 'webinar_specializations', 'webinar_id', $registration['webinar_id']);
+
     // Set user session
     $_SESSION['user_id'] = $registration['user_id'];
     $user = $userObj->getById($registration['user_id']);

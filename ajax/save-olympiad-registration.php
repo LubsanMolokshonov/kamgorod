@@ -172,6 +172,9 @@ try {
 
     addOlympiadRegistrationToCart($registrationId);
 
+    // Sync specializations to user profile for recommendations
+    syncUserSpecializations($db, $userId, 'olympiad_specializations', 'olympiad_id', $result['olympiad_id']);
+
     // Keep user_id in session
     $_SESSION['user_id'] = $userId;
 
