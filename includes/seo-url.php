@@ -33,6 +33,12 @@ function buildSeoUrl($section, $options = []) {
             $path .= '/' . $map[$options['status']];
         }
     }
+    if ($section === 'kursy' && !empty($options['program_type']) && $options['program_type'] !== 'all') {
+        $map = defined('COURSE_TYPE_URL_MAP') ? COURSE_TYPE_URL_MAP : [];
+        if (isset($map[$options['program_type']])) {
+            $path .= '/' . $map[$options['program_type']];
+        }
+    }
 
     // Аудитория → сегменты пути
     if (!empty($options['ac'])) {
@@ -48,7 +54,7 @@ function buildSeoUrl($section, $options = []) {
     $path .= '/';
 
     // Оставшиеся параметры → query string
-    $queryKeys = array_diff_key($options, array_flip(['category', 'status', 'ac', 'at', 'as']));
+    $queryKeys = array_diff_key($options, array_flip(['category', 'status', 'program_type', 'ac', 'at', 'as']));
     $queryKeys = array_filter($queryKeys, function($v) { return $v !== null && $v !== ''; });
     if (!empty($queryKeys)) {
         $path .= '?' . http_build_query($queryKeys);
@@ -73,6 +79,10 @@ function getSectionPathPrefix($section, $options = []) {
         $map = defined('WEBINAR_STATUS_URL_MAP') ? WEBINAR_STATUS_URL_MAP : [];
         return $map[$options['status']] ?? '';
     }
+    if ($section === 'kursy' && !empty($options['program_type']) && $options['program_type'] !== 'all') {
+        $map = defined('COURSE_TYPE_URL_MAP') ? COURSE_TYPE_URL_MAP : [];
+        return $map[$options['program_type']] ?? '';
+    }
     return '';
 }
 
@@ -96,6 +106,7 @@ function redirectToSeoUrl($section, $currentParams = []) {
     $seoParams = ['ac', 'at', 'as'];
     if ($section === 'konkursy') $seoParams[] = 'category';
     if ($section === 'vebinary') $seoParams[] = 'status';
+    if ($section === 'kursy') $seoParams[] = 'program_type';
 
     parse_str($queryString, $queryParsed);
 

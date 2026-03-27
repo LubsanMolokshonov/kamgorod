@@ -84,6 +84,8 @@ include __DIR__ . '/../includes/header.php';
 .landing-page {
     background: var(--bg-light);
     margin-top: -80px;
+    overflow-x: hidden;
+    max-width: 100vw;
 }
 
 /* Hero Section - Skillbox Style Dark Theme */
@@ -649,6 +651,26 @@ include __DIR__ . '/../includes/header.php';
 
 /* Респонсивность - Планшеты */
 @media (max-width: 960px) {
+    .hero-landing .container {
+        flex-direction: column;
+        padding: 80px 20px 0;
+    }
+
+    .hero-content {
+        flex: 1;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .hero-diploma {
+        width: 100%;
+        align-items: center;
+    }
+
+    .hero-title {
+        font-size: 36px;
+    }
+
     .about-content-wrapper {
         grid-template-columns: 1fr;
         gap: 32px;
@@ -1252,7 +1274,7 @@ include __DIR__ . '/../includes/header.php';
 
 @media (max-width: 640px) {
     .hero-landing {
-        padding: 60px 0 30px;
+        padding: 80px 0 30px;
     }
 
     .hero-landing::before {
@@ -1261,13 +1283,14 @@ include __DIR__ . '/../includes/header.php';
 
     .hero-landing .container {
         flex-direction: column;
-        padding: 60px 16px 0;
+        padding: 100px 16px 0;
         gap: 20px;
     }
 
     .hero-content {
         flex: 1;
         width: 100%;
+        max-width: 100%;
         text-align: left;
         padding-top: 10px;
     }
@@ -1820,6 +1843,44 @@ include __DIR__ . '/../includes/header.php';
     /* Оптимизация padding для всех основных секций */
     section[style*="padding"] {
         padding: 40px 0 !important;
+    }
+}
+
+/* Фиксированная мобильная CTA */
+.mobile-fixed-cta {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-fixed-cta {
+        display: block;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        padding: 10px 16px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+        opacity: 0;
+        transform: translateY(100%);
+        transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .mobile-fixed-cta.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .mobile-fixed-cta-btn {
+        display: block;
+        text-align: center;
+        background: var(--gradient-primary);
+        color: white;
+        font-size: 15px;
+        font-weight: 600;
+        padding: 12px;
+        border-radius: 10px;
+        text-decoration: none;
     }
 }
 </style>
@@ -2409,6 +2470,13 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
+<!-- Фиксированная мобильная кнопка -->
+<div class="mobile-fixed-cta" id="mobileFixedCta">
+    <a href="/pages/registration.php?competition_id=<?php echo $competition['id']; ?>" class="mobile-fixed-cta-btn">
+        Принять участие
+    </a>
+</div>
+
 <script>
 // FAQ Toggle
 document.addEventListener('DOMContentLoaded', function() {
@@ -2440,6 +2508,18 @@ document.querySelectorAll('.feature-card, .nomination-card, .award-card').forEac
     el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
     observer.observe(el);
 });
+
+// Фиксированная мобильная кнопка
+if (window.innerWidth <= 768) {
+    const heroCta = document.querySelector('.hero-cta-row');
+    const fixedCta = document.getElementById('mobileFixedCta');
+    if (heroCta && fixedCta) {
+        const obs = new IntersectionObserver(([e]) => {
+            fixedCta.classList.toggle('visible', !e.isIntersecting);
+        }, { threshold: 0 });
+        obs.observe(heroCta);
+    }
+}
 </script>
 
 <!-- Regulations Modal -->
@@ -2502,6 +2582,8 @@ window.dataLayer.push({
     }
 });
 </script>
+
+<?php include __DIR__ . '/../includes/social-links.php'; ?>
 
 <?php
 // Include footer

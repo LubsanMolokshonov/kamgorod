@@ -52,11 +52,13 @@ class CartRecommendation {
         $excludeCompetitionIds = [];
         $excludeOlympiadIds = [];
         $excludeWebinarIds = [];
+        $excludeCourseIds = [];
 
         // Detect which product categories are already in the cart
         $cartHasCompetition = false;
         $cartHasOlympiad = false;
         $cartHasWebinar = false;
+        $cartHasCourse = false;
 
         foreach ($allItems as $item) {
             $raw = $item['raw_data'] ?? [];
@@ -69,6 +71,9 @@ class CartRecommendation {
             } elseif ($item['type'] === 'webinar_certificate') {
                 $excludeWebinarIds[] = (int)($raw['webinar_id'] ?? 0);
                 $cartHasWebinar = true;
+            } elseif ($item['type'] === 'course_enrollment') {
+                $excludeCourseIds[] = (int)($raw['course_id'] ?? 0);
+                $cartHasCourse = true;
             }
         }
 
@@ -79,6 +84,7 @@ class CartRecommendation {
         if (!$cartHasCompetition) $notInCart[] = 'competition'; else $inCart[] = 'competition';
         if (!$cartHasOlympiad)    $notInCart[] = 'olympiad';     else $inCart[] = 'olympiad';
         if (!$cartHasWebinar)     $notInCart[] = 'webinar';      else $inCart[] = 'webinar';
+        if (!$cartHasCourse)      $notInCart[] = 'course';       else $inCart[] = 'course';
 
         $slotPriority = array_merge($notInCart, $inCart);
 
@@ -93,6 +99,7 @@ class CartRecommendation {
         $usedCompetitionIds = $excludeCompetitionIds;
         $usedOlympiadIds = $excludeOlympiadIds;
         $usedWebinarIds = $excludeWebinarIds;
+        $usedCourseIds = $excludeCourseIds;
 
         foreach ($slots as $category) {
             $card = null;
@@ -111,6 +118,11 @@ class CartRecommendation {
                 $card = $this->fillWebinarSlot($audienceSlugs, $usedWebinarIds, $userId, $context);
                 if ($card && $card['id'] > 0) {
                     $usedWebinarIds[] = $card['id'];
+                }
+            } elseif ($category === 'course') {
+                $card = $this->fillCourseSlot($audienceSlugs, $usedCourseIds, $context);
+                if ($card) {
+                    $usedCourseIds[] = $card['id'];
                 }
             }
 
@@ -164,6 +176,7 @@ class CartRecommendation {
         $webinarIds = [];
         $publicationIds = [];
         $olympiadIds = [];
+        $courseIds = [];
 
         foreach ($allItems as $item) {
             $raw = $item['raw_data'] ?? [];
@@ -175,6 +188,8 @@ class CartRecommendation {
                 $publicationIds[] = (int)$raw['publication_id'];
             } elseif ($item['type'] === 'olympiad_registration' && !empty($raw['olympiad_id'])) {
                 $olympiadIds[] = (int)$raw['olympiad_id'];
+            } elseif ($item['type'] === 'course_enrollment' && !empty($raw['course_id'])) {
+                $courseIds[] = (int)$raw['course_id'];
             }
         }
 
@@ -232,6 +247,21 @@ class CartRecommendation {
                  JOIN olympiad_audience_types oat ON at.id = oat.audience_type_id
                  WHERE oat.olympiad_id IN ($placeholders) AND at.is_active = 1",
                 $olympiadIds
+            );
+            foreach ($rows as $row) {
+                $audienceSlugs[] = $row['slug'];
+            }
+        }
+
+        // Courses → audience_types via course_audience_types
+        if (!empty($courseIds)) {
+            $placeholders = implode(',', array_fill(0, count($courseIds), '?'));
+            $rows = $this->db->query(
+                "SELECT DISTINCT at.slug
+                 FROM audience_types at
+                 JOIN course_audience_types cat ON at.id = cat.audience_type_id
+                 WHERE cat.course_id IN ($placeholders) AND at.is_active = 1",
+                $courseIds
             );
             foreach ($rows as $row) {
                 $audienceSlugs[] = $row['slug'];
@@ -303,6 +333,7 @@ class CartRecommendation {
         $webinarIds = [];
         $publicationIds = [];
         $olympiadIds = [];
+        $courseIds = [];
 
         foreach ($allItems as $item) {
             $raw = $item['raw_data'] ?? [];
@@ -314,6 +345,8 @@ class CartRecommendation {
                 $publicationIds[] = (int)$raw['publication_id'];
             } elseif ($item['type'] === 'olympiad_registration' && !empty($raw['olympiad_id'])) {
                 $olympiadIds[] = (int)$raw['olympiad_id'];
+            } elseif ($item['type'] === 'course_enrollment' && !empty($raw['course_id'])) {
+                $courseIds[] = (int)$raw['course_id'];
             }
         }
 
@@ -357,6 +390,17 @@ class CartRecommendation {
             $rows = $this->db->query(
                 "SELECT DISTINCT specialization_id FROM olympiad_specializations WHERE olympiad_id IN ($placeholders)",
                 $olympiadIds
+            );
+            foreach ($rows as $row) {
+                $specIds[] = (int)$row['specialization_id'];
+            }
+        }
+
+        if (!empty($courseIds)) {
+            $placeholders = implode(',', array_fill(0, count($courseIds), '?'));
+            $rows = $this->db->query(
+                "SELECT DISTINCT specialization_id FROM course_specializations WHERE course_id IN ($placeholders)",
+                $courseIds
             );
             foreach ($rows as $row) {
                 $specIds[] = (int)$row['specialization_id'];
@@ -929,5 +973,97 @@ class CartRecommendation {
             'creative' => 'Творчество',
         ];
         return $labels[$category] ?? 'Конкурс';
+    }
+
+    // ── Course recommendations ──
+
+    /**
+     * Fill a course slot. Courses are always available (browse).
+     *   1. Course browse matching audience
+     *   2. Static "browse courses" CTA (last resort)
+     */
+    private function fillCourseSlot(array $audienceSlugs, array $excludeIds, array $context = []): ?array {
+        try {
+            $results = $this->getCourseRecommendations($audienceSlugs, $excludeIds, 1, $context);
+            if (!empty($results)) {
+                return $results[0];
+            }
+        } catch (\Throwable $e) {
+            error_log("Cart rec (course slot) error: " . $e->getMessage());
+        }
+
+        // Fallback: static CTA
+        return $this->getCourseListingCTA()[0];
+    }
+
+    /**
+     * Get course recommendations matching audience.
+     */
+    private function getCourseRecommendations(array $audienceSlugs, array $excludeIds, int $limit, array $context = []): array {
+        if (empty($audienceSlugs)) {
+            return [];
+        }
+
+        $limitSafe = intval($limit);
+        $audiencePlaceholders = implode(',', array_fill(0, count($audienceSlugs), '?'));
+
+        $score = $this->buildSpecScoreJoin('course_specializations', 'course_id', 'cr', $context);
+
+        $params = array_merge($score['join_params'], $audienceSlugs);
+
+        $excludeClause = '';
+        if (!empty($excludeIds)) {
+            $excludePlaceholders = implode(',', array_fill(0, count($excludeIds), '?'));
+            $excludeClause = "AND cr.id NOT IN ($excludePlaceholders)";
+            $params = array_merge($params, $excludeIds);
+        }
+
+        $rows = $this->db->query(
+            "SELECT cr.id, cr.title, cr.slug, cr.price, cr.program_type, cr.hours
+                    {$score['select_expr']}
+             FROM courses cr
+             {$score['join_sql']}
+             JOIN course_audience_types cat ON cr.id = cat.course_id
+             JOIN audience_types at ON cat.audience_type_id = at.id
+             WHERE cr.is_active = 1
+               AND at.slug IN ($audiencePlaceholders)
+               $excludeClause
+             GROUP BY cr.id
+             ORDER BY {$score['order_expr']}cr.display_order ASC
+             LIMIT $limitSafe",
+            $params
+        );
+
+        return array_map(function ($row) {
+            $typeLabel = $row['program_type'] === 'pp' ? 'Переподготовка' : 'Повышение квалификации';
+            $meta = $typeLabel . ' • ' . $row['hours'] . ' ч.';
+
+            return [
+                'type' => 'course',
+                'id' => (int)$row['id'],
+                'title' => $row['title'],
+                'slug' => $row['slug'],
+                'price' => (float)$row['price'],
+                'meta' => $meta,
+                'quick_add' => false,
+                'add_data' => null,
+            ];
+        }, $rows);
+    }
+
+    /**
+     * Get a static "browse courses" CTA card.
+     */
+    private function getCourseListingCTA(): array {
+        return [[
+            'type' => 'course_cta',
+            'id' => 0,
+            'title' => 'Курсы повышения квалификации',
+            'slug' => '',
+            'price' => 2900.0,
+            'meta' => 'КПК и переподготовка • от 36 ч. • с удостоверением',
+            'quick_add' => false,
+            'add_data' => null,
+        ]];
     }
 }

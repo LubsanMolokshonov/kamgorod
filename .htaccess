@@ -7,6 +7,7 @@ RewriteBase /
 
 # HTTPS Redirect (пропускает localhost)
 RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteCond %{HTTP_HOST} !^localhost [NC]
 RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
 RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
@@ -141,6 +142,30 @@ RewriteRule ^opublikovat/?$ pages/submit-publication.php [L,QSA]
 RewriteRule ^sertifikat-publikacii/?$ pages/publication-certificate.php [L,QSA]
 
 # ================================================
+# КУРСЫ ПОВЫШЕНИЯ КВАЛИФИКАЦИИ
+# ================================================
+
+# Список курсов
+RewriteRule ^kursy/?$ courses.php [L,QSA]
+
+# Тип программы + аудитория (3 уровня): /kursy/povyshenie-kvalifikatsii/pedagogi/dou/vospitatel/
+RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ courses.php?ct=$1&ac=$2&at=$3&as=$4 [L,QSA]
+RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ courses.php?ct=$1&ac=$2&at=$3 [L,QSA]
+RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ courses.php?ct=$1&ac=$2 [L,QSA]
+
+# Типы программ (без аудитории)
+RewriteRule ^kursy/povyshenie-kvalifikatsii/?$ courses.php?program_type=kpk [L,QSA]
+RewriteRule ^kursy/perepodgotovka/?$ courses.php?program_type=pp [L,QSA]
+
+# Аудитория курсов (3 уровня): /kursy/pedagogi/dou/vospitatel/
+RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ courses.php?ac=$1&at=$2&as=$3 [L,QSA]
+RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ courses.php?ac=$1&at=$2 [L,QSA]
+RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ courses.php?ac=$1 [L,QSA]
+
+# Детальная страница курса
+RewriteRule ^kursy/([a-z0-9-]+)/?$ pages/course-detail.php?slug=$1 [L,QSA]
+
+# ================================================
 # АУДИТОРИЯ
 # ================================================
 
@@ -182,6 +207,9 @@ RewriteRule ^svedeniya/dostupnaya-sreda/?$ pages/svedeniya/dostupnaya-sreda.php 
 RewriteRule ^o-portale/?$ pages/about.php [L,QSA]
 RewriteRule ^polzovatelskoe-soglashenie/?$ pages/terms.php [L,QSA]
 RewriteRule ^politika-konfidencialnosti/?$ pages/privacy.php [L,QSA]
+RewriteRule ^oferta-kursy/?$ pages/oferta-courses.php [L,QSA]
+RewriteRule ^oferta-meropriyatiya/?$ pages/oferta-events.php [L,QSA]
+RewriteRule ^oferta-materialy/?$ pages/oferta-materials.php [L,QSA]
 
 # Кастомная 404 страница
 ErrorDocument 404 /pages/404.php

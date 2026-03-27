@@ -91,14 +91,18 @@ function buildRecommendationCard(rec, willBeFree) {
         'olympiad': 'Олимпиада',
         'webinar_certificate': 'Сертификат вебинара',
         'webinar_browse': 'Вебинар',
-        'webinar_listing_cta': 'Вебинар'
+        'webinar_listing_cta': 'Вебинар',
+        'course': 'Курс',
+        'course_cta': 'Курс'
     };
     var typeClasses = {
         'competition': 'rec-type-competition',
         'olympiad': 'rec-type-olympiad',
         'webinar_certificate': 'rec-type-webinar',
         'webinar_browse': 'rec-type-webinar',
-        'webinar_listing_cta': 'rec-type-webinar'
+        'webinar_listing_cta': 'rec-type-webinar',
+        'course': 'rec-type-course',
+        'course_cta': 'rec-type-course'
     };
 
     var badgeLabel = typeLabels[rec.type] || '';
@@ -106,7 +110,7 @@ function buildRecommendationCard(rec, willBeFree) {
     var freeClass = willBeFree ? ' rec-card-will-be-free' : '';
 
     var priceHtml;
-    if (rec.type === 'webinar_listing_cta') {
+    if (rec.type === 'webinar_listing_cta' || rec.type === 'course_cta') {
         priceHtml = '<span class="rec-price rec-price-from">от ' + formatPrice(rec.price) + ' ₽</span>';
     } else if (willBeFree) {
         priceHtml = '<span class="rec-price rec-price-free">' +
@@ -139,6 +143,12 @@ function buildRecommendationCard(rec, willBeFree) {
         } else if (rec.type === 'webinar_listing_cta') {
             url = '/vebinary/';
             btnText = 'Все вебинары &rarr;';
+        } else if (rec.type === 'course') {
+            url = '/kursy/' + encodeURIComponent(rec.slug) + '/';
+            btnText = 'Подробнее &rarr;';
+        } else if (rec.type === 'course_cta') {
+            url = '/kursy/';
+            btnText = 'Все курсы &rarr;';
         } else {
             // Default: competition
             url = '/konkursy/' + encodeURIComponent(rec.slug);

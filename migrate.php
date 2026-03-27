@@ -63,7 +63,22 @@ $migrations = [
     '043_publication_audience_tables.sql',
     '044_seed_publication_audience_data.sql',
     '045_convert_resurs_to_videolecture.sql',
-    '046_backfill_user_specializations.sql'
+    '046_backfill_user_specializations.sql',
+    '047_create_courses_schema.sql',
+    '048_add_course_specializations.sql',
+    '049_seed_courses_data.sql',
+    '050_convert_nastavnik_to_videolecture.sql',
+    '051_create_course_consultations.sql',
+    '052_fix_courses_double_encoding.sql',
+    '053_add_utm_to_course_tables.sql',
+    '054_fix_courses_missing_audience.sql',
+    '055_add_neyroseti_pedagog_webinar.sql',
+    '056_fix_courses_uppercase_titles.sql',
+    '057_add_metodicheskoe_soprovozhdenie_webinar.sql',
+    '058_add_ii_rukovoditel_webinar.sql',
+    '059_add_perezagruzka_roditely_webinar.sql',
+    '060_add_course_payment_support.sql',
+    '061_add_bitrix_sync_fields.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';

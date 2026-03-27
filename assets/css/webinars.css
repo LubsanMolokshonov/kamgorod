@@ -1730,3 +1730,41 @@
         font-size: 14px !important;
     }
 }
+
+/* Фиксированная мобильная CTA */
+.mobile-fixed-cta {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-fixed-cta {
+        display: block;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        padding: 10px 16px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+        opacity: 0;
+        transform: translateY(100%);
+        transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .mobile-fixed-cta.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .mobile-fixed-cta-btn {
+        display: block;
+        text-align: center;
+        background: var(--gradient-primary);
+        color: white;
+        font-size: 15px;
+        font-weight: 600;
+        padding: 12px;
+        border-radius: 10px;
+        text-decoration: none;
+    }
+}

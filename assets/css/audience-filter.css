@@ -132,6 +132,70 @@
 }
 
 /* ===========================
+   Desktop sidebar filters
+   =========================== */
+
+/* На десктопе скрываем горизонтальные фильтры */
+@media (min-width: 961px) {
+    .af-horizontal-only {
+        display: none;
+    }
+}
+
+/* На мобильных скрываем sidebar, показываем горизонтальные */
+@media (max-width: 960px) {
+    .af-horizontal-only {
+        display: block;
+    }
+}
+
+/* Вертикальные ссылки-фильтры в sidebar */
+.filter-links {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.filter-link {
+    display: block;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    color: #4A5568;
+    transition: all 0.2s ease;
+    line-height: 1.4;
+}
+
+.filter-link:hover {
+    background: #F0F4FF;
+    color: var(--primary-purple, #0077FF);
+}
+
+.filter-link.active {
+    background: #E8F1FF;
+    color: var(--primary-purple, #0077FF);
+    font-weight: 600;
+}
+
+.filter-link-count {
+    color: #94A3B8;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+
+/* Grid → 2 колонки при среднем экране с sidebar */
+@media (min-width: 961px) and (max-width: 1200px) {
+    .competitions-layout .competitions-grid,
+    .competitions-layout .olympiad-grid,
+    .webinars-layout .webinars-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ===========================
    Responsive: horizontal scroll on mobile
    =========================== */
 @media (max-width: 768px) {

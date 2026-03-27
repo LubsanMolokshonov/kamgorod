@@ -13,6 +13,7 @@ require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Registration.php';
 require_once __DIR__ . '/../classes/Validator.php';
 require_once __DIR__ . '/../classes/EmailJourney.php';
+require_once __DIR__ . '/../includes/session.php';
 
 // Validate inputs
 $validator = new Validator($_POST);

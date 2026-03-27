@@ -52,7 +52,10 @@
                         <a href="/svedeniya/">Сведения об организации</a><br>
                         <a href="/pages/contacts.php">Контакты</a><br>
                         <a href="/polzovatelskoe-soglashenie/">Пользовательское соглашение</a><br>
-                        <a href="/politika-konfidencialnosti/">Политика конфиденциальности</a>
+                        <a href="/politika-konfidencialnosti/">Политика конфиденциальности</a><br>
+                        <a href="/oferta-kursy/">Оферта (курсы)</a><br>
+                        <a href="/oferta-meropriyatiya/">Оферта (мероприятия)</a><br>
+                        <a href="/oferta-materialy/">Оферта (материалы)</a>
                     </p>
                 </div>
 

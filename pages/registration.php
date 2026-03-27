@@ -199,9 +199,10 @@ include __DIR__ . '/../includes/header.php';
                             <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
                                 <input type="checkbox" name="agreement" id="agreement" style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0;">
                                 <span class="agreement-text" style="font-size: 13px; color: #64748B; line-height: 1.5;">
-                                    Я принимаю условия <a href="/pages/terms.php" target="_blank" style="color: #3B5998;">Пользовательского соглашения</a>
+                                    Я принимаю условия <a href="/polzovatelskoe-soglashenie/" target="_blank" style="color: #3B5998;">Пользовательского соглашения</a>,
+                                    <a href="/oferta-meropriyatiya/" target="_blank" style="color: #3B5998;">Договора-оферты</a>
                                     и даю согласие на обработку персональных данных в соответствии с
-                                    <a href="/pages/privacy.php" target="_blank" style="color: #3B5998;">Политикой конфиденциальности</a>
+                                    <a href="/politika-konfidencialnosti/" target="_blank" style="color: #3B5998;">Политикой конфиденциальности</a>
                                 </span>
                             </label>
                             <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
@@ -285,9 +286,10 @@ include __DIR__ . '/../includes/header.php';
                             <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
                                 <input type="checkbox" name="supervisor_agreement" id="supervisor_agreement" style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0;">
                                 <span class="agreement-text" style="font-size: 13px; color: #64748B; line-height: 1.5;">
-                                    Я принимаю условия <a href="/pages/terms.php" target="_blank" style="color: #3B5998;">Пользовательского соглашения</a>
+                                    Я принимаю условия <a href="/polzovatelskoe-soglashenie/" target="_blank" style="color: #3B5998;">Пользовательского соглашения</a>,
+                                    <a href="/oferta-meropriyatiya/" target="_blank" style="color: #3B5998;">Договора-оферты</a>
                                     и даю согласие на обработку персональных данных в соответствии с
-                                    <a href="/pages/privacy.php" target="_blank" style="color: #3B5998;">Политикой конфиденциальности</a>
+                                    <a href="/politika-konfidencialnosti/" target="_blank" style="color: #3B5998;">Политикой конфиденциальности</a>
                                 </span>
                             </label>
                             <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>

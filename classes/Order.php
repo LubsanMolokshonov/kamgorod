@@ -91,6 +91,37 @@ class Order {
     }
 
     /**
+     * Create order for course enrollment (direct payment, no cart)
+     */
+    public function createForCourseEnrollment($userId, $enrollmentId, $courseTitle, $price, $discountAmount = 0) {
+        $orderNumber = self::generateOrderNumber();
+        $finalAmount = $price - $discountAmount;
+
+        $orderId = $this->db->insert('orders', [
+            'user_id' => $userId,
+            'order_number' => $orderNumber,
+            'total_amount' => $price,
+            'discount_amount' => $discountAmount,
+            'final_amount' => $finalAmount,
+            'promotion_applied' => $discountAmount > 0 ? 1 : 0,
+            'payment_status' => 'pending'
+        ]);
+
+        if ($orderId) {
+            $this->db->insert('order_items', [
+                'order_id' => $orderId,
+                'course_enrollment_id' => $enrollmentId,
+                'price' => $finalAmount,
+                'is_free_promotion' => 0
+            ]);
+
+            $this->log("CREATE | User {$userId} | Course order {$orderNumber} | Amount {$finalAmount} RUB (discount {$discountAmount})");
+        }
+
+        return $orderId;
+    }
+
+    /**
      * Get order by ID with items
      */
     public function getById($orderId) {
@@ -163,7 +194,9 @@ class Order {
                     w.title as webinar_title,
                     olr.olympiad_id, olr.placement as olympiad_placement,
                     olr.score as olympiad_score,
-                    ol.title as olympiad_title
+                    ol.title as olympiad_title,
+                    ce.course_id as ce_course_id, ce.full_name as ce_full_name,
+                    crs.title as course_title, crs.program_type as course_program_type
              FROM order_items oi
              LEFT JOIN registrations r ON oi.registration_id = r.id
              LEFT JOIN competitions c ON r.competition_id = c.id
@@ -173,6 +206,8 @@ class Order {
              LEFT JOIN webinars w ON wc.webinar_id = w.id
              LEFT JOIN olympiad_registrations olr ON oi.olympiad_registration_id = olr.id
              LEFT JOIN olympiads ol ON olr.olympiad_id = ol.id
+             LEFT JOIN course_enrollments ce ON oi.course_enrollment_id = ce.id
+             LEFT JOIN courses crs ON ce.course_id = crs.id
              WHERE oi.order_id = ?",
             [$orderId]
         );

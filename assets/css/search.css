@@ -647,3 +647,15 @@
     background: #E3F2FD;
     color: #1565C0;
 }
+
+/* Course type badge */
+.search-result-type--course {
+    background: #FFF3E0;
+    color: #E65100;
+}
+
+/* Course icon variant */
+.search-result-icon--course {
+    background: #FFF3E0;
+    color: #E65100;
+}

@@ -348,8 +348,9 @@ include __DIR__ . '/../includes/header.php';
                                 <label class="checkbox-label">
                                     <input type="checkbox" name="agree" required>
                                     <span class="checkbox-text">
-                                        Я принимаю условия <a href="/pages/terms.php" class="link-terms" target="_blank">Пользовательского соглашения</a>
-                                        и даю согласие на <a href="/pages/privacy.php" class="link-terms" target="_blank">обработку персональных данных</a>
+                                        Я принимаю условия <a href="/polzovatelskoe-soglashenie/" class="link-terms" target="_blank">Пользовательского соглашения</a>,
+                                        <a href="/oferta-meropriyatiya/" class="link-terms" target="_blank">Договора-оферты</a>
+                                        и даю согласие на <a href="/politika-konfidencialnosti/" class="link-terms" target="_blank">обработку персональных данных</a>
                                     </span>
                                 </label>
                             </div>
@@ -437,6 +438,15 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </section>
 
+<!-- Фиксированная мобильная кнопка -->
+<div class="mobile-fixed-cta" id="mobileFixedCta">
+    <a href="#registration-form" class="mobile-fixed-cta-btn">
+        <?php echo $isAutowebinar ? 'Получить доступ бесплатно' : 'Принять бесплатное участие'; ?>
+    </a>
+</div>
+
+<?php include __DIR__ . '/../includes/social-links.php'; ?>
+
 <?php include __DIR__ . '/../includes/footer.php'; ?>
 
 <script src="/assets/js/webinars.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/webinars.js'); ?>" defer></script>
@@ -453,4 +463,16 @@ include __DIR__ . '/../includes/header.php';
         };
     });
 })();
+
+// Фиксированная мобильная кнопка
+if (window.innerWidth <= 768) {
+    var heroCta = document.querySelector('.hero-cta-row');
+    var fixedCta = document.getElementById('mobileFixedCta');
+    if (heroCta && fixedCta) {
+        var obs = new IntersectionObserver(function(entries) {
+            fixedCta.classList.toggle('visible', !entries[0].isIntersecting);
+        }, { threshold: 0 });
+        obs.observe(heroCta);
+    }
+}
 </script>

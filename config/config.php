@@ -55,6 +55,9 @@ if (!defined('YOOKASSA_MODE')) define('YOOKASSA_MODE', $_ENV['YOOKASSA_MODE'] ??
 // Bitrix24 CRM Integration
 if (!defined('BITRIX24_WEBHOOK_URL')) define('BITRIX24_WEBHOOK_URL', $_ENV['BITRIX24_WEBHOOK_URL'] ?? '');
 if (!defined('BITRIX24_WEBINAR_PIPELINE_ID')) define('BITRIX24_WEBINAR_PIPELINE_ID', $_ENV['BITRIX24_WEBINAR_PIPELINE_ID'] ?? 102);
+if (!defined('BITRIX24_COURSE_PIPELINE_ID')) define('BITRIX24_COURSE_PIPELINE_ID', $_ENV['BITRIX24_COURSE_PIPELINE_ID'] ?? 108);
+if (!defined('BITRIX24_COURSE_STAGE_NEW')) define('BITRIX24_COURSE_STAGE_NEW', 'C108:NEW');
+if (!defined('BITRIX24_COURSE_STAGE_PAID')) define('BITRIX24_COURSE_STAGE_PAID', 'C108:EXECUTING');
 
 // Yandex GPT AI Moderation
 if (!defined('YANDEX_GPT_API_KEY')) define('YANDEX_GPT_API_KEY', $_ENV['YANDEX_GPT_API_KEY'] ?? '');
@@ -117,6 +120,27 @@ if (!defined('WEBINAR_STATUS_URL_REVERSE')) {
         'predstoyashchie' => 'upcoming',
         'zapisi' => 'recordings',
         'videolektsii' => 'videolecture'
+    ]);
+}
+
+// Course Program Types
+if (!defined('COURSE_PROGRAM_TYPES')) {
+    define('COURSE_PROGRAM_TYPES', [
+        'kpk' => 'Повышение квалификации',
+        'pp'  => 'Профессиональная переподготовка'
+    ]);
+}
+
+if (!defined('COURSE_TYPE_URL_MAP')) {
+    define('COURSE_TYPE_URL_MAP', [
+        'kpk' => 'povyshenie-kvalifikatsii',
+        'pp'  => 'perepodgotovka'
+    ]);
+}
+if (!defined('COURSE_TYPE_URL_REVERSE')) {
+    define('COURSE_TYPE_URL_REVERSE', [
+        'povyshenie-kvalifikatsii' => 'kpk',
+        'perepodgotovka' => 'pp'
     ]);
 }
 

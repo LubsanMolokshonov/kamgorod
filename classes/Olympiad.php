@@ -327,4 +327,21 @@ class Olympiad {
 
         return $slug;
     }
+
+    /**
+     * Получить ТОП олимпиад по количеству регистраций
+     */
+    public function getTopOlympiads(int $limit = 5): array
+    {
+        return $this->db->query(
+            "SELECT o.*, COUNT(r.id) as registrations_count
+             FROM olympiads o
+             LEFT JOIN olympiad_registrations r ON o.id = r.olympiad_id
+             WHERE o.is_active = 1
+             GROUP BY o.id
+             ORDER BY registrations_count DESC
+             LIMIT ?",
+            [$limit]
+        );
+    }
 }

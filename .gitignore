@@ -14,6 +14,9 @@ composer.lock
 /logs/*.log
 *.log
 
+# MCP config (contains DB credentials)
+.mcp.json
+
 # IDE
 .idea/
 .vscode/

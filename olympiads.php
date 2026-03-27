@@ -70,10 +70,18 @@ if (!empty($selectedSpec)) {
 }
 
 if (!empty($filters)) {
-    $olympiads = $olympiadObj->getFilteredOlympiads($filters);
+    $allOlympiads = $olympiadObj->getFilteredOlympiads($filters);
 } else {
-    $olympiads = $olympiadObj->getActiveOlympiads();
+    $allOlympiads = $olympiadObj->getActiveOlympiads();
 }
+
+// Пагинация: 30 олимпиад на страницу
+$perPage = 30;
+$totalFiltered = count($allOlympiads);
+$totalPages = max(1, ceil($totalFiltered / $perPage));
+$currentPage = max(1, min((int)($_GET['page'] ?? 1), $totalPages));
+$offset = ($currentPage - 1) * $perPage;
+$olympiads = array_slice($allOlympiads, $offset, $perPage);
 
 $totalOlympiads = $olympiadObj->count();
 $totalParticipants = $olympiadObj->getTotalParticipants();
@@ -189,7 +197,13 @@ include __DIR__ . '/includes/header.php';
 /* Filter Section */
 .olympiad-filters-section {
     padding: 40px 0 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
     background: var(--bg-light, #F5F7FA);
+}
+
+.olympiad-filters-section .audience-filter {
+    margin-bottom: 0;
 }
 
 .audience-tabs {
@@ -263,7 +277,7 @@ include __DIR__ . '/includes/header.php';
 
 /* Olympiad Cards Grid */
 .olympiad-catalog {
-    padding: 40px 0 60px;
+    padding: 0 0 60px;
     background: var(--bg-light, #F5F7FA);
 }
 
@@ -517,6 +531,59 @@ include __DIR__ . '/includes/header.php';
     font-size: 14px;
 }
 
+/* Pagination */
+.olympiad-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+}
+
+.pagination-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text-dark, #2C3E50);
+    background: white;
+    border: 2px solid #E2E8F0;
+    transition: all 0.2s ease;
+}
+
+.pagination-link:hover {
+    border-color: var(--primary-purple, #0077FF);
+    color: var(--primary-purple, #0077FF);
+}
+
+.pagination-current {
+    background: var(--primary-purple, #0077FF);
+    color: white;
+    border-color: var(--primary-purple, #0077FF);
+}
+
+.pagination-current:hover {
+    color: white;
+}
+
+.pagination-dots {
+    font-size: 16px;
+    color: #64748B;
+    padding: 0 4px;
+}
+
+.pagination-prev,
+.pagination-next {
+    font-size: 13px;
+}
+
 /* Empty state */
 .olympiad-empty {
     text-align: center;
@@ -665,26 +732,49 @@ include __DIR__ . '/includes/header.php';
     }
 
     .olympiad-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
     }
 
     .olympiad-card {
-        padding: 24px 20px;
-        border-radius: 24px;
+        padding: 16px 14px;
+        border-radius: 18px;
+    }
+
+    .olympiad-category {
+        padding: 4px 10px;
+        font-size: 10px;
+        margin-bottom: 8px;
     }
 
     .olympiad-card h3 {
-        font-size: 18px;
+        font-size: 14px;
+        margin-bottom: 8px;
+        line-height: 1.3;
     }
 
     .olympiad-card p {
-        font-size: 14px;
+        font-size: 12px;
+        margin-bottom: 12px;
+        line-height: 1.4;
     }
 
     .olympiad-card .btn {
-        font-size: 14px;
-        padding: 12px 24px;
+        font-size: 12px;
+        padding: 10px 14px;
+    }
+
+    .olympiad-pagination {
+        gap: 4px;
+        margin-top: 24px;
+    }
+
+    .pagination-link {
+        min-width: 34px;
+        height: 34px;
+        padding: 0 8px;
+        font-size: 13px;
+        border-radius: 10px;
     }
 
     .section-title-center {
@@ -782,14 +872,17 @@ include __DIR__ . '/includes/header.php';
         font-size: 13px;
     }
 
-    .olympiad-filters-section,
+    .olympiad-filters-section {
+        padding: 24px 0 0;
+    }
+
     .olympiad-trust-section,
     .olympiad-steps-section {
         padding: 40px 0;
     }
 
     .olympiad-catalog {
-        padding: 24px 0 40px;
+        padding: 0 0 40px;
     }
 
     .container {
@@ -827,65 +920,128 @@ include __DIR__ . '/includes/header.php';
 <!-- Filter Section -->
 <section class="olympiad-filters-section" id="olympiad-catalog">
     <div class="container">
-        <?php
-        $audienceFilterBaseUrl = '/olimpiady';
-        $extraPathPrefix = '';
-        include __DIR__ . '/includes/audience-filter.php';
-        ?>
+        <!-- Горизонтальные фильтры: только мобильные -->
+        <div class="af-horizontal-only">
+            <?php
+            $audienceFilterBaseUrl = '/olimpiady';
+            $extraPathPrefix = '';
+            include __DIR__ . '/includes/audience-filter.php';
+            ?>
+        </div>
     </div>
 </section>
 
 <!-- Olympiad Cards Catalog -->
 <section class="olympiad-catalog">
     <div class="container">
-        <?php
-        $catalogSearchPlaceholder = 'Поиск олимпиад и конкурсов...';
-        $catalogSearchContext = 'olympiads';
-        $catalogSearchAriaLabel = 'Поиск по олимпиадам';
-        include __DIR__ . '/includes/catalog-search.php';
-        ?>
-
-        <div class="olympiad-count">
-            Найдено олимпиад: <strong><?php echo count($olympiads); ?></strong>
-        </div>
-
-        <?php if (empty($olympiads)): ?>
-            <div class="olympiad-empty">
-                <h3>Олимпиады не найдены</h3>
-                <p>В данной категории пока нет активных олимпиад. Попробуйте выбрать другую категорию.</p>
-            </div>
-        <?php else: ?>
-            <div class="olympiad-grid">
-                <?php foreach ($olympiads as $olympiad):
-                    $olympiadAudienceTypes = $olympiadObj->getAudienceTypes($olympiad['id']);
-                    // Первый тег аудитории
-                    $firstTag = '';
-                    if (!empty($olympiadAudienceTypes)) {
-                        $firstTag = $olympiadAudienceTypes[0]['name'];
-                    } elseif (!empty($olympiad['target_audience'])) {
-                        $firstTag = Olympiad::getAudienceLabel($olympiad['target_audience']);
-                    }
+        <div class="competitions-layout" id="catalog">
+            <!-- Sidebar фильтры: только десктоп -->
+            <aside class="sidebar-filters">
+                <?php
+                $sidebarExtraFilters = null;
+                include __DIR__ . '/includes/sidebar-filter.php';
                 ?>
-                <div class="olympiad-card">
-                    <?php if ($firstTag): ?>
-                    <span class="olympiad-category">
-                        <?php echo htmlspecialchars($firstTag); ?>
-                    </span>
+            </aside>
+
+            <div class="content-area">
+                <?php
+                $catalogSearchPlaceholder = 'Поиск олимпиад и конкурсов...';
+                $catalogSearchContext = 'olympiads';
+                $catalogSearchAriaLabel = 'Поиск по олимпиадам';
+                include __DIR__ . '/includes/catalog-search.php';
+                ?>
+
+                <div class="olympiad-count">
+                    Найдено олимпиад: <strong><?php echo $totalFiltered; ?></strong>
+                </div>
+
+                <?php if (empty($olympiads)): ?>
+                    <div class="olympiad-empty">
+                        <h3>Олимпиады не найдены</h3>
+                        <p>В данной категории пока нет активных олимпиад. Попробуйте выбрать другую категорию.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="olympiad-grid">
+                        <?php foreach ($olympiads as $olympiad):
+                            $olympiadAudienceTypes = $olympiadObj->getAudienceTypes($olympiad['id']);
+                            // Первый тег аудитории
+                            $firstTag = '';
+                            if (!empty($olympiadAudienceTypes)) {
+                                $firstTag = $olympiadAudienceTypes[0]['name'];
+                            } elseif (!empty($olympiad['target_audience'])) {
+                                $firstTag = Olympiad::getAudienceLabel($olympiad['target_audience']);
+                            }
+                        ?>
+                        <div class="olympiad-card">
+                            <?php if ($firstTag): ?>
+                            <span class="olympiad-category">
+                                <?php echo htmlspecialchars($firstTag); ?>
+                            </span>
+                            <?php endif; ?>
+
+                            <h3><?php echo htmlspecialchars($olympiad['title']); ?></h3>
+
+                            <p>
+                                <?php echo htmlspecialchars(mb_substr($olympiad['description'], 0, 150) . (mb_strlen($olympiad['description']) > 150 ? '...' : '')); ?>
+                            </p>
+
+                            <a href="/olimpiady/<?php echo htmlspecialchars($olympiad['slug']); ?>" class="btn btn-primary btn-block">
+                                Пройти бесплатно
+                            </a>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <?php if ($totalPages > 1): ?>
+                    <nav class="olympiad-pagination" aria-label="Пагинация олимпиад">
+                        <?php
+                        // Формируем базовый URL с учётом текущих фильтров
+                        $paginationParams = [];
+                        if ($selectedCategory) $paginationParams['ac'] = $selectedCategory;
+                        if ($selectedType) $paginationParams['at'] = $selectedType;
+                        if ($selectedSpec) $paginationParams['as'] = $selectedSpec;
+
+                        $buildPageUrl = function($page) use ($paginationParams) {
+                            $params = $paginationParams;
+                            if ($page > 1) $params['page'] = $page;
+                            $qs = http_build_query($params);
+                            return '/olimpiady/' . ($qs ? '?' . $qs : '');
+                        };
+                        ?>
+
+                        <?php if ($currentPage > 1): ?>
+                        <a href="<?= $buildPageUrl($currentPage - 1) ?>" class="pagination-link pagination-prev" aria-label="Предыдущая страница">&laquo; Назад</a>
+                        <?php endif; ?>
+
+                        <?php
+                        // Показываем номера страниц с многоточием
+                        $range = 2;
+                        for ($i = 1; $i <= $totalPages; $i++):
+                            if ($i == 1 || $i == $totalPages || ($i >= $currentPage - $range && $i <= $currentPage + $range)):
+                        ?>
+                        <?php if ($i == $currentPage): ?>
+                        <span class="pagination-link pagination-current"><?= $i ?></span>
+                        <?php else: ?>
+                        <a href="<?= $buildPageUrl($i) ?>" class="pagination-link"><?= $i ?></a>
+                        <?php endif; ?>
+                        <?php
+                            elseif ($i == $currentPage - $range - 1 || $i == $currentPage + $range + 1):
+                        ?>
+                        <span class="pagination-dots">&hellip;</span>
+                        <?php
+                            endif;
+                        endfor;
+                        ?>
+
+                        <?php if ($currentPage < $totalPages): ?>
+                        <a href="<?= $buildPageUrl($currentPage + 1) ?>" class="pagination-link pagination-next" aria-label="Следующая страница">Вперёд &raquo;</a>
+                        <?php endif; ?>
+                    </nav>
                     <?php endif; ?>
 
-                    <h3><?php echo htmlspecialchars($olympiad['title']); ?></h3>
-
-                    <p>
-                        <?php echo htmlspecialchars(mb_substr($olympiad['description'], 0, 150) . (mb_strlen($olympiad['description']) > 150 ? '...' : '')); ?>
-                    </p>
-
-                    <a href="/olimpiady/<?php echo htmlspecialchars($olympiad['slug']); ?>" class="btn btn-primary btn-block">
-                        Пройти бесплатно
-                    </a>
-                </div>
-                <?php endforeach; ?>
+                <?php endif; ?>
             </div>
-        <?php endif; ?>
+        </div>
     </div>
 </section>
 
@@ -1038,6 +1194,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<?php include __DIR__ . '/includes/social-links.php'; ?>
 
 <?php
 // Include footer

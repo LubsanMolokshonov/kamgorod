@@ -12,6 +12,7 @@ require_once __DIR__ . '/classes/Webinar.php';
 require_once __DIR__ . '/classes/Publication.php';
 require_once __DIR__ . '/classes/AudienceType.php';
 require_once __DIR__ . '/classes/Olympiad.php';
+require_once __DIR__ . '/classes/Course.php';
 require_once __DIR__ . '/includes/session.php';
 
 // Page metadata
@@ -25,18 +26,18 @@ $publicationObj = new Publication($db);
 $audienceTypeObj = new AudienceType($db);
 
 $totalCompetitions = count($competitionObj->getActiveCompetitions('all'));
-$recentCompetitions = array_slice($competitionObj->getActiveCompetitions('all'), 0, 6);
+$topCompetitions = $competitionObj->getTopCompetitions(6);
 
 $webinarCounts = $webinarObj->countByStatus();
-$upcomingWebinars = $webinarObj->getAll(['status' => 'upcoming'], 6);
+$topWebinars = $webinarObj->getTopWebinars(6);
 
-// Publication data - will work after adding methods to Publication class
+// Publication data
 try {
     $publicationCount = $publicationObj->getPublishedCount();
-    $recentPublications = $publicationObj->getAll(['status' => 'published'], 6);
+    $topPublications = $publicationObj->getPopular(6);
 } catch (Exception $e) {
     $publicationCount = 0;
-    $recentPublications = [];
+    $topPublications = [];
 }
 
 $audienceTypes = $audienceTypeObj->getAll();
@@ -44,6 +45,13 @@ $audienceTypes = $audienceTypeObj->getAll();
 $olympiadObj = new Olympiad($db);
 $totalOlympiads = $olympiadObj->count();
 $totalOlympiadParticipants = $olympiadObj->getTotalParticipants();
+$topOlympiads = $olympiadObj->getTopOlympiads(6);
+
+$courseObj = new Course($db);
+$totalCourses = $courseObj->count();
+$topCourses = array_slice($courseObj->getActiveCourses(), 0, 6);
+
+$totalWebinars = ($webinarCounts['upcoming'] ?? 0) + ($webinarCounts['recordings'] ?? 0) + ($webinarCounts['autowebinars'] ?? 0);
 
 // JSON-LD Organization
 $jsonLd = [
@@ -207,8 +215,8 @@ include __DIR__ . '/includes/header.php';
                     <h3>Вебинары для повышения квалификации</h3>
                     <p>Живые трансляции и записи от ведущих экспертов. Сертификаты участника</p>
                     <div class="benefit-card-stats">
-                        <span class="stats-number"><?php echo isset($webinarCounts['upcoming']) ? $webinarCounts['upcoming'] : 0; ?></span>
-                        <span class="stats-label">предстоящих вебинаров</span>
+                        <span class="stats-number"><?php echo $totalWebinars; ?>+</span>
+                        <span class="stats-label">вебинаров и видеолекций</span>
                     </div>
                 </div>
             </a>
@@ -225,14 +233,14 @@ include __DIR__ . '/includes/header.php';
                 </div>
             </a>
 
-            <!-- Карточка: Дипломы и сертификаты -->
-            <a href="/cabinet" class="homepage-benefit-card homepage-benefit-card--link" data-service="certificates">
+            <!-- Карточка: Курсы -->
+            <a href="/kursy" class="homepage-benefit-card homepage-benefit-card--link" data-service="courses">
                 <div class="benefit-card-content">
-                    <h3>Официальные документы</h3>
-                    <p>Разнообразие шаблонов дипломов и сертификатов. Мгновенное получение в личном кабинете</p>
+                    <h3>Курсы повышения квалификации</h3>
+                    <p>Программы КПК и профессиональной переподготовки с удостоверением</p>
                     <div class="benefit-card-stats">
-                        <span class="stats-number">6+</span>
-                        <span class="stats-label">шаблонов дипломов</span>
+                        <span class="stats-number"><?php echo $totalCourses; ?>+</span>
+                        <span class="stats-label">программ обучения</span>
                     </div>
                 </div>
             </a>
@@ -243,51 +251,53 @@ include __DIR__ . '/includes/header.php';
 <!-- Лицензия и аккредитации -->
 <section class="licenses-section">
     <div class="container">
-        <div class="text-center mb-40">
-            <h2>Лицензия и аккредитации</h2>
-        </div>
+        <h2 class="section-title" style="text-align: center;">Лицензия и аккредитации</h2>
+        <p class="section-subtitle">Наш портал имеет все необходимые документы для ведения образовательной деятельности</p>
 
-        <div class="licenses-grid">
+        <div class="license-grid">
             <!-- Образовательная лицензия -->
             <div class="license-card">
-                <div class="license-icon">
-                    <img src="/assets/images/cropped-logo_rosobrnadzor-2.png" alt="Рособрнадзор" width="100" height="100">
-                </div>
-                <div class="license-content">
-                    <h3 class="license-title">Образовательная лицензия</h3>
-                    <p class="license-subtitle">Лицензия на образовательную деятельность № Л035-01212-59/00203856 от 17.12.2021 г.</p>
-                    <a href="https://islod.obrnadzor.gov.ru/rlic/details/c197b78b-ee10-1b2e-3837-6f0b1295bc1f/" target="_blank" rel="noopener noreferrer" class="license-button">
-                        Проверить лицензию
-                    </a>
-                </div>
+                <img src="/assets/images/cropped-logo_rosobrnadzor-2.png" alt="Рособрнадзор" class="license-card-logo">
+                <h3>Образовательная лицензия</h3>
+                <p>Лицензия на образовательную деятельность № Л035-01212-59/00203856 от 17.12.2021 г.</p>
+                <a href="https://islod.obrnadzor.gov.ru/rlic/details/c197b78b-ee10-1b2e-3837-6f0b1295bc1f/" target="_blank" rel="noopener noreferrer" class="license-card-link">
+                    Проверить лицензию
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                        <polyline points="15 3 21 3 21 9"/>
+                        <line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                </a>
             </div>
 
             <!-- Официальное СМИ -->
             <div class="license-card">
-                <div class="license-icon">
-                    <img src="/assets/images/eagle_s.svg" alt="Роскомнадзор" width="100" height="100">
-                </div>
-                <div class="license-content">
-                    <h3 class="license-title">Официальное СМИ</h3>
-                    <p class="license-subtitle">Свидетельство о регистрации СМИ Эл. №ФС 77-74524 от 24.12.2018</p>
-                    <a href="https://rkn.gov.ru/activity/mass-media/for-founders/media/?id=700411&page=" target="_blank" rel="noopener noreferrer" class="license-button">
-                        Проверить свидетельство
-                    </a>
-                </div>
+                <img src="/assets/images/eagle_s.svg" alt="Роскомнадзор" class="license-card-logo">
+                <h3>Официальное СМИ</h3>
+                <p>Свидетельство о регистрации СМИ Эл. №ФС 77-74524 от 24.12.2018</p>
+                <a href="https://rkn.gov.ru/activity/mass-media/for-founders/media/?id=700411&page=" target="_blank" rel="noopener noreferrer" class="license-card-link">
+                    Проверить свидетельство
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                        <polyline points="15 3 21 3 21 9"/>
+                        <line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                </a>
             </div>
 
             <!-- Резидент Сколково -->
             <div class="license-card">
-                <div class="license-icon">
-                    <img src="/assets/images/skolkovo-logo.svg" alt="Сколково" width="100" height="100">
-                </div>
-                <div class="license-content">
-                    <h3 class="license-title">Резидент Сколково</h3>
-                    <p class="license-subtitle">Резидент инновационного центра «Сколково» №1127165 от 18.02.2025</p>
-                    <a href="/assets/files/Выписка_из_реестра_Сколково_12_01_2026.pdf" download class="license-button">
-                        Скачать выписку
-                    </a>
-                </div>
+                <img src="/assets/images/skolkovo-logo.svg" alt="Сколково" class="license-card-logo">
+                <h3>Резидент Сколково</h3>
+                <p>Резидент инновационного центра «Сколково» №1127165 от 18.02.2025</p>
+                <a href="/assets/files/Выписка_из_реестра_Сколково_12_01_2026.pdf" download class="license-card-link">
+                    Скачать выписку
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                </a>
             </div>
         </div>
     </div>
@@ -310,27 +320,53 @@ include __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<!-- Последние активности -->
+<!-- Популярные предложения -->
 <div class="container mt-60">
     <div class="homepage-recent-activity">
         <div class="text-center mb-40">
             <h2>Актуальные предложения</h2>
-            <p>Присоединяйтесь к активным конкурсам и вебинарам</p>
+            <p>Самые популярные мероприятия на портале</p>
         </div>
 
         <div class="activity-tabs">
-            <button class="activity-tab active" data-tab="tab-competitions">Новые конкурсы</button>
-            <button class="activity-tab" data-tab="tab-webinars">Предстоящие вебинары</button>
-            <?php if (count($recentPublications) > 0): ?>
-            <button class="activity-tab" data-tab="tab-publications">Свежие публикации</button>
+            <button class="activity-tab active" data-tab="tab-courses" data-link="/kursy" data-link-text="Смотреть все курсы">ТОП курсы</button>
+            <button class="activity-tab" data-tab="tab-competitions" data-link="/konkursy" data-link-text="Смотреть все конкурсы">ТОП конкурсы</button>
+            <button class="activity-tab" data-tab="tab-webinars" data-link="/vebinary" data-link-text="Смотреть все вебинары">ТОП вебинары</button>
+            <button class="activity-tab" data-tab="tab-olympiads" data-link="/olimpiady" data-link-text="Смотреть все олимпиады">ТОП олимпиады</button>
+            <button class="activity-tab" data-tab="tab-publications" data-link="/zhurnal" data-link-text="Смотреть все публикации">ТОП публикации</button>
+        </div>
+
+        <!-- Таб: Курсы -->
+        <div id="tab-courses" class="activity-content active">
+            <?php if (count($topCourses) > 0): ?>
+                <?php foreach ($topCourses as $course): ?>
+                <a href="/kursy/<?php echo $course['slug']; ?>" class="course-card-home">
+                    <div class="course-card-home__badges">
+                        <span class="course-card-home__badge course-card-home__badge--type">
+                            <?php echo $course['program_type'] === 'pp' ? 'Переподготовка' : 'Повышение квалификации'; ?>
+                        </span>
+                        <span class="course-card-home__badge course-card-home__badge--hours"><?php echo $course['hours']; ?> ч.</span>
+                    </div>
+                    <h3 class="course-card-home__title"><?php echo htmlspecialchars($course['title']); ?></h3>
+                    <div class="course-card-home__footer">
+                        <span class="course-card-home__price"><?php echo number_format($course['price'], 0, ',', ' '); ?> ₽</span>
+                        <span class="btn btn-sm btn-primary">Подробнее</span>
+                    </div>
+                </a>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="empty-state">
+                    <p>Курсы появятся в ближайшее время.</p>
+                    <a href="/kursy" class="btn btn-secondary mt-20">Перейти в каталог</a>
+                </div>
             <?php endif; ?>
         </div>
 
         <!-- Таб: Конкурсы -->
-        <div id="tab-competitions" class="activity-content active">
-            <?php foreach ($recentCompetitions as $competition): ?>
+        <div id="tab-competitions" class="activity-content">
+            <?php foreach ($topCompetitions as $competition): ?>
             <a href="/konkursy/<?php echo $competition['slug']; ?>" class="competition-card">
-                <div class="competition-category"><?php echo htmlspecialchars($competition['category_name']); ?></div>
+                <div class="competition-category"><?php echo htmlspecialchars($competition['category_name'] ?? ''); ?></div>
                 <h3 class="competition-title"><?php echo htmlspecialchars($competition['title']); ?></h3>
                 <p class="competition-description">
                     <?php
@@ -348,45 +384,58 @@ include __DIR__ . '/includes/header.php';
 
         <!-- Таб: Вебинары -->
         <div id="tab-webinars" class="activity-content">
-            <?php if (count($upcomingWebinars) > 0): ?>
-                <?php foreach ($upcomingWebinars as $webinar): ?>
+            <?php if (count($topWebinars) > 0): ?>
+                <?php foreach ($topWebinars as $webinar): ?>
                 <a href="/vebinar/<?php echo $webinar['slug']; ?>" class="webinar-card">
                     <div class="webinar-header">
-                        <span class="webinar-badge webinar-badge--upcoming">Предстоящий</span>
-                        <?php if ($webinar['is_free']): ?>
+                        <?php
+                        $statusLabels = [
+                            'upcoming' => ['Предстоящий', 'webinar-badge--upcoming'],
+                            'recording' => ['Запись', 'webinar-badge--recording'],
+                            'videolecture' => ['Видеолекция', 'webinar-badge--recording'],
+                        ];
+                        $statusInfo = $statusLabels[$webinar['status']] ?? ['', ''];
+                        ?>
+                        <?php if ($statusInfo[0]): ?>
+                        <span class="webinar-badge <?php echo $statusInfo[1]; ?>"><?php echo $statusInfo[0]; ?></span>
+                        <?php endif; ?>
+                        <?php if (!empty($webinar['is_free'])): ?>
                         <span class="webinar-badge webinar-badge--free">Бесплатно</span>
                         <?php endif; ?>
                     </div>
                     <h3 class="webinar-title"><?php echo htmlspecialchars($webinar['title']); ?></h3>
-                    <div class="webinar-date">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="16" y1="2" x2="16" y2="6"></line>
-                            <line x1="8" y1="2" x2="8" y2="6"></line>
-                            <line x1="3" y1="10" x2="21" y2="10"></line>
-                        </svg>
-                        <?php echo date('d.m.Y в H:i', strtotime($webinar['scheduled_at'])); ?>
-                    </div>
                     <?php if (!empty($webinar['speaker_name'])): ?>
                     <div class="webinar-speaker">
                         Спикер: <?php echo htmlspecialchars($webinar['speaker_name']); ?>
                     </div>
                     <?php endif; ?>
-                    <span class="btn btn-sm btn-primary mt-20">Зарегистрироваться</span>
+                    <span class="btn btn-sm btn-primary mt-20">Подробнее</span>
                 </a>
                 <?php endforeach; ?>
             <?php else: ?>
                 <div class="empty-state">
-                    <p>В ближайшее время вебинары не запланированы. Проверьте записи прошедших вебинаров.</p>
-                    <a href="/vebinary/zapisi" class="btn btn-secondary mt-20">Смотреть записи</a>
+                    <p>Вебинары пока не добавлены.</p>
                 </div>
             <?php endif; ?>
         </div>
 
+        <!-- Таб: Олимпиады -->
+        <div id="tab-olympiads" class="activity-content">
+            <?php foreach ($topOlympiads as $olympiad): ?>
+            <a href="/olimpiady/<?php echo $olympiad['slug']; ?>" class="olympiad-card-home">
+                <div class="olympiad-card-home__badges">
+                    <span class="olympiad-card-home__badge olympiad-card-home__badge--free">Бесплатно</span>
+                </div>
+                <h3 class="olympiad-card-home__title"><?php echo htmlspecialchars($olympiad['title']); ?></h3>
+                <p class="olympiad-card-home__desc">10 вопросов • Диплом сразу после прохождения</p>
+                <span class="btn btn-sm btn-primary">Пройти олимпиаду</span>
+            </a>
+            <?php endforeach; ?>
+        </div>
+
         <!-- Таб: Публикации -->
-        <?php if (count($recentPublications) > 0): ?>
         <div id="tab-publications" class="activity-content">
-            <?php foreach ($recentPublications as $publication): ?>
+            <?php foreach ($topPublications as $publication): ?>
             <a href="/publikaciya/<?php echo $publication['slug']; ?>" class="publication-card">
                 <div class="publication-type"><?php echo htmlspecialchars($publication['type_name'] ?? 'Публикация'); ?></div>
                 <h3 class="publication-title"><?php echo htmlspecialchars($publication['title']); ?></h3>
@@ -397,10 +446,9 @@ include __DIR__ . '/includes/header.php';
             </a>
             <?php endforeach; ?>
         </div>
-        <?php endif; ?>
 
         <div class="text-center mt-40">
-            <a href="/konkursy" class="btn btn-outline">Смотреть все конкурсы</a>
+            <a href="/kursy" id="activity-view-all" class="btn btn-outline">Смотреть все курсы</a>
         </div>
     </div>
 </div>
@@ -493,23 +541,30 @@ include __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<?php include __DIR__ . '/includes/social-links.php'; ?>
+
 <script src="/assets/js/hero-parallax.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Tab switching для секции последних активностей
     const tabs = document.querySelectorAll('.activity-tab');
     const contents = document.querySelectorAll('.activity-content');
+    const viewAllBtn = document.getElementById('activity-view-all');
 
     tabs.forEach(tab => {
         tab.addEventListener('click', function() {
-            // Remove active from all
             tabs.forEach(t => t.classList.remove('active'));
             contents.forEach(c => c.classList.remove('active'));
 
-            // Add active to clicked
             this.classList.add('active');
             const targetId = this.dataset.tab;
             document.getElementById(targetId).classList.add('active');
+
+            // Обновить кнопку «Смотреть все»
+            if (viewAllBtn) {
+                viewAllBtn.href = this.dataset.link;
+                viewAllBtn.textContent = this.dataset.linkText;
+            }
         });
     });
 

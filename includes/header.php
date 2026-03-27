@@ -77,11 +77,23 @@ initSession();
         <?php endforeach; ?>
     <?php endif; ?>
 
-<?php if (!empty($jsonLd)): ?>
+<?php
+// Поддержка нескольких JSON-LD блоков: $jsonLdArray (массив), $jsonLd (одиночный), $breadcrumbJsonLd
+$allJsonLd = [];
+if (!empty($jsonLdArray)) {
+    $allJsonLd = $jsonLdArray;
+} elseif (!empty($jsonLd)) {
+    $allJsonLd = [$jsonLd];
+}
+if (!empty($breadcrumbJsonLd)) {
+    $allJsonLd[] = $breadcrumbJsonLd;
+}
+foreach ($allJsonLd as $ld):
+?>
     <script type="application/ld+json">
-<?php echo json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT); ?>
+<?php echo json_encode($ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT); ?>
     </script>
-<?php endif; ?>
+<?php endforeach; ?>
 </head>
 <body>
     <header class="header">
@@ -139,6 +151,7 @@ initSession();
                     <a href="/konkursy">Конкурсы</a>
                     <a href="/olimpiady">Олимпиады</a>
                     <a href="/vebinary">Вебинары</a>
+                    <a href="/kursy">Курсы</a>
                     <div class="nav-dropdown">
                         <a href="/zhurnal" class="nav-dropdown-trigger">Журнал</a>
                         <div class="nav-dropdown-menu">

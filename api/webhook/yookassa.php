@@ -246,6 +246,17 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
             }
         }
 
+        // Mark course enrollments as paid
+        foreach ($orderItems as $item) {
+            if (!empty($item['course_enrollment_id'])) {
+                $stmt = $GLOBALS['db']->prepare(
+                    "UPDATE course_enrollments SET status = 'paid' WHERE id = ?"
+                );
+                $stmt->execute([$item['course_enrollment_id']]);
+                logWebhook('INFO', $paymentId, "Course enrollment {$item['course_enrollment_id']} marked as paid", '');
+            }
+        }
+
         // COMMIT TRANSACTION
         $GLOBALS['db']->commit();
 
@@ -263,6 +274,80 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
             }
         } catch (Exception $e) {
             logWebhook('WARNING', $paymentId, "Specialization sync failed: " . $e->getMessage(), '');
+        }
+
+        // Bitrix24: создать/переместить сделку для оплаченных курсов
+        try {
+            require_once BASE_PATH . '/classes/Bitrix24Integration.php';
+            require_once BASE_PATH . '/classes/Course.php';
+
+            $bitrix = new Bitrix24Integration();
+            if ($bitrix->isConfigured()) {
+                $dbHelper = new Database($GLOBALS['db']);
+                $courseObj = new Course($GLOBALS['db']);
+
+                foreach ($orderItems as $item) {
+                    if (empty($item['course_enrollment_id'])) continue;
+
+                    try {
+                        $GLOBALS['db']->beginTransaction();
+                        $enrollment = $dbHelper->queryOne(
+                            "SELECT * FROM course_enrollments WHERE id = ? FOR UPDATE",
+                            [$item['course_enrollment_id']]
+                        );
+
+                        if (!$enrollment) {
+                            $GLOBALS['db']->commit();
+                            continue;
+                        }
+
+                        $paidStage = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:EXECUTING';
+
+                        if (empty($enrollment['bitrix_lead_id'])) {
+                            // Сделка ещё не создана — создаём с этапом "Оплата на сайте"
+                            $course = $courseObj->getById($enrollment['course_id']);
+                            if ($course) {
+                                $dealId = $bitrix->createCourseDeal([
+                                    'full_name' => $enrollment['full_name'],
+                                    'email' => $enrollment['email'],
+                                    'phone' => $enrollment['phone'],
+                                    'utm_source' => $enrollment['utm_source'] ?? '',
+                                    'utm_medium' => $enrollment['utm_medium'] ?? '',
+                                    'utm_campaign' => $enrollment['utm_campaign'] ?? '',
+                                    'utm_content' => $enrollment['utm_content'] ?? '',
+                                    'utm_term' => $enrollment['utm_term'] ?? '',
+                                    'ym_uid' => $enrollment['ym_uid'] ?? '',
+                                    'source_page' => $enrollment['source_page'] ?? '',
+                                ], $course, $paidStage);
+
+                                if ($dealId) {
+                                    $dbHelper->update('course_enrollments', [
+                                        'bitrix_lead_id' => $dealId,
+                                        'bitrix_stage' => $paidStage,
+                                    ], 'id = ?', [$item['course_enrollment_id']]);
+                                    logWebhook('INFO', $paymentId, "Bitrix24 course deal {$dealId} created (stage: {$paidStage}) for enrollment {$item['course_enrollment_id']}", '');
+                                }
+                            }
+                        } else {
+                            // Cron уже создал сделку — переместить на этап "Оплата на сайте"
+                            $bitrix->moveDeal($enrollment['bitrix_lead_id'], $paidStage);
+                            $dbHelper->update('course_enrollments', [
+                                'bitrix_stage' => $paidStage,
+                            ], 'id = ?', [$item['course_enrollment_id']]);
+                            logWebhook('INFO', $paymentId, "Bitrix24 deal {$enrollment['bitrix_lead_id']} moved to {$paidStage} for enrollment {$item['course_enrollment_id']}", '');
+                        }
+
+                        $GLOBALS['db']->commit();
+                    } catch (Exception $e) {
+                        if ($GLOBALS['db']->inTransaction()) {
+                            $GLOBALS['db']->rollBack();
+                        }
+                        logWebhook('WARNING', $paymentId, "Bitrix24 course deal error for enrollment {$item['course_enrollment_id']}: " . $e->getMessage(), '');
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            logWebhook('WARNING', $paymentId, "Bitrix24 course integration error: " . $e->getMessage(), '');
         }
 
         // Cancel email journey for paid registrations
@@ -378,6 +463,15 @@ function handleRefundSucceeded($orderObj, $order, $payment) {
             UPDATE registrations r
             INNER JOIN order_items oi ON r.id = oi.registration_id
             SET r.status = 'pending'
+            WHERE oi.order_id = ?
+        ");
+        $stmt->execute([$orderId]);
+
+        // Reset course enrollments back to 'new'
+        $stmt = $GLOBALS['db']->prepare("
+            UPDATE course_enrollments ce
+            INNER JOIN order_items oi ON ce.id = oi.course_enrollment_id
+            SET ce.status = 'new'
             WHERE oi.order_id = ?
         ");
         $stmt->execute([$orderId]);

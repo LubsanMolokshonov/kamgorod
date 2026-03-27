@@ -3,9 +3,10 @@
 $catalogSearchPlaceholder = $catalogSearchPlaceholder ?? 'Поиск конкурсов...';
 $catalogSearchContext = $catalogSearchContext ?? 'competitions';
 $catalogSearchAriaLabel = $catalogSearchAriaLabel ?? 'Поиск по каталогу';
+$catalogSearchEndpoint = $catalogSearchEndpoint ?? '/ajax/search-competitions.php';
 ?>
 <!-- Поиск по каталогу -->
-<div class="catalog-search" id="catalogSearch" data-context="<?php echo htmlspecialchars($catalogSearchContext); ?>">
+<div class="catalog-search" id="catalogSearch" data-context="<?php echo htmlspecialchars($catalogSearchContext); ?>" data-endpoint="<?php echo htmlspecialchars($catalogSearchEndpoint); ?>">
     <div class="catalog-search-container">
         <div class="catalog-search-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

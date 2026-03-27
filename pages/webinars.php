@@ -184,25 +184,55 @@ include __DIR__ . "/../includes/header.php";
 
 <section class="webinars-grid-section" id="webinars-catalog">
     <div class="container">
-        <?php
-        $audienceFilterBaseUrl = '/vebinary';
-        $extraPathPrefix = getSectionPathPrefix('vebinary', ['status' => $status]);
-        include __DIR__ . '/../includes/audience-filter.php';
-        ?>
+        <!-- Горизонтальные фильтры: только мобильные -->
+        <div class="af-horizontal-only">
+            <?php
+            $audienceFilterBaseUrl = '/vebinary';
+            $extraPathPrefix = getSectionPathPrefix('vebinary', ['status' => $status]);
+            include __DIR__ . '/../includes/audience-filter.php';
+            ?>
 
-        <!-- Тип вебинара -->
-        <div class="af-categories" style="margin-top: 8px; margin-bottom: 24px;">
-            <a href="<?php echo buildSeoUrl('vebinary', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
-               class="af-pill<?php echo empty($status) ? ' active' : ''; ?>">Все вебинары</a>
-            <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
-               class="af-pill<?php echo $status === 'upcoming' ? ' active' : ''; ?>">Предстоящие (<?php echo $counts["upcoming"]; ?>)</a>
-            <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'videolecture', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
-               class="af-pill<?php echo $status === 'videolecture' ? ' active' : ''; ?>">Видеолекции (<?php echo $counts["autowebinars"]; ?>)</a>
+            <!-- Тип вебинара -->
+            <div class="af-categories" style="margin-top: 8px; margin-bottom: 24px;">
+                <a href="<?php echo buildSeoUrl('vebinary', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+                   class="af-pill<?php echo empty($status) ? ' active' : ''; ?>">Все вебинары</a>
+                <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+                   class="af-pill<?php echo $status === 'upcoming' ? ' active' : ''; ?>">Предстоящие (<?php echo $counts["upcoming"]; ?>)</a>
+                <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'videolecture', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+                   class="af-pill<?php echo $status === 'videolecture' ? ' active' : ''; ?>">Видеолекции (<?php echo $counts["autowebinars"]; ?>)</a>
+            </div>
         </div>
 
-        <div class="webinars-layout" style="display: block;">
+        <div class="webinars-layout" id="catalog">
+            <!-- Sidebar фильтры: только десктоп -->
+            <aside class="sidebar-filters">
+                <?php
+                $sidebarExtraFilters = [
+                    'title' => 'Тип',
+                    'allLabel' => 'Все вебинары',
+                    'allUrl' => buildSeoUrl('vebinary', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
+                    'allActive' => empty($status),
+                    'links' => [
+                        [
+                            'label' => 'Предстоящие',
+                            'url' => buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
+                            'active' => ($status === 'upcoming'),
+                            'count' => $counts["upcoming"]
+                        ],
+                        [
+                            'label' => 'Видеолекции',
+                            'url' => buildSeoUrl('vebinary', ['status' => 'videolecture', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
+                            'active' => ($status === 'videolecture'),
+                            'count' => $counts["autowebinars"]
+                        ]
+                    ]
+                ];
+                include __DIR__ . '/../includes/sidebar-filter.php';
+                ?>
+            </aside>
+
             <!-- Контент с карточками -->
-            <div class="content-area" style="max-width: 100%;">
+            <div class="content-area">
                 <div class="webinars-count">
                     Найдено вебинаров: <strong><?php echo $totalWebinars; ?></strong>
                 </div>
@@ -282,5 +312,7 @@ include __DIR__ . "/../includes/header.php";
 </section>
 
 <script src="/assets/js/webinars.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/webinars.js'); ?>" defer></script>
+
+<?php include __DIR__ . "/../includes/social-links.php"; ?>
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

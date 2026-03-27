@@ -422,8 +422,21 @@ include __DIR__ . '/../includes/header.php';
                         'variant' => $item['nomination'] ?? '',
                         'quantity' => 1
                     ];
+                } elseif (!empty($item['course_enrollment_id'])) {
+                    // Курс
+                    $ecomProducts[] = [
+                        'id' => 'course-' . ($item['ce_course_id'] ?? ''),
+                        'name' => $item['course_title'] ?? '',
+                        'price' => (float)$item['price'],
+                        'brand' => 'Педпортал',
+                        'category' => 'Курсы',
+                        'quantity' => 1
+                    ];
+                    $hasCourseItems = true;
                 }
             }
+            // Определяем тип купона: курсы — скидка 10%, остальное — 2+1
+            $hasCourseItems = $hasCourseItems ?? false;
             ?>
             <script>
             window.dataLayer = window.dataLayer || [];
@@ -434,7 +447,7 @@ include __DIR__ . '/../includes/header.php';
                         "actionField": {
                             "id": "<?php echo htmlspecialchars($order['order_number']); ?>",
                             "revenue": <?php echo $order['final_amount']; ?><?php if ($order['discount_amount'] > 0): ?>,
-                            "coupon": "2+1"<?php endif; ?>
+                            "coupon": "<?php echo $hasCourseItems ? 'скидка-10' : '2+1'; ?>"<?php endif; ?>
 
                         },
                         "products": <?php echo json_encode($ecomProducts, JSON_UNESCAPED_UNICODE); ?>

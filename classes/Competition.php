@@ -475,4 +475,21 @@ class Competition {
 
         return $this->db->query($sql, $params);
     }
+
+    /**
+     * Получить ТОП конкурсов по количеству регистраций
+     */
+    public function getTopCompetitions(int $limit = 5): array
+    {
+        return $this->db->query(
+            "SELECT c.*, COUNT(r.id) as registrations_count
+             FROM competitions c
+             LEFT JOIN registrations r ON c.id = r.competition_id
+             WHERE c.is_active = 1
+             GROUP BY c.id
+             ORDER BY registrations_count DESC
+             LIMIT ?",
+            [$limit]
+        );
+    }
 }

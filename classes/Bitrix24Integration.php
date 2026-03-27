@@ -397,6 +397,170 @@ class Bitrix24Integration {
         return implode("\n", $comments);
     }
 
+    // ==================== Вспомогательные методы для курсов ====================
+
+    /**
+     * Создать сделку для записи на курс
+     * Сделка создается в воронке "Курсы" (CATEGORY_ID 108)
+     *
+     * @param array $enrollment Данные записи (full_name, email, phone, utm_*, ym_uid, source_page)
+     * @param array $course Данные курса
+     * @param string|null $stageId ID стадии (null = BITRIX24_COURSE_STAGE_NEW)
+     * @return string|null ID сделки или null
+     */
+    public function createCourseDeal($enrollment, $course, $stageId = null) {
+        $contactId = $this->findOrCreateContact($enrollment);
+
+        $categoryId = defined('BITRIX24_COURSE_PIPELINE_ID') ? BITRIX24_COURSE_PIPELINE_ID : 108;
+        if ($stageId === null) {
+            $stageId = defined('BITRIX24_COURSE_STAGE_NEW') ? BITRIX24_COURSE_STAGE_NEW : 'C' . $categoryId . ':NEW';
+        }
+
+        $data = [
+            'TITLE' => mb_substr($course['title'], 0, 100) . ' — ' . $enrollment['full_name'],
+            'CATEGORY_ID' => $categoryId,
+            'STAGE_ID' => $stageId,
+            'SOURCE_ID' => 'WEB',
+            'SOURCE_DESCRIPTION' => 'Запись на курс через Каменный город',
+            'COMMENTS' => $this->buildCourseComments($enrollment, $course),
+            'OPENED' => 'Y',
+            'PROBABILITY' => 50,
+            'OPPORTUNITY' => $course['price'] ?? 0,
+            'CURRENCY_ID' => 'RUB',
+        ];
+
+        // UTM-метки (стандартные поля Bitrix24)
+        if (!empty($enrollment['utm_source'])) $data['UTM_SOURCE'] = $enrollment['utm_source'];
+        if (!empty($enrollment['utm_medium'])) $data['UTM_MEDIUM'] = $enrollment['utm_medium'];
+        if (!empty($enrollment['utm_campaign'])) $data['UTM_CAMPAIGN'] = $enrollment['utm_campaign'];
+        if (!empty($enrollment['utm_content'])) $data['UTM_CONTENT'] = $enrollment['utm_content'];
+        if (!empty($enrollment['utm_term'])) $data['UTM_TERM'] = $enrollment['utm_term'];
+
+        if ($contactId) {
+            $data['CONTACT_ID'] = $contactId;
+        }
+
+        $dealId = $this->createDeal($data);
+
+        if ($dealId) {
+            $this->log("Course deal created: {$dealId} for enrollment {$enrollment['email']}");
+        }
+
+        return $dealId;
+    }
+
+    /**
+     * Создать сделку для заявки на консультацию по курсу
+     *
+     * @param array $consultation Данные заявки (phone, course_title, utm_*, ym_uid, source_page)
+     * @return string|null ID сделки или null
+     */
+    public function createCourseConsultationDeal($consultation) {
+        $categoryId = defined('BITRIX24_COURSE_PIPELINE_ID') ? BITRIX24_COURSE_PIPELINE_ID : 108;
+        $stageId = 'C' . $categoryId . ':NEW';
+
+        $comments = [];
+        $comments[] = "Заявка на консультацию";
+        $comments[] = "Телефон: " . $consultation['phone'];
+        if (!empty($consultation['course_title'])) {
+            $comments[] = "Курс: " . $consultation['course_title'];
+        }
+        if (!empty($consultation['source_page'])) {
+            $comments[] = "Страница: " . $consultation['source_page'];
+        }
+        if (!empty($consultation['ym_uid'])) {
+            $comments[] = "Яндекс.Метрика ID: " . $consultation['ym_uid'];
+        }
+        if (!empty($consultation['utm_source'])) {
+            $comments[] = "UTM Source: " . $consultation['utm_source'];
+        }
+        if (!empty($consultation['utm_medium'])) {
+            $comments[] = "UTM Medium: " . $consultation['utm_medium'];
+        }
+        if (!empty($consultation['utm_campaign'])) {
+            $comments[] = "UTM Campaign: " . $consultation['utm_campaign'];
+        }
+
+        $data = [
+            'TITLE' => 'Консультация по курсу — ' . $consultation['phone'],
+            'CATEGORY_ID' => $categoryId,
+            'STAGE_ID' => $stageId,
+            'SOURCE_ID' => 'WEB',
+            'SOURCE_DESCRIPTION' => 'Заявка на консультацию через Каменный город',
+            'COMMENTS' => implode("\n", $comments),
+            'OPENED' => 'Y',
+        ];
+
+        // UTM-метки
+        if (!empty($consultation['utm_source'])) $data['UTM_SOURCE'] = $consultation['utm_source'];
+        if (!empty($consultation['utm_medium'])) $data['UTM_MEDIUM'] = $consultation['utm_medium'];
+        if (!empty($consultation['utm_campaign'])) $data['UTM_CAMPAIGN'] = $consultation['utm_campaign'];
+        if (!empty($consultation['utm_content'])) $data['UTM_CONTENT'] = $consultation['utm_content'];
+        if (!empty($consultation['utm_term'])) $data['UTM_TERM'] = $consultation['utm_term'];
+
+        $dealId = $this->createDeal($data);
+
+        if ($dealId) {
+            $this->log("Course consultation deal created: {$dealId} for phone {$consultation['phone']}");
+        }
+
+        return $dealId;
+    }
+
+    /**
+     * Построить комментарии для сделки курса
+     *
+     * @param array $enrollment Данные записи
+     * @param array $course Данные курса
+     * @return string Комментарий
+     */
+    private function buildCourseComments($enrollment, $course) {
+        $comments = [];
+        $comments[] = "Курс: " . $course['title'];
+
+        if (!empty($course['program_type'])) {
+            $label = class_exists('Course') ? Course::getProgramTypeLabel($course['program_type']) : $course['program_type'];
+            $comments[] = "Тип: " . $label;
+        }
+        if (!empty($course['hours'])) {
+            $comments[] = "Объём: " . $course['hours'] . " ч.";
+        }
+        if (!empty($course['price'])) {
+            $comments[] = "Стоимость: " . number_format($course['price'], 0, ',', ' ') . " руб.";
+        }
+        if (!empty($course['learning_format'])) {
+            $comments[] = "Формат: " . $course['learning_format'];
+        } else {
+            $comments[] = "Формат: Дистанционный";
+        }
+        if (!empty($enrollment['phone'])) {
+            $comments[] = "Телефон: " . $enrollment['phone'];
+        }
+        if (!empty($enrollment['source_page'])) {
+            $comments[] = "Страница: " . $enrollment['source_page'];
+        }
+        if (!empty($enrollment['ym_uid'])) {
+            $comments[] = "Яндекс.Метрика ID: " . $enrollment['ym_uid'];
+        }
+        if (!empty($enrollment['utm_source'])) {
+            $comments[] = "UTM Source: " . $enrollment['utm_source'];
+        }
+        if (!empty($enrollment['utm_medium'])) {
+            $comments[] = "UTM Medium: " . $enrollment['utm_medium'];
+        }
+        if (!empty($enrollment['utm_campaign'])) {
+            $comments[] = "UTM Campaign: " . $enrollment['utm_campaign'];
+        }
+        if (!empty($enrollment['utm_content'])) {
+            $comments[] = "UTM Content: " . $enrollment['utm_content'];
+        }
+        if (!empty($enrollment['utm_term'])) {
+            $comments[] = "UTM Term: " . $enrollment['utm_term'];
+        }
+
+        return implode("\n", $comments);
+    }
+
     // ==================== REST API вызов ====================
 
     /**

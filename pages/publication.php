@@ -166,7 +166,19 @@ include __DIR__ . '/../includes/header.php';
                 <!-- Publication Content -->
                 <?php if (!empty($publication['content'])): ?>
                     <div class="publication-body">
-                        <?php echo $publication['content']; ?>
+                        <?php
+                        $content = $publication['content'];
+                        // Паттерн 1: <strong>- <br></strong> → тире на новой строке
+                        $content = preg_replace('/<strong>\s*-\s*<br\s*\/?>\s*<\/strong>/i', '<br>&ndash;&nbsp;', $content);
+                        // Паттерн 2: ";- <br>" или ";- \n" → тире на новой строке
+                        $content = preg_replace('/;\s*-\s*<br\s*\/?>/i', ';<br>&ndash;&nbsp;', $content);
+                        $content = preg_replace('/;\s*-\s*\n/i', ';<br>&ndash;&nbsp;', $content);
+                        // Паттерн 3: "- <br>" в начале <p> (после <p>) → тире
+                        $content = preg_replace('/<p>\s*-\s+/i', '<p>&ndash;&nbsp;', $content);
+                        // Убираем множественные <br> подряд
+                        $content = preg_replace('/(<br\s*\/?>){3,}/i', '<br><br>', $content);
+                        echo $content;
+                        ?>
                     </div>
                 <?php else: ?>
                     <div class="publication-body publication-body--empty">
@@ -266,5 +278,7 @@ function copyLink() {
     });
 }
 </script>
+
+<?php include __DIR__ . '/../includes/social-links.php'; ?>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

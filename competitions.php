@@ -219,27 +219,51 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Unified Audience Filter -->
 <div class="container mt-40" id="competitions">
-    <?php
-    $audienceFilterBaseUrl = '/konkursy';
-    $extraPathPrefix = getSectionPathPrefix('konkursy', ['category' => $category]);
-    include __DIR__ . '/includes/audience-filter.php';
-    ?>
+    <!-- Горизонтальные фильтры: только мобильные -->
+    <div class="af-horizontal-only">
+        <?php
+        $audienceFilterBaseUrl = '/konkursy';
+        $extraPathPrefix = getSectionPathPrefix('konkursy', ['category' => $category]);
+        include __DIR__ . '/includes/audience-filter.php';
+        ?>
 
-    <!-- Категория конкурса -->
-    <div class="af-categories" style="margin-top: 8px; margin-bottom: 24px;">
-        <a href="<?php echo buildSeoUrl('konkursy', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
-           class="af-pill<?php echo $category === 'all' ? ' active' : ''; ?>">Все конкурсы</a>
-        <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
-        <a href="<?php echo buildSeoUrl('konkursy', ['category' => $cat, 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
-           class="af-pill<?php echo $category === $cat ? ' active' : ''; ?>">
-            <?php echo htmlspecialchars($label); ?>
-        </a>
-        <?php endforeach; ?>
+        <!-- Категория конкурса -->
+        <div class="af-categories" style="margin-top: 8px; margin-bottom: 24px;">
+            <a href="<?php echo buildSeoUrl('konkursy', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+               class="af-pill<?php echo $category === 'all' ? ' active' : ''; ?>">Все конкурсы</a>
+            <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
+            <a href="<?php echo buildSeoUrl('konkursy', ['category' => $cat, 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+               class="af-pill<?php echo $category === $cat ? ' active' : ''; ?>">
+                <?php echo htmlspecialchars($label); ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
     </div>
 
-    <div class="competitions-layout">
+    <div class="competitions-layout" id="catalog">
+        <!-- Sidebar фильтры: только десктоп -->
+        <aside class="sidebar-filters">
+            <?php
+            $sidebarExtraFilters = [
+                'title' => 'Категория',
+                'allLabel' => 'Все конкурсы',
+                'allUrl' => buildSeoUrl('konkursy', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
+                'allActive' => ($category === 'all'),
+                'links' => []
+            ];
+            foreach (COMPETITION_CATEGORIES as $cat => $label) {
+                $sidebarExtraFilters['links'][] = [
+                    'label' => $label,
+                    'url' => buildSeoUrl('konkursy', ['category' => $cat, 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
+                    'active' => ($category === $cat)
+                ];
+            }
+            include __DIR__ . '/includes/sidebar-filter.php';
+            ?>
+        </aside>
+
         <!-- Контент с карточками -->
-        <div class="content-area" style="max-width: 100%; flex: 1;">
+        <div class="content-area">
             <?php
             $catalogSearchPlaceholder = 'Поиск конкурсов и олимпиад...';
             $catalogSearchContext = 'competitions';
@@ -664,6 +688,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<?php include __DIR__ . '/includes/social-links.php'; ?>
 
 <?php
 // Include footer

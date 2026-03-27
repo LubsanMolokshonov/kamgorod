@@ -16,6 +16,7 @@ require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../classes/WebinarQuiz.php';
 require_once __DIR__ . '/../classes/OlympiadQuiz.php';
 require_once __DIR__ . '/../classes/OlympiadRegistration.php';
+require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Auto-login via cookie if session doesn't exist
@@ -87,6 +88,10 @@ $olympRegObj = new OlympiadRegistration($db);
 $userOlympiadResults = $olympQuizObj->getResultsByUser($_SESSION['user_id']);
 $userOlympiadRegs = $olympRegObj->getByUser($_SESSION['user_id']);
 
+// Get user's course enrollments
+$courseObj = new Course($db);
+$userCourseEnrollments = $courseObj->getEnrollmentsByEmail($_SESSION['user_email']);
+
 // Index olympiad registrations by olympiad_id for quick lookup
 $olympRegsByResultId = [];
 foreach ($userOlympiadRegs as $reg) {
@@ -95,7 +100,7 @@ foreach ($userOlympiadRegs as $reg) {
 
 // Current tab
 $activeTab = $_GET['tab'] ?? 'diplomas';
-if (!in_array($activeTab, ['diplomas', 'publications', 'webinars', 'olympiads'])) {
+if (!in_array($activeTab, ['diplomas', 'publications', 'webinars', 'olympiads', 'courses'])) {
     $activeTab = 'diplomas';
 }
 
@@ -103,6 +108,10 @@ if (!in_array($activeTab, ['diplomas', 'publications', 'webinars', 'olympiads'])
 $pageTitle = 'Личный кабинет | ' . SITE_NAME;
 $pageDescription = 'Ваши регистрации и дипломы';
 $additionalCSS = ['/assets/css/cabinet.css?v=' . filemtime(__DIR__ . '/../assets/css/cabinet.css'), '/assets/css/journal.css?v=' . filemtime(__DIR__ . '/../assets/css/journal.css')];
+$additionalJS = [];
+if ($activeTab === 'courses') {
+    $additionalJS[] = '/assets/js/course-payment.js?v=' . filemtime(__DIR__ . '/../assets/js/course-payment.js');
+}
 $noindex = true;
 
 // Include header
@@ -122,6 +131,13 @@ include __DIR__ . '/../includes/header.php';
 
         <!-- Tabs -->
         <div class="cabinet-tabs">
+            <a href="?tab=courses" class="cabinet-tab <?php echo $activeTab === 'courses' ? 'active' : ''; ?>">
+                <span class="tab-icon">📚</span>
+                Курсы
+                <?php if (!empty($userCourseEnrollments)): ?>
+                    <span class="tab-count"><?php echo count($userCourseEnrollments); ?></span>
+                <?php endif; ?>
+            </a>
             <a href="?tab=diplomas" class="cabinet-tab <?php echo $activeTab === 'diplomas' ? 'active' : ''; ?>">
                 <span class="tab-icon">🏆</span>
                 Дипломы
@@ -252,6 +268,214 @@ include __DIR__ . '/../includes/header.php';
                 <div class="cabinet-actions">
                     <a href="/olimpiady" class="btn btn-primary">
                         Пройти другие олимпиады
+                    </a>
+                </div>
+            <?php endif; ?>
+
+        <?php elseif ($activeTab === 'courses'): ?>
+            <!-- Courses Tab -->
+            <?php if (empty($userCourseEnrollments)): ?>
+                <div class="empty-cabinet">
+                    <div class="empty-icon">📚</div>
+                    <h2>У вас пока нет заявок на курсы</h2>
+                    <p>Запишитесь на курс повышения квалификации или профессиональной переподготовки</p>
+                    <a href="/kursy/" class="btn btn-primary">
+                        Перейти к курсам
+                    </a>
+                </div>
+            <?php else: ?>
+                <?php
+                // Разделяем на неоплаченные и завершённые
+                $unpaidEnrollments = [];
+                $completedEnrollments = [];
+                foreach ($userCourseEnrollments as $enrollment) {
+                    if (in_array($enrollment['enrollment_status'], ['paid', 'cancelled'])) {
+                        $completedEnrollments[] = $enrollment;
+                    } else {
+                        $unpaidEnrollments[] = $enrollment;
+                    }
+                }
+
+                // Предрасчёт данных для неоплаченных
+                $unpaidData = [];
+                $hasAnyDiscount = false;
+                $earliestDeadline = null;
+                $earliestRemainingSeconds = 0;
+                $totalPrice = 0;
+                $totalDiscountedPrice = 0;
+
+                foreach ($unpaidEnrollments as $enrollment) {
+                    $priceRaw = floatval($enrollment['price']);
+                    $enrolledAtUtc = new DateTime($enrollment['enrolled_at'], new DateTimeZone('UTC'));
+                    $enrolledAtUtc->setTimezone(new DateTimeZone(date_default_timezone_get()));
+                    $discountDeadline = $enrolledAtUtc->getTimestamp() + 600;
+                    $isDiscountActive = time() < $discountDeadline;
+                    $remainingSeconds = max(0, $discountDeadline - time());
+                    $discountedPrice = round($priceRaw * 0.9);
+
+                    if ($isDiscountActive) {
+                        $hasAnyDiscount = true;
+                        if ($earliestDeadline === null || $discountDeadline < $earliestDeadline) {
+                            $earliestDeadline = $discountDeadline;
+                            $earliestRemainingSeconds = $remainingSeconds;
+                        }
+                    }
+
+                    $totalPrice += $priceRaw;
+                    $totalDiscountedPrice += $isDiscountActive ? $discountedPrice : $priceRaw;
+
+                    $unpaidData[] = [
+                        'enrollment' => $enrollment,
+                        'priceRaw' => $priceRaw,
+                        'price' => number_format($priceRaw, 0, ',', ' '),
+                        'discountDeadline' => $discountDeadline,
+                        'isDiscountActive' => $isDiscountActive,
+                        'discountedPrice' => $discountedPrice,
+                        'discountedPriceFormatted' => number_format($discountedPrice, 0, ',', ' '),
+                        'programLabel' => Course::getProgramTypeLabel($enrollment['program_type']),
+                    ];
+                }
+
+                $totalDiscount = $totalPrice - $totalDiscountedPrice;
+                ?>
+
+                <?php if (isset($_GET['payment']) && $_GET['payment'] === 'success'): ?>
+                    <div class="success-message">
+                        <div class="success-icon">✅</div>
+                        <div>
+                            <h3>Оплата прошла успешно!</h3>
+                            <p>Мы свяжемся с вами для организации обучения</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($unpaidData)): ?>
+                <!-- Checkout Zone -->
+                <div class="course-checkout">
+                    <div class="course-checkout-header">
+                        <h2>Оформление <?php echo count($unpaidData) === 1 ? 'курса' : 'курсов'; ?></h2>
+                        <span class="item-count-badge"><?php echo count($unpaidData); ?></span>
+                    </div>
+
+                    <?php if ($hasAnyDiscount): ?>
+                    <div class="course-promo-banner">
+                        <div class="promo-icon">🔥</div>
+                        <div class="promo-content">
+                            <h3>Скидка 10% — ограниченное время!</h3>
+                            <p>Оплатите в течение 10 минут после записи и сэкономьте <?php echo number_format($totalDiscount, 0, ',', ' '); ?> ₽</p>
+                        </div>
+                        <div class="promo-timer">
+                            <span class="promo-timer-label">осталось</span>
+                            <span class="course-timer" data-seconds="<?php echo $earliestRemainingSeconds; ?>">
+                                <?php echo sprintf('%02d:%02d', floor($earliestRemainingSeconds / 60), $earliestRemainingSeconds % 60); ?>
+                            </span>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <div class="course-checkout-items">
+                        <?php foreach ($unpaidData as $item):
+                            $e = $item['enrollment'];
+                        ?>
+                        <div class="course-checkout-item"
+                             data-enrollment-id="<?php echo $e['enrollment_id']; ?>"
+                             data-course-id="<?php echo $e['course_id']; ?>"
+                             data-deadline="<?php echo $item['discountDeadline']; ?>"
+                             data-price="<?php echo $item['priceRaw']; ?>"
+                             data-discounted-price="<?php echo $item['discountedPrice']; ?>">
+                            <div class="checkout-item-details">
+                                <div class="checkout-item-name"><?php echo htmlspecialchars($e['title']); ?></div>
+                                <div class="checkout-item-meta">
+                                    <?php echo htmlspecialchars($item['programLabel']); ?> · <?php echo Course::formatHours($e['hours']); ?>
+                                </div>
+                            </div>
+                            <div class="checkout-item-price">
+                                <?php if ($item['isDiscountActive']): ?>
+                                    <span class="price-original"><?php echo $item['price']; ?> ₽</span>
+                                    <span class="price-discounted"><?php echo $item['discountedPriceFormatted']; ?> ₽</span>
+                                <?php else: ?>
+                                    <span class="price-current"><?php echo $item['price']; ?> ₽</span>
+                                <?php endif; ?>
+                            </div>
+                            <a href="/kursy/<?php echo htmlspecialchars($e['slug']); ?>/" class="checkout-item-link" title="Подробнее о курсе">→</a>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <div class="course-price-summary">
+                        <div class="summary-row">
+                            <span>Стоимость:</span>
+                            <span><?php echo number_format($totalPrice, 0, ',', ' '); ?> ₽</span>
+                        </div>
+                        <?php if ($hasAnyDiscount): ?>
+                        <div class="summary-row discount">
+                            <span>Скидка 10%:</span>
+                            <span>−<?php echo number_format($totalDiscount, 0, ',', ' '); ?> ₽</span>
+                        </div>
+                        <?php endif; ?>
+                        <div class="summary-row total">
+                            <span>Итого к оплате:</span>
+                            <span><?php echo number_format($hasAnyDiscount ? $totalDiscountedPrice : $totalPrice, 0, ',', ' '); ?> ₽</span>
+                        </div>
+                    </div>
+
+                    <div class="course-payment-section">
+                        <?php
+                        $payAmount = $hasAnyDiscount ? $totalDiscountedPrice : $totalPrice;
+                        $payFormatted = number_format($payAmount, 0, ',', ' ');
+                        ?>
+                        <button class="btn-course-checkout <?php echo $hasAnyDiscount ? 'has-discount' : ''; ?>">
+                            Оплатить — <?php echo $payFormatted; ?> ₽
+                        </button>
+                        <p class="payment-methods">Оплата через ЮКасса · Банковские карты, электронные кошельки, СБП</p>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php if (!empty($completedEnrollments)): ?>
+                <!-- Paid/Completed Courses -->
+                <div class="course-paid-section">
+                    <h3>Оплаченные курсы (<?php echo count($completedEnrollments); ?>)</h3>
+                    <div class="course-paid-list">
+                        <?php foreach ($completedEnrollments as $enrollment):
+                            $isPaid = $enrollment['enrollment_status'] === 'paid';
+                            $isCancelled = $enrollment['enrollment_status'] === 'cancelled';
+                            $programLabel = Course::getProgramTypeLabel($enrollment['program_type']);
+                            $priceRaw = floatval($enrollment['price']);
+                        ?>
+                        <div class="course-paid-item">
+                            <div class="paid-item-check"><?php echo $isPaid ? '✓' : '✕'; ?></div>
+                            <div class="paid-item-details">
+                                <div class="paid-item-name"><?php echo htmlspecialchars($enrollment['title']); ?></div>
+                                <div class="paid-item-meta">
+                                    <?php echo htmlspecialchars($programLabel); ?> · <?php echo Course::formatHours($enrollment['hours']); ?>
+                                    <?php if ($isCancelled): ?>
+                                        <span class="paid-item-status cancelled">Отменена</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <div class="paid-item-price"><?php echo number_format($priceRaw, 0, ',', ' '); ?> ₽</div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Info Block -->
+                <div class="course-info-block">
+                    <h3>Что дальше?</h3>
+                    <ol>
+                        <li>После оплаты мы свяжемся с вами для организации обучения</li>
+                        <li>Обучение проходит заочно с применением дистанционных технологий</li>
+                        <li>По итогам выдаётся удостоверение установленного образца</li>
+                        <li>На ваш email придёт подтверждение оплаты</li>
+                    </ol>
+                </div>
+
+                <!-- Actions -->
+                <div class="cabinet-actions">
+                    <a href="/kursy/" class="btn btn-primary">
+                        Смотреть другие курсы
                     </a>
                 </div>
             <?php endif; ?>
@@ -817,6 +1041,10 @@ function appealPublication(publicationId) {
     .catch(function() { alert('Ошибка при подаче апелляции'); });
 }
 </script>
+
+<?php if ($activeTab === 'courses'): ?>
+<script>window.csrfToken = '<?php echo generateCSRFToken(); ?>';</script>
+<?php endif; ?>
 
 <?php
 // Include footer

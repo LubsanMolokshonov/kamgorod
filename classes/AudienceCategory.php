@@ -94,11 +94,20 @@ class AudienceCategory {
             [$categoryId]
         );
 
+        $courses = $this->db->queryOne(
+            "SELECT COUNT(DISTINCT cac.course_id) as total
+             FROM course_audience_categories cac
+             JOIN courses c ON cac.course_id = c.id
+             WHERE cac.category_id = ? AND c.is_active = 1",
+            [$categoryId]
+        );
+
         return [
             'competitions' => $competitions['total'] ?? 0,
             'olympiads' => $olympiads['total'] ?? 0,
             'webinars' => $webinars['total'] ?? 0,
-            'publications' => $publications['total'] ?? 0
+            'publications' => $publications['total'] ?? 0,
+            'courses' => $courses['total'] ?? 0
         ];
     }
 }

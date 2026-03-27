@@ -82,6 +82,8 @@ include __DIR__ . '/../includes/header.php';
 .olympiad-landing {
     background: var(--bg-light, #F5F7FA);
     margin-top: -80px;
+    overflow-x: hidden;
+    max-width: 100vw;
 }
 
 /* ---- Screen 1: Hero ---- */
@@ -111,7 +113,7 @@ include __DIR__ . '/../includes/header.php';
 .olympiad-hero-detail .container {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     position: relative;
     z-index: 1;
     padding: 100px 20px 80px;
@@ -121,7 +123,6 @@ include __DIR__ . '/../includes/header.php';
 .olympiad-hero-left {
     flex: 0 0 58%;
     color: white;
-    padding-top: 20px;
 }
 
 .olympiad-hero-badges {
@@ -934,6 +935,29 @@ include __DIR__ . '/../includes/header.php';
 /* =====================
    Responsive Styles
    ===================== */
+
+@media (max-width: 960px) {
+    .olympiad-hero-detail .container {
+        flex-direction: column;
+        padding: 80px 20px 40px;
+    }
+
+    .olympiad-hero-left {
+        flex: 1;
+        width: 100%;
+    }
+
+    .olympiad-hero-right {
+        flex: 1;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .olympiad-hero-title {
+        font-size: 32px;
+    }
+}
+
 @media (max-width: 1024px) {
     .olympiad-benefits-section .container {
         padding: 0 40px;
@@ -984,7 +1008,29 @@ include __DIR__ . '/../includes/header.php';
     .fan-3 { left: 55px; top: 5px; transform: rotate(10deg); }
 
     .license-grid {
-        gap: 20px;
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .license-card {
+        display: grid;
+        grid-template-columns: 48px 1fr;
+        gap: 4px 16px;
+        text-align: left;
+        padding: 24px 20px;
+    }
+
+    .license-card-logo {
+        grid-column: 1;
+        grid-row: 1 / -1;
+        height: 48px;
+        align-self: center;
+    }
+
+    .license-card h3,
+    .license-card p,
+    .license-card-link {
+        grid-column: 2;
     }
 
     .olympiad-steps-grid {
@@ -1006,25 +1052,6 @@ include __DIR__ . '/../includes/header.php';
 
     .olympiad-faq-section h2 {
         font-size: 36px;
-    }
-}
-
-@media (max-width: 768px) {
-    .license-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
-    }
-
-    .license-card {
-        flex-direction: row;
-        text-align: left;
-        padding: 24px 20px;
-        gap: 16px;
-    }
-
-    .license-card-logo {
-        height: 48px;
-        flex-shrink: 0;
     }
 }
 
@@ -1119,7 +1146,7 @@ include __DIR__ . '/../includes/header.php';
     }
 
     .olympiad-hero-detail {
-        padding: 60px 0 0;
+        padding: 80px 0 0;
     }
 
     .olympiad-hero-detail::before {
@@ -1128,7 +1155,7 @@ include __DIR__ . '/../includes/header.php';
 
     .olympiad-hero-detail .container {
         flex-direction: column;
-        padding: 60px 16px 40px;
+        padding: 100px 16px 40px;
         gap: 24px;
     }
 
@@ -1332,6 +1359,44 @@ include __DIR__ . '/../includes/header.php';
     .olympiad-steps-section,
     .olympiad-seo-section {
         padding: 40px 0;
+    }
+}
+
+/* Фиксированная мобильная CTA */
+.mobile-fixed-cta {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-fixed-cta {
+        display: block;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        padding: 10px 16px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+        opacity: 0;
+        transform: translateY(100%);
+        transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .mobile-fixed-cta.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .mobile-fixed-cta-btn {
+        display: block;
+        text-align: center;
+        background: var(--gradient-primary);
+        color: white;
+        font-size: 15px;
+        font-weight: 600;
+        padding: 12px;
+        border-radius: 10px;
+        text-decoration: none;
     }
 }
 </style>
@@ -1719,6 +1784,13 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
+<!-- Фиксированная мобильная кнопка -->
+<div class="mobile-fixed-cta" id="mobileFixedCta">
+    <a href="/olimpiada-test/<?php echo $olympiad['id']; ?>" class="mobile-fixed-cta-btn">
+        Пройти олимпиаду бесплатно
+    </a>
+</div>
+
 <script>
 // FAQ Toggle
 document.addEventListener('DOMContentLoaded', function() {
@@ -1749,8 +1821,22 @@ document.addEventListener('DOMContentLoaded', function() {
         el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
         observer.observe(el);
     });
+
+    // Фиксированная мобильная кнопка
+    if (window.innerWidth <= 768) {
+        var heroCta = document.querySelector('.btn-olympiad-cta');
+        var fixedCta = document.getElementById('mobileFixedCta');
+        if (heroCta && fixedCta) {
+            var obs = new IntersectionObserver(function(entries) {
+                fixedCta.classList.toggle('visible', !entries[0].isIntersecting);
+            }, { threshold: 0 });
+            obs.observe(heroCta);
+        }
+    }
 });
 </script>
+
+<?php include __DIR__ . '/../includes/social-links.php'; ?>
 
 <?php
 // Include footer

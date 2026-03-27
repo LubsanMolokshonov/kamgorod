@@ -463,4 +463,20 @@ class Webinar {
             'iso' => date('c', $timestamp)
         ];
     }
+
+    /**
+     * Получить ТОП вебинаров по количеству регистраций
+     */
+    public function getTopWebinars(int $limit = 5): array
+    {
+        return $this->db->query(
+            "SELECT w.*, s.full_name as speaker_name, s.position as speaker_position
+             FROM webinars w
+             LEFT JOIN speakers s ON w.speaker_id = s.id
+             WHERE w.is_active = 1
+             ORDER BY w.registrations_count DESC
+             LIMIT ?",
+            [$limit]
+        );
+    }
 }

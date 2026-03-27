@@ -404,6 +404,11 @@
     color: #065F46;
 }
 
+.rec-type-course .rec-badge {
+    background: #FCE7F3;
+    color: #9D174D;
+}
+
 .rec-title {
     font-weight: 600;
     font-size: 15px;

@@ -514,6 +514,108 @@ class SearchService {
     }
 
     // ========================================
+    // Поиск курсов
+    // ========================================
+
+    /**
+     * Поиск курсов (MySQL LIKE)
+     */
+    public function searchCourses($query, $limit = 10) {
+        $query = trim($query);
+
+        if (mb_strlen($query) < 2) {
+            return [];
+        }
+
+        $courses = $this->courseLikeSearch($query, $limit);
+        return $this->formatCourseResults($courses, $query);
+    }
+
+    /**
+     * LIKE поиск курсов
+     */
+    private function courseLikeSearch($query, $limit) {
+        $words = preg_split('/\s+/', $query);
+        $likePatterns = [];
+        $params = [];
+
+        foreach ($words as $word) {
+            if (mb_strlen($word) >= 2) {
+                $pattern = '%' . $word . '%';
+                $likePatterns[] = "(c.title LIKE ? OR c.description LIKE ? OR c.target_audience_text LIKE ? OR c.course_group LIKE ?)";
+                $params[] = $pattern;
+                $params[] = $pattern;
+                $params[] = $pattern;
+                $params[] = $pattern;
+            }
+        }
+
+        if (empty($likePatterns)) {
+            $pattern = '%' . $query . '%';
+            $likePatterns[] = "(c.title LIKE ? OR c.description LIKE ? OR c.target_audience_text LIKE ? OR c.course_group LIKE ?)";
+            $params[] = $pattern;
+            $params[] = $pattern;
+            $params[] = $pattern;
+            $params[] = $pattern;
+        }
+
+        $whereClause = implode(' OR ', $likePatterns);
+
+        return $this->db->query(
+            "SELECT c.*,
+                    CASE
+                        WHEN c.title LIKE ? THEN 3
+                        WHEN c.description LIKE ? THEN 2
+                        WHEN c.course_group LIKE ? THEN 1
+                        ELSE 0
+                    END as relevance
+             FROM courses c
+             WHERE c.is_active = 1 AND ({$whereClause})
+             ORDER BY
+                CASE WHEN c.title LIKE ? THEN 0 ELSE 1 END,
+                c.display_order ASC,
+                c.title ASC
+             LIMIT ?",
+            array_merge(
+                ['%' . $query . '%', '%' . $query . '%', '%' . $query . '%'],
+                $params,
+                ['%' . $query . '%', $limit]
+            )
+        );
+    }
+
+    /**
+     * Форматировать результаты курсов для frontend
+     */
+    private function formatCourseResults($courses, $query) {
+        $results = [];
+
+        foreach ($courses as $course) {
+            $programTypeLabel = defined('COURSE_PROGRAM_TYPES') && isset(COURSE_PROGRAM_TYPES[$course['program_type']])
+                ? COURSE_PROGRAM_TYPES[$course['program_type']]
+                : $course['program_type'];
+
+            $results[] = [
+                'id' => (int)$course['id'],
+                'type' => 'course',
+                'title' => $course['title'],
+                'slug' => $course['slug'],
+                'description' => $this->truncateText($course['description'], 100),
+                'price' => number_format((float)$course['price'], 0, ',', ' ') . ' ₽',
+                'hours' => (int)$course['hours'],
+                'programType' => $course['program_type'],
+                'programTypeLabel' => $programTypeLabel,
+                'category' => $course['course_group'],
+                'categoryLabel' => $programTypeLabel . ' · ' . $course['hours'] . ' ч.',
+                'url' => '/kursy/' . urlencode($course['slug']),
+                'highlight' => $this->highlightMatch($course['title'], $query)
+            ];
+        }
+
+        return $results;
+    }
+
+    // ========================================
     // Единый поиск (конкурсы + олимпиады)
     // ========================================
 

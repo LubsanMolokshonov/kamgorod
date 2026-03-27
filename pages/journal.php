@@ -655,6 +655,13 @@ include __DIR__ . '/../includes/header.php';
                                         </div>
 
                                         <div class="publication-meta">
+                                            <span class="publication-date">
+                                                <?php
+                                                $date = new DateTime($pub['published_at']);
+                                                $months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+                                                echo $date->format('d') . ' ' . $months[$date->format('n') - 1] . ' ' . $date->format('Y');
+                                                ?>
+                                            </span>
                                             <span class="meta-item" title="Просмотры">
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -662,23 +669,7 @@ include __DIR__ . '/../includes/header.php';
                                                 </svg>
                                                 <?php echo number_format($pub['views_count']); ?>
                                             </span>
-                                            <span class="meta-item" title="Скачивания">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                                </svg>
-                                                <?php echo number_format($pub['downloads_count']); ?>
-                                            </span>
                                         </div>
-                                    </div>
-
-                                    <div class="publication-date">
-                                        <?php
-                                        $date = new DateTime($pub['published_at']);
-                                        $months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-                                        echo $date->format('d') . ' ' . $months[$date->format('n') - 1] . ' ' . $date->format('Y');
-                                        ?>
                                     </div>
                                 </a>
                             </article>
@@ -795,5 +786,7 @@ function buildUrl($params = []) {
     return $path . ($query ? '?' . $query : '') . '#catalog';
 }
 ?>
+
+<?php include __DIR__ . '/../includes/social-links.php'; ?>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

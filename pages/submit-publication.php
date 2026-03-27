@@ -267,8 +267,9 @@ include __DIR__ . '/../includes/header.php';
                                     <span class="checkmark"></span>
                                     <span class="agreement-text">
                                         Я подтверждаю, что являюсь автором материала, принимаю условия
-                                        <a href="/pages/terms.php" target="_blank">Пользовательского соглашения</a>
-                                        и даю согласие на <a href="/pages/privacy.php" target="_blank">обработку персональных данных</a>
+                                        <a href="/polzovatelskoe-soglashenie/" target="_blank">Пользовательского соглашения</a>,
+                                        <a href="/oferta-meropriyatiya/" target="_blank">Договора-оферты</a>
+                                        и даю согласие на <a href="/politika-konfidencialnosti/" target="_blank">обработку персональных данных</a>
                                     </span>
                                 </label>
                             </div>

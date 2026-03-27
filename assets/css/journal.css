@@ -28,6 +28,17 @@
     opacity: 1;
 }
 
+/* Journal Hero — fix flex overflow (50% + 50% + gap > 100%) */
+.journal-hero-main .homepage-hero-content {
+    flex: 1 1 50%;
+    min-width: 0;
+}
+
+.journal-hero-main .homepage-hero-right {
+    flex: 1 1 50%;
+    min-width: 0;
+}
+
 /* Journal Hero Image - override homepage hero styles */
 .journal-hero-image {
     display: flex !important;
@@ -987,6 +998,7 @@ textarea.form-control {
 .journal-page {
     padding: 40px 0;
     min-height: 70vh;
+    overflow: visible;
 }
 
 .journal-header {
@@ -1014,6 +1026,8 @@ textarea.form-control {
     display: grid;
     grid-template-columns: 280px 1fr;
     gap: 40px;
+    min-width: 0;
+    overflow: visible;
 }
 
 /* Sidebar */
@@ -1144,6 +1158,7 @@ textarea.form-control {
 /* Main Content */
 .journal-main {
     min-width: 0;
+    overflow: visible;
 }
 
 .sort-bar {
@@ -1189,37 +1204,50 @@ textarea.form-control {
 }
 
 /* Publications Grid */
-.publications-grid {
+.journal-page .publications-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
     gap: 24px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.publication-card {
+.journal-page .publication-card {
     background: white;
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     transition: transform 0.3s, box-shadow 0.3s;
+    padding: 0;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    word-break: break-word;
 }
 
-.publication-card:hover {
+.journal-page .publication-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
-.card-link {
-    display: block;
-    padding: 24px;
+.journal-page .card-link {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
     text-decoration: none;
     color: inherit;
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
 }
 
-.card-header {
+.journal-page .card-header {
     margin-bottom: 12px;
+    min-width: 0;
 }
 
-.publication-type {
+.journal-page .publication-type {
     display: inline-block;
     padding: 4px 10px;
     background: #f3f4f6;
@@ -1228,9 +1256,14 @@ textarea.form-control {
     color: #6b7280;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-sizing: border-box;
 }
 
-.publication-title {
+.journal-page .publication-title {
     font-size: 1.1rem;
     font-weight: 600;
     color: #1f2937;
@@ -1240,9 +1273,12 @@ textarea.form-control {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    min-width: 0;
 }
 
-.publication-excerpt {
+.journal-page .publication-excerpt {
     font-size: 0.9rem;
     color: #6b7280;
     line-height: 1.5;
@@ -1251,38 +1287,49 @@ textarea.form-control {
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    min-width: 0;
 }
 
-.card-footer {
+.journal-page .card-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding-top: 16px;
     border-top: 1px solid #f3f4f6;
+    min-width: 0;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
-.author-name {
+.journal-page .author-name {
     font-size: 0.875rem;
     color: #4b5563;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
 }
 
-.publication-meta {
+.journal-page .publication-meta {
     display: flex;
+    align-items: center;
     gap: 12px;
+    flex-shrink: 0;
 }
 
-.meta-item {
+.journal-page .meta-item {
     display: flex;
     align-items: center;
     gap: 4px;
     font-size: 0.8rem;
     color: #9ca3af;
+    white-space: nowrap;
 }
 
 .publication-date {
     font-size: 0.8rem;
     color: #9ca3af;
-    margin-top: 12px;
 }
 
 /* Empty State */
@@ -2614,14 +2661,116 @@ textarea.form-control {
 
     .journal-sidebar {
         position: static;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
+        display: block;
     }
 
     .sidebar-section {
-        flex: 1;
-        min-width: 200px;
+        margin-bottom: 16px;
+    }
+
+    .sidebar-title {
+        font-size: 0.8rem;
+        margin-bottom: 10px;
+    }
+
+    /* Фильтры как горизонтальные pills (как в олимпиадах) */
+    .filter-list {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 8px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 4px 0;
+        margin-left: -16px;
+        margin-right: -16px;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .filter-list::-webkit-scrollbar {
+        display: none;
+    }
+
+    .filter-list li {
+        margin-bottom: 0;
+        flex-shrink: 0;
+    }
+
+    .filter-link {
+        padding: 7px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        white-space: nowrap;
+        border: 1.5px solid #E2E8F0;
+        background: white;
+        color: #64748B;
+    }
+
+    .filter-link:hover {
+        border-color: #0077FF;
+        color: #0077FF;
+        background: white;
+    }
+
+    .filter-link.active {
+        background: #E8F1FF;
+        color: #0077FF;
+        border-color: #0077FF;
+    }
+
+    .filter-link .count {
+        display: none;
+    }
+
+    /* Предметы — показывать раскрытыми */
+    .collapsible .collapsed {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 8px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 4px 0;
+        margin-left: -16px;
+        margin-right: -16px;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .collapsible .collapsed::-webkit-scrollbar {
+        display: none;
+    }
+
+    .collapsible .toggle-icon {
+        display: none;
+    }
+
+    /* Карточки публикаций — 2 колонки на планшетах */
+    .journal-page .publications-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    .journal-page .publication-card {
+        border-radius: 12px;
+    }
+
+    .journal-page .publication-card .card-link {
+        padding: 14px;
+    }
+
+    .journal-page .publication-card .card-header {
+        margin-bottom: 8px;
+    }
+
+    .journal-page .publication-card .publication-excerpt {
+        display: none;
+    }
+
+    .journal-page .publication-card .publication-title {
+        font-size: 0.95rem;
+        -webkit-line-clamp: 2;
     }
 
     .publication-layout {
@@ -2663,6 +2812,12 @@ textarea.form-control {
 }
 
 @media (max-width: 768px) {
+    /* Фильтры — ещё компактнее на телефонах */
+    .filter-link {
+        padding: 5px 12px;
+        font-size: 12px;
+    }
+
     /* Journal Landing Mobile */
     .journal-hero {
         padding: 50px 0 70px;
@@ -2822,8 +2977,56 @@ textarea.form-control {
         padding: 24px;
     }
 
-    .publications-grid {
-        grid-template-columns: 1fr;
+    .journal-page .publications-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .journal-page .publication-card {
+        border-radius: 10px;
+    }
+
+    .journal-page .publication-card .card-link {
+        padding: 10px;
+    }
+
+    .journal-page .publication-card .card-header {
+        margin-bottom: 6px;
+    }
+
+    .journal-page .publication-type {
+        font-size: 0.6rem;
+        padding: 2px 6px;
+        letter-spacing: 0.3px;
+    }
+
+    .journal-page .publication-card .publication-title {
+        font-size: 0.8rem;
+        margin-bottom: 4px;
+        -webkit-line-clamp: 2;
+        line-height: 1.3;
+    }
+
+    .journal-page .publication-card .publication-excerpt {
+        display: none;
+    }
+
+    .journal-page .publication-card .card-footer {
+        padding-top: 6px;
+        border-top: none;
+    }
+
+    .journal-page .publication-card .author-name {
+        display: none;
+    }
+
+    .journal-page .publication-card .publication-date {
+        font-size: 0.6rem;
+    }
+
+    .journal-page .publication-card .meta-item svg {
+        width: 12px;
+        height: 12px;
     }
 
     .publication-content .publication-title {
@@ -2836,11 +3039,29 @@ textarea.form-control {
     }
 
     .cabinet-tabs {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        margin-left: -16px;
+        margin-right: -16px;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .cabinet-tabs::-webkit-scrollbar {
+        display: none;
     }
 
     .cabinet-tab {
-        justify-content: center;
+        flex: 0 0 auto;
+        min-width: auto;
+        padding: 10px 18px;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 50px;
+        white-space: nowrap;
     }
 
     /* Submit page mobile */
@@ -2868,6 +3089,66 @@ textarea.form-control {
 
     .journal-preview {
         display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Карточки публикаций — 2 колонки на мобильных */
+    .journal-page .publications-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .journal-page .publication-card {
+        border-radius: 8px;
+    }
+
+    .journal-page .publication-card .card-link {
+        padding: 8px;
+    }
+
+    .journal-page .publication-card .card-header {
+        margin-bottom: 4px;
+    }
+
+    .journal-page .publication-type {
+        font-size: 0.5rem;
+        padding: 2px 5px;
+        letter-spacing: 0;
+    }
+
+    .journal-page .publication-card .publication-title {
+        font-size: 0.75rem;
+        -webkit-line-clamp: 2;
+        line-height: 1.25;
+        margin-bottom: 2px;
+    }
+
+    .journal-page .publication-card .card-footer {
+        padding-top: 4px;
+        border-top: none;
+        flex-wrap: nowrap;
+    }
+
+    .journal-page .publication-card .author-name {
+        display: none;
+    }
+
+    .journal-page .publication-card .publication-date {
+        font-size: 0.55rem;
+    }
+
+    .journal-page .publication-card .publication-meta {
+        gap: 4px;
+    }
+
+    .journal-page .publication-card .meta-item {
+        font-size: 0.55rem;
+    }
+
+    .journal-page .publication-card .meta-item svg {
+        width: 10px;
+        height: 10px;
     }
 }
 
@@ -3000,6 +3281,13 @@ textarea.form-control {
     background: #f8fafc;
     border-radius: 0 8px 8px 0;
     color: #4b5563;
+}
+
+.publication-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 16px 0;
 }
 
 .publication-body--empty {

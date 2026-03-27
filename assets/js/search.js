@@ -13,6 +13,14 @@ var SearchUtils = (function() {
                    '</svg>' +
                    '</div>';
         }
+        if (item.type === 'course') {
+            return '<div class="search-result-icon search-result-icon--course">' +
+                   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none">' +
+                   '<path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 004 17V4a1 1 0 011-1h14a1 1 0 011 1v13M4 19.5v.5h16v-.5M6.5 17H20" ' +
+                   'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+                   '</svg>' +
+                   '</div>';
+        }
         return '<div class="search-result-icon">' +
                '<svg width="18" height="18" viewBox="0 0 24 24" fill="none">' +
                '<path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" ' +
@@ -24,6 +32,10 @@ var SearchUtils = (function() {
     function getResultTypeBadge(item) {
         if (item.type === 'olympiad') {
             return '<span class="search-result-type search-result-type--olympiad">Олимпиада</span>';
+        }
+        if (item.type === 'course') {
+            return '<span class="search-result-type search-result-type--course">' +
+                   escapeHtml(item.programTypeLabel || 'Курс') + '</span>';
         }
         return '<span class="search-result-type search-result-type--competition">Конкурс</span>';
     }
@@ -474,9 +486,10 @@ var SearchUtils = (function() {
             return;
         }
 
-        // Читаем контекст из data-атрибута
+        // Читаем контекст и эндпоинт из data-атрибутов
         if (catalogSearch) {
             CONFIG.context = catalogSearch.getAttribute('data-context') || 'competitions';
+            CONFIG.endpoint = catalogSearch.getAttribute('data-endpoint') || CONFIG.endpoint;
         }
 
         bindEvents();

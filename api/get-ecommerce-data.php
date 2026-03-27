@@ -80,15 +80,26 @@ try {
                 'variant' => $item['nomination'] ?? '',
                 'quantity' => 1
             ];
+        } elseif (!empty($item['course_enrollment_id'])) {
+            $products[] = [
+                'id' => 'course-' . ($item['ce_course_id'] ?? ''),
+                'name' => $item['course_title'] ?? '',
+                'price' => (float)$item['price'],
+                'brand' => 'Педпортал',
+                'category' => 'Курсы',
+                'quantity' => 1
+            ];
+            $hasCourseItems = true;
         }
     }
+    $hasCourseItems = $hasCourseItems ?? false;
 
     $actionField = [
         'id' => $order['order_number'],
         'revenue' => (float)$order['final_amount']
     ];
     if ($order['discount_amount'] > 0) {
-        $actionField['coupon'] = '2+1';
+        $actionField['coupon'] = $hasCourseItems ? 'скидка-10' : '2+1';
     }
 
     echo json_encode([
