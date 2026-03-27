@@ -169,7 +169,7 @@ RewriteRule ^kursy/([a-z0-9-]+)/?$ pages/course-detail.php?slug=$1 [L,QSA]
 # АУДИТОРИЯ
 # ================================================
 
-RewriteRule ^(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/?$ pages/audience.php?slug=$1 [L,QSA]
+RewriteRule ^(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|doshkolniki|1-4-klassy|5-8-klassy|9-11-klassy|studenty-spo|dopolnitelnoe-obrazovanie)/?$ pages/audience.php?slug=$1 [L,QSA]
 
 # ================================================
 # ЛИЧНЫЙ КАБИНЕТ И ДЕЙСТВИЯ

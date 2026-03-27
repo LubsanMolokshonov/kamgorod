@@ -924,11 +924,17 @@ main {
     flex-grow: 1;
 }
 
+.competition-footer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: auto;
+}
+
 .competition-price {
     font-size: 28px;
     font-weight: 600;
     color: var(--primary-purple);
-    margin-bottom: 20px;
 }
 
 .competition-price span {
