@@ -13,6 +13,17 @@ RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
 RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
 # ================================================
+# OG-КАРТИНКИ ДЛЯ СОЦСЕТЕЙ
+# ================================================
+RewriteRule ^og-image/ad/([a-z]+)/([a-z0-9-]+)\.jpg$ api/og-image.php?mode=ad&type=$1&slug=$2 [L]
+RewriteRule ^og-image/([a-z]+)/([a-z0-9-]+)\.jpg$ api/og-image.php?type=$1&slug=$2 [L]
+
+# ================================================
+# YML ФИДЫ ДЛЯ ЯНДЕКС ДИРЕКТ
+# ================================================
+RewriteRule ^feeds/(competitions|olympiads|courses|webinars)\.yml$ api/feeds/yml.php?type=$1 [L]
+
+# ================================================
 # ГЛАВНАЯ СТРАНИЦА
 # ================================================
 
@@ -140,6 +151,14 @@ RewriteRule ^opublikovat/?$ pages/submit-publication.php [L,QSA]
 
 # Сертификат публикации
 RewriteRule ^sertifikat-publikacii/?$ pages/publication-certificate.php [L,QSA]
+
+# Каталог опубликованных материалов
+RewriteRule ^publikacii/?$ publications.php [L,QSA]
+
+# Аудитория публикаций (3 уровня): /publikacii/pedagogi/dou/logopediya/
+RewriteRule ^publikacii/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ publications.php?ac=$1&at=$2&as=$3 [L,QSA]
+RewriteRule ^publikacii/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ publications.php?ac=$1&at=$2 [L,QSA]
+RewriteRule ^publikacii/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ publications.php?ac=$1 [L,QSA]
 
 # ================================================
 # КУРСЫ ПОВЫШЕНИЯ КВАЛИФИКАЦИИ

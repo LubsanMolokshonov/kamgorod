@@ -52,7 +52,7 @@ if ($category !== 'all' && !in_array($category, $validCategories)) {
 // Audience segmentation (3-level)
 $audienceCatObj = new AudienceCategory($db);
 $audienceTypeObj = new AudienceType($db);
-$audienceCategories = $audienceCatObj->getAll();
+$audienceCategories = $audienceCatObj->getAllWithProducts('competition');
 
 // Resolve selected audience hierarchy
 $selectedCategoryData = null;
@@ -101,6 +101,7 @@ $competitions = array_slice($allCompetitions, 0, $perPage);
 $hasMore = $totalCompetitions > $perPage;
 
 // Include header
+$ogImage = SITE_URL . '/assets/images/og-competitions.jpg';
 
 include __DIR__ . '/includes/header.php';
 ?>

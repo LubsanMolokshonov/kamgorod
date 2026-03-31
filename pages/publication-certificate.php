@@ -192,7 +192,7 @@ include __DIR__ . '/../includes/header.php';
 
                         <div class="price-block">
                             <span class="price-label">Стоимость свидетельства:</span>
-                            <span class="price-value">299 ₽</span>
+                            <span class="price-value">169 ₽</span>
                         </div>
 
                         <button type="submit" class="btn btn-submit">
@@ -363,7 +363,7 @@ window.dataLayer.push({
             "products": [{
                 "id": "pub-<?php echo $publicationId; ?>",
                 "name": "<?php echo htmlspecialchars($publication['title'], ENT_QUOTES); ?>",
-                "price": 299,
+                "price": 169,
                 "brand": "Педпортал",
                 "category": "Публикации"
             }]

@@ -12,11 +12,12 @@ $(document).ready(function() {
 
     // Close mobile menu when clicking outside
     $(document).on('click', function(e) {
-        if (!$(e.target).closest('.header-container').length) {
+        if (!$(e.target).closest('.header').length) {
             $('#mainNav').removeClass('active');
             $('#hamburger').removeClass('active');
         }
     });
+
 
     // Smooth scroll for anchor links
     $('a[href^="#"]').on('click', function(e) {
@@ -24,7 +25,7 @@ $(document).ready(function() {
         var target = $(this.hash);
         if (target.length) {
             $('html, body').animate({
-                scrollTop: target.offset().top - 80
+                scrollTop: target.offset().top - 20
             }, 500);
         }
     });

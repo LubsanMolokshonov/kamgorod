@@ -70,9 +70,9 @@ $jsonLd = [
     'organizer' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL],
     'performer' => ['@type' => 'Person', 'name' => $webinar['speaker_name'] ?? '']
 ];
-if (!empty($webinar['cover_image'])) {
-    $ogImage = SITE_URL . $webinar['cover_image'];
-}
+$ogImage = !empty($webinar['cover_image'])
+    ? SITE_URL . $webinar['cover_image']
+    : SITE_URL . '/og-image/webinar/' . $webinar['slug'] . '.jpg';
 $ogType = 'article';
 
 include __DIR__ . '/../includes/header.php';

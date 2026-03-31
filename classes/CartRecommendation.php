@@ -686,7 +686,7 @@ class CartRecommendation {
                 'id' => (int)$row['id'],
                 'title' => $row['title'],
                 'slug' => $row['slug'],
-                'price' => 299.0,
+                'price' => 169.0,
                 'meta' => 'Свидетельство о публикации',
                 'quick_add' => true,
                 'add_data' => [
@@ -939,8 +939,8 @@ class CartRecommendation {
             'id' => 0,
             'title' => 'Опубликуйте свою работу',
             'slug' => '',
-            'price' => 299.0,
-            'meta' => 'Бесплатная публикация + свидетельство за 299 ₽',
+            'price' => 169.0,
+            'meta' => 'Бесплатная публикация + свидетельство за 169 ₽',
             'quick_add' => false,
             'add_data' => null,
         ]];

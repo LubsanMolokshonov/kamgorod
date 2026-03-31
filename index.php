@@ -62,6 +62,7 @@ $jsonLd = [
     'description' => $pageDescription,
     'logo' => SITE_URL . '/assets/images/logo.svg'
 ];
+$ogImage = SITE_URL . '/assets/images/og-home.jpg';
 
 include __DIR__ . '/includes/header.php';
 ?>

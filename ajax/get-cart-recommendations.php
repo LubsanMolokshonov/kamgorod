@@ -62,7 +62,7 @@ try {
             $allItems[] = [
                 'type' => 'certificate',
                 'id' => $cert['id'],
-                'price' => (float)($cert['price'] ?? 299),
+                'price' => (float)($cert['price'] ?? 169),
                 'raw_data' => $cert,
             ];
         }

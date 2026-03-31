@@ -56,7 +56,7 @@ $pageDescription = htmlspecialchars(mb_substr(strip_tags($course['description'])
     . '. ' . Course::formatHours($course['hours']) . '. ' . $credentialType . '.';
 
 $courseUrl = SITE_URL . '/kursy/' . $course['slug'] . '/';
-$ogImage = SITE_URL . '/assets/images/og-courses.jpg';
+$ogImage = SITE_URL . '/og-image/course/' . $course['slug'] . '.jpg';
 $ogType = 'article';
 
 // JSON-LD Course

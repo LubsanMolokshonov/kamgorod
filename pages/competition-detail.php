@@ -69,6 +69,7 @@ $jsonLd = [
     ]
 ];
 $ogType = 'article';
+$ogImage = SITE_URL . '/og-image/competition/' . $competition['slug'] . '.jpg';
 
 // Calculate deadline: today + 2 days
 $deadline = new DateTime();

@@ -140,7 +140,7 @@ include __DIR__ . '/../includes/header.php';
             </a>
             <a href="?tab=diplomas" class="cabinet-tab <?php echo $activeTab === 'diplomas' ? 'active' : ''; ?>">
                 <span class="tab-icon">🏆</span>
-                Дипломы
+                Конкурсы
                 <?php if (!empty($registrations)): ?>
                     <span class="tab-count"><?php echo count($registrations); ?></span>
                 <?php endif; ?>

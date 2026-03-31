@@ -74,6 +74,7 @@ $jsonLd = [
     'publisher' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL]
 ];
 $ogType = 'article';
+$ogImage = SITE_URL . '/og-image/publication/' . $publication['slug'] . '.jpg';
 
 include __DIR__ . '/../includes/header.php';
 ?>

@@ -47,7 +47,7 @@ $perPage = 21;
 // Audience segmentation (3-level)
 $audienceCatObj = new AudienceCategory($db);
 $audienceTypeObj = new AudienceType($db);
-$audienceCategories = $audienceCatObj->getAll();
+$audienceCategories = $audienceCatObj->getAllWithProducts('course');
 
 // Resolve selected audience hierarchy
 $selectedCategoryData = null;
@@ -294,6 +294,7 @@ if ($selectedTypeData) {
 }
 
 // Include header
+$ogImage = SITE_URL . '/assets/images/og-courses.jpg';
 include __DIR__ . '/includes/header.php';
 ?>
 

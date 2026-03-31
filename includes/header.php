@@ -17,15 +17,22 @@ initSession();
     <link rel="canonical" href="<?php echo $canonicalUrl; ?>">
 
     <!-- Open Graph -->
+<?php if (empty($ogImage)) $ogImage = SITE_URL . '/assets/images/og-home.jpg'; ?>
     <meta property="og:title" content="<?php echo htmlspecialchars($pageTitle ?? SITE_NAME); ?>">
     <meta property="og:description" content="<?php echo htmlspecialchars($pageDescription ?? ''); ?>">
     <meta property="og:url" content="<?php echo $canonicalUrl; ?>">
     <meta property="og:type" content="<?php echo $ogType ?? 'website'; ?>">
     <meta property="og:site_name" content="<?php echo SITE_NAME; ?>">
     <meta property="og:locale" content="ru_RU">
-<?php if (!empty($ogImage)): ?>
     <meta property="og:image" content="<?php echo $ogImage; ?>">
-<?php endif; ?>
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?php echo htmlspecialchars($pageTitle ?? SITE_NAME); ?>">
+    <meta name="twitter:description" content="<?php echo htmlspecialchars($pageDescription ?? ''); ?>">
+    <meta name="twitter:image" content="<?php echo $ogImage; ?>">
 
     <!-- Preconnect -->
     <link rel="preconnect" href="https://code.jquery.com" crossorigin>
@@ -97,104 +104,142 @@ foreach ($allJsonLd as $ld):
 </head>
 <body>
     <header class="header">
-        <div class="container">
-            <div class="header-container">
-                <a href="/" class="logo">
-                    <img src="/assets/images/logo.svg" alt="<?php echo SITE_NAME ?? 'Педагогический портал'; ?>" class="logo-image">
-                </a>
-
-                <?php if (!isset($_SESSION['user_email'])): ?>
-                <div class="header-smi-badge">
-                    <span>Свидетельство о регистрации СМИ:</span>
-                    <span>Эл. №ФС 77-74524 от 24.12.2018</span>
-                </div>
-                <?php endif; ?>
-
-                <!-- Поиск конкурсов -->
-                <div class="header-search" id="headerSearch">
-                    <div class="search-container">
-                        <input type="text"
-                               class="search-input"
-                               id="searchInput"
-                               placeholder="Найти конкурс или олимпиаду..."
-                               autocomplete="off"
-                               aria-label="Поиск конкурсов и олимпиад">
-                        <button type="button" class="search-clear" id="searchClear" aria-label="Очистить">
+        <!-- Top bar: утилиты (СМИ, поиск, корзина, авторизация) -->
+        <div class="header-topbar" id="headerTopbar">
+            <div class="container">
+                <div class="topbar-container">
+                    <?php if (!isset($_SESSION['user_email'])): ?>
+                    <div class="topbar-left">
+                        <div class="header-smi-badge">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                        </button>
-                        <button type="button" class="search-btn" id="searchBtn" aria-label="Искать">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </button>
+                            <span>СМИ: Эл. №ФС 77-74524 от 24.12.2018</span>
+                        </div>
+                    </div>
+                    <?php else: ?>
+                    <div class="topbar-left"></div>
+                    <?php endif; ?>
+
+                    <div class="topbar-center">
+                        <div class="header-search" id="headerSearch">
+                            <div class="search-container">
+                                <input type="text"
+                                       class="search-input"
+                                       id="searchInput"
+                                       placeholder="Найти конкурс или олимпиаду..."
+                                       autocomplete="off"
+                                       aria-label="Поиск конкурсов и олимпиад">
+                                <button type="button" class="search-clear" id="searchClear" aria-label="Очистить">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="search-btn" id="searchBtn" aria-label="Искать">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Dropdown с результатами -->
+                            <div class="search-results" id="searchResults">
+                                <div class="search-results-inner">
+                                    <!-- Результаты будут добавлены динамически -->
+                                </div>
+                                <div class="search-loading" id="searchLoading">
+                                    <div class="search-spinner"></div>
+                                    <span>Поиск...</span>
+                                </div>
+                                <div class="search-empty" id="searchEmpty">
+                                    <span>Ничего не найдено</span>
+                                    <p>Попробуйте изменить запрос</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Dropdown с результатами -->
-                    <div class="search-results" id="searchResults">
-                        <div class="search-results-inner">
-                            <!-- Результаты будут добавлены динамически -->
-                        </div>
-                        <div class="search-loading" id="searchLoading">
-                            <div class="search-spinner"></div>
-                            <span>Поиск...</span>
-                        </div>
-                        <div class="search-empty" id="searchEmpty">
-                            <span>Ничего не найдено</span>
-                            <p>Попробуйте изменить запрос</p>
-                        </div>
+                    <div class="topbar-right">
+                        <?php
+                        $cartCount = getCartCount();
+                        $cartTotal = $cartCount > 0 ? getCartTotal() : 0;
+                        ?>
+                        <a href="/korzina" class="cart-button <?php echo $cartCount === 0 ? 'cart-empty' : ''; ?>">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M7 18C5.9 18 5.01 18.9 5.01 20C5.01 21.1 5.9 22 7 22C8.1 22 9 21.1 9 20C9 18.9 8.1 18 7 18ZM1 2V4H3L6.6 11.59L5.25 14.04C5.09 14.32 5 14.65 5 15C5 16.1 5.9 17 7 17H19V15H7.42C7.28 15 7.17 14.89 7.17 14.75L7.2 14.63L8.1 13H15.55C16.3 13 16.96 12.59 17.3 11.97L20.88 5.48C20.96 5.34 21 5.17 21 5C21 4.45 20.55 4 20 4H5.21L4.27 2H1ZM17 18C15.9 18 15.01 18.9 15.01 20C15.01 21.1 15.9 22 17 22C18.1 22 19 21.1 19 20C19 18.9 18.1 18 17 18Z" fill="currentColor"/>
+                            </svg>
+                            <?php if ($cartCount > 0): ?>
+                            <span class="cart-count"><?php echo $cartCount; ?></span>
+                            <span class="cart-total"><?php echo number_format($cartTotal, 0, ',', ' '); ?> ₽</span>
+                            <?php endif; ?>
+                        </a>
+
+                        <?php if (isset($_SESSION['user_email'])): ?>
+                            <a href="/kabinet" class="topbar-auth-link">Кабинет</a>
+                            <a href="/vyhod" class="topbar-auth-link topbar-logout">Выйти</a>
+                        <?php else: ?>
+                            <a href="/vhod" class="topbar-auth-btn">Войти</a>
+                        <?php endif; ?>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <nav class="main-nav" id="mainNav">
-                    <a href="/konkursy">Конкурсы</a>
-                    <a href="/olimpiady">Олимпиады</a>
-                    <a href="/vebinary">Вебинары</a>
-                    <a href="/kursy">Курсы</a>
-                    <div class="nav-dropdown">
-                        <a href="/zhurnal" class="nav-dropdown-trigger">Журнал</a>
-                        <div class="nav-dropdown-menu">
-                            <a href="/zhurnal" class="dropdown-item">О журнале</a>
-                            <a href="/zhurnal#catalog" class="dropdown-item">Опубликованные материалы</a>
-                            <a href="/opublikovat" class="dropdown-item">Опубликовать статью</a>
+        <!-- Main bar: логотип + навигация -->
+        <div class="header-main">
+            <div class="container">
+                <div class="main-bar-container">
+                    <a href="/" class="logo">
+                        <img src="/assets/images/logo.svg" alt="<?php echo SITE_NAME ?? 'Педагогический портал'; ?>" class="logo-image">
+                    </a>
+
+                    <nav class="main-nav" id="mainNav">
+                        <a href="/konkursy">Конкурсы</a>
+                        <a href="/olimpiady">Олимпиады</a>
+                        <a href="/vebinary">Вебинары</a>
+                        <a href="/kursy">Курсы</a>
+                        <div class="nav-dropdown">
+                            <a href="/zhurnal" class="nav-dropdown-trigger">Журнал</a>
+                            <div class="nav-dropdown-menu">
+                                <a href="/zhurnal" class="dropdown-item">О журнале</a>
+                                <a href="/publikacii" class="dropdown-item">Опубликованные материалы</a>
+                                <a href="/opublikovat" class="dropdown-item">Опубликовать статью</a>
+                            </div>
                         </div>
+                        <a href="/o-portale">О портале</a>
+                        <!-- Мобильная авторизация (дублируется из topbar для мобильного меню) -->
+                        <div class="mobile-nav-auth">
+                            <?php if (isset($_SESSION['user_email'])): ?>
+                                <a href="/kabinet">Личный кабинет</a>
+                                <a href="/vyhod">Выйти</a>
+                            <?php else: ?>
+                                <a href="/vhod" class="nav-cta">Войти</a>
+                            <?php endif; ?>
+                        </div>
+                    </nav>
+
+                    <!-- Mobile Search Trigger -->
+                    <button type="button" class="mobile-search-trigger" id="mobileSearchTrigger" aria-label="Поиск">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+
+                    <!-- Мобильная корзина -->
+                    <a href="/korzina" class="mobile-cart-trigger <?php echo $cartCount === 0 ? 'cart-empty' : ''; ?>" aria-label="Корзина">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7 18C5.9 18 5.01 18.9 5.01 20C5.01 21.1 5.9 22 7 22C8.1 22 9 21.1 9 20C9 18.9 8.1 18 7 18ZM1 2V4H3L6.6 11.59L5.25 14.04C5.09 14.32 5 14.65 5 15C5 16.1 5.9 17 7 17H19V15H7.42C7.28 15 7.17 14.89 7.17 14.75L7.2 14.63L8.1 13H15.55C16.3 13 16.96 12.59 17.3 11.97L20.88 5.48C20.96 5.34 21 5.17 21 5C21 4.45 20.55 4 20 4H5.21L4.27 2H1ZM17 18C15.9 18 15.01 18.9 15.01 20C15.01 21.1 15.9 22 17 22C18.1 22 19 21.1 19 20C19 18.9 18.1 18 17 18Z" fill="currentColor"/>
+                        </svg>
+                        <?php if ($cartCount > 0): ?>
+                        <span class="mobile-cart-badge"><?php echo $cartCount; ?></span>
+                        <?php endif; ?>
+                    </a>
+
+                    <div class="hamburger" id="hamburger">
+                        <span></span>
+                        <span></span>
+                        <span></span>
                     </div>
-                    <a href="/o-portale">О портале</a>
-                    <?php if (isset($_SESSION['user_email'])): ?>
-                        <a href="/kabinet">Личный кабинет</a>
-                        <a href="/vyhod">Выйти</a>
-                    <?php else: ?>
-                        <a href="/vhod" class="nav-cta">Войти</a>
-                    <?php endif; ?>
-                </nav>
-
-                <?php
-                // Show cart button if cart is not empty
-                $cartCount = getCartCount();
-                if ($cartCount > 0):
-                    $cartTotal = getCartTotal();
-                ?>
-                <a href="/korzina" class="cart-button">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M7 18C5.9 18 5.01 18.9 5.01 20C5.01 21.1 5.9 22 7 22C8.1 22 9 21.1 9 20C9 18.9 8.1 18 7 18ZM1 2V4H3L6.6 11.59L5.25 14.04C5.09 14.32 5 14.65 5 15C5 16.1 5.9 17 7 17H19V15H7.42C7.28 15 7.17 14.89 7.17 14.75L7.2 14.63L8.1 13H15.55C16.3 13 16.96 12.59 17.3 11.97L20.88 5.48C20.96 5.34 21 5.17 21 5C21 4.45 20.55 4 20 4H5.21L4.27 2H1ZM17 18C15.9 18 15.01 18.9 15.01 20C15.01 21.1 15.9 22 17 22C18.1 22 19 21.1 19 20C19 18.9 18.1 18 17 18Z" fill="currentColor"/>
-                    </svg>
-                    <span class="cart-count"><?php echo $cartCount; ?></span>
-                    <span class="cart-total"><?php echo number_format($cartTotal, 0, ',', ' '); ?> ₽</span>
-                </a>
-                <?php endif; ?>
-
-                <!-- Mobile Search Trigger -->
-                <button type="button" class="mobile-search-trigger" id="mobileSearchTrigger" aria-label="Поиск">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-
-                <div class="hamburger" id="hamburger">
-                    <span></span>
-                    <span></span>
-                    <span></span>
                 </div>
             </div>
         </div>

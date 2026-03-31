@@ -47,7 +47,7 @@ $offset = ($page - 1) * $perPage;
 // Audience segmentation (3-level)
 $audienceCatObj = new AudienceCategory($db);
 $audienceTypeObj = new AudienceType($db);
-$audienceCategories = $audienceCatObj->getAll();
+$audienceCategories = $audienceCatObj->getAllWithProducts('publication');
 
 // Resolve selected audience hierarchy
 $selectedCategoryData = null;
@@ -134,6 +134,7 @@ $pageDescription = $currentTag['meta_description'] ?? 'Бесплатная пу
 
 $additionalCSS = ['/assets/css/journal.css?v=' . filemtime(__DIR__ . '/../assets/css/journal.css'), '/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/../assets/css/audience-filter.css')];
 $additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/../assets/js/audience-filter.js')];
+$ogImage = SITE_URL . '/assets/images/og-journal.jpg';
 
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -327,7 +328,7 @@ include __DIR__ . '/../includes/header.php';
 
                 <div class="certificate-price">
                     <span class="price-label">Стоимость свидетельства:</span>
-                    <span class="price-value">299 ₽</span>
+                    <span class="price-value">169 ₽</span>
                 </div>
 
                 <a href="/opublikovat" class="btn btn-primary">

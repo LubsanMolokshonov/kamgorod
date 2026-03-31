@@ -140,7 +140,7 @@ try {
         'author_name' => $_POST['author_name'],
         'organization' => $_POST['organization'],
         'position' => $_POST['position'] ?? '',
-        'price' => 299.00
+        'price' => 169.00
     ]);
 
     // Set session

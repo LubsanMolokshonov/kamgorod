@@ -69,6 +69,7 @@ $jsonLd = [
     'provider' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL]
 ];
 $ogType = 'article';
+$ogImage = SITE_URL . '/og-image/olympiad/' . $olympiad['slug'] . '.jpg';
 
 // Include header
 include __DIR__ . '/../includes/header.php';
@@ -628,6 +629,12 @@ include __DIR__ . '/../includes/header.php';
     font-style: italic;
 }
 
+.olympiad-about-cta {
+    text-align: center;
+    padding: 0 0 60px;
+    background: #fff;
+}
+
 /* ---- Screen 2: License ---- */
 .olympiad-license-section {
     padding: 80px 0;
@@ -1104,6 +1111,10 @@ include __DIR__ . '/../includes/header.php';
     .olympiad-about-description .description-text {
         font-size: 14px;
         padding-right: 0;
+    }
+
+    .olympiad-about-cta {
+        padding: 0 20px 40px;
     }
 
     .olympiad-about-description .description-text h3 {
@@ -1711,6 +1722,13 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
     </section>
+
+    <!-- CTA после "Об олимпиаде" -->
+    <div class="olympiad-about-cta">
+        <a href="/olimpiada-test/<?php echo $olympiad['id']; ?>" class="btn-olympiad-cta">
+            Пройти олимпиаду бесплатно
+        </a>
+    </div>
     <?php endif; ?>
 
     <!-- ============================

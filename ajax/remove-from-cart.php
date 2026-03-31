@@ -105,7 +105,7 @@ if ($certificateId) {
         $certEcommerce = [
             'id' => 'pub-' . $certData['publication_id'],
             'name' => $certData['publication_title'],
-            'price' => $certData['price'] ?? 299,
+            'price' => $certData['price'] ?? 169,
             'category' => 'Публикации'
         ];
     }

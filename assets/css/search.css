@@ -6,17 +6,15 @@
 /* === SEARCH CONTAINER === */
 .header-search {
     position: relative;
-    flex: 0 0 280px;
-    max-width: 280px;
-    margin: 0 15px;
+    width: 100%;
 }
 
 .search-container {
     position: relative;
     display: flex;
     align-items: center;
-    background: var(--bg-light);
-    border: 2px solid transparent;
+    background: #fff;
+    border: 2px solid #e0e0e0;
     border-radius: 25px;
     transition: all 0.3s ease;
 }
@@ -30,11 +28,11 @@
 /* === INPUT === */
 .search-input {
     flex: 1;
-    padding: 10px 14px;
+    padding: 7px 14px;
     padding-right: 75px;
     border: none;
     background: transparent;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-dark);
     outline: none;
     width: 100%;
@@ -52,8 +50,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border: none;
     border-radius: 50%;
     cursor: pointer;
@@ -61,7 +59,7 @@
 }
 
 .search-btn {
-    right: 6px;
+    right: 4px;
     background: var(--primary-purple);
     color: white;
 }
@@ -313,22 +311,7 @@
 
 /* === RESPONSIVE STYLES === */
 
-/* Tablet */
-@media (max-width: 1100px) {
-    .header-search {
-        flex: 0 0 220px;
-        max-width: 220px;
-        margin: 0 10px;
-    }
-
-    .search-results {
-        min-width: 320px;
-        right: auto;
-        left: -50px;
-    }
-}
-
-/* Mobile */
+/* Mobile - search moves to fullscreen overlay */
 @media (max-width: 960px) {
     .header-search {
         display: none;
@@ -355,6 +338,22 @@
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     }
 
+    .search-input {
+        padding: 10px 14px;
+        padding-right: 75px;
+        font-size: 14px;
+    }
+
+    .search-btn,
+    .search-clear {
+        width: 32px;
+        height: 32px;
+    }
+
+    .search-btn {
+        right: 6px;
+    }
+
     .search-results {
         position: relative;
         top: 8px;
@@ -362,10 +361,6 @@
         right: 0;
         min-width: auto;
         max-height: calc(100vh - 180px);
-    }
-
-    .mobile-search-trigger {
-        display: flex;
     }
 }
 

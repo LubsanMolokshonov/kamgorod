@@ -29,7 +29,7 @@ redirectToSeoUrl('olimpiady', [
 // Audience segmentation (3-level)
 $audienceCatObj = new AudienceCategory($db);
 $audienceTypeObj = new AudienceType($db);
-$audienceCategories = $audienceCatObj->getAll();
+$audienceCategories = $audienceCatObj->getAllWithProducts('olympiad');
 
 // Resolve selected audience hierarchy
 $selectedCategoryData = null;
@@ -93,6 +93,7 @@ $additionalCSS = ['/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/a
 $additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/assets/js/audience-filter.js')];
 
 // Include header
+$ogImage = SITE_URL . '/assets/images/og-olympiads.jpg';
 include __DIR__ . '/includes/header.php';
 ?>
 
@@ -1160,7 +1161,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             var target = document.querySelector(this.getAttribute('href'));
             if (target) {
-                var headerOffset = 100;
+                var headerOffset = 20;
                 var elementPosition = target.getBoundingClientRect().top;
                 var offsetPosition = elementPosition + window.pageYOffset - headerOffset;
                 window.scrollTo({

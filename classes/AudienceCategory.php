@@ -59,6 +59,37 @@ class AudienceCategory {
     }
 
     /**
+     * Получить категории, у которых есть товары указанного типа
+     * @param string $productType — 'olympiad', 'competition', 'webinar', 'publication', 'course'
+     */
+    public function getAllWithProducts($productType) {
+        $tableMap = [
+            'competition'  => ['competition_audience_categories', 'competition_id', 'competitions', 'is_active = 1'],
+            'olympiad'     => ['olympiad_audience_categories',    'olympiad_id',    'olympiads',    'is_active = 1'],
+            'webinar'      => ['webinar_audience_categories',     'webinar_id',     'webinars',     'is_active = 1'],
+            'publication'  => ['publication_audience_categories',  'publication_id', 'publications', "status = 'published'"],
+            'course'       => ['course_audience_categories',       'course_id',      'courses',      'is_active = 1'],
+        ];
+
+        if (!isset($tableMap[$productType])) {
+            return $this->getAll();
+        }
+
+        [$junctionTable, $productCol, $productTable, $productWhere] = $tableMap[$productType];
+
+        $sql = "SELECT ac.* FROM audience_categories ac
+                WHERE ac.is_active = 1
+                  AND EXISTS (
+                      SELECT 1 FROM {$junctionTable} jt
+                      JOIN {$productTable} p ON jt.{$productCol} = p.id
+                      WHERE jt.category_id = ac.id AND p.{$productWhere}
+                  )
+                ORDER BY ac.display_order ASC, ac.name ASC";
+
+        return $this->db->query($sql);
+    }
+
+    /**
      * Подсчитать количество мероприятий для категории (все типы)
      */
     public function getEventCounts($categoryId) {
