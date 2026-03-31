@@ -3359,3 +3359,97 @@ textarea.form-control {
         padding: 8px 10px;
     }
 }
+
+/* === Published Materials Link Block === */
+.journal-publications-link {
+    padding: 60px 0 80px;
+}
+
+.publications-link-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8f9ff;
+    border: 2px solid #e8ecf4;
+    border-radius: 20px;
+    padding: 40px 48px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.publications-link-card:hover {
+    border-color: #0077FF;
+    box-shadow: 0 8px 32px rgba(0, 119, 255, 0.1);
+}
+
+.publications-link-content {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex: 1;
+    min-width: 0;
+}
+
+.publications-link-icon {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #0077FF, #3399FF);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+.publications-link-text h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 8px;
+}
+
+.publications-link-text p {
+    font-size: 1rem;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.publications-link-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .journal-publications-link {
+        padding: 40px 0 60px;
+    }
+
+    .publications-link-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 32px 24px;
+        gap: 24px;
+    }
+
+    .publications-link-content {
+        flex-direction: column;
+    }
+
+    .publications-link-icon {
+        width: 64px;
+        height: 64px;
+    }
+
+    .publications-link-icon svg {
+        width: 36px;
+        height: 36px;
+    }
+
+    .publications-link-text h2 {
+        font-size: 1.25rem;
+    }
+}
