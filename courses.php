@@ -68,6 +68,14 @@ if ($selectedType) {
     }
 }
 
+// Resolve selected specialization
+$selectedSpecData = null;
+if (!empty($selectedSpec)) {
+    require_once __DIR__ . '/classes/AudienceSpecialization.php';
+    $specObj = new AudienceSpecialization($db);
+    $selectedSpecData = $specObj->getBySlug($selectedSpec);
+}
+
 // Get courses with filters
 $courseObj = new Course($db);
 $filters = [];
@@ -200,6 +208,12 @@ if ($selectedCategoryData) {
 if ($selectedTypeData) {
     $titleParts[] = $selectedTypeData['name'];
     $descParts[] = '(' . $selectedTypeData['name'] . ')';
+}
+
+if (!empty($selectedSpecData)) {
+    $titleParts[] = $selectedSpecData['name'];
+    $descParts[] = '— ' . $selectedSpecData['name'];
+    $h1Text .= ' — ' . $selectedSpecData['name'];
 }
 
 $pageTitle = implode(' — ', $titleParts) . ' 2025-2026 | ' . SITE_NAME;

@@ -85,34 +85,41 @@ class YmlFeedGenerator
 
         switch ($type) {
             case 'competitions':
-                $xml .= '<category id="1">Конкурсы для педагогов</category>' . "\n";
-                foreach (self::COMPETITION_CATEGORIES as $cat) {
-                    $xml .= '<category id="' . $cat['id'] . '" parentId="1">' . $this->xmlEscape($cat['name']) . '</category>' . "\n";
+                $xml .= '<category id="1" url="' . $this->xmlEscape($this->baseUrl . '/konkursy/') . '">Конкурсы для педагогов</category>' . "\n";
+                foreach (self::COMPETITION_CATEGORIES as $key => $cat) {
+                    $slug = COMPETITION_CATEGORY_URL_MAP[$key] ?? '';
+                    $urlAttr = $slug ? ' url="' . $this->xmlEscape($this->baseUrl . '/konkursy/' . $slug . '/') . '"' : '';
+                    $xml .= '<category id="' . $cat['id'] . '" parentId="1"' . $urlAttr . '>' . $this->xmlEscape($cat['name']) . '</category>' . "\n";
                 }
                 break;
 
             case 'olympiads':
-                $xml .= '<category id="2">Олимпиады</category>' . "\n";
+                $xml .= '<category id="2" url="' . $this->xmlEscape($this->baseUrl . '/olimpiady/') . '">Олимпиады</category>' . "\n";
                 // Загружаем категории аудитории из БД
                 $categories = $this->db->query(
-                    "SELECT id, name FROM audience_categories WHERE is_active = 1 ORDER BY display_order"
+                    "SELECT id, name, slug FROM audience_categories WHERE is_active = 1 ORDER BY display_order"
                 );
                 foreach ($categories as $cat) {
-                    $xml .= '<category id="2' . $cat['id'] . '" parentId="2">' . $this->xmlEscape('Олимпиады — ' . $cat['name']) . '</category>' . "\n";
+                    $urlAttr = !empty($cat['slug']) ? ' url="' . $this->xmlEscape($this->baseUrl . '/olimpiady/' . $cat['slug'] . '/') . '"' : '';
+                    $xml .= '<category id="2' . $cat['id'] . '" parentId="2"' . $urlAttr . '>' . $this->xmlEscape('Олимпиады — ' . $cat['name']) . '</category>' . "\n";
                 }
                 break;
 
             case 'courses':
-                $xml .= '<category id="3">Курсы для педагогов</category>' . "\n";
-                foreach (self::COURSE_CATEGORIES as $cat) {
-                    $xml .= '<category id="' . $cat['id'] . '" parentId="3">' . $this->xmlEscape($cat['name']) . '</category>' . "\n";
+                $xml .= '<category id="3" url="' . $this->xmlEscape($this->baseUrl . '/kursy/') . '">Курсы для педагогов</category>' . "\n";
+                foreach (self::COURSE_CATEGORIES as $key => $cat) {
+                    $slug = COURSE_TYPE_URL_MAP[$key] ?? '';
+                    $urlAttr = $slug ? ' url="' . $this->xmlEscape($this->baseUrl . '/kursy/' . $slug . '/') . '"' : '';
+                    $xml .= '<category id="' . $cat['id'] . '" parentId="3"' . $urlAttr . '>' . $this->xmlEscape($cat['name']) . '</category>' . "\n";
                 }
                 break;
 
             case 'webinars':
-                $xml .= '<category id="4">Вебинары для педагогов</category>' . "\n";
-                foreach (self::WEBINAR_CATEGORIES as $cat) {
-                    $xml .= '<category id="' . $cat['id'] . '" parentId="4">' . $this->xmlEscape($cat['name']) . '</category>' . "\n";
+                $xml .= '<category id="4" url="' . $this->xmlEscape($this->baseUrl . '/vebinary/') . '">Вебинары для педагогов</category>' . "\n";
+                foreach (self::WEBINAR_CATEGORIES as $key => $cat) {
+                    $slug = WEBINAR_STATUS_URL_MAP[$key] ?? '';
+                    $urlAttr = $slug ? ' url="' . $this->xmlEscape($this->baseUrl . '/vebinary/' . $slug . '/') . '"' : '';
+                    $xml .= '<category id="' . $cat['id'] . '" parentId="4"' . $urlAttr . '>' . $this->xmlEscape($cat['name']) . '</category>' . "\n";
                 }
                 break;
         }

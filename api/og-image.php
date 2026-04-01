@@ -76,6 +76,15 @@ if ($mode === 'ad') {
         exit;
     }
 
+    // Курсы: шаблон с дипломом + динамическая аудитория
+    if ($type === 'course') {
+        $specializations = $obj->getSpecializations($item['id']);
+        $audienceLabel = OgImageGenerator::buildAudienceLabel($specializations);
+        $programType = $item['program_type'] ?? 'kpk';
+        $filePath = $generator->getOrGenerateCourseAd($cacheKey, $audienceLabel, $programType);
+        $generator->serve($filePath);
+    }
+
     $title = $item[$config['title']] ?? '';
     $price = '';
     if ($config['price'] && !empty($item[$config['price']])) {

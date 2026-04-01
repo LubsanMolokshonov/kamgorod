@@ -21,19 +21,47 @@ class OgImageGenerator
         'publication'  => 'ПУБЛИКАЦИЯ',
     ];
 
+    // Маппинг специализаций → родительный падеж множ. числа для рекламных картинок курсов
+    private const AUDIENCE_LABEL_MAP = [
+        'Воспитатель'                       => 'ВОСПИТАТЕЛЕЙ',
+        'Старший воспитатель'               => 'СТАРШИХ ВОСПИТАТЕЛЕЙ',
+        'Младший воспитатель'               => 'МЛАДШИХ ВОСПИТАТЕЛЕЙ',
+        'Учитель'                           => 'УЧИТЕЛЕЙ',
+        'Администрация и управление'        => 'РУКОВОДИТЕЛЕЙ',
+        'Педагог дополнительного образования'=> 'ПЕДАГОГОВ ДО',
+        'Классное руководство'              => 'КЛАССНЫХ РУКОВОДИТЕЛЕЙ',
+        'Педагог-психолог'                  => 'ПЕДАГОГОВ-ПСИХОЛОГОВ',
+        'Работа с детьми с ОВЗ'             => 'ПЕДАГОГОВ ОВЗ',
+        'Социальная педагогика'             => 'СОЦИАЛЬНЫХ ПЕДАГОГОВ',
+        'Логопедия'                         => 'ЛОГОПЕДОВ',
+        'Дефектология'                      => 'ДЕФЕКТОЛОГОВ',
+        'Тьюторство'                        => 'ТЬЮТОРОВ',
+        'Методист'                          => 'МЕТОДИСТОВ',
+        'Библиотекарь'                      => 'БИБЛИОТЕКАРЕЙ',
+        'Педагог-организатор'               => 'ПЕДАГОГОВ-ОРГАНИЗАТОРОВ',
+        'Воспитатель ГПД'                   => 'ВОСПИТАТЕЛЕЙ ГПД',
+        'Инструктор по физкультуре'         => 'ИНСТРУКТОРОВ ПО ФИЗКУЛЬТУРЕ',
+    ];
+
     private string $fontBold;
     private string $fontRegular;
+    private string $fontMontserratBold;
+    private string $fontMontserratRegular;
     private string $logoPath;
     private string $logoDarkPath;
     private string $cacheDir;
+    private string $courseAdTemplatePath;
 
     public function __construct()
     {
         $this->fontBold    = __DIR__ . '/../vendor/mpdf/mpdf/ttfonts/DejaVuSans-Bold.ttf';
         $this->fontRegular = __DIR__ . '/../vendor/mpdf/mpdf/ttfonts/DejaVuSans.ttf';
+        $this->fontMontserratBold    = __DIR__ . '/../assets/fonts/Montserrat-Bold.ttf';
+        $this->fontMontserratRegular = __DIR__ . '/../assets/fonts/Montserrat-Regular.ttf';
         $this->logoPath    = __DIR__ . '/../assets/images/logo-white.png';
         $this->logoDarkPath = __DIR__ . '/../assets/images/logo.png';
         $this->cacheDir    = __DIR__ . '/../uploads/og-cache';
+        $this->courseAdTemplatePath = __DIR__ . '/../Дипломы/fgos.pro (1).png';
 
         if (!is_dir($this->cacheDir)) {
             mkdir($this->cacheDir, 0755, true);
@@ -559,5 +587,180 @@ class OgImageGenerator
 
         readfile($filePath);
         exit;
+    }
+
+    // =============================================
+    // РЕКЛАМНЫЕ КАРТИНКИ КУРСОВ (шаблон + аудитория)
+    // =============================================
+
+    /**
+     * Построить текст аудитории из массива специализаций
+     * @param array $specializations Массив из Course->getSpecializations()
+     * @return string Например «ДЛЯ ВОСПИТАТЕЛЕЙ»
+     */
+    public static function buildAudienceLabel(array $specializations): string
+    {
+        if (empty($specializations)) {
+            return 'ДЛЯ ПЕДАГОГОВ';
+        }
+
+        // Берём только role-специализации (они более релевантны для рекламы)
+        $roles = array_filter($specializations, fn($s) => ($s['specialization_type'] ?? '') === 'role');
+        if (empty($roles)) {
+            $roles = $specializations;
+        }
+
+        $roles = array_values($roles);
+
+        if (count($roles) === 1) {
+            $name = $roles[0]['name'] ?? '';
+            $label = self::AUDIENCE_LABEL_MAP[$name] ?? null;
+            return $label ? 'ДЛЯ ' . $label : 'ДЛЯ ПЕДАГОГОВ';
+        }
+
+        if (count($roles) === 2) {
+            $label1 = self::AUDIENCE_LABEL_MAP[$roles[0]['name'] ?? ''] ?? null;
+            $label2 = self::AUDIENCE_LABEL_MAP[$roles[1]['name'] ?? ''] ?? null;
+            if ($label1 && $label2) {
+                return 'ДЛЯ ' . $label1 . ' И ' . $label2;
+            }
+        }
+
+        return 'ДЛЯ ПЕДАГОГОВ';
+    }
+
+    /**
+     * Получить рекламную картинку курса из кэша или сгенерировать
+     * @return string Путь к JPG-файлу
+     */
+    public function getOrGenerateCourseAd(string $cacheKey, string $audienceLabel, string $programType = 'kpk'): string
+    {
+        $filePath = $this->cacheDir . '/ad-' . $cacheKey . '.jpg';
+
+        if (file_exists($filePath) && (time() - filemtime($filePath)) < self::CACHE_TTL) {
+            return $filePath;
+        }
+
+        $programTypeLabel = $programType === 'pp'
+            ? 'КУРС ПРОФЕССИОНАЛЬНОЙ ПЕРЕПОДГОТОВКИ'
+            : 'КУРС ПОВЫШЕНИЯ КВАЛИФИКАЦИИ';
+
+        return $this->generateCourseAd($filePath, $programTypeLabel, $audienceLabel);
+    }
+
+    /**
+     * Сгенерировать рекламную картинку курса на основе шаблона
+     * Шаблон содержит: логотип, диплом, стрелку, fgos.pro
+     * Динамически накладывается текст аудитории
+     * @return string Путь к файлу
+     */
+    public function generateCourseAd(string $outputPath, string $programTypeLabel, string $audienceLabel): string
+    {
+        // Загружаем шаблон
+        if (!file_exists($this->courseAdTemplatePath)) {
+            // Fallback на стандартную генерацию
+            return $this->generateAd($outputPath, 'course', $audienceLabel);
+        }
+
+        $template = imagecreatefrompng($this->courseAdTemplatePath);
+        if (!$template) {
+            return $this->generateAd($outputPath, 'course', $audienceLabel);
+        }
+
+        $origW = imagesx($template);
+        $origH = imagesy($template);
+
+        // Масштабируем в 600×600
+        $img = imagecreatetruecolor(self::AD_WIDTH, self::AD_HEIGHT);
+        imagealphablending($img, true);
+        imagecopyresampled($img, $template, 0, 0, 0, 0, self::AD_WIDTH, self::AD_HEIGHT, $origW, $origH);
+        imagedestroy($template);
+
+        // Рисуем «КУРС ПОВЫШЕНИЯ КВАЛИФИКАЦИИ» красным + текст аудитории тёмным
+        $this->drawCourseAdText($img, $programTypeLabel, $audienceLabel);
+
+        imagejpeg($img, $outputPath, 92);
+        imagedestroy($img);
+
+        return $outputPath;
+    }
+
+    /**
+     * Нарисовать текст на рекламной картинке курса:
+     * 1) «КУРС ПОВЫШЕНИЯ КВАЛИФИКАЦИИ» — красным, мельче
+     * 2) Аудитория (например «ДЛЯ ВОСПИТАТЕЛЕЙ») — тёмным, крупнее
+     */
+    private function drawCourseAdText(\GdImage $img, string $programTypeLabel, string $audienceLabel): void
+    {
+        $redColor = imagecolorallocate($img, 231, 61, 59);   // #e73d3b
+        $darkColor = imagecolorallocate($img, 26, 26, 46);   // #1a1a2e — тёмный
+        $maxWidth = self::AD_WIDTH - 40 * 2; // 520px
+
+        // Шрифт Montserrat (fallback на DejaVu если файл отсутствует)
+        $fontBold = file_exists($this->fontMontserratBold) ? $this->fontMontserratBold : $this->fontBold;
+
+        // Предварительно вычисляем высоту всего текстового блока для центрирования
+        $typeFontSize = 16;
+        $typeLines = $this->wrapText($programTypeLabel, $typeFontSize, $maxWidth, $fontBold);
+        $typeLineHeight = (int)($typeFontSize * 1.5);
+        $gapBetween = 14;
+
+        // Определяем размер шрифта аудитории заранее
+        $audFontSize = 15;
+        $audLines = [];
+        foreach ([26, 22, 18, 15] as $fs) {
+            $lines = $this->wrapText($audienceLabel, $fs, $maxWidth, $fontBold);
+            if (count($lines) <= 2) {
+                $audFontSize = $fs;
+                $audLines = $lines;
+                break;
+            }
+        }
+        $audLineHeight = (int)($audFontSize * 1.5);
+
+        // Общая высота блока
+        $totalH = count($typeLines) * $typeLineHeight + $gapBetween + count($audLines) * $audLineHeight;
+
+        // Центрируем в области y=115..240 (высота 125px)
+        $areaTop = 115;
+        $areaBottom = 240;
+        $areaCenter = ($areaTop + $areaBottom) / 2;
+        $startY = (int)($areaCenter - $totalH / 2) + $typeFontSize;
+
+        $y = $startY;
+        foreach ($typeLines as $line) {
+            $bbox = imagettfbbox($typeFontSize, 0, $fontBold, $line);
+            $lineW = abs($bbox[2] - $bbox[0]);
+            $x = (int)((self::AD_WIDTH - $lineW) / 2);
+            imagettftext($img, $typeFontSize, 0, $x, $y, $redColor, $fontBold, $line);
+            $y += $typeLineHeight;
+        }
+
+        // Отступ между красной строкой и аудиторией
+        $y += 14;
+
+        // Строка 2: аудитория тёмным, крупнее
+        foreach ([26, 22, 18, 15] as $fontSize) {
+            $lines = $this->wrapText($audienceLabel, $fontSize, $maxWidth, $fontBold);
+
+            if (count($lines) <= 2) {
+                $lineHeight = (int)($fontSize * 1.5);
+                foreach ($lines as $line) {
+                    $bbox = imagettfbbox($fontSize, 0, $fontBold, $line);
+                    $lineW = abs($bbox[2] - $bbox[0]);
+                    $x = (int)((self::AD_WIDTH - $lineW) / 2);
+                    imagettftext($img, $fontSize, 0, $x, $y, $darkColor, $fontBold, $line);
+                    $y += $lineHeight;
+                }
+                return;
+            }
+        }
+
+        // Fallback
+        $fontSize = 15;
+        $bbox = imagettfbbox($fontSize, 0, $fontBold, $audienceLabel);
+        $lineW = abs($bbox[2] - $bbox[0]);
+        $x = (int)((self::AD_WIDTH - $lineW) / 2);
+        imagettftext($img, $fontSize, 0, max(30, $x), $y, $darkColor, $fontBold, $audienceLabel);
     }
 }
