@@ -7,7 +7,7 @@
  * - status = 'paid' → сделка на этапе "Оплата на сайте" (BITRIX24_COURSE_STAGE_PAID)
  * - status != 'paid' → сделка на этапе "Новая" (BITRIX24_COURSE_STAGE_NEW)
  *
- * Crontab: */5 * * * * docker exec pedagogy_web php /var/www/html/cron/process-course-bitrix.php
+ * Crontab (every 5 min): docker exec pedagogy_web php /var/www/html/cron/process-course-bitrix.php
  */
 
 // Prevent web access

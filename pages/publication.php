@@ -63,40 +63,48 @@ $pageDescription = htmlspecialchars(mb_substr($publication['annotation'], 0, 160
 $additionalCSS = ['/assets/css/journal.css?v=' . filemtime(__DIR__ . '/../assets/css/journal.css')];
 
 // JSON-LD Article
+$ogType = 'article';
+$ogImage = SITE_URL . '/og-image/publication/' . $publication['slug'] . '.jpg';
 $jsonLd = [
     '@context' => 'https://schema.org',
     '@type' => 'Article',
     'headline' => $publication['title'],
     'description' => mb_substr(strip_tags($publication['annotation']), 0, 300),
     'url' => SITE_URL . '/publikaciya/' . $publication['slug'] . '/',
+    'image' => $ogImage,
     'author' => ['@type' => 'Person', 'name' => $publication['author_name'] ?? ''],
-    'datePublished' => $publication['published_at'],
-    'publisher' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL]
+    'datePublished' => date('c', strtotime($publication['published_at'])),
+    'dateModified' => date('c', strtotime($publication['updated_at'] ?? $publication['published_at'])),
+    'publisher' => [
+        '@type' => 'Organization',
+        'name' => SITE_NAME,
+        'url' => SITE_URL,
+        'logo' => SITE_URL . '/assets/images/logo.svg'
+    ]
 ];
-$ogType = 'article';
-$ogImage = SITE_URL . '/og-image/publication/' . $publication['slug'] . '.jpg';
+if (!empty($tags)) {
+    $jsonLd['keywords'] = array_column($tags, 'name');
+}
+
+// Breadcrumbs (JSON-LD + данные для компонента)
+$breadcrumbs = [
+    ['label' => 'Главная', 'url' => '/'],
+    ['label' => 'Журнал', 'url' => '/zhurnal/'],
+    ['label' => $publication['title']]
+];
 
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="publication-page">
+
+<!-- Breadcrumbs -->
+<?php include __DIR__ . '/../includes/breadcrumbs.php'; ?>
+
     <div class="container">
         <div class="publication-layout">
             <!-- Main Content -->
             <article class="publication-content">
-                <!-- Breadcrumbs -->
-                <nav class="breadcrumbs">
-                    <a href="/">Главная</a>
-                    <span class="separator">/</span>
-                    <a href="/zhurnal">Журнал</a>
-                    <?php if (!empty($tags)): ?>
-                        <span class="separator">/</span>
-                        <a href="/zhurnal?tag=<?php echo urlencode($tags[0]['slug']); ?>">
-                            <?php echo htmlspecialchars($tags[0]['name']); ?>
-                        </a>
-                    <?php endif; ?>
-                </nav>
-
                 <!-- Header -->
                 <header class="publication-header">
                     <?php if ($publication['type_name']): ?>

@@ -320,7 +320,7 @@ include __DIR__ . '/includes/header.php';
         <div class="hero-content">
             <h1 class="hero-title"><?php echo htmlspecialchars($h1Text); ?></h1>
 
-            <p class="hero-subtitle">Дистанционные курсы с удостоверением установленного образца. Данные вносятся в ФИС ФРДО. Начало обучения — сразу после оплаты.</p>
+            <p class="hero-subtitle">Дистанционные курсы для педагогов с удостоверением установленного образца. Одна из первых аккредитованных организаций в России. Данные вносятся в ФИС ФРДО.</p>
 
             <div class="hero-cta-row" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
                 <a href="#courses" class="btn btn-hero">Выбрать курс</a>
@@ -362,6 +362,30 @@ include __DIR__ . '/includes/header.php';
     </div>
 </section>
 
+<!-- Блок статистики -->
+<div class="container">
+    <div class="stats-section">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number" data-target="4500">0</div>
+                <div class="stat-label">выпускников прошли<br>наши курсы</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" data-target="66" data-suffix="+">0</div>
+                <div class="stat-label">программ<br>обучения</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" data-target="85">0</div>
+                <div class="stat-label">регионов<br>России</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" data-prefix="С " data-target="2021">0</div>
+                <div class="stat-label">года обучаем<br>педагогов</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Блок аккредитации -->
 <div class="container">
     <div class="accreditation-block">
@@ -397,6 +421,49 @@ include __DIR__ . '/includes/header.php';
                 <strong>Данные в ФИС ФРДО</strong>
                 <span>Все данные вносятся в Федеральный реестр</span>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Блок: Изменения в законодательстве -->
+<div class="container">
+    <div class="law-alert">
+        <div class="law-alert__header">
+            <div class="law-alert__icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#667eea"/>
+                </svg>
+            </div>
+            <div class="law-alert__title">
+                <h2>С 1 сентября 2025 года изменились правила повышения квалификации</h2>
+                <p class="law-alert__subtitle">Федеральный закон от 21.04.2025 № 86-ФЗ — новая часть 5.2 статьи 47 Закона «Об образовании» (273-ФЗ)</p>
+            </div>
+        </div>
+
+        <div class="law-alert__body">
+            <div class="law-alert__col law-alert__col--risks">
+                <h3>Риски обучения в неуполномоченных организациях</h3>
+                <ul class="law-alert__list">
+                    <li>Документ не примут при аттестации и проверке Рособрнадзора</li>
+                    <li>Работодатель вправе не засчитать повышение квалификации</li>
+                    <li>Запись в ФИС ФРДО не подтверждает право организации обучать педагогов</li>
+                    <li>Потеря денег и времени — придётся переучиваться заново</li>
+                </ul>
+            </div>
+
+            <div class="law-alert__col law-alert__col--trust">
+                <h3>Почему «Каменный город» — надёжный выбор</h3>
+                <ul class="law-alert__list law-alert__list--check">
+                    <li>Разрешение Фонда «Сколково» № 068 на образовательную деятельность</li>
+                    <li>Все данные вносятся в ФИС ФРДО в течение 30 дней</li>
+                    <li>Удостоверение установленного образца — примут при любой проверке</li>
+                    <li>Действующая лицензия на образовательную деятельность</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="law-alert__footer">
+            <span class="law-alert__ref">Основание: ч. 5.2 ст. 47 Федерального закона от 29.12.2012 № 273-ФЗ «Об образовании в РФ» (в ред. ФЗ от 21.04.2025 № 86-ФЗ), Постановление Правительства РФ № 850</span>
         </div>
     </div>
 </div>
@@ -481,12 +548,13 @@ include __DIR__ . '/includes/header.php';
 
                             <p><?php echo htmlspecialchars(mb_substr($course['description'], 0, 120) . '...'); ?></p>
 
-                            <div class="competition-price">
-                                <?php echo number_format($course['price'], 0, ',', ' '); ?> ₽
+                            <div class="course-card-feature">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+                                Удостоверение в ФИС ФРДО
                             </div>
 
                             <a href="/kursy/<?php echo htmlspecialchars($course['slug']); ?>/" class="btn btn-primary btn-block">
-                                Подробнее
+                                Смотреть программу
                             </a>
                         </div>
                     <?php endforeach; ?>
@@ -825,7 +893,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             var html = '';
             batch.forEach(function(course) {
-                var price = new Intl.NumberFormat('ru-RU').format(course.price);
                 var desc = course.description ? course.description.substring(0, 120) + '...' : '';
                 var slug = course.slug || '';
                 var hours = course.hours || 72;
@@ -836,8 +903,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     '</div>' +
                     '<h3>' + (course.title || '') + '</h3>' +
                     '<p>' + desc + '</p>' +
-                    '<div class="competition-price">' + price + ' ₽</div>' +
-                    '<a href="/kursy/' + slug + '/" class="btn btn-primary btn-block">Подробнее</a>' +
+                    '<div class="course-card-feature">' +
+                    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>' +
+                    ' Удостоверение в ФИС ФРДО</div>' +
+                    '<a href="/kursy/' + slug + '/" class="btn btn-primary btn-block">Смотреть программу</a>' +
                     '</div>';
             });
 
@@ -870,7 +939,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         "products": [{
                             "id": "course-" + card.dataset.courseId,
                             "name": card.querySelector('h3') ? card.querySelector('h3').textContent : '',
-                            "price": parseFloat((card.querySelector('.competition-price') ? card.querySelector('.competition-price').textContent : '0').replace(/[^\d]/g, '')),
+                            "price": 0,
                             "brand": "Педпортал",
                             "category": "Курсы"
                         }]
@@ -880,6 +949,40 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Count-up animation for stats
+(function() {
+    var statsObserved = false;
+    var counters = document.querySelectorAll('.stat-number[data-target]');
+    if (!counters.length) return;
+
+    var observer = new IntersectionObserver(function(entries) {
+        if (statsObserved) return;
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                statsObserved = true;
+                counters.forEach(function(el) {
+                    var target = parseInt(el.dataset.target);
+                    var prefix = el.dataset.prefix || '';
+                    var suffix = el.dataset.suffix || '';
+                    var duration = 1500;
+                    var start = performance.now();
+                    function animate(now) {
+                        var progress = Math.min((now - start) / duration, 1);
+                        var ease = 1 - Math.pow(1 - progress, 3);
+                        var current = Math.floor(ease * target);
+                        el.textContent = prefix + new Intl.NumberFormat('ru-RU').format(current) + suffix;
+                        if (progress < 1) requestAnimationFrame(animate);
+                    }
+                    requestAnimationFrame(animate);
+                });
+                observer.disconnect();
+            }
+        });
+    }, { threshold: 0.3 });
+
+    observer.observe(document.querySelector('.stats-section'));
+})();
 </script>
 
 <?php include __DIR__ . '/includes/social-links.php'; ?>

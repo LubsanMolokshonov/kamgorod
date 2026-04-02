@@ -136,6 +136,20 @@ $additionalCSS = ['/assets/css/journal.css?v=' . filemtime(__DIR__ . '/../assets
 $additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/../assets/js/audience-filter.js')];
 $ogImage = SITE_URL . '/assets/images/og-journal.jpg';
 
+// JSON-LD CollectionPage
+$jsonLd = [
+    '@context' => 'https://schema.org',
+    '@type' => 'CollectionPage',
+    'name' => $pageTitle,
+    'description' => $pageDescription,
+    'url' => SITE_URL . '/zhurnal/',
+    'isPartOf' => [
+        '@type' => 'WebSite',
+        'name' => SITE_NAME,
+        'url' => SITE_URL
+    ]
+];
+
 include __DIR__ . '/../includes/header.php';
 ?>
 

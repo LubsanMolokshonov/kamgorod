@@ -78,7 +78,8 @@ $migrations = [
     '058_add_ii_rukovoditel_webinar.sql',
     '059_add_perezagruzka_roditely_webinar.sql',
     '060_add_course_payment_support.sql',
-    '061_add_bitrix_sync_fields.sql'
+    '061_add_bitrix_sync_fields.sql',
+    '062_restore_webinar_registrations.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';
