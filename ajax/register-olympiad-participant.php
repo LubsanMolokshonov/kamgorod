@@ -125,6 +125,18 @@ try {
     $_SESSION['user_id'] = $userId;
     $_SESSION['user_email'] = $email;
 
+    // Schedule olympiad welcome email + reminder
+    $olympiadId = intval($_POST['olympiad_id'] ?? 0);
+    if ($olympiadId) {
+        try {
+            require_once __DIR__ . '/../classes/OlympiadEmailChain.php';
+            $emailChain = new OlympiadEmailChain($db);
+            $emailChain->scheduleRegistrationEmails($userId, $olympiadId);
+        } catch (Exception $e) {
+            error_log('Olympiad reg email error: ' . $e->getMessage());
+        }
+    }
+
     // Return success
     echo json_encode([
         'success' => true,

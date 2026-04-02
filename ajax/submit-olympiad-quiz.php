@@ -111,6 +111,21 @@ try {
         exit;
     }
 
+    // Schedule quiz result emails
+    try {
+        require_once __DIR__ . '/../classes/OlympiadEmailChain.php';
+        $emailChain = new OlympiadEmailChain($db);
+        $emailChain->scheduleQuizResultEmails(
+            $userId,
+            $olympiadId,
+            $result['result_id'],
+            $result['score'],
+            $result['placement']
+        );
+    } catch (Exception $e) {
+        error_log('Olympiad quiz email error: ' . $e->getMessage());
+    }
+
     // Return success response
     echo json_encode([
         'success' => true,

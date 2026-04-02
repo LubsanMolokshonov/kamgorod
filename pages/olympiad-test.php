@@ -719,6 +719,7 @@ include __DIR__ . '/../includes/header.php';
                 data: {
                     fio: fio,
                     email: email,
+                    olympiad_id: olympiadId,
                     csrf_token: csrfToken
                 },
                 dataType: 'json',

@@ -175,11 +175,12 @@ try {
     // Sync specializations to user profile for recommendations
     syncUserSpecializations($db, $userId, 'olympiad_specializations', 'olympiad_id', $result['olympiad_id']);
 
-    // Schedule olympiad email chain for unpaid diploma order
+    // Schedule olympiad email chain for unpaid diploma order + cancel quiz reminder
     try {
         require_once __DIR__ . '/../classes/OlympiadEmailChain.php';
         $emailChain = new OlympiadEmailChain($db);
         $emailChain->scheduleForRegistration($registrationId, $userId);
+        $emailChain->cancelDiplomaReminder($userId, $result['olympiad_id']);
     } catch (Exception $e) {
         error_log('Olympiad email chain schedule error: ' . $e->getMessage());
     }

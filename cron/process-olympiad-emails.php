@@ -50,9 +50,14 @@ try {
     echo date('Y-m-d H:i:s') . " - Starting olympiad email chain processing...\n";
 
     $chain = new OlympiadEmailChain($db);
-    $results = $chain->processPendingEmails();
 
-    echo date('Y-m-d H:i:s') . " - Completed. Sent: {$results['sent']}, Failed: {$results['failed']}, Skipped: {$results['skipped']}\n";
+    // Обработка дипломной цепочки (1ч/24ч/3д/7д)
+    $results = $chain->processPendingEmails();
+    echo date('Y-m-d H:i:s') . " - Diploma chain: Sent: {$results['sent']}, Failed: {$results['failed']}, Skipped: {$results['skipped']}\n";
+
+    // Обработка quiz-писем (регистрация, результаты теста)
+    $quizResults = $chain->processQuizEmails();
+    echo date('Y-m-d H:i:s') . " - Quiz emails: Sent: {$quizResults['sent']}, Failed: {$quizResults['failed']}, Skipped: {$quizResults['skipped']}\n";
 
 } catch (Exception $e) {
     echo date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n";
