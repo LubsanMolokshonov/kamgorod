@@ -171,6 +171,30 @@ function collectOrderAttachments($db, $items) {
                 }
             }
         }
+
+        // Olympiad diplomas
+        if (!empty($item['olympiad_registration_id'])) {
+            $stmt = $db->prepare("
+                SELECT pdf_path, recipient_type FROM olympiad_diplomas
+                WHERE olympiad_registration_id = ? AND recipient_type = 'participant'
+                ORDER BY generated_at DESC LIMIT 1
+            ");
+            $stmt->execute([$item['olympiad_registration_id']]);
+            $olympDiploma = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($olympDiploma && !empty($olympDiploma['pdf_path'])) {
+                $pdfFullPath = BASE_PATH . '/uploads/diplomas/' . $olympDiploma['pdf_path'];
+                if (file_exists($pdfFullPath)) {
+                    $title = !empty($item['olympiad_title']) ? $item['olympiad_title'] : 'олимпиада';
+                    $attachments[] = [
+                        'path' => $pdfFullPath,
+                        'name' => 'Диплом_олимпиады_' . mb_substr(preg_replace('/[^\w\d\-а-яёА-ЯЁ ]/u', '', $title), 0, 50) . '.pdf',
+                        'type' => 'olympiad_diploma',
+                        'title' => $title
+                    ];
+                }
+            }
+        }
     }
 
     return $attachments;
@@ -209,6 +233,11 @@ function buildSuccessEmailBody($order, $user, $attachments = []) {
             $title = htmlspecialchars($item['webinar_title']);
             $itemsHtml .= "<tr><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\">Сертификат</td><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\"><strong>{$title}</strong></td></tr>";
         }
+        if (!empty($item['olympiad_registration_id']) && !empty($item['olympiad_title'])) {
+            $title = htmlspecialchars($item['olympiad_title']);
+            $placement = !empty($item['olympiad_placement']) ? ', ' . htmlspecialchars($item['olympiad_placement']) . ' место' : '';
+            $itemsHtml .= "<tr><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\">Диплом олимпиады</td><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\"><strong>{$title}</strong>{$placement}</td></tr>";
+        }
     }
 
     // Attachment notice
@@ -225,6 +254,7 @@ HTML;
                 'diploma' => 'Диплом',
                 'certificate' => 'Свидетельство о публикации',
                 'webinar_certificate' => 'Сертификат участника вебинара',
+                'olympiad_diploma' => 'Диплом олимпиады',
                 default => 'Документ'
             };
             $attTitle = htmlspecialchars($att['title']);
@@ -365,6 +395,10 @@ function buildSuccessEmailBodyText($order, $user, $attachments = []) {
         }
         if (!empty($item['webinar_certificate_id']) && !empty($item['webinar_title'])) {
             $itemsText .= "  - Сертификат: {$item['webinar_title']}\n";
+        }
+        if (!empty($item['olympiad_registration_id']) && !empty($item['olympiad_title'])) {
+            $placement = !empty($item['olympiad_placement']) ? " ({$item['olympiad_placement']} место)" : '';
+            $itemsText .= "  - Диплом олимпиады: {$item['olympiad_title']}{$placement}\n";
         }
     }
 

@@ -382,6 +382,20 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
             logWebhook('WARNING', $paymentId, "Publication email chain cancel failed: " . $e->getMessage(), '');
         }
 
+        // Cancel olympiad email chain for paid olympiad registrations
+        try {
+            require_once BASE_PATH . '/classes/OlympiadEmailChain.php';
+            $olympiadChain = new OlympiadEmailChain($GLOBALS['db']);
+            foreach ($orderItems as $item) {
+                if (!empty($item['olympiad_registration_id'])) {
+                    $olympiadChain->cancelForRegistration($item['olympiad_registration_id']);
+                }
+            }
+            logWebhook('INFO', $paymentId, "Olympiad email chain cancelled for order {$orderNumber}", '');
+        } catch (Exception $e) {
+            logWebhook('WARNING', $paymentId, "Olympiad email chain cancel failed: " . $e->getMessage(), '');
+        }
+
         // Send success email (non-blocking)
         try {
             sendPaymentSuccessEmail($userId, $orderId);

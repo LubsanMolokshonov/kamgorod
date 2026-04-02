@@ -175,6 +175,15 @@ try {
     // Sync specializations to user profile for recommendations
     syncUserSpecializations($db, $userId, 'olympiad_specializations', 'olympiad_id', $result['olympiad_id']);
 
+    // Schedule olympiad email chain for unpaid diploma order
+    try {
+        require_once __DIR__ . '/../classes/OlympiadEmailChain.php';
+        $emailChain = new OlympiadEmailChain($db);
+        $emailChain->scheduleForRegistration($registrationId, $userId);
+    } catch (Exception $e) {
+        error_log('Olympiad email chain schedule error: ' . $e->getMessage());
+    }
+
     // Keep user_id in session
     $_SESSION['user_id'] = $userId;
 

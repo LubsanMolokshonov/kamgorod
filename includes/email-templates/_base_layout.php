@@ -385,7 +385,7 @@
                 <p>Всероссийские конкурсы для педагогов и школьников</p>
                 <p><a href="<?php echo htmlspecialchars($site_url); ?>">fgos.pro</a></p>
                 <div class="unsubscribe-link">
-                    Вы получили это письмо, потому что зарегистрировались на конкурс.<br>
+                    Вы получили это письмо, потому что <?php echo $footer_reason ?? 'зарегистрировались на конкурс на нашем портале'; ?>.<br>
                     <a href="<?php echo htmlspecialchars($unsubscribe_url); ?>">Отписаться от рассылки</a>
                 </div>
             </div>
