@@ -362,68 +362,7 @@ include __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- Блок статистики -->
-<div class="container">
-    <div class="stats-section">
-        <div class="stats-grid">
-            <div class="stat-item">
-                <div class="stat-number" data-target="4500">0</div>
-                <div class="stat-label">выпускников прошли<br>наши курсы</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" data-target="66" data-suffix="+">0</div>
-                <div class="stat-label">программ<br>обучения</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" data-target="85">0</div>
-                <div class="stat-label">регионов<br>России</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" data-prefix="С " data-target="2021">0</div>
-                <div class="stat-label">года обучаем<br>педагогов</div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Блок аккредитации -->
-<div class="container">
-    <div class="accreditation-block">
-        <div class="accreditation-block__item">
-            <div class="accreditation-block__icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5zm-1 14.59l-3.29-3.3 1.41-1.41L11 13.76l4.88-4.88 1.41 1.41L11 16.59z" fill="#667eea"/>
-                </svg>
-            </div>
-            <div class="accreditation-block__text">
-                <strong>Аккредитованная организация</strong>
-                <span>С 2025 года обучать по ДПО могут только аккредитованные организации</span>
-            </div>
-        </div>
-        <div class="accreditation-block__item">
-            <div class="accreditation-block__icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM9 13h6v2H9v-2zm0 4h6v2H9v-2z" fill="#667eea"/>
-                </svg>
-            </div>
-            <div class="accreditation-block__text">
-                <strong>Разрешение Сколково №068</strong>
-                <span>Удостоверение примут при аттестации и проверке</span>
-            </div>
-        </div>
-        <div class="accreditation-block__item">
-            <div class="accreditation-block__icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" fill="#667eea"/>
-                </svg>
-            </div>
-            <div class="accreditation-block__text">
-                <strong>Данные в ФИС ФРДО</strong>
-                <span>Все данные вносятся в Федеральный реестр</span>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Блок: Изменения в законодательстве -->
 <div class="container">
@@ -452,7 +391,7 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <div class="law-alert__col law-alert__col--trust">
-                <h3>Почему «Каменный город» — надёжный выбор</h3>
+                <h3>Почему «ФГОС-практикум» — надёжный выбор</h3>
                 <ul class="law-alert__list law-alert__list--check">
                     <li>Разрешение Фонда «Сколково» № 068 на образовательную деятельность</li>
                     <li>Все данные вносятся в ФИС ФРДО в течение 30 дней</li>
@@ -467,6 +406,8 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
+
+<?php include __DIR__ . '/includes/social-proof.php'; ?>
 
 <!-- Unified Audience Filter -->
 <div class="container mt-40" id="courses">

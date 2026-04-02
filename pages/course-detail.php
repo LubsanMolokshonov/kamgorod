@@ -834,58 +834,7 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </section>
 
-<!-- Лицензия и аккредитации -->
-<section class="licenses-section">
-    <div class="container">
-        <div class="text-center mb-40">
-            <h2>Лицензия и аккредитации</h2>
-        </div>
-
-        <div class="licenses-grid">
-            <!-- Образовательная лицензия -->
-            <div class="license-card">
-                <div class="license-icon">
-                    <img src="/assets/images/cropped-logo_rosobrnadzor-2.png" alt="Рособрнадзор" width="100" height="100">
-                </div>
-                <div class="license-content">
-                    <h3 class="license-title">Образовательная лицензия</h3>
-                    <p class="license-subtitle">Лицензия на образовательную деятельность № Л035-01212-59/00203856 от 17.12.2021 г.</p>
-                    <a href="https://islod.obrnadzor.gov.ru/rlic/details/c197b78b-ee10-1b2e-3837-6f0b1295bc1f/" target="_blank" rel="noopener noreferrer" class="license-button">
-                        Проверить лицензию
-                    </a>
-                </div>
-            </div>
-
-            <!-- Официальное СМИ -->
-            <div class="license-card">
-                <div class="license-icon">
-                    <img src="/assets/images/eagle_s.svg" alt="Роскомнадзор" width="100" height="100">
-                </div>
-                <div class="license-content">
-                    <h3 class="license-title">Официальное СМИ</h3>
-                    <p class="license-subtitle">Свидетельство о регистрации СМИ Эл. №ФС 77-74524 от 24.12.2018</p>
-                    <a href="https://rkn.gov.ru/activity/mass-media/for-founders/media/?id=700411&page=" target="_blank" rel="noopener noreferrer" class="license-button">
-                        Проверить свидетельство
-                    </a>
-                </div>
-            </div>
-
-            <!-- Резидент Сколково -->
-            <div class="license-card">
-                <div class="license-icon">
-                    <img src="/assets/images/skolkovo-logo.svg" alt="Сколково" width="100" height="100">
-                </div>
-                <div class="license-content">
-                    <h3 class="license-title">Аккредитация Сколково</h3>
-                    <p class="license-subtitle">Разрешение №068 от 16.03.2026 на осуществление образовательной деятельности. Одна из первых аккредитованных организаций в России.</p>
-                    <a href="/assets/files/Выписка_из_реестра_Сколково_12_01_2026.pdf" download class="license-button">
-                        Скачать выписку
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+<?php include __DIR__ . '/../includes/social-proof.php'; ?>
 
 <!-- Modules -->
 <?php if (!empty($modules)): ?>
@@ -938,57 +887,6 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </section>
 <?php endif; ?>
-
-<!-- Trust Section -->
-<section class="trust-section">
-    <div class="container">
-        <h2>Нам доверяют педагоги из</h2>
-        <p class="section-subtitle">Образовательные организации со всей России</p>
-
-        <div class="trust-orgs">
-            <div class="trust-org">
-                <div class="trust-org-name">МБОУ СОШ №36</div>
-                <div class="trust-org-city">г. Пермь</div>
-            </div>
-            <div class="trust-org">
-                <div class="trust-org-name">МБДОУ «Детский сад №45»</div>
-                <div class="trust-org-city">г. Екатеринбург</div>
-            </div>
-            <div class="trust-org">
-                <div class="trust-org-name">МАОУ «Гимназия №12»</div>
-                <div class="trust-org-city">г. Новосибирск</div>
-            </div>
-            <div class="trust-org">
-                <div class="trust-org-name">МБОУ «Лицей №3»</div>
-                <div class="trust-org-city">г. Красноярск</div>
-            </div>
-            <div class="trust-org">
-                <div class="trust-org-name">МАДОУ «Детский сад №78»</div>
-                <div class="trust-org-city">г. Челябинск</div>
-            </div>
-            <div class="trust-org">
-                <div class="trust-org-name">МБОУ СОШ №21</div>
-                <div class="trust-org-city">г. Нижний Тагил</div>
-            </div>
-            <div class="trust-org">
-                <div class="trust-org-name">МКОУ СОШ №5</div>
-                <div class="trust-org-city">г. Краснодар</div>
-            </div>
-            <div class="trust-org">
-                <div class="trust-org-name">МБДОУ «Детский сад №102»</div>
-                <div class="trust-org-city">г. Казань</div>
-            </div>
-            <div class="trust-org">
-                <div class="trust-org-name">МАОУ СОШ №8</div>
-                <div class="trust-org-city">г. Тюмень</div>
-            </div>
-            <div class="trust-org">
-                <div class="trust-org-name">МБОУ «Гимназия №56»</div>
-                <div class="trust-org-city">г. Ижевск</div>
-            </div>
-        </div>
-    </div>
-</section>
 
 <!-- Consultation CTA -->
 <section class="consultation-cta-section">
