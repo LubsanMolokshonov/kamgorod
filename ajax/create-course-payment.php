@@ -126,6 +126,9 @@ try {
                 if ($freshEnrollment && empty($freshEnrollment['bitrix_lead_id'])) {
                     $course = $courseObj->getById($freshEnrollment['course_id']);
                     if ($course) {
+                        // A/B-тест: фактическая цена для CRM
+                        $abPriceCrm = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
+
                         $dealId = $bitrix->createCourseDeal([
                             'full_name' => $freshEnrollment['full_name'],
                             'email' => $freshEnrollment['email'],
@@ -137,7 +140,7 @@ try {
                             'utm_term' => $freshEnrollment['utm_term'] ?? '',
                             'ym_uid' => $freshEnrollment['ym_uid'] ?? '',
                             'source_page' => $freshEnrollment['source_page'] ?? '',
-                        ], $course, $paidStage);
+                        ], $course, $paidStage, $abPriceCrm);
 
                         if ($dealId) {
                             $dbObj->update('course_enrollments', [

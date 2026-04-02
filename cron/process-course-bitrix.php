@@ -23,6 +23,7 @@ require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/database.php';
 require_once BASE_PATH . '/classes/Database.php';
 require_once BASE_PATH . '/classes/Course.php';
+require_once BASE_PATH . '/classes/CoursePriceAB.php';
 require_once BASE_PATH . '/classes/Bitrix24Integration.php';
 
 // Lock file
@@ -104,6 +105,10 @@ try {
                 continue;
             }
 
+            // A/B-тест цен: скорректированная цена из варианта enrollment
+            $abVariant = $fresh['ab_variant'] ?? 'A';
+            $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
+
             $dealId = $bitrix->createCourseDeal([
                 'full_name' => $fresh['full_name'],
                 'email' => $fresh['email'],
@@ -115,7 +120,7 @@ try {
                 'utm_term' => $fresh['utm_term'] ?? '',
                 'ym_uid' => $fresh['ym_uid'] ?? '',
                 'source_page' => $fresh['source_page'] ?? '',
-            ], $course, $stage);
+            ], $course, $stage, $abPrice);
 
             if ($dealId) {
                 $dbObj->update('course_enrollments', [

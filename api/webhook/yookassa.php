@@ -280,6 +280,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
         try {
             require_once BASE_PATH . '/classes/Bitrix24Integration.php';
             require_once BASE_PATH . '/classes/Course.php';
+            require_once BASE_PATH . '/classes/CoursePriceAB.php';
 
             $bitrix = new Bitrix24Integration();
             if ($bitrix->isConfigured()) {
@@ -307,6 +308,10 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                             // Сделка ещё не создана — создаём с этапом "Оплата на сайте"
                             $course = $courseObj->getById($enrollment['course_id']);
                             if ($course) {
+                                // A/B-тест: фактическая цена из варианта enrollment
+                                $abVariant = $enrollment['ab_variant'] ?? 'A';
+                                $abPriceCrm = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
+
                                 $dealId = $bitrix->createCourseDeal([
                                     'full_name' => $enrollment['full_name'],
                                     'email' => $enrollment['email'],
@@ -318,7 +323,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                                     'utm_term' => $enrollment['utm_term'] ?? '',
                                     'ym_uid' => $enrollment['ym_uid'] ?? '',
                                     'source_page' => $enrollment['source_page'] ?? '',
-                                ], $course, $paidStage);
+                                ], $course, $paidStage, $abPriceCrm);
 
                                 if ($dealId) {
                                     $dbHelper->update('course_enrollments', [

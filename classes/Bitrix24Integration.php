@@ -408,7 +408,7 @@ class Bitrix24Integration {
      * @param string|null $stageId ID стадии (null = BITRIX24_COURSE_STAGE_NEW)
      * @return string|null ID сделки или null
      */
-    public function createCourseDeal($enrollment, $course, $stageId = null) {
+    public function createCourseDeal($enrollment, $course, $stageId = null, $adjustedPrice = null) {
         $contactId = $this->findOrCreateContact($enrollment);
 
         $categoryId = defined('BITRIX24_COURSE_PIPELINE_ID') ? BITRIX24_COURSE_PIPELINE_ID : 108;
@@ -422,10 +422,10 @@ class Bitrix24Integration {
             'STAGE_ID' => $stageId,
             'SOURCE_ID' => 'WEB',
             'SOURCE_DESCRIPTION' => 'Запись на курс через Каменный город',
-            'COMMENTS' => $this->buildCourseComments($enrollment, $course),
+            'COMMENTS' => $this->buildCourseComments($enrollment, $course, $adjustedPrice),
             'OPENED' => 'Y',
             'PROBABILITY' => 50,
-            'OPPORTUNITY' => $course['price'] ?? 0,
+            'OPPORTUNITY' => $adjustedPrice ?? $course['price'] ?? 0,
             'CURRENCY_ID' => 'RUB',
         ];
 
@@ -514,7 +514,7 @@ class Bitrix24Integration {
      * @param array $course Данные курса
      * @return string Комментарий
      */
-    private function buildCourseComments($enrollment, $course) {
+    private function buildCourseComments($enrollment, $course, $adjustedPrice = null) {
         $comments = [];
         $comments[] = "Курс: " . $course['title'];
 
@@ -525,8 +525,9 @@ class Bitrix24Integration {
         if (!empty($course['hours'])) {
             $comments[] = "Объём: " . $course['hours'] . " ч.";
         }
-        if (!empty($course['price'])) {
-            $comments[] = "Стоимость: " . number_format($course['price'], 0, ',', ' ') . " руб.";
+        $displayPrice = $adjustedPrice ?? ($course['price'] ?? 0);
+        if ($displayPrice > 0) {
+            $comments[] = "Стоимость: " . number_format($displayPrice, 0, ',', ' ') . " руб.";
         }
         if (!empty($course['learning_format'])) {
             $comments[] = "Формат: " . $course['learning_format'];

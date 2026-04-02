@@ -19,6 +19,7 @@ $enrollmentId = intval($argv[1]);
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Course.php';
+require_once __DIR__ . '/../classes/CoursePriceAB.php';
 
 $dbObj = new Database($db);
 
@@ -60,7 +61,10 @@ try {
     );
 
     $programLabel = Course::getProgramTypeLabel($course['program_type']);
-    $price = number_format($course['price'], 0, ',', ' ');
+    // A/B-тест: фактическая цена из варианта enrollment
+    $abVariant = $enrollment['ab_variant'] ?? 'A';
+    $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
+    $price = number_format($abPrice, 0, ',', ' ');
     $crmStatus = "Отложенная синхронизация (10 мин)";
 
     $mail->Body = <<<HTML
