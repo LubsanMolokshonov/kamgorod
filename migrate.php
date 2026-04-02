@@ -81,7 +81,8 @@ $migrations = [
     '061_add_bitrix_sync_fields.sql',
     '062_restore_webinar_registrations.sql',
     '063_add_olympiad_email_chain.sql',
-    '064_add_olympiad_quiz_emails.sql'
+    '064_add_olympiad_quiz_emails.sql',
+    '065_add_course_ab_variant.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';

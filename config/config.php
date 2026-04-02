@@ -208,3 +208,8 @@ if (YOOKASSA_MODE === 'sandbox') {
 
 // Timezone
 date_default_timezone_set('Europe/Moscow');
+
+// A/B-тест цен курсов
+if (!defined('COURSE_AB_TEST_ACTIVE')) define('COURSE_AB_TEST_ACTIVE', true);
+if (!defined('COURSE_AB_TEST_SECRET')) define('COURSE_AB_TEST_SECRET', $_ENV['COURSE_AB_TEST_SECRET'] ?? 'kG7x2pL9qR4mN8vW3jF5');
+if (!defined('COURSE_AB_TEST_COOKIE')) define('COURSE_AB_TEST_COOKIE', 'cab_v');

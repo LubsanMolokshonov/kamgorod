@@ -13,6 +13,7 @@ require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Bitrix24Integration.php';
 require_once __DIR__ . '/../classes/Validator.php';
+require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../includes/session.php';
 
 try {
@@ -129,6 +130,10 @@ try {
     if ($ymUid) $enrollmentData['ym_uid'] = $ymUid;
     if ($sourcePage) $enrollmentData['source_page'] = $sourcePage;
 
+    // A/B-тест цен
+    $abVariant = CoursePriceAB::getVariant();
+    $enrollmentData['ab_variant'] = $abVariant;
+
     $enrollmentId = $dbObj->insert('course_enrollments', $enrollmentData);
 
     // Set session
@@ -161,7 +166,7 @@ try {
         'ecommerce' => [
             'id'       => 'course-' . $course['id'],
             'name'     => $course['title'],
-            'price'    => floatval($course['price']),
+            'price'    => CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant),
             'category' => 'Курсы',
         ]
     ], JSON_UNESCAPED_UNICODE);

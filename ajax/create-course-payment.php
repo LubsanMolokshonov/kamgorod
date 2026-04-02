@@ -12,6 +12,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/User.php';
+require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../includes/session.php';
 
 use YooKassa\Client;
@@ -76,8 +77,11 @@ try {
         }
     }
 
-    // Серверная проверка скидки (10% в течение 10 минут)
-    $price = floatval($enrollment['price']);
+    // A/B-тест цен: применяем множитель варианта к базовой цене
+    $abVariant = CoursePriceAB::getVariant();
+    $price = CoursePriceAB::getAdjustedPrice(floatval($enrollment['price']), $abVariant);
+
+    // Серверная проверка скидки (10% в течение 10 минут) — поверх AB-цены
     $discountAmount = 0;
     $finalPrice = $price;
 
@@ -227,6 +231,7 @@ try {
                 'user_id' => $enrollmentUserId,
                 'user_email' => $userEmail,
                 'course_enrollment_id' => $enrollmentId,
+                'ab_variant' => $abVariant,
             ],
         ],
         $orderNumber

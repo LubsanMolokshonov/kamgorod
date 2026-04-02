@@ -9,6 +9,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/CourseExpert.php';
+require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../includes/session.php';
 
 $slug = $_GET['slug'] ?? '';
@@ -37,6 +38,11 @@ if (!$course) {
     include __DIR__ . '/../includes/footer.php';
     exit;
 }
+
+// A/B-тест цен
+$abVariant = CoursePriceAB::getVariant();
+$abPrice = CoursePriceAB::getAdjustedPrice((float)$course['price'], $abVariant);
+$abBasePrice = (float)$course['price'];
 
 // Get course data
 $experts = $courseObj->getExperts($course['id']);
@@ -76,7 +82,7 @@ $jsonLd = [
     ],
     'offers' => [
         '@type' => 'Offer',
-        'price' => (float)$course['price'],
+        'price' => $abPrice,
         'priceCurrency' => 'RUB',
         'availability' => 'https://schema.org/InStock',
         'url' => $courseUrl
@@ -826,7 +832,14 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                     <div class="info-card-content">
                         <div class="info-card-title" style="color: rgba(255,255,255,0.8);">Стоимость</div>
-                        <div class="info-card-value" style="color: white; font-size: 24px;"><?php echo number_format($course['price'], 0, ',', ' '); ?> ₽</div>
+                        <div class="info-card-value" style="color: white; font-size: 24px;">
+                            <?php if ($abVariant !== 'A'): ?>
+                                <span style="text-decoration: line-through; opacity: 0.6; font-size: 16px;"><?= number_format($abBasePrice, 0, ',', ' ') ?> ₽</span>
+                                <?= number_format($abPrice, 0, ',', ' ') ?> ₽
+                            <?php else: ?>
+                                <?= number_format($abPrice, 0, ',', ' ') ?> ₽
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -963,7 +976,14 @@ include __DIR__ . '/../includes/header.php';
         <div class="price-cta-container">
             <div class="price-cta-content">
                 <div class="price-label">Стоимость обучения</div>
-                <div class="price-amount"><?php echo number_format($course['price'], 0, ',', ' '); ?> ₽</div>
+                <div class="price-amount">
+                    <?php if ($abVariant !== 'A'): ?>
+                        <span style="text-decoration: line-through; opacity: 0.5; font-size: 0.5em;"><?= number_format($abBasePrice, 0, ',', ' ') ?> ₽</span><br>
+                        <?= number_format($abPrice, 0, ',', ' ') ?> ₽
+                    <?php else: ?>
+                        <?= number_format($abPrice, 0, ',', ' ') ?> ₽
+                    <?php endif; ?>
+                </div>
                 <div class="price-note"><?php echo Course::formatHours($course['hours']); ?> обучения с удостоверением установленного образца</div>
 
                 <button class="btn-cta-large" onclick="openEnrollmentModal()">Записаться на курс</button>
@@ -1394,7 +1414,7 @@ window.dataLayer.push({
             "products": [{
                 "id": "course-<?= $course['id'] ?>",
                 "name": "<?= htmlspecialchars($course['title'], ENT_QUOTES) ?>",
-                "price": <?= $course['price'] ?>,
+                "price": <?= $abPrice ?>,
                 "brand": "Педпортал",
                 "category": "Курсы"
             }]
@@ -1402,6 +1422,10 @@ window.dataLayer.push({
     }
 });
 </script>
+
+<?php if ($abVariant !== 'A'): ?>
+<script>ym(106465857, 'params', {course_ab_variant: '<?= $abVariant ?>', course_ab_discount: <?= CoursePriceAB::getDiscountPercent($abVariant) ?>});</script>
+<?php endif; ?>
 
 <script>
 // Фиксированная мобильная кнопка

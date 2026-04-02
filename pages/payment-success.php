@@ -433,10 +433,31 @@ include __DIR__ . '/../includes/header.php';
                         'quantity' => 1
                     ];
                     $hasCourseItems = true;
+
+                    // A/B-тест цен: получить вариант из enrollment
+                    if (!isset($courseAbVariant)) {
+                        $dbTmp = new Database($db);
+                        $ceRow = $dbTmp->queryOne(
+                            "SELECT ab_variant FROM course_enrollments WHERE id = ?",
+                            [$item['course_enrollment_id']]
+                        );
+                        $courseAbVariant = $ceRow['ab_variant'] ?? null;
+                    }
                 }
             }
             // Определяем тип купона: курсы — скидка 10%, остальное — 2+1
             $hasCourseItems = $hasCourseItems ?? false;
+            $courseAbVariant = $courseAbVariant ?? null;
+
+            // Формируем строку купона с учётом AB-теста
+            $couponParts = [];
+            if ($order['discount_amount'] > 0) {
+                $couponParts[] = $hasCourseItems ? 'скидка-10' : '2+1';
+            }
+            if ($courseAbVariant && $courseAbVariant !== 'A') {
+                $couponParts[] = 'ab-цена-' . $courseAbVariant;
+            }
+            $couponString = implode(',', $couponParts);
             ?>
             <script>
             window.dataLayer = window.dataLayer || [];
@@ -446,8 +467,8 @@ include __DIR__ . '/../includes/header.php';
                     "purchase": {
                         "actionField": {
                             "id": "<?php echo htmlspecialchars($order['order_number']); ?>",
-                            "revenue": <?php echo $order['final_amount']; ?><?php if ($order['discount_amount'] > 0): ?>,
-                            "coupon": "<?php echo $hasCourseItems ? 'скидка-10' : '2+1'; ?>"<?php endif; ?>
+                            "revenue": <?php echo $order['final_amount']; ?><?php if (!empty($couponString)): ?>,
+                            "coupon": "<?= htmlspecialchars($couponString, ENT_QUOTES) ?>"<?php endif; ?>
 
                         },
                         "products": <?php echo json_encode($ecomProducts, JSON_UNESCAPED_UNICODE); ?>

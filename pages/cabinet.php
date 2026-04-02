@@ -17,6 +17,7 @@ require_once __DIR__ . '/../classes/WebinarQuiz.php';
 require_once __DIR__ . '/../classes/OlympiadQuiz.php';
 require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../classes/Course.php';
+require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Auto-login via cookie if session doesn't exist
@@ -304,8 +305,11 @@ include __DIR__ . '/../includes/header.php';
                 $totalPrice = 0;
                 $totalDiscountedPrice = 0;
 
+                // A/B-тест цен
+                $abVariant = CoursePriceAB::getVariant();
+
                 foreach ($unpaidEnrollments as $enrollment) {
-                    $priceRaw = floatval($enrollment['price']);
+                    $priceRaw = CoursePriceAB::getAdjustedPrice(floatval($enrollment['price']), $abVariant);
                     $enrolledAtUtc = new DateTime($enrollment['enrolled_at'], new DateTimeZone('UTC'));
                     $enrolledAtUtc->setTimezone(new DateTimeZone(date_default_timezone_get()));
                     $discountDeadline = $enrolledAtUtc->getTimestamp() + 600;
