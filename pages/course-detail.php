@@ -1423,9 +1423,7 @@ window.dataLayer.push({
 });
 </script>
 
-<?php if ($abVariant !== 'A'): ?>
-<script>ym(106465857, 'params', {course_ab_variant: '<?= $abVariant ?>', course_ab_discount: <?= CoursePriceAB::getDiscountPercent($abVariant) ?>});</script>
-<?php endif; ?>
+<script>ym(106465857, 'params', {course_ab_discount: '<?= CoursePriceAB::getDiscountPercent($abVariant) ?>'});</script>
 
 <script>
 // Фиксированная мобильная кнопка
