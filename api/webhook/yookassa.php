@@ -35,6 +35,7 @@ require_once __DIR__ . '/../../classes/Order.php';
 require_once __DIR__ . '/../../classes/Registration.php';
 require_once __DIR__ . '/../../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../../classes/WebinarCertificate.php';
+require_once __DIR__ . '/../../classes/WebinarRegistration.php';
 require_once __DIR__ . '/../../classes/Diploma.php';
 require_once __DIR__ . '/../../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../../classes/OlympiadDiploma.php';
@@ -174,8 +175,12 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
         foreach ($orderItems as $item) {
             if (!empty($item['certificate_id'])) {
                 $certObj->updateStatus($item['certificate_id'], 'paid');
-                $certObj->generate($item['certificate_id']);
-                logWebhook('INFO', $paymentId, "Certificate {$item['certificate_id']} generated for order {$orderNumber}", '');
+                $certResult = $certObj->generate($item['certificate_id']);
+                if ($certResult['success']) {
+                    logWebhook('INFO', $paymentId, "Certificate {$item['certificate_id']} generated for order {$orderNumber}", '');
+                } else {
+                    logWebhook('ERROR', $paymentId, "Certificate {$item['certificate_id']} generation FAILED for order {$orderNumber}: {$certResult['message']}", '');
+                }
             }
         }
 
@@ -184,8 +189,12 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
         foreach ($orderItems as $item) {
             if (!empty($item['webinar_certificate_id'])) {
                 $webCertObj->updateStatus($item['webinar_certificate_id'], 'paid');
-                $webCertObj->generate($item['webinar_certificate_id']);
-                logWebhook('INFO', $paymentId, "Webinar certificate {$item['webinar_certificate_id']} generated for order {$orderNumber}", '');
+                $genResult = $webCertObj->generate($item['webinar_certificate_id']);
+                if ($genResult['success']) {
+                    logWebhook('INFO', $paymentId, "Webinar certificate {$item['webinar_certificate_id']} generated for order {$orderNumber}", '');
+                } else {
+                    logWebhook('ERROR', $paymentId, "Webinar certificate {$item['webinar_certificate_id']} generation FAILED for order {$orderNumber}: {$genResult['message']}", '');
+                }
 
                 // Cancel autowebinar email chain for this registration
                 try {
@@ -401,12 +410,59 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
             logWebhook('WARNING', $paymentId, "Olympiad email chain cancel failed: " . $e->getMessage(), '');
         }
 
-        // Send success email (non-blocking)
-        try {
-            sendPaymentSuccessEmail($userId, $orderId);
-        } catch (Exception $e) {
-            logWebhook('WARNING', $paymentId, "Email failed for order {$orderNumber}: " . $e->getMessage(), '');
-            // Don't fail the webhook if email fails
+        // Verify all documents are generated before sending email
+        $allDocsReady = true;
+        $missingDocs = [];
+        foreach ($orderItems as $item) {
+            if (!empty($item['certificate_id'])) {
+                $c = $certObj->getById($item['certificate_id']);
+                if (!$c || $c['status'] !== 'ready' || empty($c['pdf_path']) || !file_exists(BASE_PATH . $c['pdf_path'])) {
+                    $allDocsReady = false;
+                    $missingDocs[] = "pub_cert:{$item['certificate_id']}";
+                }
+            }
+            if (!empty($item['webinar_certificate_id'])) {
+                $wc = $webCertObj->getById($item['webinar_certificate_id']);
+                if (!$wc || $wc['status'] !== 'ready' || empty($wc['pdf_path']) || !file_exists(BASE_PATH . $wc['pdf_path'])) {
+                    $allDocsReady = false;
+                    $missingDocs[] = "web_cert:{$item['webinar_certificate_id']}";
+                }
+            }
+            if (!empty($item['registration_id'])) {
+                $dStmt = $GLOBALS['db']->prepare("SELECT pdf_path FROM diplomas WHERE registration_id = ? AND recipient_type = 'participant' AND pdf_path IS NOT NULL AND pdf_path != '' LIMIT 1");
+                $dStmt->execute([$item['registration_id']]);
+                $dRow = $dStmt->fetch(PDO::FETCH_ASSOC);
+                if (!$dRow || !file_exists(BASE_PATH . '/uploads/diplomas/' . $dRow['pdf_path'])) {
+                    $allDocsReady = false;
+                    $missingDocs[] = "diploma:reg_{$item['registration_id']}";
+                }
+            }
+        }
+
+        if ($allDocsReady) {
+            // Send success email with all attachments
+            try {
+                sendPaymentSuccessEmail($userId, $orderId);
+
+                // Mark certificate_email_sent for webinar registrations
+                $webRegObj = new WebinarRegistration($GLOBALS['db']);
+                foreach ($orderItems as $item) {
+                    if (!empty($item['webinar_certificate_id'])) {
+                        $wcData = $webCertObj->getById($item['webinar_certificate_id']);
+                        if ($wcData && !empty($wcData['registration_id'])) {
+                            $webRegObj->markCertificateEmailSent($wcData['registration_id']);
+                            logWebhook('INFO', $paymentId, "certificate_email_sent marked for registration {$wcData['registration_id']}", '');
+                        }
+                    }
+                }
+                logWebhook('SUCCESS', $paymentId, "Payment success email sent for order {$orderNumber}", '');
+            } catch (Exception $e) {
+                logWebhook('WARNING', $paymentId, "Email failed for order {$orderNumber}: " . $e->getMessage(), '');
+            }
+        } else {
+            $missing = implode(', ', $missingDocs);
+            logWebhook('ERROR', $paymentId, "EMAIL NOT SENT for order {$orderNumber} - documents not ready: {$missing}", '');
+
         }
 
     } catch (Exception $e) {

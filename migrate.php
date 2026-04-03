@@ -82,7 +82,8 @@ $migrations = [
     '062_restore_webinar_registrations.sql',
     '063_add_olympiad_email_chain.sql',
     '064_add_olympiad_quiz_emails.sql',
-    '065_add_course_ab_variant.sql'
+    '065_add_course_ab_variant.sql',
+    '066_create_course_promo_emails.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';

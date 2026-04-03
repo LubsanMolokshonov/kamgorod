@@ -4,7 +4,7 @@
  * Приглашение на вебинар для пользователей, которые ещё не зарегистрированы
  */
 
-$utm = 'utm_source=email&utm_medium=invite&utm_campaign=webinar-chitatelskie-marafony';
+$utm = 'utm_source=email&utm_medium=invite&utm_campaign=webinar-nastavnik-2026';
 $webinar_link = $site_url . '/vebinar/' . $webinar_slug . '?' . $utm;
 
 $email_subject = "Приглашаем на бесплатный вебинар: {$webinar_title}";

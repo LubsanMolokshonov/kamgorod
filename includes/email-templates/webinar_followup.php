@@ -37,7 +37,7 @@ ob_start();
         <span class="badge" style="display:inline-block; background: #dcfce7; color: #16a34a; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 10px;">Бонус для участников</span>
         <h3 style="margin: 0 0 15px 0; color: #16a34a; font-size: 18px; font-weight: 600;">🎁 Презентация и подарок</h3>
         <p style="color: #4A5568; margin-bottom: 20px;">Скачайте презентацию вебинара и специальный подарок от спикера.</p>
-        <a href="https://clck.ru/3SGVsi" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);">
+        <a href="https://clck.ru/3SaKHd" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);">
             Скачать материалы
         </a>
     </div>
@@ -46,7 +46,7 @@ ob_start();
     <div style="background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border-radius: 16px; padding: 25px; margin: 25px 0; text-align: center; border: 2px dashed #93c5fd;">
         <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 18px; font-weight: 600;">📝 Поделитесь впечатлениями</h3>
         <p style="color: #4A5568; margin-bottom: 20px;">Ваше мнение очень важно для нас! Заполните короткую анкету — это займёт не больше 2 минут.</p>
-        <a href="https://clck.ru/3Rktcu" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
+        <a href="https://clck.ru/3SaLJ4" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
             Заполнить анкету
         </a>
     </div>
@@ -93,16 +93,7 @@ ob_start();
     </div>
     <?php endif; ?>
 
-    <!-- Блок: Приглашение на следующий вебинар -->
-    <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-radius: 16px; padding: 25px; margin: 30px 0; text-align: center; border-left: 4px solid #8b5cf6;">
-        <span class="badge" style="display:inline-block; background: #ede9fe; color: #7c3aed; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 10px;">Следующий вебинар</span>
-        <h3 style="margin: 0 0 10px 0; color: #7c3aed; font-size: 18px; font-weight: 600;">📅 Приглашаем на следующий вебинар</h3>
-        <p style="color: #4A5568; margin-bottom: 5px; font-weight: 600;">«Наставник 2026: новые подходы к сопровождению молодых педагогов»</p>
-        <p style="color: #718096; margin-bottom: 20px; font-size: 14px;">19 марта 2026 в 14:00 МСК. Продолжите повышение квалификации вместе с нами!</p>
-        <a href="https://fgos.pro/vebinar/nastavnik-2026?<?php echo $utm; ?>" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);">
-            Зарегистрироваться бесплатно
-        </a>
-    </div>
+    <!-- Блок: Приглашение на следующий вебинар (скрыт - нет запланированного вебинара) -->
 
     <div class="text-center" style="margin-top: 30px; padding-top: 30px; border-top: 1px solid #e2e8f0;">
         <p style="color: #718096; margin-bottom: 15px;">Следите за новыми вебинарами в личном кабинете</p>
