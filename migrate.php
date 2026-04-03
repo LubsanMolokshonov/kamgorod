@@ -83,7 +83,10 @@ $migrations = [
     '063_add_olympiad_email_chain.sql',
     '064_add_olympiad_quiz_emails.sql',
     '065_add_course_ab_variant.sql',
-    '066_create_course_promo_emails.sql'
+    '066_create_course_promo_emails.sql',
+    '067_create_visits_table.sql',
+    '068_add_utm_to_orders.sql',
+    '069_add_utm_to_registrations.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';

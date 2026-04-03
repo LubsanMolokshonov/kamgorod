@@ -30,7 +30,7 @@ $currentAdmin = Admin::verifySession();
             </div>
 
             <nav class="sidebar-nav">
-                <a href="/admin/index.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) === 'index.php' ? 'active' : ''; ?>">
+                <a href="/admin/index.php" class="nav-item <?php echo $_SERVER['PHP_SELF'] === '/admin/index.php' ? 'active' : ''; ?>">
                     <span class="nav-icon">📊</span>
                     <span>Дашборд</span>
                 </a>
@@ -38,6 +38,16 @@ $currentAdmin = Admin::verifySession();
                 <a href="/admin/competitions/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/competitions/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">🏆</span>
                     <span>Конкурсы</span>
+                </a>
+
+                <a href="/admin/olympiads/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/olympiads/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">🎓</span>
+                    <span>Олимпиады</span>
+                </a>
+
+                <a href="/admin/courses/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/courses/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">📚</span>
+                    <span>Курсы</span>
                 </a>
 
                 <a href="/admin/templates/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/templates/') !== false ? 'active' : ''; ?>">
@@ -58,6 +68,11 @@ $currentAdmin = Admin::verifySession();
                 <a href="/admin/users/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/users/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">👥</span>
                     <span>Пользователи</span>
+                </a>
+
+                <a href="/admin/analytics/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/analytics/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">📈</span>
+                    <span>UTM-аналитика</span>
                 </a>
 
                 <div class="nav-divider"></div>

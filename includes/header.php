@@ -101,6 +101,9 @@ foreach ($allJsonLd as $ld):
 <?php echo json_encode($ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT); ?>
     </script>
 <?php endforeach; ?>
+
+    <!-- Visit Tracker -->
+    <script src="/assets/js/visit-tracker.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/visit-tracker.js'); ?>" defer></script>
 </head>
 <body>
     <header class="header">

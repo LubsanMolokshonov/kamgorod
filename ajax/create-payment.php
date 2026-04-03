@@ -427,6 +427,26 @@ try {
         throw new Exception('Не удалось создать заказ');
     }
 
+    // Сохраняем UTM-атрибуцию на заказе
+    $utmSource = mb_substr(trim($_POST['utm_source'] ?? ''), 0, 255) ?: null;
+    $utmMedium = mb_substr(trim($_POST['utm_medium'] ?? ''), 0, 255) ?: null;
+    $utmCampaign = mb_substr(trim($_POST['utm_campaign'] ?? ''), 0, 255) ?: null;
+    $utmContent = mb_substr(trim($_POST['utm_content'] ?? ''), 0, 255) ?: null;
+    $utmTerm = mb_substr(trim($_POST['utm_term'] ?? ''), 0, 255) ?: null;
+    $visitId = intval($_POST['visit_id'] ?? 0) ?: null;
+
+    if ($utmSource || $utmMedium || $utmCampaign || $utmContent || $utmTerm || $visitId) {
+        $dbObj = new Database($db);
+        $dbObj->update('orders', [
+            'utm_source' => $utmSource,
+            'utm_medium' => $utmMedium,
+            'utm_campaign' => $utmCampaign,
+            'utm_content' => $utmContent,
+            'utm_term' => $utmTerm,
+            'visit_id' => $visitId,
+        ], 'id = ?', [$orderId]);
+    }
+
     // Get order details
     $order = $orderObj->getById($orderId);
     $orderNumber = $order['order_number'];

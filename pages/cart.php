@@ -316,6 +316,14 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.disabled = true;
             btn.textContent = 'Обработка...';
 
+            // Добавляем UTM из sessionStorage для атрибуции
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function(key) {
+                var val = sessionStorage.getItem('_fgos_' + key);
+                if (val) formData.append(key, val);
+            });
+            var visitId = sessionStorage.getItem('_fgos_visit_id');
+            if (visitId) formData.append('visit_id', visitId);
+
             // Send request
             fetch('/ajax/create-payment.php', {
                 method: 'POST',

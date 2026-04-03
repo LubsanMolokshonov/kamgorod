@@ -101,6 +101,25 @@ class Olympiad {
     }
 
     /**
+     * Update olympiad
+     */
+    public function update($id, $data) {
+        $allowedFields = [
+            'title', 'slug', 'description', 'seo_content',
+            'target_audience', 'subject', 'grade',
+            'diploma_price', 'academic_year', 'is_active', 'display_order'
+        ];
+        $updateData = [];
+        foreach ($allowedFields as $field) {
+            if (array_key_exists($field, $data)) {
+                $updateData[$field] = $data[$field];
+            }
+        }
+        if (empty($updateData)) return 0;
+        return $this->db->update('olympiads', $updateData, 'id = ?', [$id]);
+    }
+
+    /**
      * Get filtered olympiads (unified system)
      */
     public function getFilteredOlympiads($filters = []) {
