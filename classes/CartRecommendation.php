@@ -52,13 +52,11 @@ class CartRecommendation {
         $excludeCompetitionIds = [];
         $excludeOlympiadIds = [];
         $excludeWebinarIds = [];
-        $excludeCourseIds = [];
 
         // Detect which product categories are already in the cart
         $cartHasCompetition = false;
         $cartHasOlympiad = false;
         $cartHasWebinar = false;
-        $cartHasCourse = false;
 
         foreach ($allItems as $item) {
             $raw = $item['raw_data'] ?? [];
@@ -71,9 +69,6 @@ class CartRecommendation {
             } elseif ($item['type'] === 'webinar_certificate') {
                 $excludeWebinarIds[] = (int)($raw['webinar_id'] ?? 0);
                 $cartHasWebinar = true;
-            } elseif ($item['type'] === 'course_enrollment') {
-                $excludeCourseIds[] = (int)($raw['course_id'] ?? 0);
-                $cartHasCourse = true;
             }
         }
 
@@ -84,7 +79,6 @@ class CartRecommendation {
         if (!$cartHasCompetition) $notInCart[] = 'competition'; else $inCart[] = 'competition';
         if (!$cartHasOlympiad)    $notInCart[] = 'olympiad';     else $inCart[] = 'olympiad';
         if (!$cartHasWebinar)     $notInCart[] = 'webinar';      else $inCart[] = 'webinar';
-        if (!$cartHasCourse)      $notInCart[] = 'course';       else $inCart[] = 'course';
 
         $slotPriority = array_merge($notInCart, $inCart);
 
@@ -99,7 +93,6 @@ class CartRecommendation {
         $usedCompetitionIds = $excludeCompetitionIds;
         $usedOlympiadIds = $excludeOlympiadIds;
         $usedWebinarIds = $excludeWebinarIds;
-        $usedCourseIds = $excludeCourseIds;
 
         foreach ($slots as $category) {
             $card = null;
@@ -118,11 +111,6 @@ class CartRecommendation {
                 $card = $this->fillWebinarSlot($audienceSlugs, $usedWebinarIds, $userId, $context);
                 if ($card && $card['id'] > 0) {
                     $usedWebinarIds[] = $card['id'];
-                }
-            } elseif ($category === 'course') {
-                $card = $this->fillCourseSlot($audienceSlugs, $usedCourseIds, $context);
-                if ($card) {
-                    $usedCourseIds[] = $card['id'];
                 }
             }
 
