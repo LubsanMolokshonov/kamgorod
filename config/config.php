@@ -59,6 +59,17 @@ if (!defined('BITRIX24_COURSE_PIPELINE_ID')) define('BITRIX24_COURSE_PIPELINE_ID
 if (!defined('BITRIX24_COURSE_STAGE_NEW')) define('BITRIX24_COURSE_STAGE_NEW', 'C108:NEW');
 if (!defined('BITRIX24_COURSE_STAGE_PAID')) define('BITRIX24_COURSE_STAGE_PAID', 'C108:EXECUTING');
 
+// Bitrix24: стадии email-цепочки курсов (pipeline 108)
+if (!defined('BITRIX24_COURSE_STAGE_15MIN')) define('BITRIX24_COURSE_STAGE_15MIN', 'C108:UC_HWWIFQ');
+if (!defined('BITRIX24_COURSE_STAGE_1H'))    define('BITRIX24_COURSE_STAGE_1H', 'C108:UC_1YOFLO');
+if (!defined('BITRIX24_COURSE_STAGE_24H'))   define('BITRIX24_COURSE_STAGE_24H', 'C108:UC_5CUC97');
+if (!defined('BITRIX24_COURSE_STAGE_2D'))    define('BITRIX24_COURSE_STAGE_2D', 'C108:UC_V57398');
+if (!defined('BITRIX24_COURSE_STAGE_3D'))    define('BITRIX24_COURSE_STAGE_3D', 'C108:UC_B7IZAB');
+if (!defined('BITRIX24_COURSE_STAGE_WON'))   define('BITRIX24_COURSE_STAGE_WON', 'C108:WON');
+
+// Секрет для HMAC-подписи скидочных ссылок в email-цепочке курсов
+if (!defined('COURSE_EMAIL_DISCOUNT_SECRET')) define('COURSE_EMAIL_DISCOUNT_SECRET', $_ENV['COURSE_EMAIL_DISCOUNT_SECRET'] ?? '');
+
 // Yandex GPT AI Moderation
 if (!defined('YANDEX_GPT_API_KEY')) define('YANDEX_GPT_API_KEY', $_ENV['YANDEX_GPT_API_KEY'] ?? '');
 if (!defined('YANDEX_GPT_FOLDER_ID')) define('YANDEX_GPT_FOLDER_ID', $_ENV['YANDEX_GPT_FOLDER_ID'] ?? '');
@@ -209,7 +220,8 @@ if (YOOKASSA_MODE === 'sandbox') {
 // Timezone
 date_default_timezone_set('Europe/Moscow');
 
-// A/B-тест цен курсов
-if (!defined('COURSE_AB_TEST_ACTIVE')) define('COURSE_AB_TEST_ACTIVE', true);
+// A/B-тест цен курсов (отключён, победил вариант C — зафиксирована скидка 55%)
+if (!defined('COURSE_AB_TEST_ACTIVE')) define('COURSE_AB_TEST_ACTIVE', false);
 if (!defined('COURSE_AB_TEST_SECRET')) define('COURSE_AB_TEST_SECRET', $_ENV['COURSE_AB_TEST_SECRET'] ?? 'kG7x2pL9qR4mN8vW3jF5');
 if (!defined('COURSE_AB_TEST_COOKIE')) define('COURSE_AB_TEST_COOKIE', 'cab_v');
+if (!defined('COURSE_FIXED_DISCOUNT')) define('COURSE_FIXED_DISCOUNT', 55); // фиксированная скидка в %

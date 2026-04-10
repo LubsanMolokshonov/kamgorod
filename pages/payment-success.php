@@ -476,6 +476,21 @@ include __DIR__ . '/../includes/header.php';
                 }
             });
 
+            // Яндекс Метрика: цель «Оплата курса» с ценностью
+            <?php if (!empty($hasCourseItems)):
+                // Посчитать сумму только курсов
+                $courseTotalAmount = 0;
+                foreach ($order['items'] as $item) {
+                    if (!empty($item['course_enrollment_id'])) {
+                        $courseTotalAmount += (float)$item['price'];
+                    }
+                }
+            ?>
+            if (typeof ym === 'function') {
+                ym(106465857, 'reachGoal', 'oplatakursa', {order_price: <?= $courseTotalAmount ?>});
+            }
+            <?php endif; ?>
+
             // Очистить заказ из pending e-commerce трекинга (событие отправлено)
             try {
                 var pendingOrders = JSON.parse(localStorage.getItem('pending_ecommerce_orders') || '[]');

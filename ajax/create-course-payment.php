@@ -77,7 +77,7 @@ try {
         }
     }
 
-    // A/B-тест цен: применяем множитель варианта к базовой цене
+    // Ценообразование: фиксированная скидка / A/B-тест
     $abVariant = CoursePriceAB::getVariant();
     $price = CoursePriceAB::getAdjustedPrice(floatval($enrollment['price']), $abVariant);
 
@@ -88,6 +88,19 @@ try {
     if ($courseObj->isDiscountEligible($enrollment)) {
         $discountAmount = round($price * 0.10, 2);
         $finalPrice = $price - $discountAmount;
+    }
+
+    // Скидка из email-цепочки (письма 24ч, 2д, 3д) — HMAC-токен
+    if (!$discountAmount) {
+        $emailDiscountToken = $_SESSION['email_discount_token'] ?? null;
+        if ($emailDiscountToken) {
+            require_once __DIR__ . '/../classes/CourseEmailChain.php';
+            $validEnrollmentId = CourseEmailChain::validateDiscountToken($emailDiscountToken);
+            if ($validEnrollmentId && $validEnrollmentId === $enrollmentId) {
+                $discountAmount = round($price * 0.10, 2);
+                $finalPrice = $price - $discountAmount;
+            }
+        }
     }
 
     // Убедимся, что user_id есть в enrollment

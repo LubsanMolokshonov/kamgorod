@@ -377,6 +377,24 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
             logWebhook('WARNING', $paymentId, "Email journey cancel failed: " . $e->getMessage(), '');
         }
 
+        // Cancel course email chain + send payment confirmation for paid enrollments
+        try {
+            require_once BASE_PATH . '/classes/CourseEmailChain.php';
+            $courseEmailChain = new CourseEmailChain($GLOBALS['db']);
+            foreach ($orderItems as $item) {
+                if (!empty($item['course_enrollment_id'])) {
+                    $courseEmailChain->cancelForEnrollment($item['course_enrollment_id']);
+                    logWebhook('INFO', $paymentId, "Course email chain cancelled for enrollment {$item['course_enrollment_id']}", '');
+
+                    // Письмо-подтверждение оплаты курса
+                    $courseEmailChain->sendPaymentConfirmation($item['course_enrollment_id'], $orderNumber);
+                    logWebhook('INFO', $paymentId, "Course payment confirmation sent for enrollment {$item['course_enrollment_id']}", '');
+                }
+            }
+        } catch (Exception $e) {
+            logWebhook('WARNING', $paymentId, "Course email chain error: " . $e->getMessage(), '');
+        }
+
         // Cancel publication email chain for paid certificates
         try {
             $pubChain = new PublicationEmailChain($GLOBALS['db']);

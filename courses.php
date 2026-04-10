@@ -13,6 +13,10 @@ require_once __DIR__ . '/classes/AudienceCategory.php';
 require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/url-helper.php';
 require_once __DIR__ . '/includes/seo-url.php';
+require_once __DIR__ . '/classes/CoursePriceAB.php';
+
+$abVariant = CoursePriceAB::getVariant();
+$discountPercent = CoursePriceAB::getDiscountPercent($abVariant);
 
 // Map ct (URL slug) → program_type (internal key) для SEO URL из .htaccess
 if (isset($_GET['ct'])) {
@@ -314,96 +318,77 @@ include __DIR__ . '/includes/header.php';
 
 <?php include __DIR__ . '/includes/breadcrumbs.php'; ?>
 
-<!-- Hero Section -->
-<section class="hero-landing">
+<!-- Hero Section (course-detail style) -->
+<section class="hero-landing catalog-hero">
     <div class="container">
-        <div class="hero-content">
-            <h1 class="hero-title"><?php echo htmlspecialchars($h1Text); ?></h1>
+        <div class="hero-main-grid">
+            <div class="hero-left-col">
+                <div class="hero-badges">
+                    <span class="hero-category">Повышение квалификации</span>
+                    <span class="hero-category">Переподготовка</span>
+                    <span class="hero-category">Дистанционно</span>
+                </div>
 
-            <p class="hero-subtitle">Дистанционные курсы для педагогов с удостоверением установленного образца. Одна из первых аккредитованных организаций в России. Данные вносятся в ФИС ФРДО.</p>
+                <h1 class="hero-title"><?php echo htmlspecialchars($h1Text); ?></h1>
 
-            <div class="hero-cta-row" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-                <a href="#courses" class="btn btn-hero">Выбрать курс</a>
-                <button class="btn-hero-consultation" onclick="openConsultationModal()">Получить консультацию</button>
+                <div class="hero-attestation-card">
+                    <div class="hero-attestation-header">
+                        <img src="/assets/images/skolkovo.webp" alt="Сколково" class="hero-attestation-logo">
+                        <span class="hero-attestation-badge-text">Фонд «Сколково» — разрешение № 068</span>
+                    </div>
+                    <h2 class="hero-attestation-title">С нашими курсами вы <span>100% пройдёте аттестацию</span></h2>
+                    <p class="hero-attestation-desc">Мы получили разрешение на осуществление образовательной деятельности от Фонда «Сколково» по <strong>66 образовательным программам</strong>. Таких организаций в России — единицы. Ваше удостоверение будет подтверждено на федеральном уровне.</p>
+                    <ul class="hero-features-list">
+                        <li>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Документ примут при любой аттестации</span>
+                        </li>
+                        <li>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Удостоверение видно на Госуслугах</span>
+                        </li>
+                        <li>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Данные вносятся в ФИС ФРДО</span>
+                        </li>
+                        <li>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>66 аккредитованных программ</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="hero-bottom-row">
+                    <div class="hero-cta-row">
+                        <a href="#courses" class="btn-hero-cta">Выбрать курс</a>
+                        <button class="btn-hero-consultation" onclick="openConsultationModal()">Получить консультацию</button>
+                    </div>
+                    <div class="hero-frdo-badge">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        <span>Вносится в ФИС ФРДО — видно на Госуслугах</span>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="hero-right">
-            <div class="hero-certificate-preview">
-                <img src="/assets/images/certificates/course-certificate-sample.webp"
-                     alt="Образец удостоверения о повышении квалификации"
-                     class="hero-certificate-img"
-                     width="800" height="566"
+            <div class="hero-skolkovo-doc" onclick="openSkolkovoModal()">
+                <img src="/assets/images/razreshenie-skolkovo-068.png"
+                     alt="Разрешение Сколково № 068 на образовательную деятельность"
+                     class="hero-skolkovo-doc-img"
                      loading="eager">
-            </div>
-
-            <div class="hero-features hero-features--badges">
-                <div class="feature-card feature-card--badge">
-                    <div class="feature-logo">
-                        <img src="/assets/images/skolkovo.webp" alt="Сколково" width="70" height="70">
-                    </div>
-                    <div class="feature-text">
-                        <span class="feature-label">Резидент</span>
-                        <span class="feature-label">Сколково</span>
-                    </div>
-                </div>
-
-                <div class="feature-card feature-card--badge">
-                    <div class="feature-logo">
-                        <img src="/assets/images/eagle_s.svg" alt="Лицензия" width="70" height="70">
-                    </div>
-                    <div class="feature-text">
-                        <span class="feature-label">Лицензия на</span>
-                        <span class="feature-label">образовательную деятельность</span>
-                    </div>
-                </div>
+                <span class="hero-skolkovo-doc-caption">Разрешение № 068 — нажмите, чтобы увеличить</span>
             </div>
         </div>
     </div>
 </section>
 
-
-
-<!-- Блок: Изменения в законодательстве -->
-<div class="container">
-    <div class="law-alert">
-        <div class="law-alert__header">
-            <div class="law-alert__icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#667eea"/>
-                </svg>
-            </div>
-            <div class="law-alert__title">
-                <h2>С 1 сентября 2025 года изменились правила повышения квалификации</h2>
-                <p class="law-alert__subtitle">Федеральный закон от 21.04.2025 № 86-ФЗ — новая часть 5.2 статьи 47 Закона «Об образовании» (273-ФЗ)</p>
-            </div>
-        </div>
-
-        <div class="law-alert__body">
-            <div class="law-alert__col law-alert__col--risks">
-                <h3>Риски обучения в неуполномоченных организациях</h3>
-                <ul class="law-alert__list">
-                    <li>Документ не примут при аттестации и проверке Рособрнадзора</li>
-                    <li>Работодатель вправе не засчитать повышение квалификации</li>
-                    <li>Запись в ФИС ФРДО не подтверждает право организации обучать педагогов</li>
-                    <li>Потеря денег и времени — придётся переучиваться заново</li>
-                </ul>
-            </div>
-
-            <div class="law-alert__col law-alert__col--trust">
-                <h3>Почему «ФГОС-практикум» — надёжный выбор</h3>
-                <ul class="law-alert__list law-alert__list--check">
-                    <li>Разрешение Фонда «Сколково» № 068 на образовательную деятельность</li>
-                    <li>Все данные вносятся в ФИС ФРДО в течение 30 дней</li>
-                    <li>Удостоверение установленного образца — примут при любой проверке</li>
-                    <li>Действующая лицензия на образовательную деятельность</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="law-alert__footer">
-            <span class="law-alert__ref">Основание: ч. 5.2 ст. 47 Федерального закона от 29.12.2012 № 273-ФЗ «Об образовании в РФ» (в ред. ФЗ от 21.04.2025 № 86-ФЗ), Постановление Правительства РФ № 850</span>
-        </div>
+<!-- Skolkovo Permission Modal -->
+<div class="skolkovo-modal-overlay" id="skolkovoModal">
+    <div class="skolkovo-modal">
+        <button class="close-modal" onclick="closeSkolkovoModal()">&times;</button>
+        <img src="/assets/images/razreshenie-skolkovo-068.png"
+             alt="Разрешение Сколково № 068"
+             class="skolkovo-modal-img">
+        <p class="skolkovo-modal-caption">Разрешение № 068 от 16.03.2026 на осуществление образовательной деятельности</p>
     </div>
 </div>
 
@@ -492,6 +477,19 @@ include __DIR__ . '/includes/header.php';
                             <div class="course-card-feature">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
                                 Удостоверение в ФИС ФРДО
+                            </div>
+
+                            <?php
+                                $basePrice = (float)$course['price'];
+                                $abPrice = CoursePriceAB::getAdjustedPrice($basePrice, $abVariant);
+                            ?>
+                            <div class="competition-price">
+                                <?php if ($discountPercent > 0): ?>
+                                    <span class="price-old"><?= number_format($basePrice, 0, ',', ' ') ?> ₽</span>
+                                    <span class="price-current"><?= number_format($abPrice, 0, ',', ' ') ?> ₽</span>
+                                <?php else: ?>
+                                    <span class="price-current"><?= number_format($abPrice, 0, ',', ' ') ?> ₽</span>
+                                <?php endif; ?>
                             </div>
 
                             <a href="/kursy/<?php echo htmlspecialchars($course['slug']); ?>/" class="btn btn-primary btn-block">
@@ -707,7 +705,20 @@ document.getElementById('consultationModal').addEventListener('click', function(
     if (e.target === this) closeConsultationModal();
 });
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeConsultationModal();
+    if (e.key === 'Escape') { closeConsultationModal(); closeSkolkovoModal(); }
+});
+
+// Skolkovo modal
+function openSkolkovoModal() {
+    document.getElementById('skolkovoModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+function closeSkolkovoModal() {
+    document.getElementById('skolkovoModal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+document.getElementById('skolkovoModal').addEventListener('click', function(e) {
+    if (e.target === this) closeSkolkovoModal();
 });
 
 // Phone mask
@@ -822,6 +833,17 @@ document.addEventListener('DOMContentLoaded', function() {
     var allCourses = <?php echo json_encode(array_slice($allCourses, $perPage), JSON_UNESCAPED_UNICODE); ?>;
     var perPage = <?php echo $perPage; ?>;
     var currentOffset = 0;
+    var discountPercent = <?= $discountPercent ?>;
+
+    function formatPrice(num) {
+        return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+    function calcAbPrice(basePrice) {
+        if (discountPercent > 0) {
+            return Math.round(basePrice * (1 - discountPercent / 100));
+        }
+        return basePrice;
+    }
 
     if (loadMoreBtn && allCourses.length > 0) {
         loadMoreBtn.addEventListener('click', function() {
@@ -847,6 +869,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<div class="course-card-feature">' +
                     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>' +
                     ' Удостоверение в ФИС ФРДО</div>' +
+                    '<div class="competition-price">' +
+                    (discountPercent > 0
+                        ? '<span class="price-old">' + formatPrice(course.price) + ' ₽</span> <span class="price-current">' + formatPrice(calcAbPrice(course.price)) + ' ₽</span>'
+                        : '<span class="price-current">' + formatPrice(course.price) + ' ₽</span>') +
+                    '</div>' +
                     '<a href="/kursy/' + slug + '/" class="btn btn-primary btn-block">Смотреть программу</a>' +
                     '</div>';
             });

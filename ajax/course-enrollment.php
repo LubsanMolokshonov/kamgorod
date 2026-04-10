@@ -130,7 +130,7 @@ try {
     if ($ymUid) $enrollmentData['ym_uid'] = $ymUid;
     if ($sourcePage) $enrollmentData['source_page'] = $sourcePage;
 
-    // A/B-тест цен
+    // Ценообразование (фиксированная скидка / A/B-тест)
     $abVariant = CoursePriceAB::getVariant();
     $enrollmentData['ab_variant'] = $abVariant;
 

@@ -235,6 +235,20 @@ class Olympiad {
     }
 
     /**
+     * Get audience categories for an olympiad (Level 0)
+     */
+    public function getAudienceCategories($olympiadId) {
+        return $this->db->query(
+            "SELECT ac.*
+             FROM audience_categories ac
+             JOIN olympiad_audience_categories oac ON ac.id = oac.category_id
+             WHERE oac.olympiad_id = ? AND ac.is_active = 1
+             ORDER BY ac.display_order ASC",
+            [$olympiadId]
+        );
+    }
+
+    /**
      * Set audience categories for an olympiad
      */
     public function setAudienceCategories($olympiadId, $categoryIds) {

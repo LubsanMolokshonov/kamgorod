@@ -39,10 +39,12 @@ if (!$course) {
     exit;
 }
 
-// A/B-тест цен
+// Ценообразование (фиксированная скидка / A/B-тест)
 $abVariant = CoursePriceAB::getVariant();
 $abPrice = CoursePriceAB::getAdjustedPrice((float)$course['price'], $abVariant);
 $abBasePrice = (float)$course['price'];
+$hasDiscount = $abVariant !== 'A';
+$discountPercent = CoursePriceAB::getDiscountPercent($abVariant);
 
 // Get course data
 $experts = $courseObj->getExperts($course['id']);
@@ -140,10 +142,11 @@ include __DIR__ . '/../includes/header.php';
 
 <style>
 /* Course Detail - reuses competition-detail patterns */
+/* ===== HERO (merged) ===== */
 .landing-page { background: var(--bg-light); margin-top: -80px; }
 
 .hero-landing {
-    padding: 100px 0 60px; margin-top: -80px; position: relative; overflow: hidden; color: #fff;
+    padding: 100px 0 20px; margin-top: -80px; position: relative; overflow: hidden; color: #fff;
     background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
 }
 .hero-landing::before {
@@ -152,22 +155,84 @@ include __DIR__ . '/../includes/header.php';
     background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%); border-radius: 0 0 80px 80px; z-index: 0;
 }
 .hero-landing .container {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    position: relative; z-index: 1; padding: 100px 20px 0; gap: 40px;
+    display: flex; flex-direction: column;
+    position: relative; z-index: 1; padding: 100px 20px 20px;
+    max-width: 1440px;
 }
-.hero-content { flex: 0 0 58%; color: white; padding-top: 40px; }
-.hero-badges { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 32px; }
+
+/* Badges */
+.hero-badges { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 10px; }
 .hero-category {
     display: inline-block; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
     padding: 8px 20px; border-radius: 8px; font-size: 16px; font-weight: 500; color: rgba(255,255,255,0.9);
 }
-.hero-title { font-size: 46px; font-weight: 700; line-height: 1.15; margin-bottom: 24px; color: white; }
-.hero-gift-box {
-    background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 12px;
-    padding: 16px 20px; margin-bottom: 32px; display: inline-block; border: 1px solid rgba(255,255,255,0.15); max-width: fit-content;
+
+/* Title */
+.hero-title { font-size: 35px; font-weight: 700; line-height: 1.15; margin-bottom: 10px; color: white; }
+
+/* Middle grid */
+.hero-main-grid {
+    display: grid; grid-template-columns: 65fr 35fr; gap: 40px;
+    align-items: start; margin-bottom: 14px;
 }
-.gift-text { font-size: 16px; color: rgba(255,255,255,0.9); line-height: 1.5; margin: 0; }
-.hero-cta-row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+
+/* Attestation card */
+.hero-attestation-card {
+    background: rgba(255,255,255,0.08); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 24px;
+    padding: 20px 24px;
+}
+.hero-attestation-header {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.1); padding: 6px 14px;
+    border-radius: 8px; margin-bottom: 8px;
+}
+.hero-attestation-logo { width: 32px; height: 32px; object-fit: contain; }
+.hero-attestation-badge-text { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9); }
+.hero-attestation-title {
+    font-size: 26px; font-weight: 700; color: white;
+    margin: 0 0 12px; line-height: 1.3;
+}
+.hero-attestation-title span { color: #4ade80; }
+.hero-attestation-desc {
+    font-size: 15px; color: rgba(255,255,255,0.8); line-height: 1.6; margin-bottom: 8px;
+}
+.hero-attestation-desc strong { color: white; }
+
+/* Feature checklist */
+.hero-features-list {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.hero-features-list li {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 14px; color: rgba(255,255,255,0.9); line-height: 1.4;
+}
+.hero-features-list li svg { flex-shrink: 0; margin-top: 2px; }
+
+/* Left column wrapper */
+.hero-left-col { display: flex; flex-direction: column; gap: 20px; }
+
+/* Skolkovo doc thumbnail */
+.hero-skolkovo-doc {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    cursor: pointer; transition: transform 0.3s ease;
+}
+.hero-skolkovo-doc:hover { transform: scale(1.03); }
+.hero-skolkovo-doc-img {
+    width: 100%; border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15);
+}
+.hero-skolkovo-doc-caption {
+    font-size: 12px; color: rgba(255,255,255,0.6); text-align: center;
+}
+
+/* Bottom row */
+.hero-bottom-row {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 20px;
+}
+.hero-cta-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .btn-hero-cta {
     display: inline-block; background: var(--gradient-primary); color: white; font-size: 16px; font-weight: 600;
     padding: 18px 36px; border-radius: var(--border-radius-button); text-decoration: none;
@@ -180,31 +245,36 @@ include __DIR__ . '/../includes/header.php';
     transition: all 0.3s ease; border: 2px solid white; cursor: pointer;
 }
 .btn-hero-consultation:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
-.skolkovo-badge { display: flex; align-items: center; gap: 12px; }
-.skolkovo-logo { height: 48px; width: auto; }
-.skolkovo-text { font-size: 14px; font-weight: 600; color: white; line-height: 1.3; }
-
-.hero-diploma { flex: 0 0 38%; position: relative; display: flex; align-items: center; justify-content: center; padding: 40px 0; }
-.hero-diploma-img {
-    width: 100%; height: auto; border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+.hero-frdo-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.08); padding: 10px 20px;
+    border-radius: 50px; font-size: 14px; color: rgba(255,255,255,0.9);
 }
 
-/* Benefits */
-.competition-benefits-section {
-    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%); padding: 0 0 80px;
+/* Skolkovo Document Modal */
+.skolkovo-modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+    z-index: 9999; align-items: center; justify-content: center;
 }
-.competition-benefits-section .container { max-width: 1440px; padding: 0 80px; }
-.benefits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-.benefit-card {
-    background: white; border-radius: 24px; padding: 28px 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1); transition: all 0.3s ease;
-    display: flex; flex-direction: column; gap: 12px;
+.skolkovo-modal-overlay.active { display: flex; }
+.skolkovo-modal {
+    background: white; border-radius: 32px; padding: 32px; max-width: 700px; width: 90%;
+    position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    max-height: 90vh; overflow-y: auto;
 }
-.benefit-card:hover { transform: translateY(-5px); box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
-.benefit-icon { font-size: 32px; }
-.benefit-card h3 { font-size: 16px; font-weight: 600; color: #2C3E50; margin: 0; line-height: 1.4; }
-.benefit-card p { font-size: 14px; color: #64748B; margin: 0; line-height: 1.5; }
+.skolkovo-modal .close-modal {
+    position: absolute; top: 16px; right: 20px; background: none; border: none;
+    font-size: 28px; color: #9ca3af; cursor: pointer; line-height: 1; z-index: 1;
+}
+.skolkovo-modal .close-modal:hover { color: var(--text-dark); }
+.skolkovo-modal-img {
+    width: 100%; height: auto; border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+.skolkovo-modal-caption {
+    text-align: center; font-size: 14px; color: #6b7280; margin-top: 16px;
+}
 
 /* About Section */
 .about-section-modern { padding: 80px 0; }
@@ -406,16 +476,12 @@ include __DIR__ . '/../includes/header.php';
 
 /* --- Tablet (1024px) --- */
 @media (max-width: 1024px) {
-    .hero-landing .container { padding: 80px 40px 0; }
+    .hero-landing .container { padding: 80px 40px 40px; }
     .hero-title { font-size: 38px; }
-    .hero-content { flex: 0 0 55%; }
-    .hero-diploma { flex: 0 0 42%; }
-    .benefits-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .hero-main-grid { grid-template-columns: 65fr 35fr; gap: 32px; }
     .section-title { font-size: 36px; }
     .about-section-modern, .nominations-section, .experts-section,
     .outcomes-section, .price-cta-section { padding: 60px 0; }
-    .competition-benefits-section { padding: 0 0 60px; }
-    .competition-benefits-section .container { padding: 0 40px; }
     .licenses-grid { gap: 16px; }
     .license-card { padding: 24px; }
     .faq-section { padding: 50px 40px; }
@@ -424,12 +490,11 @@ include __DIR__ . '/../includes/header.php';
 
 /* --- Landscape Tablet (960px) --- */
 @media (max-width: 960px) {
-    .hero-landing .container { flex-direction: column; padding: 80px 20px 40px; }
-    .hero-content { flex: none; width: 100%; }
-    .hero-diploma { display: none; }
+    .hero-landing .container { padding: 80px 20px 40px; }
     .hero-title { font-size: 36px; }
+    .hero-main-grid { grid-template-columns: 1fr; gap: 24px; }
+    .hero-skolkovo-doc { max-width: 100%; }
     .about-content-wrapper { grid-template-columns: 1fr; }
-    .competition-benefits-section .container { padding: 0 20px; }
     .experts-grid { gap: 24px; }
     .expert-card { width: 240px; }
     .licenses-grid { grid-template-columns: 1fr; }
@@ -446,28 +511,23 @@ include __DIR__ . '/../includes/header.php';
     /* Hero */
     .hero-landing { padding: 80px 0 30px; }
     .hero-landing::before { border-radius: 0 0 40px 40px; }
-    .hero-landing .container { padding: 80px 16px 0; gap: 20px; }
-    .hero-title { font-size: 26px; margin-bottom: 20px; }
+    .hero-landing .container { padding: 80px 16px 24px; }
+    .hero-title { font-size: 26px; margin-bottom: 24px; }
     .hero-badges { gap: 8px; justify-content: flex-start; }
     .hero-category { font-size: 11px; padding: 6px 12px; }
-    .hero-gift-box { margin-bottom: 20px; padding: 12px 16px; }
-    .gift-text { font-size: 14px; }
-    .hero-cta-row { gap: 12px; }
-    .btn-hero-cta { font-size: 14px; padding: 14px 28px; width: 100%; text-align: center; }
-    .btn-hero-consultation { padding: 12px 24px; font-size: 14px; width: 100%; text-align: center; }
-    .skolkovo-badge { gap: 10px; }
-    .skolkovo-logo { height: 40px; }
-    .skolkovo-text { font-size: 12px; }
-
-    /* Benefits */
-    .competition-benefits-section { padding: 0 0 40px; }
-    .competition-benefits-section .container { padding: 0 16px; }
-    .benefits-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .benefit-card { padding: 18px 14px; border-radius: 16px; gap: 8px; }
-    .benefit-card h3 { font-size: 14px; }
-    .benefit-card p { font-size: 13px; }
-    .benefit-icon { font-size: 24px; }
-    .benefit-icon svg { width: 24px; height: 24px; }
+    .hero-main-grid { gap: 20px; }
+    .hero-attestation-card { padding: 20px; border-radius: 16px; }
+    .hero-attestation-title { font-size: 20px; }
+    .hero-attestation-desc { font-size: 14px; }
+    .hero-features-list { grid-template-columns: 1fr; gap: 8px; }
+    .hero-features-list li { font-size: 13px; }
+    .hero-skolkovo-doc { max-width: 180px; }
+    .hero-bottom-row { flex-direction: column; align-items: stretch; }
+    .hero-cta-row { flex-direction: column; }
+    .btn-hero-cta { width: 100%; text-align: center; font-size: 14px; padding: 14px 28px; }
+    .btn-hero-consultation { width: 100%; text-align: center; font-size: 14px; padding: 12px 24px; }
+    .hero-frdo-badge { justify-content: center; font-size: 13px; }
+    .skolkovo-modal { padding: 20px; border-radius: 20px; }
 
     /* Section titles */
     .section-title { font-size: 28px; margin-bottom: 12px; }
@@ -571,14 +631,13 @@ include __DIR__ . '/../includes/header.php';
 /* --- Small phones (480px) --- */
 @media (max-width: 480px) {
     .container { padding: 0 12px; }
-    .hero-landing .container { padding: 80px 12px 0; }
+    .hero-landing .container { padding: 80px 12px 20px; }
     .hero-title { font-size: 24px; }
     .section-title { font-size: 24px; }
     .hero-badges { gap: 6px; }
     .hero-category { font-size: 10px; padding: 4px 10px; }
-    .benefit-card { padding: 14px 12px; }
-    .benefit-card h3 { font-size: 13px; }
-    .benefit-card p { font-size: 12px; }
+    .hero-attestation-card { padding: 16px; }
+    .hero-attestation-title { font-size: 18px; }
     .price-cta-container .price-amount { font-size: 38px; }
     .expert-card { padding: 20px 16px; }
     .nomination-card p { font-size: 13px; }
@@ -699,75 +758,75 @@ include __DIR__ . '/../includes/header.php';
 <!-- Hero Section -->
 <section class="hero-landing">
     <div class="container">
-        <div class="hero-content">
-            <div class="hero-badges">
-                <span class="hero-category"><?php echo htmlspecialchars(Course::getProgramTypeLabel($course['program_type'])); ?></span>
-                <span class="hero-category"><?php echo Course::formatHours($course['hours']); ?></span>
-                <span class="hero-category">Дистанционно</span>
-            </div>
+        <div class="hero-main-grid">
+            <div class="hero-left-col">
+                <div class="hero-badges">
+                    <span class="hero-category"><?php echo htmlspecialchars(Course::getProgramTypeLabel($course['program_type'])); ?></span>
+                    <span class="hero-category"><?php echo Course::formatHours($course['hours']); ?></span>
+                    <span class="hero-category">Дистанционно</span>
+                </div>
 
-            <h1 class="hero-title"><?php echo htmlspecialchars($course['title']); ?></h1>
+                <h1 class="hero-title"><?php echo htmlspecialchars($course['title']); ?></h1>
+                <div class="hero-attestation-card">
+                    <div class="hero-attestation-header">
+                        <img src="/assets/images/skolkovo.webp" alt="Сколково" class="hero-attestation-logo">
+                        <span class="hero-attestation-badge-text">Фонд «Сколково» — разрешение № 068</span>
+                    </div>
+                    <h2 class="hero-attestation-title">С нашими курсами вы <span>100% пройдёте аттестацию</span></h2>
+                    <p class="hero-attestation-desc">Мы получили разрешение на осуществление образовательной деятельности от Фонда «Сколково» по <strong>66 образовательным программам</strong>. Таких организаций в России — единицы. Ваше удостоверение будет подтверждено на федеральном уровне.</p>
+                    <ul class="hero-features-list">
+                        <li>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Документ примут при любой аттестации</span>
+                        </li>
+                        <li>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Удостоверение видно на Госуслугах</span>
+                        </li>
+                        <li>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Данные вносятся в ФИС ФРДО</span>
+                        </li>
+                        <li>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>66 аккредитованных программ</span>
+                        </li>
+                    </ul>
+                </div>
 
-            <div class="hero-gift-box">
-                <p class="gift-text">Удостоверение установленного образца. Вносится в ФИС ФРДО. Начало обучения — сразу после оплаты.</p>
-            </div>
-
-            <div class="hero-cta-row">
-                <button class="btn-hero-cta" onclick="openEnrollmentModal()">Записаться на курс</button>
-                <button class="btn-hero-consultation" onclick="openConsultationModal()">Получить консультацию</button>
-
-                <div class="skolkovo-badge">
-                    <img src="/assets/images/skolkovo.webp" alt="Сколково" class="skolkovo-logo">
-                    <div class="skolkovo-text">Резидент<br>Сколково</div>
+                <div class="hero-bottom-row">
+                    <div class="hero-cta-row">
+                        <button class="btn-hero-cta" onclick="openEnrollmentModal()">Записаться на курс</button>
+                        <button class="btn-hero-consultation" onclick="openConsultationModal()">Получить консультацию</button>
+                    </div>
+                    <div class="hero-frdo-badge">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        <span>Вносится в ФИС ФРДО — видно на Госуслугах</span>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="hero-diploma">
-            <img src="/assets/images/certificates/course-certificate-sample.webp"
-                 alt="Образец удостоверения о повышении квалификации"
-                 class="hero-diploma-img"
-                 width="800" height="566"
-                 loading="eager">
-        </div>
-    </div>
-</section>
-
-<!-- Benefits -->
-<section class="competition-benefits-section">
-    <div class="container">
-        <div class="benefits-grid">
-            <div class="benefit-card">
-                <div class="benefit-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                </div>
-                <h3>Дистанционный формат</h3>
-                <p>Обучайтесь из дома в удобном темпе, без отрыва от работы</p>
-            </div>
-            <div class="benefit-card">
-                <div class="benefit-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
-                </div>
-                <h3>Удостоверение установленного образца</h3>
-                <p>Официальный документ, принимаемый при аттестации</p>
-            </div>
-            <div class="benefit-card">
-                <div class="benefit-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-                </div>
-                <h3>В реестре ФИС ФРДО</h3>
-                <p>Данные вносятся в Федеральный реестр — удостоверение примут при аттестации и проверке Рособрнадзора</p>
-            </div>
-            <div class="benefit-card">
-                <div class="benefit-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2C3E50" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                </div>
-                <h3>Начало — сразу после оплаты</h3>
-                <p>Мгновенный доступ к учебным материалам 24/7</p>
+            <div class="hero-skolkovo-doc" onclick="openSkolkovoModal()">
+                <img src="/assets/images/razreshenie-skolkovo-068.png"
+                     alt="Разрешение Сколково № 068 на образовательную деятельность"
+                     class="hero-skolkovo-doc-img"
+                     loading="eager">
+                <span class="hero-skolkovo-doc-caption">Разрешение № 068 — нажмите, чтобы увеличить</span>
             </div>
         </div>
     </div>
 </section>
+
+<!-- Skolkovo Permission Modal -->
+<div class="skolkovo-modal-overlay" id="skolkovoModal">
+    <div class="skolkovo-modal">
+        <button class="close-modal" onclick="closeSkolkovoModal()">&times;</button>
+        <img src="/assets/images/razreshenie-skolkovo-068.png"
+             alt="Разрешение Сколково № 068"
+             class="skolkovo-modal-img">
+        <p class="skolkovo-modal-caption">Разрешение № 068 от 16.03.2026 на осуществление образовательной деятельности</p>
+    </div>
+</div>
 
 <!-- About Course -->
 <section class="about-section-modern">
@@ -833,9 +892,10 @@ include __DIR__ . '/../includes/header.php';
                     <div class="info-card-content">
                         <div class="info-card-title" style="color: rgba(255,255,255,0.8);">Стоимость</div>
                         <div class="info-card-value" style="color: white; font-size: 24px;">
-                            <?php if ($abVariant !== 'A'): ?>
+                            <?php if ($hasDiscount): ?>
                                 <span style="text-decoration: line-through; opacity: 0.6; font-size: 16px;"><?= number_format($abBasePrice, 0, ',', ' ') ?> ₽</span>
                                 <?= number_format($abPrice, 0, ',', ' ') ?> ₽
+                                <span style="background: #ff4444; color: white; font-size: 12px; padding: 2px 8px; border-radius: 12px; margin-left: 6px; vertical-align: middle;">-<?= $discountPercent ?>%</span>
                             <?php else: ?>
                                 <?= number_format($abPrice, 0, ',', ' ') ?> ₽
                             <?php endif; ?>
@@ -977,9 +1037,10 @@ include __DIR__ . '/../includes/header.php';
             <div class="price-cta-content">
                 <div class="price-label">Стоимость обучения</div>
                 <div class="price-amount">
-                    <?php if ($abVariant !== 'A'): ?>
+                    <?php if ($hasDiscount): ?>
                         <span style="text-decoration: line-through; opacity: 0.5; font-size: 0.5em;"><?= number_format($abBasePrice, 0, ',', ' ') ?> ₽</span><br>
                         <?= number_format($abPrice, 0, ',', ' ') ?> ₽
+                        <span style="background: #ff4444; color: white; font-size: 0.35em; padding: 4px 12px; border-radius: 16px; margin-left: 8px; vertical-align: middle;">-<?= $discountPercent ?>%</span>
                     <?php else: ?>
                         <?= number_format($abPrice, 0, ',', ' ') ?> ₽
                     <?php endif; ?>
@@ -999,7 +1060,7 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                     <div class="price-feature">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                        В ФИС ФРДО — примут при проверке
+                        В ФИС ФРДО и на Госуслугах
                     </div>
                 </div>
 
@@ -1079,7 +1140,11 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="faq-item">
                 <div class="faq-question"><h3>Принимает ли работодатель такое удостоверение?</h3><div class="faq-icon">+</div></div>
-                <div class="faq-answer">Да. Мы имеем разрешение Сколково №068 — таких организаций в России менее 100. Удостоверение принимается всеми образовательными организациями, учитывается при аттестации и проверках Рособрнадзора. Все данные вносятся в ФИС ФРДО.</div>
+                <div class="faq-answer">Да. Мы имеем разрешение Фонда «Сколково» № 068 на осуществление образовательной деятельности по 66 программам — таких организаций в России единицы. Удостоверение принимается всеми образовательными организациями, учитывается при аттестации и проверках Рособрнадзора. Все данные вносятся в ФИС ФРДО.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question"><h3>Увижу ли я удостоверение на Госуслугах?</h3><div class="faq-icon">+</div></div>
+                <div class="faq-answer">Да. Данные о вашем удостоверении вносятся в ФИС ФРДО в течение 30 дней после завершения обучения. После этого вы сможете увидеть запись о повышении квалификации в личном кабинете на Госуслугах.</div>
             </div>
             <div class="faq-item">
                 <div class="faq-question"><h3>Когда можно начать обучение?</h3><div class="faq-icon">+</div></div>
@@ -1219,9 +1284,23 @@ function closeEnrollmentModal() {
 document.getElementById('enrollmentModal').addEventListener('click', function(e) {
     if (e.target === this) closeEnrollmentModal();
 });
+
+// Skolkovo permission modal
+function openSkolkovoModal() {
+    document.getElementById('skolkovoModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+function closeSkolkovoModal() {
+    document.getElementById('skolkovoModal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+document.getElementById('skolkovoModal').addEventListener('click', function(e) {
+    if (e.target === this) closeSkolkovoModal();
+});
+
 // Close on Escape
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeEnrollmentModal(); closeConsultationModal(); }
+    if (e.key === 'Escape') { closeEnrollmentModal(); closeConsultationModal(); closeSkolkovoModal(); }
 });
 
 // Phone mask +7 (___) ___-__-__
@@ -1303,6 +1382,7 @@ function submitConsultation(e) {
     .then(function(res) { return res.json(); })
     .then(function(data) {
         if (data.success) {
+            if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'zayavkakurs'); }
             document.getElementById('consultationForm').style.display = 'none';
             document.getElementById('consultationSuccess').style.display = 'block';
         } else {
@@ -1335,6 +1415,7 @@ function submitConsultationInline(e) {
     .then(function(res) { return res.json(); })
     .then(function(data) {
         if (data.success) {
+            if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'zayavkakurs'); }
             form.style.display = 'none';
             form.parentElement.querySelector('.consultation-inline-success').style.display = 'flex';
         } else {
@@ -1377,6 +1458,8 @@ function submitEnrollment(e) {
         method: 'POST',
         body: formData
     }).then(function(r) { return r.json(); }).then(function(response) {
+        // Яндекс Метрика: цель «Заявка на курс»
+        if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'zayavkakurs'); }
         // E-commerce: add (заявка на курс)
         if (response.ecommerce) {
             window.dataLayer = window.dataLayer || [];
@@ -1423,7 +1506,7 @@ window.dataLayer.push({
 });
 </script>
 
-<script>ym(106465857, 'params', {course_ab_discount: '<?= CoursePriceAB::getDiscountPercent($abVariant) ?>'});</script>
+<script>ym(106465857, 'params', {course_discount: '<?= $discountPercent ?>'});</script>
 
 <script>
 // Фиксированная мобильная кнопка

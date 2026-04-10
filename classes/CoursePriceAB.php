@@ -1,13 +1,15 @@
 <?php
 /**
- * A/B-тест цен курсов
+ * Ценообразование курсов
  *
- * Серверное назначение варианта через подписанную cookie.
- * Варианты: A (100%), B (50%), C (30% от базовой цены).
+ * Режим 1 (текущий): Фиксированная скидка COURSE_FIXED_DISCOUNT% на все курсы.
+ * Режим 2 (отключён): A/B-тест цен через подписанную cookie.
+ *
+ * Варианты: A (100%), B (50%), C (30%), D (фиксированная скидка).
  */
 class CoursePriceAB
 {
-    private const VARIANTS = ['A', 'B', 'C'];
+    private const VARIANTS = ['A', 'B', 'C', 'D'];
     private const MULTIPLIERS = [
         'A' => 1.0,
         'B' => 0.5,
@@ -17,10 +19,16 @@ class CoursePriceAB
 
     /**
      * Получить вариант текущего пользователя.
-     * Читает подписанную cookie; если нет — назначает случайно и ставит cookie.
+     * При фиксированной скидке всегда возвращает 'D'.
+     * При активном A/B-тесте читает cookie; если нет — назначает случайно.
      */
     public static function getVariant(): string
     {
+        // Фиксированная скидка — всегда вариант D
+        if (self::hasFixedDiscount()) {
+            return 'D';
+        }
+
         if (!defined('COURSE_AB_TEST_ACTIVE') || !COURSE_AB_TEST_ACTIVE) {
             return 'A';
         }
@@ -36,7 +44,8 @@ class CoursePriceAB
         }
 
         // Назначить случайно
-        $variant = self::VARIANTS[random_int(0, count(self::VARIANTS) - 1)];
+        $abVariants = ['A', 'B', 'C'];
+        $variant = $abVariants[random_int(0, count($abVariants) - 1)];
 
         // Установить cookie
         $signed = self::sign($variant);
@@ -55,11 +64,19 @@ class CoursePriceAB
     }
 
     /**
-     * Тест активен?
+     * Фиксированная скидка активна?
+     */
+    public static function hasFixedDiscount(): bool
+    {
+        return defined('COURSE_FIXED_DISCOUNT') && COURSE_FIXED_DISCOUNT > 0;
+    }
+
+    /**
+     * A/B-тест активен?
      */
     public static function isActive(): bool
     {
-        return defined('COURSE_AB_TEST_ACTIVE') && COURSE_AB_TEST_ACTIVE;
+        return self::hasFixedDiscount() || (defined('COURSE_AB_TEST_ACTIVE') && COURSE_AB_TEST_ACTIVE);
     }
 
     /**
@@ -67,6 +84,11 @@ class CoursePriceAB
      */
     public static function getAdjustedPrice(float $basePrice, string $variant): float
     {
+        if ($variant === 'D' || self::hasFixedDiscount()) {
+            $discount = defined('COURSE_FIXED_DISCOUNT') ? COURSE_FIXED_DISCOUNT : 0;
+            return round($basePrice * (1 - $discount / 100));
+        }
+
         $multiplier = self::MULTIPLIERS[$variant] ?? 1.0;
         return round($basePrice * $multiplier);
     }
@@ -76,6 +98,10 @@ class CoursePriceAB
      */
     public static function getDiscountPercent(string $variant): int
     {
+        if ($variant === 'D' || self::hasFixedDiscount()) {
+            return defined('COURSE_FIXED_DISCOUNT') ? (int) COURSE_FIXED_DISCOUNT : 0;
+        }
+
         return match ($variant) {
             'B' => 50,
             'C' => 70,

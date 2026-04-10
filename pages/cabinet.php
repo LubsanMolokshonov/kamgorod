@@ -99,6 +99,11 @@ foreach ($userOlympiadRegs as $reg) {
     $olympRegsByResultId[$reg['olympiad_result_id']] = $reg;
 }
 
+// Сохранить discount_token из email-цепочки курсов в сессию
+if (!empty($_GET['discount_token'])) {
+    $_SESSION['email_discount_token'] = $_GET['discount_token'];
+}
+
 // Current tab
 $activeTab = $_GET['tab'] ?? 'diplomas';
 if (!in_array($activeTab, ['diplomas', 'publications', 'webinars', 'olympiads', 'courses'])) {
@@ -305,8 +310,10 @@ include __DIR__ . '/../includes/header.php';
                 $totalPrice = 0;
                 $totalDiscountedPrice = 0;
 
-                // A/B-тест цен
+                // Ценообразование (фиксированная скидка / A/B-тест)
                 $abVariant = CoursePriceAB::getVariant();
+                $courseHasDiscount = $abVariant !== 'A';
+                $courseDiscountPercent = CoursePriceAB::getDiscountPercent($abVariant);
 
                 foreach ($unpaidEnrollments as $enrollment) {
                     $priceRaw = CoursePriceAB::getAdjustedPrice(floatval($enrollment['price']), $abVariant);
@@ -330,6 +337,8 @@ include __DIR__ . '/../includes/header.php';
 
                     $unpaidData[] = [
                         'enrollment' => $enrollment,
+                        'basePrice' => floatval($enrollment['price']),
+                        'basePriceFormatted' => number_format(floatval($enrollment['price']), 0, ',', ' '),
                         'priceRaw' => $priceRaw,
                         'price' => number_format($priceRaw, 0, ',', ' '),
                         'discountDeadline' => $discountDeadline,
@@ -394,8 +403,13 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
                             </div>
                             <div class="checkout-item-price">
+                                <?php if ($courseHasDiscount): ?>
+                                    <span class="price-original"><?php echo $item['basePriceFormatted']; ?> ₽</span>
+                                <?php endif; ?>
                                 <?php if ($item['isDiscountActive']): ?>
-                                    <span class="price-original"><?php echo $item['price']; ?> ₽</span>
+                                    <?php if (!$courseHasDiscount): ?>
+                                        <span class="price-original"><?php echo $item['price']; ?> ₽</span>
+                                    <?php endif; ?>
                                     <span class="price-discounted"><?php echo $item['discountedPriceFormatted']; ?> ₽</span>
                                 <?php else: ?>
                                     <span class="price-current"><?php echo $item['price']; ?> ₽</span>

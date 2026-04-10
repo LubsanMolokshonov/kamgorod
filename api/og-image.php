@@ -85,6 +85,31 @@ if ($mode === 'ad') {
         $generator->serve($filePath);
     }
 
+    // Конкурсы: градиент + веер дипломов + аудитория
+    if ($type === 'competition') {
+        $audienceLabel = OgImageGenerator::buildCompetitionAudienceLabel(
+            $item['target_participants'] ?? ''
+        );
+        $filePath = $generator->getOrGenerateContentAd($cacheKey, 'ВСЕРОССИЙСКИЙ КОНКУРС', $audienceLabel);
+        $generator->serve($filePath);
+    }
+
+    // Олимпиады: градиент + веер дипломов + аудитория
+    if ($type === 'olympiad') {
+        $categories = $obj->getAudienceCategories($item['id']);
+        $audienceLabel = OgImageGenerator::buildCategoryAudienceLabel($categories);
+        $filePath = $generator->getOrGenerateContentAd($cacheKey, 'ВСЕРОССИЙСКАЯ ОЛИМПИАДА', $audienceLabel);
+        $generator->serve($filePath);
+    }
+
+    // Вебинары: градиент + веер дипломов + аудитория
+    if ($type === 'webinar') {
+        $categories = $obj->getAudienceCategories($item['id']);
+        $audienceLabel = OgImageGenerator::buildCategoryAudienceLabel($categories);
+        $filePath = $generator->getOrGenerateContentAd($cacheKey, 'ВЕБИНАР', $audienceLabel);
+        $generator->serve($filePath);
+    }
+
     $title = $item[$config['title']] ?? '';
     $price = '';
     if ($config['price'] && !empty($item[$config['price']])) {

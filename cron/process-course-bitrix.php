@@ -1,9 +1,10 @@
 #!/usr/bin/env php
 <?php
 /**
- * Cron Script: Отложенная синхронизация записей на курсы с Bitrix24
+ * Cron Script: Retry-синхронизация записей на курсы с Bitrix24
  *
- * Через 10 минут после записи, если bitrix_lead_id пустой:
+ * Основное создание сделки происходит сразу в scripts/process-course-enrollment.php.
+ * Этот крон — fallback для записей, где первая попытка не удалась:
  * - status = 'paid' → сделка на этапе "Оплата на сайте" (BITRIX24_COURSE_STAGE_PAID)
  * - status != 'paid' → сделка на этапе "Новая" (BITRIX24_COURSE_STAGE_NEW)
  *
@@ -44,7 +45,7 @@ file_put_contents($lockFile, getmypid());
 
 $BATCH_SIZE = 50;
 $MAX_ATTEMPTS = 3;
-$DELAY_MINUTES = 10;
+$DELAY_MINUTES = 1; // Минимальная задержка — основное создание в scripts/process-course-enrollment.php
 
 try {
     echo date('Y-m-d H:i:s') . " - Starting course Bitrix24 sync...\n";
@@ -105,7 +106,7 @@ try {
                 continue;
             }
 
-            // A/B-тест цен: скорректированная цена из варианта enrollment
+            // Скорректированная цена (фиксированная скидка / AB-вариант enrollment)
             $abVariant = $fresh['ab_variant'] ?? 'A';
             $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
 

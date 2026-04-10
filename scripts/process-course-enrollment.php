@@ -20,6 +20,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
+require_once __DIR__ . '/../classes/Bitrix24Integration.php';
 
 $dbObj = new Database($db);
 
@@ -41,7 +42,45 @@ $fullName = $enrollment['full_name'];
 $email = $enrollment['email'];
 $phone = $enrollment['phone'];
 
-// Bitrix24 CRM — отложенная синхронизация (10 мин), см. cron/process-course-bitrix.php
+// Bitrix24 CRM — создание сделки сразу после записи
+$crmStatus = '—';
+try {
+    $bitrix = new Bitrix24Integration();
+    if ($bitrix->isConfigured()) {
+        $stageNew = defined('BITRIX24_COURSE_STAGE_NEW') ? BITRIX24_COURSE_STAGE_NEW : 'C108:NEW';
+        $abVariant = $enrollment['ab_variant'] ?? 'A';
+        $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
+
+        $dealId = $bitrix->createCourseDeal([
+            'full_name' => $fullName,
+            'email' => $email,
+            'phone' => $phone,
+            'utm_source' => $enrollment['utm_source'] ?? '',
+            'utm_medium' => $enrollment['utm_medium'] ?? '',
+            'utm_campaign' => $enrollment['utm_campaign'] ?? '',
+            'utm_content' => $enrollment['utm_content'] ?? '',
+            'utm_term' => $enrollment['utm_term'] ?? '',
+            'ym_uid' => $enrollment['ym_uid'] ?? '',
+            'source_page' => $enrollment['source_page'] ?? '',
+        ], $course, $stageNew, $abPrice);
+
+        if ($dealId) {
+            $dbObj->update('course_enrollments', [
+                'bitrix_lead_id' => $dealId,
+                'bitrix_stage' => $stageNew,
+            ], 'id = ?', [$enrollmentId]);
+            $crmStatus = "Сделка #{$dealId}";
+        } else {
+            $crmStatus = 'Ошибка API (retry через cron)';
+            error_log("process-course-enrollment: Bitrix24 API returned null for enrollment #{$enrollmentId}");
+        }
+    } else {
+        $crmStatus = 'Bitrix24 не настроен';
+    }
+} catch (Exception $e) {
+    $crmStatus = 'Ошибка (retry через cron)';
+    error_log("process-course-enrollment: Bitrix24 error for enrollment #{$enrollmentId}: " . $e->getMessage());
+}
 
 // Email админу
 try {
@@ -61,11 +100,10 @@ try {
     );
 
     $programLabel = Course::getProgramTypeLabel($course['program_type']);
-    // A/B-тест: фактическая цена из варианта enrollment
+    // Фактическая цена (фиксированная скидка / AB-вариант enrollment)
     $abVariant = $enrollment['ab_variant'] ?? 'A';
     $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
     $price = number_format($abPrice, 0, ',', ' ');
-    $crmStatus = "Отложенная синхронизация (10 мин)";
 
     $mail->Body = <<<HTML
 <!DOCTYPE html>
@@ -98,4 +136,16 @@ HTML;
     $mail->send();
 } catch (Exception $e) {
     error_log('Course enrollment admin email error: ' . $e->getMessage());
+}
+
+// Email-цепочка дожима (6 писем: welcome → 15мин → 1ч → 24ч → 2д → 3д)
+try {
+    require_once __DIR__ . '/../classes/CourseEmailChain.php';
+    $emailChain = new CourseEmailChain($db);
+    $scheduled = $emailChain->scheduleForEnrollment($enrollmentId);
+    if ($scheduled) {
+        error_log("process-course-enrollment: scheduled {$scheduled} emails for enrollment #{$enrollmentId}");
+    }
+} catch (Exception $e) {
+    error_log('Course email chain schedule error (enrollment #' . $enrollmentId . '): ' . $e->getMessage());
 }

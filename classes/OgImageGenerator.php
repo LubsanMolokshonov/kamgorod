@@ -21,6 +21,46 @@ class OgImageGenerator
         'publication'  => 'ПУБЛИКАЦИЯ',
     ];
 
+    // Маппинг категорий аудитории → родительный падеж для рекламных картинок
+    private const CATEGORY_AUDIENCE_MAP = [
+        'Педагогам'      => 'ПЕДАГОГОВ',
+        'Дошкольникам'   => 'ДОШКОЛЬНИКОВ',
+        'Школьникам'     => 'ШКОЛЬНИКОВ',
+        'Студентам СПО'  => 'СТУДЕНТОВ СПО',
+    ];
+
+    // Маппинг target_participants → родительный падеж (частичное совпадение)
+    private const COMPETITION_AUDIENCE_MAP = [
+        'Воспитатели'           => 'ВОСПИТАТЕЛЕЙ',
+        'Учителя'               => 'УЧИТЕЛЕЙ',
+        'Учитель'               => 'УЧИТЕЛЕЙ',
+        'Преподаватели'         => 'ПРЕПОДАВАТЕЛЕЙ',
+        'Классные руководители' => 'КЛАССНЫХ РУКОВОДИТЕЛЕЙ',
+        'Педагоги-психологи'    => 'ПЕДАГОГОВ-ПСИХОЛОГОВ',
+        'Педагоги-организаторы' => 'ПЕДАГОГОВ-ОРГАНИЗАТОРОВ',
+        'Педагоги'              => 'ПЕДАГОГОВ',
+        'Логопеды'              => 'ЛОГОПЕДОВ',
+        'Учителя-логопеды'      => 'ЛОГОПЕДОВ',
+        'Учителя-дефектологи'   => 'ДЕФЕКТОЛОГОВ',
+        'Социальные педагоги'   => 'СОЦИАЛЬНЫХ ПЕДАГОГОВ',
+        'Методисты'             => 'МЕТОДИСТОВ',
+        'Тьюторы'               => 'ТЬЮТОРОВ',
+        'Руководители'          => 'РУКОВОДИТЕЛЕЙ',
+        'Заместители'           => 'РУКОВОДИТЕЛЕЙ',
+        'Инструкторы'           => 'ИНСТРУКТОРОВ',
+        'Музыкальные'           => 'МУЗЫКАЛЬНЫХ РУКОВОДИТЕЛЕЙ',
+        'Кураторы'              => 'КУРАТОРОВ',
+        'Тренеры'               => 'ТРЕНЕРОВ',
+        'Библиотекари'          => 'БИБЛИОТЕКАРЕЙ',
+        'Учащиеся'              => 'УЧАЩИХСЯ',
+        'Ученики'               => 'УЧЕНИКОВ',
+        'Студенты'              => 'СТУДЕНТОВ',
+        'Дошкольники'           => 'ДОШКОЛЬНИКОВ',
+        'Обучающиеся'           => 'ОБУЧАЮЩИХСЯ',
+        'Воспитанники'          => 'ВОСПИТАННИКОВ',
+        'Дети'                  => 'ДЕТЕЙ',
+    ];
+
     // Маппинг специализаций → родительный падеж множ. числа для рекламных картинок курсов
     private const AUDIENCE_LABEL_MAP = [
         'Воспитатель'                       => 'ВОСПИТАТЕЛЕЙ',
@@ -51,6 +91,8 @@ class OgImageGenerator
     private string $logoDarkPath;
     private string $cacheDir;
     private string $courseAdTemplatePath;
+    private string $diplomaFanTemplatePath;
+    private string $skolkovoLogoPath;
 
     public function __construct()
     {
@@ -62,6 +104,8 @@ class OgImageGenerator
         $this->logoDarkPath = __DIR__ . '/../assets/images/logo.png';
         $this->cacheDir    = __DIR__ . '/../uploads/og-cache';
         $this->courseAdTemplatePath = __DIR__ . '/../Дипломы/fgos.pro (1).png';
+        $this->diplomaFanTemplatePath = __DIR__ . '/../assets/images/diploma-fan-template.png';
+        $this->skolkovoLogoPath = __DIR__ . '/../assets/images/skolkovo-logo-white.png';
 
         if (!is_dir($this->cacheDir)) {
             mkdir($this->cacheDir, 0755, true);
@@ -762,5 +806,272 @@ class OgImageGenerator
         $lineW = abs($bbox[2] - $bbox[0]);
         $x = (int)((self::AD_WIDTH - $lineW) / 2);
         imagettftext($img, $fontSize, 0, max(30, $x), $y, $darkColor, $fontBold, $audienceLabel);
+    }
+
+    // =============================================
+    // РЕКЛАМНЫЕ КАРТИНКИ КОНКУРСОВ/ОЛИМПИАД/ВЕБИНАРОВ
+    // (градиентный фон + веер дипломов + аудитория)
+    // =============================================
+
+    /**
+     * Построить текст аудитории из target_participants конкурса
+     * Берёт первый элемент через запятую и ищет совпадение в маппинге
+     */
+    public static function buildCompetitionAudienceLabel(string $targetParticipants): string
+    {
+        if (empty($targetParticipants)) {
+            return 'ДЛЯ ПЕДАГОГОВ';
+        }
+
+        $parts = array_map('trim', explode(',', $targetParticipants));
+        $first = $parts[0];
+
+        // Ищем по началу строки (ключи маппинга — начало target_participants)
+        foreach (self::COMPETITION_AUDIENCE_MAP as $prefix => $label) {
+            if (mb_stripos($first, $prefix) === 0) {
+                return 'ДЛЯ ' . $label;
+            }
+        }
+
+        // Fallback: берём первый элемент как есть, обрезаем если слишком длинный
+        $fallback = mb_strtoupper(trim($first));
+        if (mb_strlen($fallback) > 30) {
+            $fallback = mb_substr($fallback, 0, 27) . '...';
+        }
+
+        return 'ДЛЯ ' . $fallback;
+    }
+
+    /**
+     * Построить текст аудитории из массива audience_categories
+     * @param array $categories Массив из getAudienceCategories() — [{id, name, slug}, ...]
+     * @return string Например «ДЛЯ ПЕДАГОГОВ»
+     */
+    public static function buildCategoryAudienceLabel(array $categories): string
+    {
+        if (empty($categories)) {
+            return 'ДЛЯ ПЕДАГОГОВ';
+        }
+
+        if (count($categories) === 1) {
+            $name = $categories[0]['name'] ?? '';
+            $label = self::CATEGORY_AUDIENCE_MAP[$name] ?? null;
+            return $label ? 'ДЛЯ ' . $label : 'ДЛЯ ПЕДАГОГОВ';
+        }
+
+        if (count($categories) === 2) {
+            $label1 = self::CATEGORY_AUDIENCE_MAP[$categories[0]['name'] ?? ''] ?? null;
+            $label2 = self::CATEGORY_AUDIENCE_MAP[$categories[1]['name'] ?? ''] ?? null;
+            if ($label1 && $label2) {
+                return 'ДЛЯ ' . $label1 . ' И ' . $label2;
+            }
+        }
+
+        return 'ДЛЯ ПЕДАГОГОВ';
+    }
+
+    /**
+     * Получить рекламную картинку контента (конкурс/олимпиада/вебинар) из кэша или сгенерировать
+     * @return string Путь к JPG-файлу
+     */
+    public function getOrGenerateContentAd(string $cacheKey, string $typeLabel, string $audienceLabel): string
+    {
+        $filePath = $this->cacheDir . '/ad-' . $cacheKey . '.jpg';
+
+        if (file_exists($filePath) && (time() - filemtime($filePath)) < self::CACHE_TTL) {
+            return $filePath;
+        }
+
+        return $this->generateContentAd($filePath, $typeLabel, $audienceLabel);
+    }
+
+    /**
+     * Сгенерировать рекламную картинку 600×600:
+     * Градиент #2C3E50→#34495E (135°) + веер дипломов + тип + аудитория
+     * @return string Путь к файлу
+     */
+    public function generateContentAd(string $outputPath, string $typeLabel, string $audienceLabel): string
+    {
+        $img = imagecreatetruecolor(self::AD_WIDTH, self::AD_HEIGHT);
+        imagealphablending($img, true);
+        imagesavealpha($img, true);
+
+        // Градиент 135° (#2C3E50 → #34495E)
+        $this->drawDiagonalGradient($img, 44, 62, 80, 52, 73, 94);
+
+        // Накладываем веер дипломов
+        $this->drawDiplomaFan($img);
+
+        // Текст: тип продукта + аудитория (белым на тёмном фоне)
+        $this->drawContentAdText($img, $typeLabel, $audienceLabel);
+
+        // Логотип Сколково в правом нижнем углу
+        $this->drawSkolkovoLogo($img);
+
+        imagejpeg($img, $outputPath, 92);
+        imagedestroy($img);
+
+        return $outputPath;
+    }
+
+    /**
+     * Диагональный градиент 135° (от верхнего левого к нижнему правому)
+     * Оптимизация: рисуем построчно со средним цветом по строке
+     */
+    private function drawDiagonalGradient(\GdImage $img, int $r1, int $g1, int $b1, int $r2, int $g2, int $b2): void
+    {
+        $w = self::AD_WIDTH;
+        $h = self::AD_HEIGHT;
+        $maxDist = $w + $h;
+
+        for ($y = 0; $y < $h; $y++) {
+            // Средний ratio для строки (центр строки по X)
+            $ratio = ($w / 2 + $y) / $maxDist;
+            $r = (int)($r1 + $ratio * ($r2 - $r1));
+            $g = (int)($g1 + $ratio * ($g2 - $g1));
+            $b = (int)($b1 + $ratio * ($b2 - $b1));
+            $color = imagecolorallocate($img, $r, $g, $b);
+            imageline($img, 0, $y, $w, $y, $color);
+        }
+    }
+
+    /**
+     * Наложить веер дипломов из шаблона
+     */
+    private function drawDiplomaFan(\GdImage $img): void
+    {
+        if (!file_exists($this->diplomaFanTemplatePath)) {
+            return;
+        }
+
+        $fan = imagecreatefrompng($this->diplomaFanTemplatePath);
+        if (!$fan) {
+            return;
+        }
+
+        $origW = imagesx($fan);
+        $origH = imagesy($fan);
+
+        // Масштабируем веер в нижнюю часть (занимает ~65% высоты)
+        $targetH = (int)(self::AD_HEIGHT * 0.65);
+        $targetW = (int)($origW * ($targetH / $origH));
+
+        // Ограничиваем ширину
+        if ($targetW > self::AD_WIDTH) {
+            $targetW = self::AD_WIDTH;
+            $targetH = (int)($origH * ($targetW / $origW));
+        }
+
+        $dstX = (int)((self::AD_WIDTH - $targetW) / 2);
+        $dstY = self::AD_HEIGHT - $targetH;
+
+        imagealphablending($img, true);
+        imagecopyresampled($img, $fan, $dstX, $dstY, 0, 0, $targetW, $targetH, $origW, $origH);
+        imagedestroy($fan);
+    }
+
+    /**
+     * Логотип Сколково в правом нижнем углу
+     * Используется предобработанный PNG с прозрачным фоном и белым текстом
+     */
+    private function drawSkolkovoLogo(\GdImage $img): void
+    {
+        if (!file_exists($this->skolkovoLogoPath)) {
+            return;
+        }
+
+        $logo = imagecreatefrompng($this->skolkovoLogoPath);
+        if (!$logo) {
+            return;
+        }
+
+        $origW = imagesx($logo);
+        $origH = imagesy($logo);
+
+        $targetH = 70;
+        $targetW = (int)($origW * ($targetH / $origH));
+
+        $dstX = self::AD_WIDTH - $targetW - 15;
+        $dstY = self::AD_HEIGHT - $targetH - 10;
+
+        imagealphablending($img, true);
+        imagecopyresampled($img, $logo, $dstX, $dstY, 0, 0, $targetW, $targetH, $origW, $origH);
+        imagedestroy($logo);
+    }
+
+    /**
+     * Нарисовать текст на рекламной картинке контента:
+     * 1) Тип продукта (например «ВСЕРОССИЙСКИЙ КОНКУРС») — красным
+     * 2) Аудитория (например «ДЛЯ ВОСПИТАТЕЛЕЙ») — белым
+     */
+    private function drawContentAdText(\GdImage $img, string $typeLabel, string $audienceLabel): void
+    {
+        $accentColor = imagecolorallocate($img, 74, 222, 128);  // #4ade80
+        $whiteColor = imagecolorallocate($img, 255, 255, 255); // белый (на тёмном фоне)
+        $maxWidth = self::AD_WIDTH - 40 * 2; // 520px
+
+        $fontBold = file_exists($this->fontMontserratBold) ? $this->fontMontserratBold : $this->fontBold;
+
+        // Вычисляем высоту блока текста для центрирования
+        $typeFontSize = 16;
+        $typeLines = $this->wrapText($typeLabel, $typeFontSize, $maxWidth, $fontBold);
+        $typeLineHeight = (int)($typeFontSize * 1.5);
+        $gapBetween = 14;
+
+        $audFontSize = 15;
+        $audLines = [];
+        foreach ([26, 22, 18, 15] as $fs) {
+            $lines = $this->wrapText($audienceLabel, $fs, $maxWidth, $fontBold);
+            if (count($lines) <= 2) {
+                $audFontSize = $fs;
+                $audLines = $lines;
+                break;
+            }
+        }
+        $audLineHeight = (int)($audFontSize * 1.5);
+
+        $totalH = count($typeLines) * $typeLineHeight + $gapBetween + count($audLines) * $audLineHeight;
+
+        // Центрируем в верхней области (y=60..200)
+        $areaTop = 60;
+        $areaBottom = 200;
+        $areaCenter = ($areaTop + $areaBottom) / 2;
+        $startY = (int)($areaCenter - $totalH / 2) + $typeFontSize;
+
+        // Строка 1: тип продукта акцентным цветом
+        $y = $startY;
+        foreach ($typeLines as $line) {
+            $bbox = imagettfbbox($typeFontSize, 0, $fontBold, $line);
+            $lineW = abs($bbox[2] - $bbox[0]);
+            $x = (int)((self::AD_WIDTH - $lineW) / 2);
+            imagettftext($img, $typeFontSize, 0, $x, $y, $accentColor, $fontBold, $line);
+            $y += $typeLineHeight;
+        }
+
+        $y += $gapBetween;
+
+        // Строка 2: аудитория белым, крупнее
+        foreach ([26, 22, 18, 15] as $fontSize) {
+            $lines = $this->wrapText($audienceLabel, $fontSize, $maxWidth, $fontBold);
+
+            if (count($lines) <= 2) {
+                $lineHeight = (int)($fontSize * 1.5);
+                foreach ($lines as $line) {
+                    $bbox = imagettfbbox($fontSize, 0, $fontBold, $line);
+                    $lineW = abs($bbox[2] - $bbox[0]);
+                    $x = (int)((self::AD_WIDTH - $lineW) / 2);
+                    imagettftext($img, $fontSize, 0, $x, $y, $whiteColor, $fontBold, $line);
+                    $y += $lineHeight;
+                }
+                return;
+            }
+        }
+
+        // Fallback
+        $fontSize = 15;
+        $bbox = imagettfbbox($fontSize, 0, $fontBold, $audienceLabel);
+        $lineW = abs($bbox[2] - $bbox[0]);
+        $x = (int)((self::AD_WIDTH - $lineW) / 2);
+        imagettftext($img, $fontSize, 0, max(30, $x), $y, $whiteColor, $fontBold, $audienceLabel);
     }
 }
