@@ -1458,8 +1458,15 @@ function submitEnrollment(e) {
         method: 'POST',
         body: formData
     }).then(function(r) { return r.json(); }).then(function(response) {
-        // Яндекс Метрика: цель «Заявка на курс»
-        if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'zayavkakurs'); }
+        if (!response.success) {
+            alert(response.message || 'Произошла ошибка. Попробуйте ещё раз.');
+            btn.disabled = false;
+            btn.textContent = 'Записаться на курс';
+            return;
+        }
+
+        var redirectUrl = response.cabinet_url || '/kabinet/?tab=courses&enrolled=success';
+
         // E-commerce: add (заявка на курс)
         if (response.ecommerce) {
             window.dataLayer = window.dataLayer || [];
@@ -1479,7 +1486,19 @@ function submitEnrollment(e) {
                 }
             });
         }
-        window.location.href = response.cabinet_url || '/kabinet/?tab=courses&enrolled=success';
+
+        // Яндекс Метрика: цель «Заявка на курс»
+        // Ждём колбэк от Метрики, чтобы цель успела уйти до редиректа
+        var redirected = false;
+        function doRedirect() {
+            if (!redirected) { redirected = true; window.location.href = redirectUrl; }
+        }
+        if (typeof ym === 'function') {
+            ym(106465857, 'reachGoal', 'zayavkakurs', null, doRedirect);
+            setTimeout(doRedirect, 1000);
+        } else {
+            doRedirect();
+        }
     }).catch(function() {
         window.location.href = '/kabinet/?tab=courses&enrolled=success';
     });
