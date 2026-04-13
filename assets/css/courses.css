@@ -399,6 +399,9 @@
 .consultation-modal .enrollment-form .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
 /* Hero CTA row buttons — matched sizing */
+.catalog-hero .hero-cta-row {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
 .hero-cta-row .btn-hero {
     margin: 0;
     padding: 16px 32px;
@@ -709,21 +712,25 @@
 }
 
 @media (max-width: 768px) {
+    .catalog-hero { padding-bottom: 60px; }
     .catalog-hero .hero-main-grid { grid-template-columns: 1fr; gap: 24px; }
     .catalog-hero .hero-title { font-size: 26px; }
     .catalog-hero .hero-attestation-title { font-size: 22px; }
     .catalog-hero .hero-features-list { grid-template-columns: 1fr; }
     .catalog-hero .hero-skolkovo-doc { max-width: 200px; margin: 0 auto; }
     .catalog-hero .hero-bottom-row { flex-direction: column; align-items: flex-start; }
+    .catalog-hero::before { border-radius: 0; width: 100%; max-width: 100%; }
 }
 
 @media (max-width: 480px) {
+    .catalog-hero { padding-bottom: 40px; }
     .catalog-hero .hero-title { font-size: 22px; }
     .catalog-hero .hero-attestation-card { padding: 16px; }
     .catalog-hero .hero-attestation-title { font-size: 20px; }
     .catalog-hero .hero-attestation-desc { font-size: 14px; }
     .catalog-hero .hero-category { font-size: 13px; padding: 6px 14px; }
     .catalog-hero .hero-skolkovo-doc { max-width: 160px; }
+    .catalog-hero::before { border-radius: 0; }
 }
 
 /* ==========================================
