@@ -91,8 +91,14 @@ class YmlFeedGenerator
             case 'competitions':
                 $xml .= $this->buildCompetitionOffers();
                 break;
+            case 'competitions-ad':
+                $xml .= $this->buildCompetitionAdOffers();
+                break;
             case 'olympiads':
                 $xml .= $this->buildOlympiadOffers();
+                break;
+            case 'olympiads-ad':
+                $xml .= $this->buildOlympiadAdOffers();
                 break;
             case 'courses':
                 $xml .= $this->buildCourseOffers();
@@ -121,6 +127,7 @@ class YmlFeedGenerator
 
         switch ($type) {
             case 'competitions':
+            case 'competitions-ad':
                 $xml .= '<category id="1">Конкурсы для педагогов</category>' . "\n";
                 foreach (self::COMPETITION_CATEGORIES as $key => $cat) {
                     $xml .= '<category id="' . $cat['id'] . '" parentId="1">' . $this->xmlEscape($cat['name']) . '</category>' . "\n";
@@ -128,6 +135,7 @@ class YmlFeedGenerator
                 break;
 
             case 'olympiads':
+            case 'olympiads-ad':
                 $xml .= '<category id="2">Олимпиады</category>' . "\n";
                 // Загружаем категории аудитории из БД
                 $categories = $this->db->query(
@@ -215,6 +223,150 @@ class YmlFeedGenerator
     }
 
     // =============================================
+    // КОНКУРСЫ (рекламный фид competitions-ad)
+    // =============================================
+
+    private function buildCompetitionAdOffers(): string
+    {
+        $competitions = $this->db->query(
+            "SELECT * FROM competitions WHERE is_active = 1 ORDER BY display_order ASC, created_at DESC"
+        );
+
+        $xml = '';
+        foreach ($competitions as $comp) {
+            $categoryId = self::COMPETITION_CATEGORIES[$comp['category']]['id'] ?? 1;
+            $headline = $this->buildCompetitionAdHeadline($comp);
+            $description = $this->buildCompetitionAdDescription($comp);
+
+            $xml .= $this->buildOfferXml([
+                'id'          => 'comp-' . $comp['id'],
+                'url'         => $this->baseUrl . '/konkursy/' . $comp['slug'] . '/',
+                'price'       => $comp['price'] ?? '',
+                'categoryId'  => $categoryId,
+                'picture'     => $this->baseUrl . '/og-image/ad/competition/' . $comp['slug'] . '.jpg',
+                'name'        => $headline,
+                'description' => $description,
+                'sales_notes' => 'Диплом — в день отправки работы',
+                'params'      => [
+                    ['name' => 'Тип', 'value' => 'Конкурс'],
+                    ['name' => 'Уровень', 'value' => 'Всероссийский'],
+                    ['name' => 'Аудитория', 'value' => $comp['target_participants'] ?? 'Педагоги'],
+                    ['name' => 'Документ', 'value' => 'Диплом'],
+                    ['name' => 'Формат', 'value' => 'Дистанционный'],
+                ],
+            ]);
+        }
+
+        return $xml;
+    }
+
+    /**
+     * Построить рекламный заголовок для конкурса (до 56 символов)
+     * Формат: "Конкурс для {аудитория}. Диплом сразу!"
+     */
+    private function buildCompetitionAdHeadline(array $comp): string
+    {
+        $audience = $this->getShortAudienceLabel($comp);
+        $sep = mb_substr($audience, -1) === '.' ? ' ' : '. ';
+
+        // Вариант 1: полный — "Конкурс для учителей математики. Диплом сразу!"
+        $headline = 'Конкурс для ' . $audience . $sep . 'Диплом сразу!';
+        if (mb_strlen($headline) <= 56) {
+            return $headline;
+        }
+
+        // Вариант 2: без восклицания — "Конкурс для учителей математики. Диплом"
+        $headline = 'Конкурс для ' . $audience . $sep . 'Диплом';
+        if (mb_strlen($headline) <= 56) {
+            return $headline;
+        }
+
+        // Вариант 3: укороченная аудитория
+        $shortAudience = $this->truncateAudience($audience, 25);
+        $sep = mb_substr($shortAudience, -1) === '.' ? ' ' : '. ';
+        $headline = 'Конкурс для ' . $shortAudience . $sep . 'Диплом сразу!';
+        if (mb_strlen($headline) <= 56) {
+            return $headline;
+        }
+
+        // Вариант 4: минимальный
+        return 'Конкурс для педагогов. Диплом сразу!';
+    }
+
+    /**
+     * Построить рекламное описание для конкурса
+     */
+    private function buildCompetitionAdDescription(array $comp): string
+    {
+        // Видимая часть (до 81 символа)
+        $desc = 'Диплом в день отправки! Всероссийский конкурс от 149 ₽. Принимаем работы 24/7. ';
+
+        // Развёрнутая часть
+        $desc .= '«' . $comp['title'] . '»';
+
+        if (!empty($comp['target_participants'])) {
+            $desc .= ' для ' . mb_strtolower($comp['target_participants_genitive'] ?? $comp['target_participants']);
+        }
+
+        $desc .= '. ';
+
+        if (!empty($comp['description'])) {
+            $desc .= $this->extractSentences($comp['description'], 2) . ' ';
+        }
+
+        $desc .= 'Именной диплом установленного образца. Дистанционный формат.';
+
+        return $this->cleanText($desc);
+    }
+
+    /**
+     * Получить короткий ярлык аудитории из target_participants_genitive
+     */
+    private function getShortAudienceLabel(array $comp): string
+    {
+        // Предпочитаем genitive форму
+        $audience = $comp['target_participants_genitive'] ?? $comp['target_participants'] ?? 'педагогов';
+        $audience = mb_strtolower(trim($audience));
+
+        // Если есть запятая — берём первую часть
+        if (mb_strpos($audience, ',') !== false) {
+            $audience = trim(mb_substr($audience, 0, mb_strpos($audience, ',')));
+        }
+
+        // Убираем длинные уточнения "образовательных учреждений", "образовательных организаций"
+        $audience = str_replace([
+            ' образовательных учреждений',
+            ' образовательных организаций',
+            ' дошкольных образовательных учреждений',
+            ' дошкольных учреждений',
+        ], '', $audience);
+
+        return trim($audience);
+    }
+
+    /**
+     * Обрезать ярлык аудитории до maxLen символов (по слову)
+     */
+    private function truncateAudience(string $audience, int $maxLen): string
+    {
+        if (mb_strlen($audience) <= $maxLen) {
+            return $audience;
+        }
+
+        $words = explode(' ', $audience);
+        $result = '';
+        foreach ($words as $word) {
+            $test = $result === '' ? $word : $result . ' ' . $word;
+            if (mb_strlen($test) > $maxLen) {
+                break;
+            }
+            $result = $test;
+        }
+
+        return $result ?: 'педагогов';
+    }
+
+    // =============================================
     // ОЛИМПИАДЫ
     // =============================================
 
@@ -279,6 +431,155 @@ class YmlFeedGenerator
         $desc .= 'Участие бесплатное! Именной диплом — ' . ($oly['diploma_price'] ?? '169') . ' ₽. Результат — сразу после прохождения.';
 
         return $this->cleanText($desc);
+    }
+
+    // =============================================
+    // ОЛИМПИАДЫ (рекламный фид olympiads-ad)
+    // =============================================
+
+    private function buildOlympiadAdOffers(): string
+    {
+        $olympiads = $this->db->query(
+            "SELECT o.*,
+                    GROUP_CONCAT(DISTINCT ac.name ORDER BY ac.display_order) as audience_categories,
+                    GROUP_CONCAT(DISTINCT at2.name ORDER BY at2.display_order) as audience_types,
+                    GROUP_CONCAT(DISTINCT oac.category_id) as category_ids
+             FROM olympiads o
+             LEFT JOIN olympiad_audience_categories oac ON o.id = oac.olympiad_id
+             LEFT JOIN audience_categories ac ON oac.category_id = ac.id
+             LEFT JOIN olympiad_audience_types oat ON o.id = oat.olympiad_id
+             LEFT JOIN audience_types at2 ON oat.audience_type_id = at2.id
+             WHERE o.is_active = 1
+             GROUP BY o.id
+             ORDER BY o.display_order ASC, o.created_at DESC"
+        );
+
+        $xml = '';
+        foreach ($olympiads as $oly) {
+            $firstCatId = 2;
+            if (!empty($oly['category_ids'])) {
+                $catIds = explode(',', $oly['category_ids']);
+                $firstCatId = '2' . $catIds[0];
+            }
+
+            $headline = $this->buildOlympiadAdHeadline($oly);
+            $description = $this->buildOlympiadAdDescription($oly);
+            $price = $oly['diploma_price'] ?? '169';
+
+            $params = [
+                ['name' => 'Тип', 'value' => 'Олимпиада'],
+                ['name' => 'Уровень', 'value' => 'Всероссийский'],
+                ['name' => 'Предмет', 'value' => $oly['subject'] ?? ''],
+                ['name' => 'Аудитория', 'value' => $oly['audience_categories'] ?? 'Педагоги'],
+                ['name' => 'Документ', 'value' => 'Диплом'],
+                ['name' => 'Формат', 'value' => 'Дистанционный'],
+            ];
+
+            $xml .= $this->buildOfferXml([
+                'id'          => 'oly-' . $oly['id'],
+                'url'         => $this->baseUrl . '/olimpiady/' . $oly['slug'] . '/',
+                'price'       => $price,
+                'categoryId'  => $firstCatId,
+                'picture'     => $this->baseUrl . '/og-image/ad/olympiad/' . $oly['slug'] . '.jpg',
+                'name'        => $headline,
+                'description' => $description,
+                'sales_notes' => 'Бесплатно! Диплом — ' . $price . ' ₽',
+                'params'      => $params,
+            ]);
+        }
+
+        return $xml;
+    }
+
+    /**
+     * Построить рекламный заголовок для олимпиады (до 56 символов)
+     * Формат: "Олимпиада для {аудитория}. Бесплатно!"
+     */
+    private function buildOlympiadAdHeadline(array $oly): string
+    {
+        $audience = $this->getOlympiadAudienceLabel($oly);
+        $sep = mb_substr($audience, -1) === '.' ? ' ' : '. ';
+
+        // Вариант 1: полный — "Олимпиада для воспитателей ДОУ. Бесплатно!"
+        $headline = 'Олимпиада для ' . $audience . $sep . 'Бесплатно!';
+        if (mb_strlen($headline) <= 56) {
+            return $headline;
+        }
+
+        // Вариант 2: без восклицания — "Олимпиада для воспитателей ДОУ. Бесплатная"
+        $headline = 'Олимпиада для ' . $audience . $sep . 'Бесплатная';
+        if (mb_strlen($headline) <= 56) {
+            return $headline;
+        }
+
+        // Вариант 3: минимальный
+        return 'Олимпиада для педагогов. Бесплатно!';
+    }
+
+    /**
+     * Построить рекламное описание для олимпиады
+     */
+    private function buildOlympiadAdDescription(array $oly): string
+    {
+        $price = $oly['diploma_price'] ?? '169';
+
+        // Видимая часть (до 81 символа)
+        $desc = 'Участие бесплатно! Именной диплом — ' . $price . ' ₽. Результат сразу. ';
+
+        // Развёрнутая часть
+        $desc .= '«' . $oly['title'] . '»';
+
+        if (!empty($oly['subject'])) {
+            $desc .= ' по предмету «' . $oly['subject'] . '»';
+        }
+
+        $desc .= '. ';
+
+        if (!empty($oly['description'])) {
+            $desc .= $this->extractSentences($oly['description'], 2) . ' ';
+        }
+
+        $desc .= 'Всероссийская олимпиада. Дистанционный формат. Диплом установленного образца.';
+
+        return $this->cleanText($desc);
+    }
+
+    /**
+     * Определить ярлык аудитории для олимпиады на основе audience_categories/types
+     */
+    private function getOlympiadAudienceLabel(array $oly): string
+    {
+        $categories = $oly['audience_categories'] ?? '';
+        $types = $oly['audience_types'] ?? '';
+
+        // Дошкольникам
+        if (mb_strpos($categories, 'Дошкольникам') !== false) {
+            return 'дошкольников';
+        }
+
+        // Школьникам — определяем возрастную группу
+        if (mb_strpos($categories, 'Школьникам') !== false) {
+            if (mb_strpos($types, '1-4') !== false && mb_strpos($types, '5-8') === false && mb_strpos($types, '9-11') === false) {
+                return 'школьников 1-4 кл.';
+            }
+            if (mb_strpos($types, '5-8') !== false && mb_strpos($types, '1-4') === false && mb_strpos($types, '9-11') === false) {
+                return 'школьников 5-8 кл.';
+            }
+            if (mb_strpos($types, '9-11') !== false && mb_strpos($types, '1-4') === false && mb_strpos($types, '5-8') === false) {
+                return 'школьников 9-11 кл.';
+            }
+            return 'школьников';
+        }
+
+        // Педагогам — уточняем по audience_types
+        if (mb_strpos($types, 'ДОУ') !== false && mb_strpos($types, 'Начальная') === false && mb_strpos($types, 'Средняя') === false) {
+            return 'воспитателей ДОУ';
+        }
+        if (mb_strpos($types, 'ДОУ') === false && (mb_strpos($types, 'Начальная') !== false || mb_strpos($types, 'Средняя') !== false)) {
+            return 'учителей';
+        }
+
+        return 'педагогов';
     }
 
     // =============================================

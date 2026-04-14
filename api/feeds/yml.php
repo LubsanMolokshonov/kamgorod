@@ -9,7 +9,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../classes/Database.php';
 require_once __DIR__ . '/../../classes/YmlFeedGenerator.php';
 
-$allowedTypes = ['competitions', 'olympiads', 'courses', 'courses-ad', 'webinars'];
+$allowedTypes = ['competitions', 'competitions-ad', 'olympiads', 'olympiads-ad', 'courses', 'courses-ad', 'webinars'];
 $type = $_GET['type'] ?? '';
 
 if (!in_array($type, $allowedTypes, true)) {

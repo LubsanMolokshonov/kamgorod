@@ -21,7 +21,7 @@ RewriteRule ^og-image/([a-z]+)/([a-z0-9-]+)\.jpg$ api/og-image.php?type=$1&slug=
 # ================================================
 # YML ФИДЫ ДЛЯ ЯНДЕКС ДИРЕКТ
 # ================================================
-RewriteRule ^feeds/(competitions|olympiads|courses-ad|courses|webinars)\.yml$ api/feeds/yml.php?type=$1 [L]
+RewriteRule ^feeds/(competitions-ad|competitions|olympiads-ad|olympiads|courses-ad|courses|webinars)\.yml$ api/feeds/yml.php?type=$1 [L]
 
 # ================================================
 # ГЛАВНАЯ СТРАНИЦА
