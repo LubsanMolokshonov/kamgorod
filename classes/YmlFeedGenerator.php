@@ -27,6 +27,39 @@ class YmlFeedGenerator
         'videolecture' => ['id' => 43, 'name' => 'Видеолекции'],
     ];
 
+    // Маппинг специализаций → короткие ярлыки для рекламных заголовков (дательный падеж)
+    private const SPECIALIZATION_HEADLINE_MAP = [
+        'Логопедия'                       => 'логопедов',
+        'Инструктор по физкультуре'       => 'инструкторов физкультуры',
+        'Педагог-психолог'                => 'психологов',
+        'Работа с детьми с ОВЗ'           => 'педагогов ОВЗ',
+        'Социальная педагогика'           => 'соц. педагогов',
+        'Классное руководство'            => 'кл. руководителей',
+        'Младший воспитатель'             => 'мл. воспитателей',
+        'Педагог дополнительного образования' => 'педагогов доп. образования',
+        'Администрация и управление'      => 'руководителей ОО',
+        'Старший воспитатель'             => 'ст. воспитателей',
+        'Учитель'                         => 'учителей',
+        'Воспитатель'                     => 'воспитателей',
+    ];
+
+    // Приоритет специализаций: чем меньше индекс, тем выше приоритет (узкие — первыми)
+    // Воспитатель выше Старшего — более широкая аудитория для рекламы
+    private const SPECIALIZATION_PRIORITY = [
+        'Логопедия',
+        'Инструктор по физкультуре',
+        'Педагог-психолог',
+        'Работа с детьми с ОВЗ',
+        'Социальная педагогика',
+        'Классное руководство',
+        'Младший воспитатель',
+        'Педагог дополнительного образования',
+        'Воспитатель',
+        'Учитель',
+        'Администрация и управление',
+        'Старший воспитатель',
+    ];
+
     public function __construct($pdo)
     {
         $this->db = new Database($pdo);
@@ -63,6 +96,9 @@ class YmlFeedGenerator
                 break;
             case 'courses':
                 $xml .= $this->buildCourseOffers();
+                break;
+            case 'courses-ad':
+                $xml .= $this->buildCourseAdOffers();
                 break;
             case 'webinars':
                 $xml .= $this->buildWebinarOffers();
@@ -103,6 +139,7 @@ class YmlFeedGenerator
                 break;
 
             case 'courses':
+            case 'courses-ad':
                 $xml .= '<category id="3">Курсы для педагогов</category>' . "\n";
                 foreach (self::COURSE_CATEGORIES as $key => $cat) {
                     $xml .= '<category id="' . $cat['id'] . '" parentId="3">' . $this->xmlEscape($cat['name']) . '</category>' . "\n";
@@ -301,6 +338,147 @@ class YmlFeedGenerator
         }
 
         $desc .= 'Дистанционно. ' . $docLabel . ' установленного образца. Лицензия на образовательную деятельность.';
+
+        return $this->cleanText($desc);
+    }
+
+    // =============================================
+    // КУРСЫ (рекламный фид courses-ad)
+    // =============================================
+
+    private function buildCourseAdOffers(): string
+    {
+        $courses = $this->db->query(
+            "SELECT c.*,
+                    GROUP_CONCAT(DISTINCT asp.name ORDER BY asp.name) as specializations
+             FROM courses c
+             LEFT JOIN course_specializations cs ON c.id = cs.course_id
+             LEFT JOIN audience_specializations asp ON cs.specialization_id = asp.id
+             WHERE c.is_active = 1
+             GROUP BY c.id
+             ORDER BY c.display_order ASC, c.created_at DESC"
+        );
+
+        $xml = '';
+        foreach ($courses as $course) {
+            $categoryId = self::COURSE_CATEGORIES[$course['program_type']]['id'] ?? 31;
+            $docLabel = $course['program_type'] === 'pp' ? 'Диплом' : 'Удостоверение';
+            $specs = !empty($course['specializations']) ? explode(',', $course['specializations']) : [];
+            $primarySpec = $this->getPrimarySpecialization($specs);
+
+            $headline = $this->buildCourseAdHeadline($course, $primarySpec);
+            $description = $this->buildCourseAdDescription($course);
+
+            $hours = $course['hours'] ?? '';
+            $salesNotes = $docLabel . ' гос. образца · ' . $hours . ' ч';
+
+            $params = [
+                ['name' => 'Тип', 'value' => $course['program_type'] === 'pp' ? 'Профессиональная переподготовка' : 'Повышение квалификации'],
+                ['name' => 'Часы', 'value' => (string)$hours, 'unit' => 'ч'],
+                ['name' => 'Документ', 'value' => $docLabel . ' установленного образца'],
+                ['name' => 'Формат', 'value' => 'Дистанционный'],
+                ['name' => 'Уровень', 'value' => 'Всероссийский'],
+                ['name' => 'Аудитория', 'value' => $primarySpec ?: 'Педагоги'],
+            ];
+
+            $xml .= $this->buildOfferXml([
+                'id'          => 'crs-' . $course['id'],
+                'url'         => $this->baseUrl . '/kursy/' . $course['slug'] . '/',
+                'price'       => $course['price'] ?? '',
+                'categoryId'  => $categoryId,
+                'picture'     => $this->baseUrl . '/og-image/ad/course/' . $course['slug'] . '.jpg',
+                'name'        => $headline,
+                'description' => $description,
+                'sales_notes' => $salesNotes,
+                'params'      => $params,
+            ]);
+        }
+
+        return $xml;
+    }
+
+    /**
+     * Выбрать наиболее приоритетную (узкую) специализацию
+     */
+    private function getPrimarySpecialization(array $specs): string
+    {
+        if (empty($specs)) {
+            return '';
+        }
+
+        $specs = array_map('trim', $specs);
+        $bestIndex = PHP_INT_MAX;
+        $bestSpec = $specs[0];
+
+        foreach ($specs as $spec) {
+            $index = array_search($spec, self::SPECIALIZATION_PRIORITY, true);
+            if ($index !== false && $index < $bestIndex) {
+                $bestIndex = $index;
+                $bestSpec = $spec;
+            }
+        }
+
+        return $bestSpec;
+    }
+
+    /**
+     * Построить рекламный заголовок для курса (до 56 символов)
+     */
+    private function buildCourseAdHeadline(array $course, string $primarySpec): string
+    {
+        $label = self::SPECIALIZATION_HEADLINE_MAP[$primarySpec] ?? 'педагогов';
+        $hours = $course['hours'] ?? '';
+        $programPrefix = $course['program_type'] === 'pp' ? 'ПП' : 'КПК';
+
+        // Вариант 1: полный — "КПК для логопедов. 72 ч. Сколково + ФРДО"
+        $headline = $programPrefix . ' для ' . $label . '. ' . $hours . ' ч. Сколково + ФРДО';
+        if (mb_strlen($headline) <= 56) {
+            return $headline;
+        }
+
+        // Вариант 2: без Сколково — "КПК для логопедов. 72 ч. ФРДО"
+        $headline = $programPrefix . ' для ' . $label . '. ' . $hours . ' ч. ФРДО';
+        if (mb_strlen($headline) <= 56) {
+            return $headline;
+        }
+
+        // Вариант 3: минимальный — "КПК для логопедов. 72 ч"
+        $headline = $programPrefix . ' для ' . $label . '. ' . $hours . ' ч';
+        if (mb_strlen($headline) <= 56) {
+            return $headline;
+        }
+
+        // Вариант 4: обрезка
+        return mb_substr($headline, 0, 56);
+    }
+
+    /**
+     * Построить рекламное описание для курса
+     * Первые 81 символ — видимая часть в объявлении Яндекс Директ
+     */
+    private function buildCourseAdDescription(array $course): string
+    {
+        $programLabel = $course['program_type'] === 'pp' ? 'Профессиональная переподготовка' : 'Повышение квалификации';
+        $docLabel = $course['program_type'] === 'pp' ? 'Диплом' : 'Удостоверение';
+        $hours = $course['hours'] ?? '';
+
+        // Видимая часть (до 81 символа) — ключевые преимущества
+        $desc = $docLabel . ' гос. образца · Сколково · ФИС ФРДО. Для аттестации! ';
+
+        // Развёрнутая часть для алгоритма Яндекса
+        $desc .= $programLabel . ' «' . $course['title'] . '»';
+
+        if (!empty($hours)) {
+            $desc .= ', ' . $hours . ' часов';
+        }
+
+        $desc .= '. ';
+
+        if (!empty($course['description'])) {
+            $desc .= $this->extractSentences($course['description'], 2) . ' ';
+        }
+
+        $desc .= 'Дистанционно. Лицензия на образовательную деятельность. Данные вносятся в ФИС ФРДО. Начните обучение в любое время.';
 
         return $this->cleanText($desc);
     }
