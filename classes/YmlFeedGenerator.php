@@ -229,7 +229,12 @@ class YmlFeedGenerator
     private function buildCompetitionAdOffers(): string
     {
         $competitions = $this->db->query(
-            "SELECT * FROM competitions WHERE is_active = 1 ORDER BY display_order ASC, created_at DESC"
+            "SELECT c.* FROM competitions c
+             INNER JOIN competition_audience_categories cac ON c.id = cac.competition_id
+             INNER JOIN audience_categories ac ON cac.category_id = ac.id AND ac.slug = 'pedagogi'
+             WHERE c.is_active = 1
+             GROUP BY c.id
+             ORDER BY c.display_order ASC, c.created_at DESC"
         );
 
         $xml = '';
