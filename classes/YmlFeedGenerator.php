@@ -297,25 +297,7 @@ class YmlFeedGenerator
      */
     private function buildCompetitionAdDescription(array $comp): string
     {
-        // Видимая часть (до 81 символа)
-        $desc = 'Диплом в день отправки! Всероссийский конкурс от 149 ₽. Принимаем работы 24/7. ';
-
-        // Развёрнутая часть
-        $desc .= '«' . $comp['title'] . '»';
-
-        if (!empty($comp['target_participants'])) {
-            $desc .= ' для ' . mb_strtolower($comp['target_participants_genitive'] ?? $comp['target_participants']);
-        }
-
-        $desc .= '. ';
-
-        if (!empty($comp['description'])) {
-            $desc .= $this->extractSentences($comp['description'], 2) . ' ';
-        }
-
-        $desc .= 'Именной диплом установленного образца. Дистанционный формат.';
-
-        return $this->cleanText($desc);
+        return 'Всероссийский конкурс! Диплом за 1 минуту! Выбор призового места и дизайна диплома!';
     }
 
     /**
