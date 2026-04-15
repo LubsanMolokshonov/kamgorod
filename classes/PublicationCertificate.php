@@ -40,7 +40,7 @@ class PublicationCertificate {
             'organization' => $data['organization'] ?? '',
             'position' => $data['position'] ?? '',
             'certificate_number' => $certificateNumber,
-            'price' => $data['price'] ?? 169.00,
+            'price' => $data['price'] ?? 299.00,
             'status' => 'pending'
         ];
 
