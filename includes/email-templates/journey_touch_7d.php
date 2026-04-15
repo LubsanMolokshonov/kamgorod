@@ -3,6 +3,7 @@
  * Touch 4: 7 Days After Registration
  * Последний шанс / специальное предложение
  */
+$utm = 'utm_source=email&utm_campaign=competition-pay-7d';
 ob_start();
 ?>
 <div class="email-header" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%);">
@@ -49,12 +50,13 @@ ob_start();
     </div>
 
     <div class="text-center">
-        <a href="<?php echo htmlspecialchars($payment_url); ?>" class="cta-button cta-button-green">
+        <?php $pay_link = $payment_url . (strpos($payment_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($pay_link); ?>" class="cta-button cta-button-green">
             Завершить регистрацию
         </a>
 
         <p style="margin-top: 15px;">
-            <a href="<?php echo htmlspecialchars($site_url); ?>" style="color: #2563eb; text-decoration: none; font-weight: 500;">
+            <a href="<?php echo htmlspecialchars($site_url . '/?' . $utm); ?>" style="color: #2563eb; text-decoration: none; font-weight: 500;">
                 Выбрать дополнительные конкурсы &rarr;
             </a>
         </p>

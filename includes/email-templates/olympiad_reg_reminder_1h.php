@@ -4,6 +4,7 @@
  * Напоминание пройти тест
  */
 $footer_reason = 'зарегистрировались на олимпиаду на нашем портале';
+$utm = 'utm_source=email&utm_campaign=olympiad-reg-1h';
 ob_start();
 ?>
 <div class="email-header">
@@ -32,7 +33,8 @@ ob_start();
     </div>
 
     <div class="text-center">
-        <a href="<?php echo htmlspecialchars($olympiad_url); ?>" class="cta-button">
+        <?php $oly_link = $olympiad_url . (strpos($olympiad_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($oly_link); ?>" class="cta-button">
             Пройти тест сейчас
         </a>
     </div>

@@ -6,6 +6,7 @@
 
 $email_subject = "Через 1 час начало! Ссылка на вебинар внутри";
 
+$utm = 'utm_source=email&utm_campaign=webinar-broadcast-1h';
 ob_start();
 ?>
 <div class="email-header" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
@@ -65,7 +66,8 @@ ob_start();
     </p>
 
     <div class="text-center" style="margin-top: 20px;">
-        <a href="<?php echo htmlspecialchars($cabinet_url); ?>" class="cta-button cta-button-secondary">
+        <?php $cab_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($cab_link); ?>" class="cta-button cta-button-secondary">
             Личный кабинет
         </a>
     </div>

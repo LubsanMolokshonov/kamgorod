@@ -6,6 +6,7 @@
 
 $email_subject = "Через 15 минут начало вебинара!";
 
+$utm = 'utm_source=email&utm_campaign=webinar-reminder-15min';
 ob_start();
 ?>
 <div class="email-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
@@ -61,7 +62,8 @@ ob_start();
     </p>
 
     <div class="text-center" style="margin-top: 20px;">
-        <a href="<?php echo htmlspecialchars($cabinet_url); ?>" class="cta-button cta-button-secondary">
+        <?php $cab_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($cab_link); ?>" class="cta-button cta-button-secondary">
             Личный кабинет
         </a>
     </div>

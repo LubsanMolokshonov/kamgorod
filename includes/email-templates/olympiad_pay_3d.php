@@ -4,6 +4,7 @@
  * Срочность / FOMO
  */
 $footer_reason = 'прошли олимпиаду на нашем портале';
+$utm = 'utm_source=email&utm_campaign=olympiad-pay-3d';
 ob_start();
 ?>
 <div class="email-header">
@@ -40,7 +41,8 @@ ob_start();
     </div>
 
     <div class="text-center">
-        <a href="<?php echo htmlspecialchars($payment_url); ?>" class="cta-button">
+        <?php $pay_link = $payment_url . (strpos($payment_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($pay_link); ?>" class="cta-button">
             Оформить диплом сейчас
         </a>
     </div>

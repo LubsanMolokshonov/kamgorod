@@ -6,6 +6,7 @@
 
 $email_subject = "Завтра вебинар: {$webinar_title}";
 
+$utm = 'utm_source=email&utm_campaign=webinar-reminder-24h';
 ob_start();
 ?>
 <div class="email-header">
@@ -85,7 +86,8 @@ ob_start();
     </ul>
 
     <div class="text-center" style="margin-top: 30px;">
-        <a href="<?php echo htmlspecialchars($webinar_url); ?>" class="cta-button">
+        <?php $web_link = $webinar_url . (strpos($webinar_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($web_link); ?>" class="cta-button">
             Подробнее о вебинаре
         </a>
     </div>

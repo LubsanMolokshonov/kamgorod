@@ -3,6 +3,7 @@
  * Touch 1: 1 Hour After Registration
  * Мягкое напоминание о незавершённой регистрации
  */
+$utm = 'utm_source=email&utm_campaign=competition-pay-1h';
 ob_start();
 ?>
 <div class="email-header">
@@ -35,7 +36,8 @@ ob_start();
     </div>
 
     <div class="text-center">
-        <a href="<?php echo htmlspecialchars($payment_url); ?>" class="cta-button">
+        <?php $pay_link = $payment_url . (strpos($payment_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($pay_link); ?>" class="cta-button">
             Завершить регистрацию
         </a>
     </div>

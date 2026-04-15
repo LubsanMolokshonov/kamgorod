@@ -3,6 +3,7 @@
  * Touch 2: 24 Hours After Registration
  * Напоминание о преимуществах участия
  */
+$utm = 'utm_source=email&utm_campaign=competition-pay-24h';
 ob_start();
 ?>
 <div class="email-header">
@@ -42,7 +43,8 @@ ob_start();
     </div>
 
     <div class="text-center">
-        <a href="<?php echo htmlspecialchars($payment_url); ?>" class="cta-button">
+        <?php $pay_link = $payment_url . (strpos($payment_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($pay_link); ?>" class="cta-button">
             Получить диплом сейчас
         </a>
     </div>
@@ -50,7 +52,7 @@ ob_start();
     <div class="promo-banner" style="margin-top: 30px;">
         <h2>Акция 2+1</h2>
         <p>При оплате 2 конкурсов — третий в подарок!</p>
-        <a href="<?php echo htmlspecialchars($site_url); ?>" style="color: white; text-decoration: underline; display: inline-block; margin-top: 10px;">Смотреть каталог конкурсов</a>
+        <a href="<?php echo htmlspecialchars($site_url . '/?' . $utm); ?>" style="color: white; text-decoration: underline; display: inline-block; margin-top: 10px;">Смотреть каталог конкурсов</a>
     </div>
 </div>
 <?php

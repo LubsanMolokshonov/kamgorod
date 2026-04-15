@@ -4,6 +4,7 @@
  * Напоминание оформить диплом
  */
 $footer_reason = 'прошли олимпиаду на нашем портале';
+$utm = 'utm_source=email&utm_campaign=olympiad-quiz-24h';
 ob_start();
 ?>
 <div class="email-header">
@@ -33,7 +34,8 @@ ob_start();
     </div>
 
     <div class="text-center">
-        <a href="<?php echo htmlspecialchars($olympiad_url); ?>" class="cta-button">
+        <?php $oly_link = $olympiad_url . (strpos($olympiad_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($oly_link); ?>" class="cta-button">
             Оформить диплом
         </a>
     </div>
@@ -41,7 +43,7 @@ ob_start();
     <div class="promo-banner" style="margin-top: 30px;">
         <h2>Акция 2+1</h2>
         <p>При оплате 2 дипломов — третий в подарок!</p>
-        <a href="<?php echo htmlspecialchars($site_url); ?>/olimpiady/" style="color: white; text-decoration: underline; display: inline-block; margin-top: 10px;">Пройти ещё олимпиады</a>
+        <a href="<?php echo htmlspecialchars($site_url . '/olimpiady/?' . $utm); ?>" style="color: white; text-decoration: underline; display: inline-block; margin-top: 10px;">Пройти ещё олимпиады</a>
     </div>
 </div>
 <?php

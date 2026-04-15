@@ -4,6 +4,7 @@
  * Утешение + призыв попробовать другие олимпиады
  */
 $footer_reason = 'прошли олимпиаду на нашем портале';
+$utm = 'utm_source=email&utm_campaign=olympiad-quiz-fail';
 ob_start();
 ?>
 <div class="email-header">
@@ -41,12 +42,12 @@ ob_start();
     </ul>
 
     <div class="text-center">
-        <a href="<?php echo htmlspecialchars($site_url); ?>/olimpiady/" class="cta-button">
+        <a href="<?php echo htmlspecialchars($site_url . '/olimpiady/?' . $utm); ?>" class="cta-button">
             Выбрать другую олимпиаду
         </a>
 
         <p style="margin-top: 15px;">
-            <a href="<?php echo htmlspecialchars($site_url); ?>/konkursy/" style="color: #2563eb; text-decoration: none; font-weight: 500;">
+            <a href="<?php echo htmlspecialchars($site_url . '/konkursy/?' . $utm); ?>" style="color: #2563eb; text-decoration: none; font-weight: 500;">
                 Посмотреть конкурсы &rarr;
             </a>
         </p>

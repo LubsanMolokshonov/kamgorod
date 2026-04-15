@@ -5,6 +5,7 @@
  *             $program_label, $document_label, $course_program_type,
  *             $payment_url, $course_url, $unsubscribe_url, $site_url
  */
+$utm = 'utm_source=email&utm_campaign=course-enroll-1h';
 ob_start();
 ?>
 <div class="email-header">
@@ -79,7 +80,8 @@ ob_start();
     </div>
 
     <div class="text-center">
-        <a href="<?php echo htmlspecialchars($payment_url); ?>" class="cta-button">
+        <?php $pay_link = $payment_url . (strpos($payment_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($pay_link); ?>" class="cta-button">
             Записаться на обучение
         </a>
     </div>

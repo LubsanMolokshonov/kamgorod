@@ -4,6 +4,7 @@
  * Поздравление + призыв оформить диплом
  */
 $footer_reason = 'прошли олимпиаду на нашем портале';
+$utm = 'utm_source=email&utm_campaign=olympiad-quiz-success';
 ob_start();
 ?>
 <div class="email-header" style="background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);">
@@ -41,7 +42,8 @@ ob_start();
     </ul>
 
     <div class="text-center">
-        <a href="<?php echo htmlspecialchars($olympiad_url); ?>" class="cta-button" style="background: linear-gradient(135deg, #059669, #047857);">
+        <?php $oly_link = $olympiad_url . (strpos($olympiad_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($oly_link); ?>" class="cta-button" style="background: linear-gradient(135deg, #059669, #047857);">
             Оформить диплом
         </a>
     </div>

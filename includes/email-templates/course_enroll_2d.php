@@ -5,6 +5,7 @@
  *             $course_hours, $program_label, $document_label, $course_program_type,
  *             $discount_url, $payment_url, $course_url, $unsubscribe_url, $site_url
  */
+$utm = 'utm_source=email&utm_campaign=course-enroll-2d';
 $formattedPrice = number_format($course_price, 0, ',', ' ');
 $formattedDiscount = number_format($discount_price, 0, ',', ' ');
 $ctaUrl = $discount_url ?: $payment_url;
@@ -39,7 +40,8 @@ ob_start();
     </div>
 
     <div class="text-center">
-        <a href="<?php echo htmlspecialchars($ctaUrl); ?>" class="cta-button cta-button-green">
+        <?php $cta_link = $ctaUrl . (strpos($ctaUrl, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($cta_link); ?>" class="cta-button cta-button-green">
             Воспользоваться скидкой
         </a>
     </div>

@@ -8,6 +8,7 @@
  *             $cabinet_url, $course_url, $unsubscribe_url, $site_url,
  *             $order_number
  */
+$utm = 'utm_source=email&utm_campaign=course-payment-success';
 $formattedPrice = number_format($course_price, 0, ',', ' ');
 
 ob_start();
@@ -77,7 +78,8 @@ ob_start();
     </table>
 
     <div class="text-center" style="margin-top: 25px;">
-        <a href="<?php echo htmlspecialchars($cabinet_url); ?>" class="cta-button">
+        <?php $cab_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($cab_link); ?>" class="cta-button">
             Перейти в личный кабинет
         </a>
     </div>

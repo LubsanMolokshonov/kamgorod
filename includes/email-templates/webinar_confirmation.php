@@ -6,6 +6,7 @@
 
 $email_subject = "Вы зарегистрированы на вебинар: {$webinar_title}";
 
+$utm = 'utm_source=email&utm_campaign=webinar-confirmation';
 ob_start();
 ?>
 <div class="email-header">
@@ -73,7 +74,8 @@ ob_start();
     <?php endif; ?>
 
     <div class="text-center" style="margin-top: 30px;">
-        <a href="<?php echo htmlspecialchars($cabinet_url); ?>" class="cta-button cta-button-secondary">
+        <?php $cab_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($cab_link); ?>" class="cta-button cta-button-secondary">
             Перейти в личный кабинет
         </a>
     </div>

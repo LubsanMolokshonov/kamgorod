@@ -5,6 +5,7 @@
  *             $course_hours, $program_label, $document_label, $course_program_type,
  *             $discount_url, $payment_url, $course_url, $unsubscribe_url, $site_url
  */
+$utm = 'utm_source=email&utm_campaign=course-enroll-3d';
 $formattedPrice = number_format($course_price, 0, ',', ' ');
 $formattedDiscount = number_format($discount_price, 0, ',', ' ');
 $ctaUrl = $discount_url ?: $payment_url;
@@ -47,7 +48,8 @@ ob_start();
     </div>
 
     <div class="text-center">
-        <a href="<?php echo htmlspecialchars($ctaUrl); ?>" class="cta-button" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); font-size: 18px; padding: 18px 40px;">
+        <?php $cta_link = $ctaUrl . (strpos($ctaUrl, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($cta_link); ?>" class="cta-button" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); font-size: 18px; padding: 18px 40px;">
             Оплатить сейчас со скидкой
         </a>
     </div>
@@ -60,7 +62,7 @@ ob_start();
     </ul>
 
     <div class="text-center" style="margin-top: 25px;">
-        <a href="<?php echo htmlspecialchars($ctaUrl); ?>" class="cta-button cta-button-green">
+        <a href="<?php echo htmlspecialchars($cta_link); ?>" class="cta-button cta-button-green">
             Воспользоваться скидкой 10%
         </a>
     </div>
