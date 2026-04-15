@@ -15,7 +15,7 @@ try {
     $webinar_duration = 60;
     $speaker_name = "";
     $broadcast_url = "https://start.bizon365.ru/room/32592/zevaut";
-    $cabinet_url = SITE_URL . "/pages/cabinet.php?tab=webinars";
+    $cabinet_url = SITE_URL . "/pages/cabinet.php?tab=events";
     $unsubscribe_url = SITE_URL . "/pages/unsubscribe.php?token=test";
 
     $mail = new PHPMailer(true);

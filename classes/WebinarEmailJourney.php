@@ -362,7 +362,7 @@ class WebinarEmailJourney {
             'calendar_url' => SITE_URL . '/ajax/generate-ics.php?registration_id=' . $emailData['webinar_registration_id'],
             'google_calendar_url' => $this->buildGoogleCalendarUrl($webinarDate, $emailData),
             'webinar_url' => SITE_URL . '/vebinar/' . $emailData['webinar_slug'],
-            'cabinet_url' => generateMagicUrl($userId, '/pages/cabinet.php?tab=webinars'),
+            'cabinet_url' => generateMagicUrl($userId, '/pages/cabinet.php?tab=events'),
             'certificate_url' => generateMagicUrl($userId, '/pages/webinar-certificate.php?registration_id=' . $emailData['webinar_registration_id']),
             'unsubscribe_url' => $unsubscribeUrl,
             'site_url' => SITE_URL,

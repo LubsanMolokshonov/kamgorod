@@ -58,7 +58,7 @@ function validateMagicToken($token) {
  * Генерирует полный URL для magic-ссылки
  *
  * @param int $userId ID пользователя
- * @param string $targetPath Относительный путь (например, '/pages/cabinet.php?tab=webinars')
+ * @param string $targetPath Относительный путь (например, '/pages/cabinet.php?tab=events')
  * @param int $expiryDays Срок действия в днях
  * @return string Полный URL magic-ссылки
  */

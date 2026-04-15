@@ -249,7 +249,7 @@ function initRegistrationForm() {
                 }
 
                 // Add button to cabinet
-                const cabinetUrl = data.cabinet_url || '/pages/cabinet.php?tab=webinars';
+                const cabinetUrl = data.cabinet_url || '/pages/cabinet.php?tab=events';
                 successHtml += '<div style="margin-top: 16px;">' +
                     '<a href="' + cabinetUrl + '" class="btn btn-outline" style="display: inline-block;">Перейти в личный кабинет</a></div>';
 

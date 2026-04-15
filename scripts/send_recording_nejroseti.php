@@ -204,13 +204,13 @@ foreach ($users as $index => $user) {
         $cabinet_url = '';
         if ($userId && $regId) {
             $certificate_url = generateMagicUrl($userId, '/pages/webinar-certificate.php?registration_id=' . $regId);
-            $cabinet_url = generateMagicUrl($userId, '/pages/cabinet.php?tab=webinars');
+            $cabinet_url = generateMagicUrl($userId, '/pages/cabinet.php?tab=events');
         } elseif ($userId) {
-            $cabinet_url = generateMagicUrl($userId, '/pages/cabinet.php?tab=webinars');
+            $cabinet_url = generateMagicUrl($userId, '/pages/cabinet.php?tab=events');
             $certificate_url = $cabinet_url; // fallback
         } else {
             $certificate_url = SITE_URL . '/pages/webinar-certificate.php';
-            $cabinet_url = SITE_URL . '/pages/cabinet.php?tab=webinars';
+            $cabinet_url = SITE_URL . '/pages/cabinet.php?tab=events';
         }
 
         // Unsubscribe

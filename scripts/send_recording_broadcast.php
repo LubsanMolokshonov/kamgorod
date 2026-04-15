@@ -227,7 +227,7 @@ foreach ($users as $index => $user) {
 
         // Генерация magic-link
         $certificate_url = generateMagicUrl($userId, '/pages/webinar-certificate.php?registration_id=' . $regId);
-        $cabinet_url = generateMagicUrl($userId, '/pages/cabinet.php?tab=webinars');
+        $cabinet_url = generateMagicUrl($userId, '/pages/cabinet.php?tab=events');
 
         // Unsubscribe
         $unsubscribeToken = base64_encode($email . ':' . substr(md5($email . SITE_URL), 0, 16));

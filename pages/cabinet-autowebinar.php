@@ -33,7 +33,7 @@ if (!isset($_SESSION['user_id'])) {
 // Get registration ID
 $registrationId = intval($_GET['registration_id'] ?? 0);
 if (!$registrationId) {
-    header('Location: /kabinet?tab=webinars');
+    header('Location: /kabinet?tab=events');
     exit;
 }
 
@@ -42,13 +42,13 @@ $regObj = new WebinarRegistration($db);
 $registration = $regObj->getById($registrationId);
 
 if (!$registration) {
-    header('Location: /kabinet?tab=webinars');
+    header('Location: /kabinet?tab=events');
     exit;
 }
 
 // Verify ownership
 if ($registration['user_id'] != $_SESSION['user_id']) {
-    header('Location: /kabinet?tab=webinars');
+    header('Location: /kabinet?tab=events');
     exit;
 }
 
@@ -57,7 +57,7 @@ $webinarObj = new Webinar($db);
 $webinar = $webinarObj->getById($registration['webinar_id']);
 
 if (!$webinar || $webinar['status'] !== 'videolecture') {
-    header('Location: /kabinet?tab=webinars');
+    header('Location: /kabinet?tab=events');
     exit;
 }
 
@@ -89,7 +89,7 @@ include __DIR__ . '/../includes/header.php';
     <div class="autowebinar-page">
         <!-- Breadcrumb -->
         <div class="autowebinar-breadcrumb">
-            <a href="/kabinet?tab=webinars">Личный кабинет</a>
+            <a href="/kabinet?tab=events">Личный кабинет</a>
             <span class="breadcrumb-sep">/</span>
             <span>Видеолекция</span>
         </div>
@@ -213,7 +213,7 @@ include __DIR__ . '/../includes/header.php';
 
         <!-- Back to cabinet -->
         <div class="autowebinar-actions">
-            <a href="/kabinet?tab=webinars" class="btn-back-cabinet">
+            <a href="/kabinet?tab=events" class="btn-back-cabinet">
                 Вернуться в личный кабинет
             </a>
         </div>

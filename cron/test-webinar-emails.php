@@ -78,7 +78,7 @@ $templateData = [
     'calendar_url' => SITE_URL . '/ajax/generate-ics.php?registration_id=0',
     'google_calendar_url' => $googleCalendarUrl,
     'webinar_url' => SITE_URL . '/vebinar/' . $webinar['slug'],
-    'cabinet_url' => SITE_URL . '/pages/cabinet.php?tab=webinars',
+    'cabinet_url' => SITE_URL . '/pages/cabinet.php?tab=events',
     'certificate_url' => SITE_URL . '/pages/cabinet.php',
     'unsubscribe_url' => SITE_URL . '/pages/unsubscribe.php?token=test',
     'site_url' => SITE_URL,

@@ -136,7 +136,7 @@ foreach ($recipients as $recipient) {
 
         // Magic-link в личный кабинет
         $userId = $recipient['user_id'];
-        $cabinet_url = generateMagicUrl($userId, '/pages/cabinet.php?tab=webinars');
+        $cabinet_url = generateMagicUrl($userId, '/pages/cabinet.php?tab=events');
         $unsubscribeToken = base64_encode($email . ':' . substr(md5($email . SITE_URL), 0, 16));
         $unsubscribe_url = SITE_URL . '/pages/unsubscribe.php?token=' . $unsubscribeToken;
 

@@ -513,7 +513,7 @@ class AutowebinarEmailChain {
                 'certificate_hours' => $emailData['certificate_hours'] ?? 2,
                 'autowebinar_url'   => $autowebinarUrl,
                 'certificate_url'   => $certificateUrl,
-                'cabinet_url'       => generateMagicUrl($emailData['user_id'], '/pages/cabinet.php?tab=webinars'),
+                'cabinet_url'       => generateMagicUrl($emailData['user_id'], '/pages/cabinet.php?tab=events'),
                 'registration_id'   => $emailData['registration_id'],
                 'unsubscribe_url'   => $unsubscribeUrl,
                 'site_url'          => SITE_URL,

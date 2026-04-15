@@ -67,7 +67,7 @@ $certificate_price = $webinar['certificate_price'] ?? 200;
 $certificate_hours = $webinar['certificate_hours'] ?? 2;
 $registration_id = 0;
 $webinar_url = SITE_URL . '/vebinar/' . $webinar_slug;
-$cabinet_url = SITE_URL . '/pages/cabinet.php?tab=webinars';
+$cabinet_url = SITE_URL . '/pages/cabinet.php?tab=events';
 $certificate_url = SITE_URL . '/pages/webinar-certificate.php?registration_id=0';
 $unsubscribe_url = SITE_URL . '/pages/unsubscribe.php?token=test';
 $site_name = 'ФГОС-Практикум';

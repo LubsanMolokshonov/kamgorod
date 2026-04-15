@@ -487,7 +487,7 @@ class PublicationEmailChain {
 
             $cabinetUrl = generateMagicUrl(
                 $emailData['user_id'],
-                '/pages/cabinet.php?tab=publications'
+                '/pages/cabinet.php?tab=events'
             );
 
             $submitUrl = generateMagicUrl(

@@ -48,7 +48,7 @@ if (!$registration) {
 
 // Verify ownership
 if ($registration['user_id'] != $_SESSION['user_id']) {
-    header('Location: /pages/cabinet.php?tab=webinars');
+    header('Location: /pages/cabinet.php?tab=events');
     exit;
 }
 
@@ -71,7 +71,7 @@ if ($webinarData && $webinarData['status'] === 'videolecture') {
 } else {
     // Regular webinars: time-based check
     if (time() < $certificateAvailableTime) {
-        header('Location: /pages/cabinet.php?tab=webinars');
+        header('Location: /pages/cabinet.php?tab=events');
         exit;
     }
 }
@@ -122,7 +122,7 @@ include __DIR__ . '/../includes/header.php';
                         <h3>Сертификат готов!</h3>
                         <p>Вы можете скачать его в личном кабинете</p>
                         <a href="/ajax/download-webinar-certificate.php?id=<?php echo $existingCert['id']; ?>" class="btn btn-submit" style="margin-bottom: 12px;">Скачать сертификат</a>
-                        <a href="/pages/cabinet.php?tab=webinars" class="btn btn-outline" style="display: inline-block;">Перейти в личный кабинет</a>
+                        <a href="/pages/cabinet.php?tab=events" class="btn btn-outline" style="display: inline-block;">Перейти в личный кабинет</a>
                     </div>
                 <?php elseif ($existingCert && $existingCert['status'] === 'paid'): ?>
                     <!-- Certificate paid, generating -->
@@ -132,7 +132,7 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <h3>Сертификат формируется</h3>
                         <p>Оплата прошла успешно. Сертификат будет готов в ближайшее время.</p>
-                        <a href="/pages/cabinet.php?tab=webinars" class="btn btn-submit">Проверить в личном кабинете</a>
+                        <a href="/pages/cabinet.php?tab=events" class="btn btn-submit">Проверить в личном кабинете</a>
                     </div>
                 <?php else: ?>
                     <!-- Webinar info card -->

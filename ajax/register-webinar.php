@@ -190,7 +190,7 @@ try {
     }
     $cabinetUrl = $isAutowebinar
         ? '/kabinet/videolektsiya/' . $registrationId
-        : '/pages/cabinet.php?tab=webinars';
+        : '/pages/cabinet.php?tab=events';
 
     // Success response
     echo json_encode([

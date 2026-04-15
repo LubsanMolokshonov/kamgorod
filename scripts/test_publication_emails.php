@@ -30,7 +30,7 @@ $sampleData = [
     'publication_slug'   => 'metodicheskie-rekomendatsii-ikt',
     'certificate_price'  => 169,
     'certificate_url'    => SITE_URL . '/pages/publication-certificate.php?id=1',
-    'cabinet_url'        => SITE_URL . '/pages/cabinet.php?tab=publications',
+    'cabinet_url'        => SITE_URL . '/pages/cabinet.php?tab=events',
     'submit_url'         => SITE_URL . '/opublikovat',
     'publication_url'    => SITE_URL . '/zhurnal/metodicheskie-rekomendatsii-ikt',
     'moderation_comment' => 'Материал не соответствует педагогической тематике: содержание относится к кулинарии, а не к образованию.',
