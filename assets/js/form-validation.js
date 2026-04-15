@@ -289,6 +289,14 @@ $(document).ready(function() {
         // Submit via AJAX
         const formData = new FormData(this);
 
+        // UTM-атрибуция первого клика: передаём метки из sessionStorage
+        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function(key) {
+            var val = sessionStorage.getItem('_fgos_' + key);
+            if (val) formData.append(key, val);
+        });
+        var visitId = sessionStorage.getItem('_fgos_visit_id');
+        if (visitId) formData.append('visit_id', visitId);
+
         $.ajax({
             url: '/ajax/save-registration.php',
             type: 'POST',

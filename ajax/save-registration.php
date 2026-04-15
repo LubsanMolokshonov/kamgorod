@@ -72,6 +72,20 @@ try {
     $supervisorName = !empty($data['supervisor_name']) ? trim($data['supervisor_name']) : null;
     $hasSupervisor = !empty($supervisorName) ? 1 : 0;
 
+    // UTM-атрибуция первого клика
+    $utmSource   = mb_substr(trim($_POST['utm_source'] ?? ''), 0, 255) ?: null;
+    $utmMedium   = mb_substr(trim($_POST['utm_medium'] ?? ''), 0, 255) ?: null;
+    $utmCampaign = mb_substr(trim($_POST['utm_campaign'] ?? ''), 0, 255) ?: null;
+    $utmContent  = mb_substr(trim($_POST['utm_content'] ?? ''), 0, 255) ?: null;
+    $utmTerm     = mb_substr(trim($_POST['utm_term'] ?? ''), 0, 255) ?: null;
+
+    // Привязка визита к пользователю
+    $visitId = intval($_POST['visit_id'] ?? 0);
+    if ($visitId && $userId) {
+        $dbObj = new Database($db);
+        $dbObj->execute("UPDATE visits SET user_id = ? WHERE id = ? AND user_id IS NULL", [$userId, $visitId]);
+    }
+
     // Create registration
     $registrationId = $registrationObj->create([
         'user_id' => $userId,
@@ -85,7 +99,12 @@ try {
         'has_supervisor' => $hasSupervisor,
         'supervisor_name' => $supervisorName,
         'supervisor_email' => $data['supervisor_email'] ?? null,
-        'supervisor_organization' => $data['supervisor_organization'] ?? null
+        'supervisor_organization' => $data['supervisor_organization'] ?? null,
+        'utm_source' => $utmSource,
+        'utm_medium' => $utmMedium,
+        'utm_campaign' => $utmCampaign,
+        'utm_content' => $utmContent,
+        'utm_term' => $utmTerm,
     ]);
 
     // Add to session cart

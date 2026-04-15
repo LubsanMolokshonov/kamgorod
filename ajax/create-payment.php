@@ -427,13 +427,56 @@ try {
         throw new Exception('Не удалось создать заказ');
     }
 
-    // Сохраняем UTM-атрибуцию на заказе
+    // Сохраняем UTM-атрибуцию на заказе (first-click attribution)
     $utmSource = mb_substr(trim($_POST['utm_source'] ?? ''), 0, 255) ?: null;
     $utmMedium = mb_substr(trim($_POST['utm_medium'] ?? ''), 0, 255) ?: null;
     $utmCampaign = mb_substr(trim($_POST['utm_campaign'] ?? ''), 0, 255) ?: null;
     $utmContent = mb_substr(trim($_POST['utm_content'] ?? ''), 0, 255) ?: null;
     $utmTerm = mb_substr(trim($_POST['utm_term'] ?? ''), 0, 255) ?: null;
     $visitId = intval($_POST['visit_id'] ?? 0) ?: null;
+
+    // Fallback: если в сессии нет UTM (пользователь вернулся по триггерной рассылке),
+    // берём UTM из регистрации/записи — атрибуция первого клика
+    if (!$utmSource) {
+        $dbFallback = new Database($db);
+        $fallbackUtm = null;
+
+        // 1. Регистрации на конкурсы
+        if (!$fallbackUtm && !empty($registrations)) {
+            $fallbackUtm = $dbFallback->queryOne(
+                "SELECT utm_source, utm_medium, utm_campaign, utm_content, utm_term
+                 FROM registrations WHERE id = ? AND utm_source IS NOT NULL",
+                [$registrations[0]]
+            );
+        }
+
+        // 2. Олимпиадные регистрации
+        if (!$fallbackUtm && !empty($olympiadRegistrations)) {
+            $fallbackUtm = $dbFallback->queryOne(
+                "SELECT utm_source, utm_medium, utm_campaign, utm_content, utm_term
+                 FROM olympiad_registrations WHERE id = ? AND utm_source IS NOT NULL",
+                [$olympiadRegistrations[0]]
+            );
+        }
+
+        // 3. Записи на курсы (course_enrollments уже сохраняют UTM)
+        if (!$fallbackUtm && $userId) {
+            $fallbackUtm = $dbFallback->queryOne(
+                "SELECT utm_source, utm_medium, utm_campaign, utm_content, utm_term
+                 FROM course_enrollments WHERE user_id = ? AND utm_source IS NOT NULL
+                 ORDER BY created_at DESC LIMIT 1",
+                [$userId]
+            );
+        }
+
+        if ($fallbackUtm && !empty($fallbackUtm['utm_source'])) {
+            $utmSource   = $fallbackUtm['utm_source'];
+            $utmMedium   = $fallbackUtm['utm_medium'] ?? null;
+            $utmCampaign = $fallbackUtm['utm_campaign'] ?? null;
+            $utmContent  = $fallbackUtm['utm_content'] ?? null;
+            $utmTerm     = $fallbackUtm['utm_term'] ?? null;
+        }
+    }
 
     if ($utmSource || $utmMedium || $utmCampaign || $utmContent || $utmTerm || $visitId) {
         $dbObj = new Database($db);

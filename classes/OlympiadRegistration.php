@@ -30,7 +30,12 @@ class OlympiadRegistration {
             'supervisor_name' => $data['supervisor_name'] ?? null,
             'supervisor_email' => $data['supervisor_email'] ?? null,
             'supervisor_organization' => $data['supervisor_organization'] ?? null,
-            'status' => 'pending'
+            'status' => 'pending',
+            'utm_source' => $data['utm_source'] ?? null,
+            'utm_medium' => $data['utm_medium'] ?? null,
+            'utm_campaign' => $data['utm_campaign'] ?? null,
+            'utm_content' => $data['utm_content'] ?? null,
+            'utm_term' => $data['utm_term'] ?? null,
         ]);
     }
 

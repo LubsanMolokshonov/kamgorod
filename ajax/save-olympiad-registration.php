@@ -147,6 +147,20 @@ try {
         $hasSupervisor = 0;
     }
 
+    // UTM-атрибуция первого клика
+    $utmSource   = mb_substr(trim($_POST['utm_source'] ?? ''), 0, 255) ?: null;
+    $utmMedium   = mb_substr(trim($_POST['utm_medium'] ?? ''), 0, 255) ?: null;
+    $utmCampaign = mb_substr(trim($_POST['utm_campaign'] ?? ''), 0, 255) ?: null;
+    $utmContent  = mb_substr(trim($_POST['utm_content'] ?? ''), 0, 255) ?: null;
+    $utmTerm     = mb_substr(trim($_POST['utm_term'] ?? ''), 0, 255) ?: null;
+
+    // Привязка визита к пользователю
+    $visitId = intval($_POST['visit_id'] ?? 0);
+    if ($visitId && $userId) {
+        $dbObj = new Database($db);
+        $dbObj->execute("UPDATE visits SET user_id = ? WHERE id = ? AND user_id IS NULL", [$userId, $visitId]);
+    }
+
     $registrationObj = new OlympiadRegistration($db);
 
     $registrationId = $registrationObj->create([
@@ -164,6 +178,11 @@ try {
         'supervisor_name'         => $supervisorName,
         'supervisor_email'        => $hasSupervisor ? ($data['supervisor_email'] ?? null) : null,
         'supervisor_organization' => $hasSupervisor ? ($data['supervisor_organization'] ?? null) : null,
+        'utm_source'              => $utmSource,
+        'utm_medium'              => $utmMedium,
+        'utm_campaign'            => $utmCampaign,
+        'utm_content'             => $utmContent,
+        'utm_term'                => $utmTerm,
     ]);
 
     // ------------------------------------------------------------------
