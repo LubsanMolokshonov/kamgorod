@@ -575,27 +575,28 @@ class YmlFeedGenerator
 
     /**
      * Построить рекламный заголовок для олимпиады (до 56 символов)
-     * Формат: "Олимпиада для {аудитория}. Бесплатно!"
+     * Формат: "Олимпиада для {аудитория}. Участие бесплатное. ФГОС"
      */
     private function buildOlympiadAdHeadline(array $oly): string
     {
         $subject = $oly['subject'] ?? '';
         $audience = self::OLYMPIAD_SUBJECT_AUDIENCE_MAP[$subject] ?? 'педагогов';
+        $tail = 'Участие бесплатное. ФГОС';
 
-        // Вариант 1: полный — "Олимпиада для логопедов. Бесплатно!"
-        $headline = 'Олимпиада для ' . $audience . '. Бесплатно!';
+        // Вариант 1: полный
+        $headline = 'Олимпиада для ' . $audience . '. ' . $tail;
         if (mb_strlen($headline) <= 56) {
             return $headline;
         }
 
-        // Вариант 2: короче — "Олимпиада для логопедов. Бесплатная"
-        $headline = 'Олимпиада для ' . $audience . '. Бесплатная';
+        // Вариант 2: без ФГОС
+        $headline = 'Олимпиада для ' . $audience . '. Участие бесплатное';
         if (mb_strlen($headline) <= 56) {
             return $headline;
         }
 
         // Вариант 3: минимальный
-        return 'Олимпиада для педагогов. Бесплатно!';
+        return 'Олимпиада для педагогов. ' . $tail;
     }
 
     /**
