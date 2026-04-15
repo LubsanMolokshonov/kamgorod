@@ -267,35 +267,29 @@ class YmlFeedGenerator
 
     /**
      * Построить рекламный заголовок для конкурса (до 56 символов)
-     * Формат: "Конкурс для {аудитория}. Диплом сразу!"
+     * Формат: "Конкурс для {аудитория}. Бесплатное участие"
      */
     private function buildCompetitionAdHeadline(array $comp): string
     {
         $audience = $this->getShortAudienceLabel($comp);
         $sep = mb_substr($audience, -1) === '.' ? ' ' : '. ';
 
-        // Вариант 1: полный — "Конкурс для учителей математики. Диплом сразу!"
-        $headline = 'Конкурс для ' . $audience . $sep . 'Диплом сразу!';
+        // Вариант 1: полный — "Конкурс для учителей математики. Бесплатное участие"
+        $headline = 'Конкурс для ' . $audience . $sep . 'Бесплатное участие';
         if (mb_strlen($headline) <= 56) {
             return $headline;
         }
 
-        // Вариант 2: без восклицания — "Конкурс для учителей математики. Диплом"
-        $headline = 'Конкурс для ' . $audience . $sep . 'Диплом';
-        if (mb_strlen($headline) <= 56) {
-            return $headline;
-        }
-
-        // Вариант 3: укороченная аудитория
+        // Вариант 2: укороченная аудитория
         $shortAudience = $this->truncateAudience($audience, 25);
         $sep = mb_substr($shortAudience, -1) === '.' ? ' ' : '. ';
-        $headline = 'Конкурс для ' . $shortAudience . $sep . 'Диплом сразу!';
+        $headline = 'Конкурс для ' . $shortAudience . $sep . 'Бесплатное участие';
         if (mb_strlen($headline) <= 56) {
             return $headline;
         }
 
         // Вариант 4: минимальный
-        return 'Конкурс для педагогов. Диплом сразу!';
+        return 'Конкурс для педагогов. Бесплатное участие';
     }
 
     /**
