@@ -272,37 +272,56 @@ class YmlFeedGenerator
     private function buildCompetitionAdHeadline(array $comp): string
     {
         $audience = $this->getShortAudienceLabel($comp);
-        $tail = 'Диплом за 1 минуту. ФГОС';
+        $sep = mb_substr($audience, -1) === '.' ? ' ' : '. ';
 
-        // Вариант 1: полный — "Конкурс для учителей математики. Диплом за 1 минуту. ФГОС"
-        $headline = 'Конкурс для ' . $audience . '. ' . $tail;
+        // Вариант 1: полный — "Конкурс для учителей математики. Диплом сразу!"
+        $headline = 'Конкурс для ' . $audience . $sep . 'Диплом сразу!';
         if (mb_strlen($headline) <= 56) {
             return $headline;
         }
 
-        // Вариант 2: без ФГОС
-        $headline = 'Конкурс для ' . $audience . '. Диплом за 1 минуту';
+        // Вариант 2: без восклицания — "Конкурс для учителей математики. Диплом"
+        $headline = 'Конкурс для ' . $audience . $sep . 'Диплом';
         if (mb_strlen($headline) <= 56) {
             return $headline;
         }
 
-        // Вариант 3: укороченная аудитория + полный хвост
+        // Вариант 3: укороченная аудитория
         $shortAudience = $this->truncateAudience($audience, 25);
-        $headline = 'Конкурс для ' . $shortAudience . '. ' . $tail;
+        $sep = mb_substr($shortAudience, -1) === '.' ? ' ' : '. ';
+        $headline = 'Конкурс для ' . $shortAudience . $sep . 'Диплом сразу!';
         if (mb_strlen($headline) <= 56) {
             return $headline;
         }
 
         // Вариант 4: минимальный
-        return 'Конкурс для педагогов. ' . $tail;
+        return 'Конкурс для педагогов. Диплом сразу!';
     }
 
     /**
-     * Построить рекламное описание для конкурса — универсальное
+     * Построить рекламное описание для конкурса
      */
     private function buildCompetitionAdDescription(array $comp): string
     {
-        return 'Всероссийский конкурс! Диплом за 1 минуту! Выбор призового места и дизайна диплома!';
+        // Видимая часть (до 81 символа)
+        $desc = 'Диплом в день отправки! Всероссийский конкурс от 149 ₽. Принимаем работы 24/7. ';
+
+        // Развёрнутая часть
+        $desc .= '«' . $comp['title'] . '»';
+
+        if (!empty($comp['target_participants'])) {
+            $desc .= ' для ' . mb_strtolower($comp['target_participants_genitive'] ?? $comp['target_participants']);
+        }
+
+        $desc .= '. ';
+
+        if (!empty($comp['description'])) {
+            $desc .= $this->extractSentences($comp['description'], 2) . ' ';
+        }
+
+        $desc .= 'Именной диплом установленного образца. Дистанционный формат.';
+
+        return $this->cleanText($desc);
     }
 
     /**
