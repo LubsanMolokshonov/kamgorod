@@ -450,8 +450,8 @@ class YmlFeedGenerator
                     GROUP_CONCAT(DISTINCT at2.name ORDER BY at2.display_order) as audience_types,
                     GROUP_CONCAT(DISTINCT oac.category_id) as category_ids
              FROM olympiads o
-             LEFT JOIN olympiad_audience_categories oac ON o.id = oac.olympiad_id
-             LEFT JOIN audience_categories ac ON oac.category_id = ac.id
+             INNER JOIN olympiad_audience_categories oac ON o.id = oac.olympiad_id
+             INNER JOIN audience_categories ac ON oac.category_id = ac.id AND ac.slug = 'pedagogi'
              LEFT JOIN olympiad_audience_types oat ON o.id = oat.olympiad_id
              LEFT JOIN audience_types at2 ON oat.audience_type_id = at2.id
              WHERE o.is_active = 1
