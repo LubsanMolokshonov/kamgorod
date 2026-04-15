@@ -20,6 +20,18 @@ if (!$redirect || $redirect[0] !== '/' || strpos($redirect, '//') === 0) {
     $redirect = '/pages/cabinet.php';
 }
 
+// Пробрасываем UTM-параметры в redirect URL
+$utmParams = [];
+foreach ($_GET as $key => $value) {
+    if (strpos($key, 'utm_') === 0 && $value !== '') {
+        $utmParams[$key] = $value;
+    }
+}
+if (!empty($utmParams)) {
+    $separator = strpos($redirect, '?') !== false ? '&' : '?';
+    $redirect .= $separator . http_build_query($utmParams);
+}
+
 // Если пользователь уже авторизован — просто редиректим
 if (isset($_SESSION['user_id'])) {
     header('Location: ' . $redirect);
