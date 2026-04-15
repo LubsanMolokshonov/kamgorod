@@ -34,11 +34,11 @@ $monthNames = [
 ];
 $currentMonthName = $monthNames[$filterMonth] . ' ' . $filterYear;
 
-// === ПЕДПОРТАЛ: Заказы (все order_items педпортала за период) ===
+// === ПЕДПОРТАЛ: Заказы (уникальные заказы педпортала за период) ===
 $stmt = $db->prepare("
-    SELECT COUNT(oi.id) as total_orders
-    FROM order_items oi
-    JOIN orders o ON oi.order_id = o.id
+    SELECT COUNT(DISTINCT o.id) as total_orders
+    FROM orders o
+    JOIN order_items oi ON oi.order_id = o.id
     WHERE o.created_at >= ? AND o.created_at <= ?
       AND (oi.registration_id IS NOT NULL
            OR oi.certificate_id IS NOT NULL
@@ -50,16 +50,18 @@ $pedportalOrders = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total_orders'];
 
 // === ПЕДПОРТАЛ: Оплаты и выручка ===
 $stmt = $db->prepare("
-    SELECT COUNT(oi.id) as paid_count,
-           COALESCE(SUM(oi.price), 0) as revenue
-    FROM order_items oi
-    JOIN orders o ON oi.order_id = o.id
+    SELECT COUNT(*) as paid_count,
+           COALESCE(SUM(o.final_amount), 0) as revenue
+    FROM orders o
     WHERE o.payment_status = 'succeeded'
       AND o.paid_at >= ? AND o.paid_at <= ?
-      AND (oi.registration_id IS NOT NULL
-           OR oi.certificate_id IS NOT NULL
-           OR oi.webinar_certificate_id IS NOT NULL
-           OR oi.olympiad_registration_id IS NOT NULL)
+      AND EXISTS (
+          SELECT 1 FROM order_items oi WHERE oi.order_id = o.id
+          AND (oi.registration_id IS NOT NULL
+               OR oi.certificate_id IS NOT NULL
+               OR oi.webinar_certificate_id IS NOT NULL
+               OR oi.olympiad_registration_id IS NOT NULL)
+      )
 ");
 $stmt->execute([$startDate, $endDate]);
 $pedportalPaid = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -79,13 +81,15 @@ $coursesApps = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total_applications'];
 
 // === КУРСЫ: Оплаты и выручка ===
 $stmt = $db->prepare("
-    SELECT COUNT(oi.id) as paid_count,
-           COALESCE(SUM(oi.price), 0) as revenue
-    FROM order_items oi
-    JOIN orders o ON oi.order_id = o.id
+    SELECT COUNT(*) as paid_count,
+           COALESCE(SUM(o.final_amount), 0) as revenue
+    FROM orders o
     WHERE o.payment_status = 'succeeded'
       AND o.paid_at >= ? AND o.paid_at <= ?
-      AND oi.course_enrollment_id IS NOT NULL
+      AND EXISTS (
+          SELECT 1 FROM order_items oi WHERE oi.order_id = o.id
+          AND oi.course_enrollment_id IS NOT NULL
+      )
 ");
 $stmt->execute([$startDate, $endDate]);
 $coursesPaid = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -127,12 +131,12 @@ $stmt->execute([$startDate, $endDate]);
 $productBreakdown = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // === Дневной breakdown: Педпортал (заказы + оплаты по дням) ===
-// Заказы по дням (все order_items педпортала, любой статус)
+// Заказы по дням (уникальные заказы педпортала, любой статус)
 $stmt = $db->prepare("
     SELECT DATE(o.created_at) as sale_date,
-           COUNT(oi.id) as orders_count
-    FROM order_items oi
-    JOIN orders o ON oi.order_id = o.id
+           COUNT(DISTINCT o.id) as orders_count
+    FROM orders o
+    JOIN order_items oi ON oi.order_id = o.id
     WHERE o.created_at >= ? AND o.created_at <= ?
       AND (oi.registration_id IS NOT NULL
            OR oi.certificate_id IS NOT NULL
@@ -149,16 +153,18 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
 // Оплаты + выручка по дням (succeeded)
 $stmt = $db->prepare("
     SELECT DATE(o.paid_at) as sale_date,
-           COUNT(oi.id) as paid_count,
-           COALESCE(SUM(oi.price), 0) as revenue
-    FROM order_items oi
-    JOIN orders o ON oi.order_id = o.id
+           COUNT(*) as paid_count,
+           COALESCE(SUM(o.final_amount), 0) as revenue
+    FROM orders o
     WHERE o.payment_status = 'succeeded'
       AND o.paid_at >= ? AND o.paid_at <= ?
-      AND (oi.registration_id IS NOT NULL
-           OR oi.certificate_id IS NOT NULL
-           OR oi.webinar_certificate_id IS NOT NULL
-           OR oi.olympiad_registration_id IS NOT NULL)
+      AND EXISTS (
+          SELECT 1 FROM order_items oi WHERE oi.order_id = o.id
+          AND (oi.registration_id IS NOT NULL
+               OR oi.certificate_id IS NOT NULL
+               OR oi.webinar_certificate_id IS NOT NULL
+               OR oi.olympiad_registration_id IS NOT NULL)
+      )
     GROUP BY DATE(o.paid_at)
 ");
 $stmt->execute([$startDate, $endDate]);
@@ -203,13 +209,15 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
 // Оплаты + выручка по дням
 $stmt = $db->prepare("
     SELECT DATE(o.paid_at) as sale_date,
-           COUNT(oi.id) as paid_count,
-           COALESCE(SUM(oi.price), 0) as revenue
-    FROM order_items oi
-    JOIN orders o ON oi.order_id = o.id
+           COUNT(*) as paid_count,
+           COALESCE(SUM(o.final_amount), 0) as revenue
+    FROM orders o
     WHERE o.payment_status = 'succeeded'
       AND o.paid_at >= ? AND o.paid_at <= ?
-      AND oi.course_enrollment_id IS NOT NULL
+      AND EXISTS (
+          SELECT 1 FROM order_items oi WHERE oi.order_id = o.id
+          AND oi.course_enrollment_id IS NOT NULL
+      )
     GROUP BY DATE(o.paid_at)
 ");
 $stmt->execute([$startDate, $endDate]);
