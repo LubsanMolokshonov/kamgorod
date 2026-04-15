@@ -455,6 +455,15 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                     $missingDocs[] = "diploma:reg_{$item['registration_id']}";
                 }
             }
+            if (!empty($item['olympiad_registration_id'])) {
+                $odStmt = $GLOBALS['db']->prepare("SELECT pdf_path FROM olympiad_diplomas WHERE olympiad_registration_id = ? AND recipient_type = 'participant' AND pdf_path IS NOT NULL AND pdf_path != '' LIMIT 1");
+                $odStmt->execute([$item['olympiad_registration_id']]);
+                $odRow = $odStmt->fetch(PDO::FETCH_ASSOC);
+                if (!$odRow || !file_exists(BASE_PATH . '/uploads/diplomas/' . $odRow['pdf_path'])) {
+                    $allDocsReady = false;
+                    $missingDocs[] = "olympiad_diploma:reg_{$item['olympiad_registration_id']}";
+                }
+            }
         }
 
         if ($allDocsReady) {

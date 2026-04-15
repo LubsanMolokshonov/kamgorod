@@ -56,6 +56,19 @@ if ($paymentStatus === 'succeeded') {
     $_SESSION['cart'] = [];
 }
 
+// Определяем вкладку ЛК по типу товаров в заказе
+$hasCourseItem = false;
+if (!empty($order['items'])) {
+    foreach ($order['items'] as $item) {
+        if (!empty($item['course_enrollment_id'])) {
+            $hasCourseItem = true;
+            break;
+        }
+    }
+}
+$cabinetTab = $hasCourseItem ? 'courses' : 'events';
+$cabinetUrl = '/pages/cabinet.php?tab=' . $cabinetTab;
+
 // Redirect to failure page if payment failed
 if ($paymentStatus === 'failed' || $paymentStatus === 'canceled') {
     header('Location: /pages/payment-failure.php?order_number=' . urlencode($orderNumber));
@@ -324,7 +337,7 @@ include __DIR__ . '/../includes/header.php';
                 Подтверждение оплаты отправлено на email <strong><?php echo htmlspecialchars($order['email']); ?></strong>
             </p>
 
-            <a href="/pages/cabinet.php" class="btn-cabinet">Перейти в личный кабинет</a>
+            <a href="<?php echo $cabinetUrl; ?>" class="btn-cabinet">Перейти в личный кабинет</a>
 
             <div class="auto-redirect">
                 Автоматический переход в личный кабинет через <span id="countdown">15</span> секунд...
@@ -350,7 +363,7 @@ include __DIR__ . '/../includes/header.php';
                 }
 
                 function doRedirect() {
-                    window.location.href = '/pages/cabinet.php';
+                    window.location.href = '<?php echo $cabinetUrl; ?>';
                 }
 
                 // Обратный отсчёт
