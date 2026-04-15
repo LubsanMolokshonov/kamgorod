@@ -45,7 +45,22 @@ class UTMAnalytics
         $orders = $this->queryOrders($filters, $groupColumns, $parentUtm);
 
         // Мержим по ключу группировки
-        return $this->mergeResults($visits, $applications, $orders, $groupByCol);
+        $results = $this->mergeResults($visits, $applications, $orders, $groupByCol);
+
+        // На уровне source добавляем строку "(без UTM)" для записей без меток
+        if ($groupLevel === 'source' && empty($parentUtm)) {
+            $noUtmRow = $this->buildRow(
+                '(без UTM)',
+                $this->queryVisitsNoUtm($filters),
+                $this->queryCourseApplicationsNoUtm($filters),
+                $this->queryOrdersNoUtm($filters)
+            );
+            if ($noUtmRow['visits'] > 0 || $noUtmRow['created_orders'] > 0 || $noUtmRow['course_applications'] > 0) {
+                $results[] = $noUtmRow;
+            }
+        }
+
+        return $results;
     }
 
     /**
@@ -93,7 +108,7 @@ class UTMAnalytics
 
     private function queryVisitsTotals(array $filters): array
     {
-        $where = ['v.is_bot = 0', 'v.utm_source IS NOT NULL'];
+        $where = ['v.is_bot = 0'];
         $params = [];
         $this->addDateFilter($where, $params, 'v.started_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
 
@@ -136,7 +151,7 @@ class UTMAnalytics
 
     private function queryCourseApplicationsTotals(array $filters): array
     {
-        $where = ['ce.utm_source IS NOT NULL'];
+        $where = ['1 = 1'];
         $params = [];
         $this->addDateFilter($where, $params, 'ce.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
 
@@ -198,7 +213,72 @@ class UTMAnalytics
 
     private function queryOrdersTotals(array $filters): array
     {
-        $where = ['o.utm_source IS NOT NULL'];
+        $where = ['1 = 1'];
+        $params = [];
+        $this->addDateFilter($where, $params, 'o.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
+        $this->addProductTypeFilter($where, $filters['product_type'] ?? 'all');
+
+        $paidWhere = [];
+        $paidParams = [];
+        if (!empty($filters['paid_from'])) {
+            $paidWhere[] = 'o.paid_at >= ?';
+            $paidParams[] = $filters['paid_from'] . ' 00:00:00';
+        }
+        if (!empty($filters['paid_to'])) {
+            $paidWhere[] = 'o.paid_at <= ?';
+            $paidParams[] = $filters['paid_to'] . ' 23:59:59';
+        }
+        $paidCondition = !empty($paidWhere)
+            ? 'o.payment_status = \'succeeded\' AND ' . implode(' AND ', $paidWhere)
+            : 'o.payment_status = \'succeeded\'';
+
+        $whereSql = implode(' AND ', $where);
+        $allParams = array_merge($params, $paidParams, $paidParams);
+
+        return $this->db->queryOne(
+            "SELECT COUNT(DISTINCT o.id) as created_orders,
+                    COUNT(DISTINCT CASE WHEN {$paidCondition} THEN o.id END) as paid_orders,
+                    COALESCE(SUM(CASE WHEN {$paidCondition} THEN o.final_amount ELSE 0 END), 0) as revenue
+             FROM orders o
+             WHERE {$whereSql}",
+            $allParams
+        ) ?: ['created_orders' => 0, 'paid_orders' => 0, 'revenue' => 0];
+    }
+
+    // ========================================
+    // Записи без UTM-меток
+    // ========================================
+
+    private function queryVisitsNoUtm(array $filters): array
+    {
+        $where = ['v.is_bot = 0', 'v.utm_source IS NULL'];
+        $params = [];
+        $this->addDateFilter($where, $params, 'v.started_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
+        $whereSql = implode(' AND ', $where);
+
+        return $this->db->queryOne(
+            "SELECT COUNT(*) as visits, ROUND(AVG(v.duration_seconds)) as avg_duration
+             FROM visits v WHERE {$whereSql}",
+            $params
+        ) ?: ['visits' => 0, 'avg_duration' => 0];
+    }
+
+    private function queryCourseApplicationsNoUtm(array $filters): array
+    {
+        $where = ['ce.utm_source IS NULL'];
+        $params = [];
+        $this->addDateFilter($where, $params, 'ce.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
+        $whereSql = implode(' AND ', $where);
+
+        return $this->db->queryOne(
+            "SELECT COUNT(*) as course_applications FROM course_enrollments ce WHERE {$whereSql}",
+            $params
+        ) ?: ['course_applications' => 0];
+    }
+
+    private function queryOrdersNoUtm(array $filters): array
+    {
+        $where = ['o.utm_source IS NULL'];
         $params = [];
         $this->addDateFilter($where, $params, 'o.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
         $this->addProductTypeFilter($where, $filters['product_type'] ?? 'all');

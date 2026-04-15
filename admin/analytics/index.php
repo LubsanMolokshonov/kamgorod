@@ -126,12 +126,17 @@ include __DIR__ . '/../includes/header.php';
 
                 <!-- Строки UTM Source (свёрнуты) -->
                 <?php foreach ($sourceData as $row): ?>
-                <tr class="utm-row utm-row-source"
+                <?php $isNoUtm = $row['label'] === '(без UTM)'; ?>
+                <tr class="utm-row utm-row-source<?php if ($isNoUtm) echo ' utm-row-no-expand'; ?>"
                     data-level="source"
                     data-utm-source="<?php echo htmlspecialchars($row['label']); ?>"
                     data-expanded="false">
                     <td class="col-label">
-                        <span class="utm-toggle" title="Раскрыть">▶</span>
+                        <?php if ($isNoUtm): ?>
+                            <span style="display:inline-block;width:16px;margin-right:4px;"></span>
+                        <?php else: ?>
+                            <span class="utm-toggle" title="Раскрыть">▶</span>
+                        <?php endif; ?>
                         <span class="utm-label"><?php echo htmlspecialchars($row['label']); ?></span>
                     </td>
                     <td class="col-num"><?php echo number_format($row['visits'], 0, ',', ' '); ?></td>
