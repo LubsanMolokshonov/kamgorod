@@ -28,6 +28,8 @@ class RNPAnalytics
         'vk_portal_cost',
         'direct_course_cost',
         'vk_course_cost',
+        'other_portal_cost',
+        'other_course_cost',
     ];
 
     public function __construct(\PDO $pdo)
@@ -104,18 +106,22 @@ class RNPAnalytics
                 }
             }
 
-            // Расходы — только для direct/vk × portal/course
+            // Расходы — для direct/vk/other × portal/course
             $cost = $costsIdx[$period['key']] ?? null;
             if ($cost) {
                 $rows['direct']['portal']['cost'] = (float)$cost['direct_portal_cost'];
                 $rows['vk']['portal']['cost']     = (float)$cost['vk_portal_cost'];
                 $rows['direct']['course']['cost'] = (float)$cost['direct_course_cost'];
                 $rows['vk']['course']['cost']     = (float)$cost['vk_course_cost'];
+                $rows['other']['portal']['cost']  = (float)$cost['other_portal_cost'];
+                $rows['other']['course']['cost']  = (float)$cost['other_course_cost'];
 
                 $grandRows['direct']['portal']['cost'] += (float)$cost['direct_portal_cost'];
                 $grandRows['vk']['portal']['cost']     += (float)$cost['vk_portal_cost'];
                 $grandRows['direct']['course']['cost'] += (float)$cost['direct_course_cost'];
                 $grandRows['vk']['course']['cost']     += (float)$cost['vk_course_cost'];
+                $grandRows['other']['portal']['cost']  += (float)$cost['other_portal_cost'];
+                $grandRows['other']['course']['cost']  += (float)$cost['other_course_cost'];
             }
 
             // Расчёт метрик и Итого по периоду
@@ -303,7 +309,9 @@ class RNPAnalytics
                 SUM(direct_portal_cost) AS direct_portal_cost,
                 SUM(vk_portal_cost)     AS vk_portal_cost,
                 SUM(direct_course_cost) AS direct_course_cost,
-                SUM(vk_course_cost)     AS vk_course_cost
+                SUM(vk_course_cost)     AS vk_course_cost,
+                SUM(other_portal_cost)  AS other_portal_cost,
+                SUM(other_course_cost)  AS other_course_cost
             FROM rnp_ad_costs
             WHERE date BETWEEN ? AND ?
             GROUP BY period_key
@@ -317,7 +325,8 @@ class RNPAnalytics
     public function getCostsForDate(string $date): array
     {
         $row = $this->db->queryOne(
-            'SELECT date, direct_portal_cost, vk_portal_cost, direct_course_cost, vk_course_cost
+            'SELECT date, direct_portal_cost, vk_portal_cost, direct_course_cost, vk_course_cost,
+                    other_portal_cost, other_course_cost
              FROM rnp_ad_costs WHERE date = ?',
             [$date]
         );
@@ -327,6 +336,8 @@ class RNPAnalytics
             'vk_portal_cost' => 0,
             'direct_course_cost' => 0,
             'vk_course_cost' => 0,
+            'other_portal_cost' => 0,
+            'other_course_cost' => 0,
         ];
     }
 

@@ -93,6 +93,14 @@ function rnpSumChannels(array $rows, array $channels): array {
 
 $groups = [
     [
+        'key' => 'grand_total', 'label' => 'ОБЩИЙ ИТОГ', 'is_sum' => true,
+        'channels' => [
+            ['direct','portal'],['vk','portal'],['other','portal'],
+            ['direct','course'],['vk','course'],['other','course'],
+        ],
+        'cost_field' => null,
+    ],
+    [
         'key' => 'total_portal', 'label' => 'ИТОГО ПОРТАЛ', 'is_sum' => true,
         'channels' => [['direct','portal'],['vk','portal'],['other','portal']],
         'cost_field' => null,
@@ -108,6 +116,11 @@ $groups = [
         'cost_field' => 'vk_portal_cost',
     ],
     [
+        'key' => 'other_portal', 'label' => 'Пед.портал Другое', 'is_sum' => false,
+        'channels' => [['other','portal']],
+        'cost_field' => 'other_portal_cost',
+    ],
+    [
         'key' => 'total_course', 'label' => 'ИТОГО КУРСЫ', 'is_sum' => true,
         'channels' => [['direct','course'],['vk','course'],['other','course']],
         'cost_field' => null,
@@ -121,6 +134,11 @@ $groups = [
         'key' => 'vk_course', 'label' => 'Курсы ВК', 'is_sum' => false,
         'channels' => [['vk','course']],
         'cost_field' => 'vk_course_cost',
+    ],
+    [
+        'key' => 'other_course', 'label' => 'Курсы Другое', 'is_sum' => false,
+        'channels' => [['other','course']],
+        'cost_field' => 'other_course_cost',
     ],
 ];
 
