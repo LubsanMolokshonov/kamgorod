@@ -140,6 +140,16 @@ $groups = [
         'channels' => [['other','course']],
         'cost_field' => 'other_course_cost',
     ],
+    [
+        'key' => 'total_direct', 'label' => 'ИТОГО ДИРЕКТ', 'is_sum' => true,
+        'channels' => [['direct','portal'],['direct','course']],
+        'cost_field' => null,
+    ],
+    [
+        'key' => 'total_vk', 'label' => 'ИТОГО ВК', 'is_sum' => true,
+        'channels' => [['vk','portal'],['vk','course']],
+        'cost_field' => null,
+    ],
 ];
 
 $metrics = [
