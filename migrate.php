@@ -92,7 +92,8 @@ $migrations = [
     '072_update_bitrix_course_stages.sql',
     '073_create_rnp_ad_costs.sql',
     '074_add_other_costs_to_rnp.sql',
-    '075_fix_utm_attribution_other_orders.sql'
+    '075_fix_utm_attribution_other_orders.sql',
+    '076_update_publication_certificate_price.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';
