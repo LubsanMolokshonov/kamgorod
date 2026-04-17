@@ -60,7 +60,7 @@ if (isCartEmpty()) {
                 'id' => $cert['id'],
                 'name' => $cert['publication_title'],
                 'meta' => 'Свидетельство о публикации • ' . $cert['author_name'],
-                'price' => (float)($cert['price'] ?? 169),
+                'price' => (float)($cert['price'] ?? 299),
                 'is_free' => false,
                 'raw_data' => $cert
             ];

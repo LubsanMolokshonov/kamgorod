@@ -409,7 +409,7 @@ include __DIR__ . '/../includes/header.php';
                     $ecomProducts[] = [
                         'id' => 'pub-' . $item['publication_id'],
                         'name' => $item['publication_title'] ?? '',
-                        'price' => $item['is_free_promotion'] ? 0 : (float)($item['price'] ?? 169),
+                        'price' => $item['is_free_promotion'] ? 0 : (float)($item['price'] ?? 299),
                         'brand' => 'Педпортал',
                         'category' => 'Публикации',
                         'quantity' => 1

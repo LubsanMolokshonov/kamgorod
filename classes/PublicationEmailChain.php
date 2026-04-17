@@ -501,7 +501,7 @@ class PublicationEmailChain {
                 'user_id'             => $emailData['user_id'],
                 'publication_title'   => $emailData['publication_title'],
                 'publication_slug'    => $emailData['publication_slug'] ?? '',
-                'certificate_price'   => $emailData['cert_price'] ?? 169,
+                'certificate_price'   => $emailData['cert_price'] ?? 299,
                 'certificate_url'     => $certificateUrl,
                 'cabinet_url'         => $cabinetUrl,
                 'submit_url'          => $submitUrl,

@@ -183,6 +183,9 @@ if (!defined('OLYMPIAD_AUDIENCES')) {
 // Olympiad Diploma Price
 if (!defined('OLYMPIAD_DIPLOMA_PRICE')) define('OLYMPIAD_DIPLOMA_PRICE', 169);
 
+// Publication Certificate Price
+if (!defined('PUBLICATION_CERTIFICATE_PRICE')) define('PUBLICATION_CERTIFICATE_PRICE', 299);
+
 // File Upload Paths
 if (!defined('UPLOADS_DIR')) define('UPLOADS_DIR', BASE_PATH . '/uploads/diplomas/');
 if (!defined('TEMPLATES_DIR')) define('TEMPLATES_DIR', BASE_PATH . '/assets/images/diplomas/templates/');

@@ -57,7 +57,7 @@ class Order {
                 $this->db->insert('order_items', [
                     'order_id' => $orderId,
                     'certificate_id' => $cert['id'],
-                    'price' => $cert['price'] ?? 169,
+                    'price' => $cert['price'] ?? 299,
                     'is_free_promotion' => !empty($cert['is_free']) ? 1 : 0
                 ]);
             }
