@@ -422,7 +422,7 @@ class RNPAnalytics
     private function channelExpr(string $col): string
     {
         return "CASE
-            WHEN LOWER($col) LIKE 'yandex%' THEN 'direct'
+            WHEN LOWER($col) LIKE 'yandex%' OR LOWER($col) LIKE 'ya%' THEN 'direct'
             WHEN LOWER($col) LIKE 'vk%' THEN 'vk'
             ELSE 'other'
         END";

@@ -469,6 +469,16 @@ try {
             );
         }
 
+        // 4. Первый визит пользователя с UTM (атрибуция первого клика)
+        if (!$fallbackUtm && $userId) {
+            $fallbackUtm = $dbFallback->queryOne(
+                "SELECT utm_source, utm_medium, utm_campaign, utm_content, utm_term
+                 FROM visits WHERE user_id = ? AND utm_source IS NOT NULL AND utm_source != ''
+                 ORDER BY started_at ASC LIMIT 1",
+                [$userId]
+            );
+        }
+
         if ($fallbackUtm && !empty($fallbackUtm['utm_source'])) {
             $utmSource   = $fallbackUtm['utm_source'];
             $utmMedium   = $fallbackUtm['utm_medium'] ?? null;
