@@ -4,7 +4,8 @@
  * Cron Script: Email-цепочка дожима курсов
  *
  * Обрабатывает очередь email для неоплаченных записей на курсы.
- * 6 писем: welcome (0), 15мин, 1ч, 24ч, 2д, 3д.
+ * Touchpoints: welcome (0), 15мин, 1ч, 90мин (bitrix_only), 24ч, 2д, 3д.
+ * Мониторинг ЦДО: деактивация email-цепочки при прогрессе сделки дальше «Подготовка документов».
  *
  * Crontab: every 5 minutes — php /path/to/cron/process-course-emails.php
  */
@@ -41,6 +42,13 @@ try {
     echo date('Y-m-d H:i:s') . " - Processing course email chain...\n";
 
     $chain = new CourseEmailChain($db);
+
+    // Проверить сделки в ЦДО — деактивировать email при прогрессе дальше «Подготовка документов»
+    $cdoResults = $chain->checkCdoDealsAndCancelEmails();
+    if ($cdoResults['cancelled'] > 0) {
+        echo date('Y-m-d H:i:s') . " - CDO check: {$cdoResults['checked']} checked, {$cdoResults['cancelled']} cancelled\n";
+    }
+
     $results = $chain->processPendingEmails();
 
     echo date('Y-m-d H:i:s') . " - Done. Sent: {$results['sent']}, Failed: {$results['failed']}, Skipped: {$results['skipped']}\n";

@@ -60,12 +60,15 @@ if (!defined('BITRIX24_COURSE_STAGE_NEW')) define('BITRIX24_COURSE_STAGE_NEW', '
 if (!defined('BITRIX24_COURSE_STAGE_PAID')) define('BITRIX24_COURSE_STAGE_PAID', 'C108:EXECUTING');
 
 // Bitrix24: стадии email-цепочки курсов (pipeline 108)
-if (!defined('BITRIX24_COURSE_STAGE_15MIN')) define('BITRIX24_COURSE_STAGE_15MIN', 'C108:UC_HWWIFQ');
-if (!defined('BITRIX24_COURSE_STAGE_1H'))    define('BITRIX24_COURSE_STAGE_1H', 'C108:UC_1YOFLO');
-if (!defined('BITRIX24_COURSE_STAGE_24H'))   define('BITRIX24_COURSE_STAGE_24H', 'C108:UC_5CUC97');
-if (!defined('BITRIX24_COURSE_STAGE_2D'))    define('BITRIX24_COURSE_STAGE_2D', 'C108:UC_V57398');
-if (!defined('BITRIX24_COURSE_STAGE_3D'))    define('BITRIX24_COURSE_STAGE_3D', 'C108:UC_B7IZAB');
-if (!defined('BITRIX24_COURSE_STAGE_WON'))   define('BITRIX24_COURSE_STAGE_WON', 'C108:WON');
+if (!defined('BITRIX24_COURSE_STAGE_15MIN'))   define('BITRIX24_COURSE_STAGE_15MIN', 'C108:UC_HWWIFQ');
+if (!defined('BITRIX24_COURSE_STAGE_1H'))      define('BITRIX24_COURSE_STAGE_1H', 'C108:UC_1YOFLO');
+if (!defined('BITRIX24_COURSE_STAGE_MANAGER')) define('BITRIX24_COURSE_STAGE_MANAGER', 'C108:UC_DLXNLQ');
+if (!defined('BITRIX24_COURSE_STAGE_WON'))     define('BITRIX24_COURSE_STAGE_WON', 'C108:WON');
+
+// Bitrix24: воронка ЦДО (pipeline 4) — мониторинг для деактивации email-цепочки
+if (!defined('BITRIX24_CDO_PIPELINE_ID'))       define('BITRIX24_CDO_PIPELINE_ID', 4);
+if (!defined('BITRIX24_CDO_STAGE_DOCS'))        define('BITRIX24_CDO_STAGE_DOCS', 'C4:17');       // «Подготовка документов»
+if (!defined('BITRIX24_CDO_STAGE_DOCS_SORT'))   define('BITRIX24_CDO_STAGE_DOCS_SORT', 80);       // SORT этой стадии
 
 // Секрет для HMAC-подписи скидочных ссылок в email-цепочке курсов
 if (!defined('COURSE_EMAIL_DISCOUNT_SECRET')) define('COURSE_EMAIL_DISCOUNT_SECRET', $_ENV['COURSE_EMAIL_DISCOUNT_SECRET'] ?? '');

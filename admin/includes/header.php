@@ -75,6 +75,11 @@ $currentAdmin = Admin::verifySession();
                     <span>UTM-аналитика</span>
                 </a>
 
+                <a href="/admin/rnp/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/rnp/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">💰</span>
+                    <span>РНП</span>
+                </a>
+
                 <div class="nav-divider"></div>
 
                 <a href="/index.php" class="nav-item" target="_blank">

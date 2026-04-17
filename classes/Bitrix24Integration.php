@@ -217,6 +217,23 @@ class Bitrix24Integration {
     }
 
     /**
+     * Получить сделку по ID
+     *
+     * @param string $dealId ID сделки
+     * @return array|null Данные сделки или null
+     */
+    public function getDeal($dealId) {
+        $params = ['id' => $dealId];
+        $result = $this->call('crm.deal.get', $params);
+
+        if ($result && isset($result['result'])) {
+            return $result['result'];
+        }
+
+        return null;
+    }
+
+    /**
      * Обновить сделку
      *
      * @param string $dealId ID сделки

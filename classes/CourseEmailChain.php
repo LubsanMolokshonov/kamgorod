@@ -2,8 +2,9 @@
 /**
  * CourseEmailChain
  * Email-цепочка дожима для неоплаченных записей на курсы.
- * 6 писем: welcome (0), 15мин, 1ч, 24ч (+скидка), 2д (+скидка), 3д (+скидка).
+ * Touchpoints: welcome (0), 15мин, 1ч, 90мин (bitrix_only), 24ч (+скидка), 2д (+скидка), 3д (+скидка).
  * Синхронизация стадий Bitrix24 при отправке каждого письма.
+ * Мониторинг сделок в ЦДО: деактивация цепочки при прохождении «Подготовка документов».
  */
 
 require_once __DIR__ . '/Database.php';
@@ -109,7 +110,7 @@ class CourseEmailChain {
         $pendingEmails = $this->db->query(
             "SELECT cel.*,
                     t.email_subject, t.email_template, t.code AS touchpoint_code,
-                    t.delay_minutes, t.bitrix_stage_id,
+                    t.delay_minutes, t.bitrix_stage_id, t.bitrix_only,
                     ce.course_id, ce.full_name, ce.user_id, ce.ab_variant,
                     c.title AS course_title, c.price AS course_price,
                     c.hours AS course_hours, c.program_type AS course_program_type,
@@ -138,6 +139,17 @@ class CourseEmailChain {
             if (!$enrollment || $enrollment['status'] !== 'new') {
                 $this->updateEmailStatus($email['id'], 'skipped', 'Enrollment paid or cancelled');
                 $results['skipped']++;
+                continue;
+            }
+
+            // bitrix_only touchpoint — только перевод стадии, без отправки email
+            if (!empty($email['bitrix_only'])) {
+                if (!empty($email['bitrix_stage_id'])) {
+                    $this->moveBitrixStage($email['enrollment_id'], $email['bitrix_stage_id']);
+                }
+                $this->updateEmailStatus($email['id'], 'sent');
+                $results['sent']++;
+                $this->log("BITRIX_ONLY | {$email['touchpoint_code']} | Enrollment #{$email['enrollment_id']}");
                 continue;
             }
 
@@ -442,6 +454,113 @@ class CourseEmailChain {
             $this->log("PAY_CONFIRM_ERROR | {$enrollment['email']} | " . $e->getMessage());
             return false;
         }
+    }
+
+    // ──────────────────────────────────────────────
+    //  Мониторинг ЦДО: деактивация email при прогрессе сделки
+    // ──────────────────────────────────────────────
+
+    /**
+     * Проверить сделки, переведённые на менеджера (стадия «Перевод на менеджера»).
+     * Если сделка в ЦДО прошла дальше этапа «Подготовка документов» — отменить email-цепочку.
+     *
+     * @return array ['cancelled' => int, 'checked' => int]
+     */
+    public function checkCdoDealsAndCancelEmails() {
+        $managerStage = defined('BITRIX24_COURSE_STAGE_MANAGER') ? BITRIX24_COURSE_STAGE_MANAGER : 'C108:UC_DLXNLQ';
+        $cdoDocsSort  = defined('BITRIX24_CDO_STAGE_DOCS_SORT') ? BITRIX24_CDO_STAGE_DOCS_SORT : 80;
+
+        // Найти записи, у которых сделка была переведена на менеджера и есть pending emails
+        $enrollments = $this->db->query(
+            "SELECT DISTINCT ce.id AS enrollment_id, ce.bitrix_lead_id, ce.bitrix_stage
+             FROM course_enrollments ce
+             INNER JOIN course_email_log cel ON cel.enrollment_id = ce.id AND cel.status = 'pending'
+             WHERE ce.status = 'new'
+               AND ce.bitrix_lead_id IS NOT NULL
+               AND ce.bitrix_stage = ?",
+            [$managerStage]
+        );
+
+        if (empty($enrollments)) {
+            return ['cancelled' => 0, 'checked' => 0];
+        }
+
+        require_once __DIR__ . '/Bitrix24Integration.php';
+        $bitrix = new Bitrix24Integration();
+
+        if (!$bitrix->isConfigured()) {
+            return ['cancelled' => 0, 'checked' => 0];
+        }
+
+        // Загрузить стадии ЦДО для определения порядка (SORT)
+        $cdoStages = $this->getCdoStagesSort($bitrix);
+        if (empty($cdoStages)) {
+            $this->log("CDO_CHECK | Failed to load ЦДО stages");
+            return ['cancelled' => 0, 'checked' => 0];
+        }
+
+        $results = ['cancelled' => 0, 'checked' => 0];
+
+        foreach ($enrollments as $enr) {
+            $results['checked']++;
+
+            $deal = $bitrix->getDeal($enr['bitrix_lead_id']);
+            if (!$deal) {
+                continue;
+            }
+
+            $dealStage = $deal['STAGE_ID'] ?? '';
+            $dealCategory = $deal['CATEGORY_ID'] ?? '';
+
+            // Сделка перешла в ЦДО (pipeline 4)?
+            $cdoPipelineId = defined('BITRIX24_CDO_PIPELINE_ID') ? BITRIX24_CDO_PIPELINE_ID : 4;
+            if ((int)$dealCategory !== (int)$cdoPipelineId) {
+                continue;
+            }
+
+            // Проверить, прошла ли стадию «Подготовка документов» (sort > cdoDocsSort)
+            $dealSort = $cdoStages[$dealStage] ?? 0;
+            if ($dealSort > $cdoDocsSort) {
+                $cancelled = $this->cancelForEnrollment($enr['enrollment_id']);
+                $this->db->update('course_enrollments', [
+                    'bitrix_stage' => $dealStage,
+                ], 'id = ?', [$enr['enrollment_id']]);
+
+                $this->log("CDO_CANCEL | Enrollment #{$enr['enrollment_id']} | Deal #{$enr['bitrix_lead_id']} at {$dealStage} (sort {$dealSort}) > docs (sort {$cdoDocsSort}) | Cancelled {$cancelled} emails");
+                $results['cancelled']++;
+            }
+        }
+
+        $this->log("CDO_CHECK | Checked: {$results['checked']}, Cancelled: {$results['cancelled']}");
+        return $results;
+    }
+
+    /**
+     * Получить маппинг стадий ЦДО: STATUS_ID → SORT
+     */
+    private function getCdoStagesSort($bitrix) {
+        $cdoPipelineId = defined('BITRIX24_CDO_PIPELINE_ID') ? BITRIX24_CDO_PIPELINE_ID : 4;
+
+        $url = rtrim(defined('BITRIX24_WEBHOOK_URL') ? BITRIX24_WEBHOOK_URL : '', '/');
+        if (empty($url)) {
+            return [];
+        }
+
+        $response = @file_get_contents($url . '/crm.dealcategory.stage.list.json?' . http_build_query(['id' => $cdoPipelineId]));
+        if ($response === false) {
+            return [];
+        }
+
+        $data = json_decode($response, true);
+        if (empty($data['result'])) {
+            return [];
+        }
+
+        $map = [];
+        foreach ($data['result'] as $stage) {
+            $map[$stage['STATUS_ID']] = (int)$stage['SORT'];
+        }
+        return $map;
     }
 
     // ──────────────────────────────────────────────

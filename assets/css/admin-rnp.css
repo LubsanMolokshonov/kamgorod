@@ -1,0 +1,162 @@
+/* РНП — Рука на пульсе */
+
+.page-header h1 { margin: 0 0 4px 0; }
+.page-header .page-sub { margin: 0 0 18px 0; color: #6c757d; font-size: 14px; }
+
+/* Фильтры */
+.rnp-filters .filter-row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; }
+.rnp-filters .filter-group label { display: block; font-size: 12px; text-transform: uppercase; color: #6c757d; margin-bottom: 6px; letter-spacing: .5px; }
+.rnp-filters .filter-dates { display: flex; align-items: center; gap: 8px; }
+.rnp-filters .filter-dates input[type="date"] { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+
+.rnp-card { margin-bottom: 24px; padding: 20px; }
+.rnp-card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.rnp-card-header h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.rnp-card-meta { color: #6c757d; font-size: 13px; }
+
+/* ============================================================
+   Pivot-таблица: строки = каналы×метрики, столбцы = периоды
+   ============================================================ */
+.rnp-pivot-wrapper {
+    overflow-x: auto;
+    max-width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+.rnp-pivot {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    white-space: nowrap;
+    min-width: 100%;
+}
+
+/* Заголовки */
+.rnp-pivot thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #f1f5f9;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: #4a5568;
+    padding: 8px 10px;
+    border-bottom: 2px solid #cbd5e1;
+    text-align: center;
+}
+
+/* Sticky — первые два столбца */
+.rnp-pivot-sticky {
+    position: sticky;
+    background: #fff;
+    z-index: 5;
+}
+.rnp-pivot-sticky-group {
+    left: 0;
+    min-width: 150px;
+    max-width: 180px;
+    z-index: 6;
+}
+.rnp-pivot-sticky-metric {
+    left: 150px;
+    min-width: 130px;
+    max-width: 150px;
+    z-index: 5;
+    border-right: 2px solid #cbd5e1;
+}
+thead .rnp-pivot-sticky-group {
+    z-index: 8;
+    background: #f1f5f9;
+}
+thead .rnp-pivot-sticky-metric {
+    z-index: 7;
+    background: #f1f5f9;
+}
+
+/* Группы строк */
+.rnp-pivot-group-label {
+    font-weight: 700;
+    font-size: 12px;
+    vertical-align: top;
+    padding-top: 10px;
+    border-right: 1px solid #e5e7eb;
+}
+.rnp-pivot-group-first td {
+    border-top: 2px solid #cbd5e1;
+}
+.rnp-pivot-sum-group td,
+.rnp-pivot-sum-group .rnp-pivot-sticky {
+    background: #f8f9fb;
+}
+.rnp-pivot-sum-group .rnp-pivot-group-label {
+    background: #eef1f5;
+    color: #1e293b;
+}
+
+/* Ячейки значений */
+.rnp-pivot-val {
+    text-align: right;
+    padding: 5px 8px;
+    font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid #f0f0f3;
+    color: #374151;
+}
+.rnp-pivot-sticky-metric {
+    text-align: left;
+    padding: 5px 10px;
+    color: #6c757d;
+    font-size: 12px;
+    border-bottom: 1px solid #f0f0f3;
+}
+
+/* Тип столбца */
+.rnp-pivot-col-total {
+    background: #eef2ff !important;
+    font-weight: 600;
+    border-right: 2px solid #a5b4fc;
+}
+thead .rnp-pivot-col-total {
+    background: #e0e7ff !important;
+}
+.rnp-pivot-col-week {
+    background: #f0fdf4 !important;
+    border-right: 1px solid #bbf7d0;
+}
+thead .rnp-pivot-col-week {
+    background: #dcfce7 !important;
+}
+.rnp-pivot-col-day {
+    min-width: 70px;
+}
+.rnp-pivot-val.rnp-pivot-col-day:nth-child(odd) {
+    background: #fafbfc;
+}
+
+/* Подсветка прибыли */
+.is-positive { color: #15803d; }
+.is-negative { color: #b91c1c; }
+
+/* Расход — ввод */
+.rnp-cost-cell { background: #fffbeb !important; }
+.rnp-cost-input {
+    width: 65px;
+    padding: 4px 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    font-size: 12px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    transition: border-color .15s, background-color .3s;
+}
+.rnp-cost-input:focus { outline: none; border-color: #6366f1; background: #fff; }
+.rnp-cost-input.is-saving { background: #fefce8; border-color: #facc15; }
+.rnp-cost-input.is-saved  { background: #dcfce7; border-color: #22c55e; }
+.rnp-cost-input.is-error  { background: #fee2e2; border-color: #ef4444; }
+
+/* Графики */
+.rnp-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+.rnp-chart-box { background: #fff; border: 1px solid #eef0f3; border-radius: 8px; padding: 16px; min-height: 260px; display: flex; flex-direction: column; }
+.rnp-chart-box h3 { margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #374151; }
+.rnp-chart-box canvas { flex: 1; max-height: 260px; }

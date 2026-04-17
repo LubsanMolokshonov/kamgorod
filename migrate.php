@@ -88,7 +88,9 @@ $migrations = [
     '068_add_utm_to_orders.sql',
     '069_add_utm_to_registrations.sql',
     '070_create_course_email_chain.sql',
-    '071_add_utm_to_olympiad_registrations.sql'
+    '071_add_utm_to_olympiad_registrations.sql',
+    '072_update_bitrix_course_stages.sql',
+    '073_create_rnp_ad_costs.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';
