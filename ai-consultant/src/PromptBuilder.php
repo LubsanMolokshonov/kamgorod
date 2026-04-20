@@ -1,0 +1,125 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Сборка промптов для YandexGPT.
+ * Системная роль + контекст страницы/корзины/каталога.
+ */
+class PromptBuilder
+{
+    /**
+     * Собрать массив messages для чата.
+     *
+     * @param array<int, array{role:string,content:string}> $history
+     * @param array<int, array> $products
+     */
+    public static function buildChatMessages(
+        array $history,
+        string $userMessage,
+        array $products,
+        ?string $pageUrl = null,
+        array $cartItems = []
+    ): array {
+        $systemPrompt = self::systemPrompt($products, $pageUrl, $cartItems);
+
+        $messages = [['role' => 'system', 'text' => $systemPrompt]];
+
+        foreach ($history as $msg) {
+            $role = $msg['role'] === 'assistant' ? 'assistant' : 'user';
+            $messages[] = ['role' => $role, 'text' => $msg['content']];
+        }
+
+        $messages[] = ['role' => 'user', 'text' => $userMessage];
+        return $messages;
+    }
+
+    /**
+     * Сборка промпта для allstartового сообщения в корзине (допродажа).
+     */
+    public static function buildRecommendMessages(array $cartProducts, array $recommendations): array
+    {
+        $sys = "Ты — AI-консультант педпортала fgos.pro. Пользователь уже положил в корзину товары.\n";
+        $sys .= "Твоя задача: коротко (2-3 предложения) предложить докупить один из товаров ниже, объяснив чем он полезен именно этому педагогу.\n";
+        $sys .= "Используй акцию 2+1 (третий товар в корзине бесплатно) как аргумент, если в корзине 1-2 товара.\n";
+        $sys .= "Говори в дружеском тоне, по-русски, без воды. Не упоминай цены в тексте — цены уже показаны в карточках.\n";
+
+        $cartText = "В корзине:\n";
+        foreach ($cartProducts as $p) {
+            $cartText .= "- {$p['title']} ({$p['type']})\n";
+        }
+
+        $recText = "\nМожешь предложить один из:\n";
+        foreach ($recommendations as $p) {
+            $recText .= "- [{$p['type']}] {$p['title']}\n";
+        }
+
+        return [
+            ['role' => 'system', 'text' => $sys],
+            ['role' => 'user', 'text' => $cartText . $recText . "\nНапиши короткое обращение к пользователю."],
+        ];
+    }
+
+    /**
+     * Сборка промпта для категоризации алерта.
+     */
+    public static function buildAlertSummaryMessages(string $description, ?string $pageUrl): array
+    {
+        $sys = "Ты — модератор техподдержки. Кратко (1-2 предложения) опиши суть проблемы пользователя и определи категорию.\n";
+        $sys .= "Верни СТРОГО JSON без markdown: {\"summary\": \"краткая суть\", \"category\": \"payment|technical|content|access|other\"}";
+
+        $user = "Страница: " . ($pageUrl ?? 'не указана') . "\n\nСообщение: " . $description;
+
+        return [
+            ['role' => 'system', 'text' => $sys],
+            ['role' => 'user', 'text' => $user],
+        ];
+    }
+
+    private static function systemPrompt(array $products, ?string $pageUrl, array $cartItems): string
+    {
+        $p = <<<PROMPT
+Ты — AI-консультант образовательного портала «Каменный город» (fgos.pro). Помогаешь педагогам, воспитателям, методистам и студентам СПО выбирать продукты портала: конкурсы, олимпиады, вебинары, курсы повышения квалификации (КПК/ПП), публикации в научном журнале.
+
+ТВОЯ ГЛАВНАЯ ЗАДАЧА — подобрать подходящий продукт и довести пользователя до покупки:
+1. Задай 1-2 уточняющих вопроса про аудиторию (ДОУ / начальная школа / средняя-старшая школа / СПО) и предмет, если они не очевидны из сообщения.
+2. Когда контекст ясен — рекомендуй 1-3 конкретных товара из списка ниже, укажи название, цену, короткий аргумент «почему подойдёт».
+3. Всегда добавляй ссылку на карточку товара, чтобы пользователь мог кликнуть.
+4. Если в корзине уже есть товары — напомни про акцию «2+1» (третий товар бесплатно).
+5. Если пользователь жалуется на ошибку, проблему с оплатой или доступом — скажи «Давайте создам заявку для поддержки» и попроси email/имя/телефон.
+
+СТИЛЬ:
+- Отвечай по-русски, коротко (2-4 предложения на абзац), дружелюбно, без канцелярита.
+- Не придумывай товары — используй только то, что указано в списке ниже. Если ничего не подходит — предложи заглянуть в каталог: /konkursy/, /olimpiady/, /vebinary/, /kursy/, /zhurnal/.
+- Не обсуждай темы вне сферы образования и продуктов портала.
+
+PROMPT;
+
+        if ($pageUrl) {
+            $p .= "\nТЕКУЩАЯ СТРАНИЦА ПОЛЬЗОВАТЕЛЯ: {$pageUrl}\n";
+        }
+
+        if (!empty($cartItems)) {
+            $p .= "\nВ КОРЗИНЕ ПОЛЬЗОВАТЕЛЯ:\n";
+            foreach ($cartItems as $item) {
+                $p .= "- [{$item['type']}] {$item['title']}\n";
+            }
+        }
+
+        if (!empty($products)) {
+            $p .= "\nРЕЛЕВАНТНЫЕ ТОВАРЫ (используй ЭТИ для рекомендаций):\n";
+            foreach ($products as $pr) {
+                $p .= sprintf(
+                    "- [%s] %s — %d ₽ — %s\n",
+                    $pr['meta'] ?? $pr['type'],
+                    $pr['title'],
+                    (int)$pr['price'],
+                    $pr['url']
+                );
+            }
+        } else {
+            $p .= "\nПо запросу пользователя ничего не найдено в каталоге. Задай уточняющий вопрос или отправь в каталог.\n";
+        }
+
+        return $p;
+    }
+}

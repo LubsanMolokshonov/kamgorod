@@ -1,0 +1,9 @@
+RewriteEngine On
+
+# Все запросы идут в api/*.php напрямую по путям
+# Для корня возвращаем health
+DirectoryIndex api/health.php
+
+<FilesMatch "\.(env|md|log)$">
+    Require all denied
+</FilesMatch>

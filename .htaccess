@@ -5,6 +5,14 @@
 RewriteEngine On
 RewriteBase /
 
+# ================================================
+# ИИ-КОНСУЛЬТАНТ (изолированный контейнер)
+# ================================================
+# Проксируем /ai-chat/api/* → ai-consultant:80/api/* через mod_proxy.
+# Если контейнер упал — Apache вернёт 503, JS виджета покажет offline-баннер
+# (ProxyPass не работает в .htaccess; используем RewriteRule с [P])
+RewriteRule ^ai-chat/api/(.*)$ http://ai-consultant:80/api/$1 [P,L]
+
 # HTTPS Redirect (пропускает localhost)
 RewriteCond %{HTTPS} off
 RewriteCond %{HTTP:X-Forwarded-Proto} !https
@@ -148,6 +156,9 @@ RewriteRule ^publikaciya/([a-z0-9-]+)/?$ pages/publication.php?slug=$1 [L,QSA]
 
 # Подача публикации
 RewriteRule ^opublikovat/?$ pages/submit-publication.php [L,QSA]
+
+# Генератор статей
+RewriteRule ^generator-statej/?$ pages/article-generator.php [L,QSA]
 
 # Сертификат публикации
 RewriteRule ^sertifikat-publikacii/?$ pages/publication-certificate.php [L,QSA]

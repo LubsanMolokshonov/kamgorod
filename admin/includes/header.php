@@ -65,6 +65,20 @@ $currentAdmin = Admin::verifySession();
                     <span>Заказы</span>
                 </a>
 
+                <?php
+                $newAlertsCount = 0;
+                try {
+                    global $db;
+                    if (isset($db)) {
+                        $newAlertsCount = (int)$db->query("SELECT COUNT(*) FROM support_alerts WHERE status='new'")->fetchColumn();
+                    }
+                } catch (\Throwable $e) { /* таблицы может не быть до миграции */ }
+                ?>
+                <a href="/admin/alerts/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/alerts/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">🔔</span>
+                    <span>Алерты<?php if ($newAlertsCount > 0): ?> <span class="nav-badge"><?php echo $newAlertsCount; ?></span><?php endif; ?></span>
+                </a>
+
                 <a href="/admin/users/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/users/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">👥</span>
                     <span>Пользователи</span>

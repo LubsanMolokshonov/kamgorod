@@ -42,6 +42,35 @@ services:
     restart: unless-stopped
     command: --default-authentication-plugin=mysql_native_password
 
+  # AI Consultant microservice (изолированный PHP-контейнер)
+  # Падение этого сервиса не влияет на основной сайт — web отвечает 502/503 на /ai-chat/api/*
+  ai-consultant:
+    build:
+      context: .
+      dockerfile: ai-consultant/Dockerfile
+    container_name: pedagogy_ai
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_NAME=pedagogy_platform
+      - DB_USER=pedagogy_user
+      - DB_PASS=pedagogy_pass
+      - YANDEX_GPT_API_KEY=${YANDEX_GPT_API_KEY}
+      - YANDEX_GPT_FOLDER_ID=${YANDEX_GPT_FOLDER_ID}
+      - YANDEX_GPT_MODEL=yandexgpt-lite
+      - SITE_URL=${SITE_URL:-http://localhost:8080}
+      - ADMIN_ALERT_EMAIL=${ADMIN_ALERT_EMAIL:-info@fgos.pro}
+    volumes:
+      - ./ai-consultant:/var/www/html
+      - ./classes:/var/www/shared/classes:ro
+      - ./config:/var/www/shared/config:ro
+      - ./includes:/var/www/shared/includes:ro
+      - ./logs:/var/www/html/logs
+    networks:
+      - pedagogy_network
+    restart: unless-stopped
+
   # phpMyAdmin (optional, for database management)
   phpmyadmin:
     image: phpmyadmin/phpmyadmin

@@ -23,8 +23,8 @@ RUN apt-get update && apt-get install -y \
 # Install PHP extensions
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath zip
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
+# Enable Apache modules (rewrite + proxy для /ai-chat)
+RUN a2enmod rewrite proxy proxy_http headers
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

@@ -78,6 +78,21 @@
     margin: 16px 0;
 }
 
+.nav-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    margin-left: 8px;
+    border-radius: 10px;
+    background: #EF4444;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+}
+
 /* Main Content */
 .admin-main {
     flex: 1;

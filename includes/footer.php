@@ -155,5 +155,17 @@
             <script src="<?php echo $js; ?>" defer></script>
         <?php endforeach; ?>
     <?php endif; ?>
+
+    <?php
+    // ИИ-консультант: не подключаем на админке, ajax, api-эндпоинтах
+    $aiConsultantSkip = preg_match('#^/(admin|ajax|api)(/|$)#', $_SERVER['REQUEST_URI'] ?? '');
+    if (!$aiConsultantSkip):
+        $aicCss = __DIR__ . '/../assets/css/ai-consultant.css';
+        $aicJs = __DIR__ . '/../assets/js/ai-consultant.js';
+    ?>
+    <link rel="stylesheet" href="/assets/css/ai-consultant.css?v=<?php echo file_exists($aicCss) ? filemtime($aicCss) : 1; ?>">
+    <script src="/assets/js/ai-consultant.js?v=<?php echo file_exists($aicJs) ? filemtime($aicJs) : 1; ?>" defer></script>
+    <div id="ai-consultant-root"></div>
+    <?php endif; ?>
 </body>
 </html>
