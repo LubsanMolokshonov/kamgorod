@@ -199,6 +199,13 @@ try {
         throw new Exception('Не удалось создать заказ');
     }
 
+    // Email-атрибуция оплаты: если пользователь пришёл по клику из письма,
+    // привязываем message_id к заказу для трекинга конверсий в email_events.
+    $emailMid = $_SESSION['email_mid'] ?? ($_COOKIE['email_mid'] ?? null);
+    if ($emailMid && preg_match('~^[a-f0-9]{32}$~', $emailMid)) {
+        (new Database($db))->update('orders', ['email_message_id' => $emailMid], 'id = ?', [$orderId]);
+    }
+
     $order = $orderObj->getById($orderId);
     $orderNumber = $order['order_number'];
 

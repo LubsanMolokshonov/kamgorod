@@ -422,7 +422,16 @@ class CoursePromoEmailCampaign {
             $mail->Body = $this->renderTemplate('course_promo', $templateData);
             $mail->AltBody = $this->renderTextVersion($templateData);
 
-            $mail->send();
+            require_once BASE_PATH . '/classes/EmailTracker.php';
+            EmailTracker::prepareAndSend($mail, [
+                'email_type'      => 'course_promo',
+                'touchpoint_code' => $emailData['touchpoint_code'] ?? 'course_promo',
+                'chain_log_id'    => $emailData['id'] ?? null,
+                'chain_log_table' => 'course_promo_email_log',
+                'user_id'         => $emailData['user_id'] ?? null,
+                'recipient_email' => $emailData['email'],
+                'unsubscribe_url' => $unsubscribeUrl,
+            ]);
 
             $this->log("SENT | {$emailData['email']} | Course: {$emailData['course_title']}");
             return true;

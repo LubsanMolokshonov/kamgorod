@@ -231,3 +231,18 @@ if (!defined('COURSE_AB_TEST_ACTIVE')) define('COURSE_AB_TEST_ACTIVE', false);
 if (!defined('COURSE_AB_TEST_SECRET')) define('COURSE_AB_TEST_SECRET', $_ENV['COURSE_AB_TEST_SECRET'] ?? 'kG7x2pL9qR4mN8vW3jF5');
 if (!defined('COURSE_AB_TEST_COOKIE')) define('COURSE_AB_TEST_COOKIE', 'cab_v');
 if (!defined('COURSE_FIXED_DISCOUNT')) define('COURSE_FIXED_DISCOUNT', 55); // фиксированная скидка в %
+
+// E-mail трекинг
+// Окно, в течение которого письмо считается причиной оплаты (дни)
+if (!defined('EMAIL_ATTRIBUTION_WINDOW_DAYS')) define('EMAIL_ATTRIBUTION_WINDOW_DAYS', 7);
+// Whitelist хостов для /api/email-track/click.php (защита от open-redirect)
+if (!defined('EMAIL_TRACK_ALLOWED_HOSTS')) {
+    $__siteHost = parse_url(SITE_URL, PHP_URL_HOST) ?: 'fgos.pro';
+    define('EMAIL_TRACK_ALLOWED_HOSTS', [
+        $__siteHost,
+        'fgos.pro',
+        'www.fgos.pro',
+        'bizon365.ru',
+        'bizon365.com',
+    ]);
+}

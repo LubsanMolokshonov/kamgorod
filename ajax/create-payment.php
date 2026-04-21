@@ -500,6 +500,13 @@ try {
         ], 'id = ?', [$orderId]);
     }
 
+    // Email-атрибуция: если пользователь пришёл по клику из письма —
+    // сохраняем message_id, чтобы webhook смог приписать оплату к конкретному письму.
+    $emailMid = $_SESSION['email_mid'] ?? ($_COOKIE['email_mid'] ?? null);
+    if ($emailMid && preg_match('~^[a-f0-9]{32}$~', $emailMid)) {
+        (new Database($db))->update('orders', ['email_message_id' => $emailMid], 'id = ?', [$orderId]);
+    }
+
     // Get order details
     $order = $orderObj->getById($orderId);
     $orderNumber = $order['order_number'];

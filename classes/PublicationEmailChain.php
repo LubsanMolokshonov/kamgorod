@@ -525,7 +525,16 @@ class PublicationEmailChain {
             $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
             $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
 
-            $mail->send();
+            require_once BASE_PATH . '/classes/EmailTracker.php';
+            EmailTracker::prepareAndSend($mail, [
+                'email_type'      => 'publication',
+                'touchpoint_code' => $emailData['touchpoint_code'],
+                'chain_log_id'    => $emailData['id'],
+                'chain_log_table' => 'publication_email_log',
+                'user_id'         => $emailData['user_id'] ?? null,
+                'recipient_email' => $emailData['email'],
+                'unsubscribe_url' => $unsubscribeUrl,
+            ]);
 
             $this->log("SENT | {$emailData['email']} | {$emailData['touchpoint_code']} | Publication {$emailData['publication_id']}");
             return true;

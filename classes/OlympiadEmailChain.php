@@ -236,7 +236,16 @@ class OlympiadEmailChain {
             $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
             $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
 
-            $mail->send();
+            require_once BASE_PATH . '/classes/EmailTracker.php';
+            EmailTracker::prepareAndSend($mail, [
+                'email_type'      => 'olympiad',
+                'touchpoint_code' => $emailData['touchpoint_code'],
+                'chain_log_id'    => $emailData['id'],
+                'chain_log_table' => 'olympiad_email_log',
+                'user_id'         => $emailData['user_id'] ?? null,
+                'recipient_email' => $emailData['email'],
+                'unsubscribe_url' => $unsubscribeUrl,
+            ]);
 
             $this->log("SENT | {$emailData['email']} | {$emailData['touchpoint_code']} | OlympiadRegistration {$emailData['olympiad_registration_id']}");
             return true;
@@ -644,7 +653,16 @@ class OlympiadEmailChain {
             $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
             $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
 
-            $mail->send();
+            require_once BASE_PATH . '/classes/EmailTracker.php';
+            EmailTracker::prepareAndSend($mail, [
+                'email_type'      => 'olympiad',
+                'touchpoint_code' => $emailType,
+                'chain_log_id'    => $emailData['id'] ?? null,
+                'chain_log_table' => 'olympiad_quiz_email_log',
+                'user_id'         => $emailData['user_id'] ?? null,
+                'recipient_email' => $emailData['email'],
+                'unsubscribe_url' => $unsubscribeUrl,
+            ]);
 
             $this->log("QUIZ_SENT | {$emailData['email']} | {$emailType} | Olympiad {$emailData['olympiad_id']}");
             return true;

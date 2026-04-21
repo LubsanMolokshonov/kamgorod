@@ -11,6 +11,29 @@ require_once __DIR__ . '/../includes/session.php';
 
 $database = new Database($db);
 
+// Логируем уникальный визит на лендинг генератора (одна запись на PHP-сессию)
+try {
+    $sid = session_id();
+    if ($sid) {
+        $stmt = $db->prepare(
+            "INSERT IGNORE INTO ai_generator_visits
+             (php_session_id, user_id, ip_address, user_agent, referrer, utm_source, utm_campaign)
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
+        $stmt->execute([
+            $sid,
+            $_SESSION['user_id'] ?? null,
+            $_SERVER['REMOTE_ADDR'] ?? null,
+            substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500) ?: null,
+            substr($_SERVER['HTTP_REFERER'] ?? '', 0, 500) ?: null,
+            isset($_GET['utm_source']) ? substr($_GET['utm_source'], 0, 100) : null,
+            isset($_GET['utm_campaign']) ? substr($_GET['utm_campaign'], 0, 100) : null,
+        ]);
+    }
+} catch (\Throwable $e) {
+    error_log('ai_generator_visits log: ' . $e->getMessage());
+}
+
 // Загрузить категории аудитории
 $audienceCategories = $database->query(
     "SELECT id, name, slug FROM audience_categories WHERE is_active = 1 ORDER BY display_order"

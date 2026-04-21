@@ -248,6 +248,7 @@ class WebinarEmailJourney {
      */
     private function sendEmail($emailData) {
         require_once BASE_PATH . '/vendor/autoload.php';
+        require_once BASE_PATH . '/classes/EmailTracker.php';
 
         try {
             $mail = new PHPMailer(true);
@@ -296,7 +297,15 @@ class WebinarEmailJourney {
             $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
             $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
 
-            $mail->send();
+            EmailTracker::prepareAndSend($mail, [
+                'email_type'      => 'webinar',
+                'touchpoint_code' => $emailData['touchpoint_code'],
+                'chain_log_id'    => $emailData['id'],
+                'chain_log_table' => 'webinar_email_log',
+                'user_id'         => $emailData['user_id'] ?? null,
+                'recipient_email' => $emailData['email'],
+                'unsubscribe_url' => $unsubscribeUrl,
+            ]);
 
             $this->updateEmailStatus($emailData['id'], 'sent');
             $this->log("SENT | {$emailData['email']} | {$emailData['touchpoint_code']} | Webinar: {$emailData['webinar_title']}");

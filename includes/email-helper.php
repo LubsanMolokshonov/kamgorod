@@ -86,7 +86,13 @@ function sendPaymentSuccessEmail($userId, $orderId) {
             $mail->addAttachment($att['path'], $att['name']);
         }
 
-        $mail->send();
+        require_once __DIR__ . '/../classes/EmailTracker.php';
+        EmailTracker::prepareAndSend($mail, [
+            'email_type'      => 'payment',
+            'touchpoint_code' => 'payment_success',
+            'user_id'         => $userId,
+            'recipient_email' => $user['email'],
+        ]);
 
         $attachCount = count($attachments);
         logEmail('SUCCESS', $user['email'], $order['order_number'], "Payment success email sent with {$attachCount} attachment(s)");
@@ -523,7 +529,13 @@ HTML;
 
         $mail->AltBody = "Здравствуйте, {$fullName}!\n\nК сожалению, платеж по заказу №{$orderNumber} не был завершен.\n\nВы можете попробовать оплатить заказ снова: {$cartLink}";
 
-        $mail->send();
+        require_once __DIR__ . '/../classes/EmailTracker.php';
+        EmailTracker::prepareAndSend($mail, [
+            'email_type'      => 'payment',
+            'touchpoint_code' => 'payment_failure',
+            'user_id'         => $userId,
+            'recipient_email' => $user['email'],
+        ]);
 
         logEmail('SUCCESS', $user['email'], $order['order_number'], 'Payment failure email sent');
         return true;

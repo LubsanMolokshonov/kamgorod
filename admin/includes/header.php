@@ -89,6 +89,16 @@ $currentAdmin = Admin::verifySession();
                     <span>UTM-аналитика</span>
                 </a>
 
+                <a href="/admin/email-tracking/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/email-tracking/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">📧</span>
+                    <span>E-mail трекинг</span>
+                </a>
+
+                <a href="/admin/ai-generator/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/ai-generator/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">🤖</span>
+                    <span>AI-генератор</span>
+                </a>
+
                 <a href="/admin/rnp/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/rnp/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">💰</span>
                     <span>РНП</span>

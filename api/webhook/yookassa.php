@@ -271,6 +271,40 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
 
         logWebhook('SUCCESS', $paymentId, "Order {$orderNumber} marked as succeeded", '');
 
+        // Email-атрибуция: связать оплату с конкретным письмом.
+        // 1) Прямая привязка по orders.email_message_id (установлен на клике из письма).
+        // 2) Fallback: если orders.utm_source='email', ищем последнее письмо этому user_id
+        //    с таким же utm_campaign в окне EMAIL_ATTRIBUTION_WINDOW_DAYS.
+        try {
+            require_once BASE_PATH . '/classes/EmailTracker.php';
+            $dbHelper = new Database($GLOBALS['db']);
+            $orderRow = $dbHelper->queryOne(
+                "SELECT id, user_id, final_amount, email_message_id, utm_source, utm_campaign
+                   FROM orders WHERE id = ?",
+                [$orderId]
+            );
+            if ($orderRow) {
+                $mid = $orderRow['email_message_id'] ?? null;
+                if (!$mid && strtolower((string)($orderRow['utm_source'] ?? '')) === 'email') {
+                    $window = defined('EMAIL_ATTRIBUTION_WINDOW_DAYS') ? (int)EMAIL_ATTRIBUTION_WINDOW_DAYS : 7;
+                    $mid = EmailTracker::findAttributionFallback(
+                        (int)$orderRow['user_id'],
+                        $orderRow['utm_campaign'] ?? null,
+                        $window
+                    );
+                }
+                if ($mid) {
+                    EmailTracker::attributeConversion($mid, (int)$orderId, (float)$orderRow['final_amount']);
+                    if (empty($orderRow['email_message_id'])) {
+                        $dbHelper->update('orders', ['email_message_id' => $mid], 'id = ?', [$orderId]);
+                    }
+                    logWebhook('INFO', $paymentId, "Email conversion attributed: order {$orderNumber} → mid {$mid}", '');
+                }
+            }
+        } catch (\Throwable $e) {
+            logWebhook('WARNING', $paymentId, "Email attribution failed: " . $e->getMessage(), '');
+        }
+
         // Sync user specializations from purchased events (additive)
         try {
             $specIds = $orderObj->getSpecializationIdsForOrder($orderId);

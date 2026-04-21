@@ -324,39 +324,27 @@ include __DIR__ . '/includes/header.php';
         <div class="hero-main-grid">
             <div class="hero-left-col">
                 <div class="hero-badges">
-                    <span class="hero-category">Повышение квалификации</span>
-                    <span class="hero-category">Переподготовка</span>
-                    <span class="hero-category">Дистанционно</span>
+                    <?php if ($programType === 'pp'): ?>
+                        <span class="hero-category">Профессиональная переподготовка</span>
+                        <span class="hero-category">Диплом гособразца</span>
+                        <span class="hero-category">Дистанционно</span>
+                    <?php elseif ($programType === 'kpk'): ?>
+                        <span class="hero-category">Повышение квалификации</span>
+                        <span class="hero-category">Удостоверение</span>
+                        <span class="hero-category">Дистанционно</span>
+                    <?php else: ?>
+                        <span class="hero-category">Повышение квалификации</span>
+                        <span class="hero-category">Переподготовка</span>
+                        <span class="hero-category">Дистанционно</span>
+                    <?php endif; ?>
                 </div>
 
                 <h1 class="hero-title"><?php echo htmlspecialchars($h1Text); ?></h1>
 
-                <div class="hero-attestation-card">
-                    <div class="hero-attestation-header">
-                        <img src="/assets/images/skolkovo.webp" alt="Сколково" class="hero-attestation-logo">
-                        <span class="hero-attestation-badge-text">Фонд «Сколково» — разрешение № 068</span>
-                    </div>
-                    <h2 class="hero-attestation-title">С нашими курсами вы <span>100% пройдёте аттестацию</span></h2>
-                    <p class="hero-attestation-desc">Мы получили разрешение на осуществление образовательной деятельности от Фонда «Сколково» по <strong>66 образовательным программам</strong>. Таких организаций в России — единицы. Ваше удостоверение будет подтверждено на федеральном уровне.</p>
-                    <ul class="hero-features-list">
-                        <li>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>Документ примут при любой аттестации</span>
-                        </li>
-                        <li>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>Удостоверение видно на Госуслугах</span>
-                        </li>
-                        <li>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>Данные вносятся в ФИС ФРДО</span>
-                        </li>
-                        <li>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>66 аккредитованных программ</span>
-                        </li>
-                    </ul>
-                </div>
+                <?php
+                $variant = $programType === 'kpk' ? 'kpk' : ($programType === 'pp' ? 'pp' : 'all');
+                include __DIR__ . '/includes/hero-attestation-card.php';
+                ?>
 
                 <div class="hero-bottom-row">
                     <div class="hero-cta-row">
