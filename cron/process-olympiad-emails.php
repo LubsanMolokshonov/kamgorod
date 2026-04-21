@@ -1,16 +1,8 @@
 #!/usr/bin/env php
 <?php
-/**
- * Cron Script: Process Olympiad Email Chain Queue
- *
- * Обработка очереди email-напоминаний для неоплаченных дипломов олимпиад.
- *
- * Recommended cron schedule: every 5 minutes
- * Crontab: */5 * * * * php /var/www/html/cron/process-olympiad-emails.php
- *
- * For Docker:
- * Crontab: */5 * * * * docker exec pedagogy_web php /var/www/html/cron/process-olympiad-emails.php
- */
+// Cron Script: Process Olympiad Email Chain Queue
+// Обработка очереди email-напоминаний для неоплаченных дипломов олимпиад.
+// Recommended cron schedule: every 5 minutes
 
 // Prevent web access
 if (php_sapi_name() !== 'cli') {
