@@ -106,6 +106,9 @@ class YmlFeedGenerator
             case 'courses-ad':
                 $xml .= $this->buildCourseAdOffers();
                 break;
+            case 'retraining-ad':
+                $xml .= $this->buildRetrainingAdOffers();
+                break;
             case 'webinars':
                 $xml .= $this->buildWebinarOffers();
                 break;
@@ -149,9 +152,14 @@ class YmlFeedGenerator
             case 'courses':
             case 'courses-ad':
                 $xml .= '<category id="3">Курсы для педагогов</category>' . "\n";
-                foreach (self::COURSE_CATEGORIES as $key => $cat) {
-                    $xml .= '<category id="' . $cat['id'] . '" parentId="3">' . $this->xmlEscape($cat['name']) . '</category>' . "\n";
-                }
+                $kpk = self::COURSE_CATEGORIES['kpk'];
+                $xml .= '<category id="' . $kpk['id'] . '" parentId="3">' . $this->xmlEscape($kpk['name']) . '</category>' . "\n";
+                break;
+
+            case 'retraining-ad':
+                $xml .= '<category id="3">Курсы для педагогов</category>' . "\n";
+                $pp = self::COURSE_CATEGORIES['pp'];
+                $xml .= '<category id="' . $pp['id'] . '" parentId="3">' . $this->xmlEscape($pp['name']) . '</category>' . "\n";
                 break;
 
             case 'webinars':
@@ -592,7 +600,7 @@ class YmlFeedGenerator
     private function buildCourseOffers(): string
     {
         $courses = $this->db->query(
-            "SELECT * FROM courses WHERE is_active = 1 ORDER BY display_order ASC, created_at DESC"
+            "SELECT * FROM courses WHERE is_active = 1 AND program_type = 'kpk' ORDER BY display_order ASC, created_at DESC"
         );
 
         $xml = '';
@@ -658,7 +666,7 @@ class YmlFeedGenerator
              FROM courses c
              LEFT JOIN course_specializations cs ON c.id = cs.course_id
              LEFT JOIN audience_specializations asp ON cs.specialization_id = asp.id
-             WHERE c.is_active = 1
+             WHERE c.is_active = 1 AND c.program_type = 'kpk'
              GROUP BY c.id
              ORDER BY c.display_order ASC, c.created_at DESC"
         );
@@ -785,6 +793,60 @@ class YmlFeedGenerator
         $desc .= 'Дистанционно. Лицензия на образовательную деятельность. Данные вносятся в ФИС ФРДО. Начните обучение в любое время.';
 
         return $this->cleanText($desc);
+    }
+
+    // =============================================
+    // ПРОФЕССИОНАЛЬНАЯ ПЕРЕПОДГОТОВКА (рекламный фид retraining-ad)
+    // =============================================
+
+    private function buildRetrainingAdOffers(): string
+    {
+        $courses = $this->db->query(
+            "SELECT c.*,
+                    GROUP_CONCAT(DISTINCT asp.name ORDER BY asp.name) as specializations
+             FROM courses c
+             LEFT JOIN course_specializations cs ON c.id = cs.course_id
+             LEFT JOIN audience_specializations asp ON cs.specialization_id = asp.id
+             WHERE c.is_active = 1 AND c.program_type = 'pp'
+             GROUP BY c.id
+             ORDER BY c.display_order ASC, c.created_at DESC"
+        );
+
+        $xml = '';
+        foreach ($courses as $course) {
+            $categoryId = self::COURSE_CATEGORIES['pp']['id'];
+            $specs = !empty($course['specializations']) ? explode(',', $course['specializations']) : [];
+            $primarySpec = $this->getPrimarySpecialization($specs);
+
+            $headline = $this->buildCourseAdHeadline($course, $primarySpec);
+            $description = $this->buildCourseAdDescription($course);
+
+            $hours = $course['hours'] ?? '';
+            $salesNotes = 'Диплом гос. образца · ' . $hours . ' ч';
+
+            $params = [
+                ['name' => 'Тип', 'value' => 'Профессиональная переподготовка'],
+                ['name' => 'Часы', 'value' => (string)$hours, 'unit' => 'ч'],
+                ['name' => 'Документ', 'value' => 'Диплом установленного образца'],
+                ['name' => 'Формат', 'value' => 'Дистанционный'],
+                ['name' => 'Уровень', 'value' => 'Всероссийский'],
+                ['name' => 'Аудитория', 'value' => $primarySpec ?: 'Педагоги'],
+            ];
+
+            $xml .= $this->buildOfferXml([
+                'id'          => 'crs-' . $course['id'],
+                'url'         => $this->baseUrl . '/kursy/' . $course['slug'] . '/',
+                'price'       => $course['price'] ?? '',
+                'categoryId'  => $categoryId,
+                'picture'     => $this->baseUrl . '/og-image/ad/course/' . $course['slug'] . '.jpg',
+                'name'        => $headline,
+                'description' => $description,
+                'sales_notes' => $salesNotes,
+                'params'      => $params,
+            ]);
+        }
+
+        return $xml;
     }
 
     // =============================================
