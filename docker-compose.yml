@@ -61,6 +61,8 @@ services:
       - YANDEX_GPT_MODEL=yandexgpt-lite
       - SITE_URL=${SITE_URL:-http://localhost:8080}
       - ADMIN_ALERT_EMAIL=${ADMIN_ALERT_EMAIL:-info@fgos.pro}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_ALERT_CHAT_ID=${TELEGRAM_ALERT_CHAT_ID:-}
     volumes:
       - ./ai-consultant:/var/www/html
       - ./classes:/var/www/shared/classes:ro

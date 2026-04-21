@@ -28,8 +28,11 @@ class AlertService
         $userId = $input['user_id'] ?? null;
 
         // Валидация
-        if ($name === '' || mb_strlen($name) > 255) {
-            return ['success' => false, 'error' => 'invalid_name', 'message' => 'Укажите ваше имя'];
+        if ($name === '') {
+            $name = 'Пользователь чата';
+        }
+        if (mb_strlen($name) > 255) {
+            return ['success' => false, 'error' => 'invalid_name', 'message' => 'Имя слишком длинное'];
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return ['success' => false, 'error' => 'invalid_email', 'message' => 'Укажите корректный email'];
@@ -96,6 +99,9 @@ class AlertService
         // Email-нотификация админу (best-effort, без зависимостей — простой mail())
         $this->notifyAdmin($alertId, $name, $email, $phone, $description, $pageUrl, $aiSummary, $aiCategory);
 
+        // Telegram-нотификация админу (best-effort)
+        $this->notifyTelegram($alertId, $name, $email, $phone, $description, $pageUrl, $aiSummary, $aiCategory);
+
         return [
             'success' => true,
             'alert_id' => $alertId,
@@ -134,5 +140,76 @@ class AlertService
         $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 
         @mail($to, $subject, $body, $headers);
+    }
+
+    private function notifyTelegram(
+        int $alertId,
+        string $name,
+        string $email,
+        string $phone,
+        string $description,
+        ?string $pageUrl,
+        ?string $aiSummary,
+        ?string $aiCategory
+    ): void {
+        $token = defined('AI_TELEGRAM_BOT_TOKEN') ? AI_TELEGRAM_BOT_TOKEN : '';
+        $chatIdsRaw = defined('AI_TELEGRAM_ALERT_CHAT_ID') ? AI_TELEGRAM_ALERT_CHAT_ID : '';
+        if ($token === '' || $chatIdsRaw === '') return;
+        $chatIds = array_values(array_filter(array_map('trim', explode(',', $chatIdsRaw)), static fn($v) => $v !== ''));
+        if (empty($chatIds)) return;
+
+        $esc = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        $lines = [];
+        $header = '🚨 <b>Новый алерт #' . $alertId . '</b>';
+        if ($aiCategory) $header .= ' · <i>' . $esc(strtoupper($aiCategory)) . '</i>';
+        $lines[] = $header;
+        $lines[] = '';
+        $lines[] = '<b>Имя:</b> ' . $esc($name);
+        $lines[] = '<b>Email:</b> ' . $esc($email);
+        if ($phone !== '') $lines[] = '<b>Телефон:</b> ' . $esc($phone);
+        if ($pageUrl) $lines[] = '<b>Страница:</b> ' . $esc($pageUrl);
+        if ($aiSummary) {
+            $lines[] = '';
+            $lines[] = '<b>AI-резюме:</b> ' . $esc($aiSummary);
+        }
+        $lines[] = '';
+        $lines[] = '<b>Описание:</b>';
+        $lines[] = $esc(mb_substr($description, 0, 3500));
+        $lines[] = '';
+        $lines[] = '<a href="' . $esc(AI_SITE_URL . '/admin/alerts/view.php?id=' . $alertId) . '">Открыть в админке</a>';
+
+        $text = implode("\n", $lines);
+
+        $url = 'https://api.telegram.org/bot' . $token . '/sendMessage';
+
+        foreach ($chatIds as $chatId) {
+            $payload = http_build_query([
+                'chat_id' => $chatId,
+                'text' => $text,
+                'parse_mode' => 'HTML',
+                'disable_web_page_preview' => 'true',
+            ]);
+
+            try {
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => $payload,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 5,
+                    CURLOPT_CONNECTTIMEOUT => 3,
+                ]);
+                $resp = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $err = curl_error($ch);
+                curl_close($ch);
+                if ($httpCode !== 200) {
+                    ai_log('ALERT', 'Telegram send failed', ['chat_id' => $chatId, 'http' => $httpCode, 'err' => $err, 'resp' => substr((string)$resp, 0, 300)]);
+                }
+            } catch (Throwable $e) {
+                ai_log('ALERT', 'Telegram exception', ['chat_id' => $chatId, 'error' => $e->getMessage()]);
+            }
+        }
     }
 }

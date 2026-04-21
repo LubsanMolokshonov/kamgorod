@@ -28,6 +28,7 @@ class Publication {
             'file_type' => $data['file_type'] ?? null,
             'publication_type_id' => $data['publication_type_id'] ?? null,
             'slug' => $data['slug'] ?? $this->generateSlug($data['title']),
+            'source' => $data['source'] ?? 'upload',
             'status' => $data['status'] ?? 'published', // Auto-publish publications
             'certificate_status' => $data['certificate_status'] ?? 'none',
             'published_at' => date('Y-m-d H:i:s') // Set publish date
@@ -55,7 +56,7 @@ class Publication {
     public function update($id, $data) {
         $allowedFields = [
             'title', 'annotation', 'content', 'file_path', 'file_original_name',
-            'file_size', 'file_type', 'publication_type_id', 'slug', 'status',
+            'file_size', 'file_type', 'publication_type_id', 'slug', 'source', 'status',
             'moderation_comment', 'moderation_type', 'moderated_at', 'gpt_confidence',
             'certificate_status', 'meta_title', 'meta_description'
         ];

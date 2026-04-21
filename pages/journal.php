@@ -165,6 +165,10 @@ include __DIR__ . '/../includes/header.php';
             <!-- CTA Row -->
             <div class="homepage-hero-cta-row">
                 <a href="/opublikovat" class="btn-journal-cta">Опубликовать бесплатно</a>
+                <a href="/generator-statej/" class="btn-journal-cta-outline">
+                    <span class="cta-badge-new">NEW</span>
+                    Сгенерировать статью за 3 мин
+                </a>
             </div>
         </div>
 
@@ -668,9 +672,10 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <h3>Публикаций пока нет</h3>
                         <p>Станьте первым автором в этом разделе!</p>
-                        <a href="/opublikovat" class="btn btn-primary">
-                            Опубликовать статью
-                        </a>
+                        <div class="empty-state-buttons">
+                            <a href="/opublikovat" class="btn btn-primary">Опубликовать статью</a>
+                            <a href="/generator-statej/" class="btn btn-outline">Сгенерировать через ИИ</a>
+                        </div>
                     </div>
                 <?php else: ?>
                     <!-- Publications grid -->

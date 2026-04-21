@@ -18,8 +18,9 @@
    Pivot-таблица: строки = каналы×метрики, столбцы = периоды
    ============================================================ */
 .rnp-pivot-wrapper {
-    overflow-x: auto;
+    overflow: auto;
     max-width: 100%;
+    max-height: calc(100vh - 180px);
     border: 1px solid #e5e7eb;
     border-radius: 8px;
 }

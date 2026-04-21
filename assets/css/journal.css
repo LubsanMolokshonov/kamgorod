@@ -3453,3 +3453,211 @@ textarea.form-control {
         font-size: 1.25rem;
     }
 }
+
+/* ================================================
+   Промо-блок Генератора статей (интеграция)
+   ================================================ */
+
+.gen-promo-banner {
+    padding: 24px 0 0;
+    background: transparent;
+}
+
+.gen-promo-card {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: linear-gradient(135deg, #0057D9 0%, #0077FF 60%, #3b82f6 100%);
+    border-radius: 20px;
+    padding: 24px 32px;
+    color: #fff;
+    text-decoration: none;
+    box-shadow: 0 10px 30px rgba(0, 119, 255, 0.25);
+    transition: transform .25s ease, box-shadow .25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.gen-promo-card::after {
+    content: '';
+    position: absolute;
+    right: -80px;
+    top: -80px;
+    width: 260px;
+    height: 260px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%);
+    pointer-events: none;
+}
+
+.gen-promo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 40px rgba(0, 119, 255, 0.32);
+}
+
+.gen-promo-icon {
+    flex-shrink: 0;
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    backdrop-filter: blur(6px);
+}
+
+.gen-promo-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.gen-promo-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+}
+
+.gen-promo-text h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    color: #fff;
+}
+
+.gen-promo-text p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.gen-promo-action {
+    flex-shrink: 0;
+}
+
+.gen-promo-btn {
+    display: inline-block;
+    background: #fff;
+    color: #0057D9;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    white-space: nowrap;
+    transition: transform .2s ease;
+}
+
+.gen-promo-card:hover .gen-promo-btn {
+    transform: scale(1.03);
+}
+
+@media (max-width: 768px) {
+    .gen-promo-card {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px;
+        gap: 16px;
+    }
+
+    .gen-promo-icon {
+        width: 56px;
+        height: 56px;
+    }
+
+    .gen-promo-text h2 {
+        font-size: 18px;
+    }
+
+    .gen-promo-action {
+        width: 100%;
+    }
+
+    .gen-promo-btn {
+        display: block;
+        text-align: center;
+        width: 100%;
+    }
+}
+
+/* ================================================
+   Второй CTA в hero журнала
+   ================================================ */
+
+.btn-journal-cta-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all .2s ease;
+    backdrop-filter: blur(4px);
+}
+
+.btn-journal-cta-outline:hover {
+    background: rgba(255, 255, 255, 0.95);
+    color: #0057D9;
+    border-color: #fff;
+    transform: translateY(-2px);
+}
+
+.cta-badge-new {
+    display: inline-block;
+    background: #fbbf24;
+    color: #78350f;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 6px;
+    line-height: 1;
+}
+
+.homepage-hero-cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+@media (max-width: 640px) {
+    .btn-journal-cta-outline {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ================================================
+   Кнопки в empty-state каталога
+   ================================================ */
+
+.empty-state-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.empty-state-buttons .btn {
+    min-width: 180px;
+}
+
+@media (max-width: 480px) {
+    .empty-state-buttons .btn {
+        width: 100%;
+    }
+}

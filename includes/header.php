@@ -207,6 +207,7 @@ foreach ($allJsonLd as $ld):
                                 <a href="/zhurnal" class="dropdown-item">О журнале</a>
                                 <a href="/publikacii" class="dropdown-item">Опубликованные материалы</a>
                                 <a href="/opublikovat" class="dropdown-item">Опубликовать статью</a>
+                                <a href="/generator-statej" class="dropdown-item">Генератор статей</a>
                             </div>
                         </div>
                         <a href="/o-portale">О портале</a>

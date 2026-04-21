@@ -45,6 +45,27 @@ include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="submit-publication-page">
+    <!-- Генератор статей — промо-баннер -->
+    <section class="gen-promo-banner">
+        <div class="container">
+            <a href="/generator-statej/" class="gen-promo-card">
+                <div class="gen-promo-icon">
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                </div>
+                <div class="gen-promo-text">
+                    <div class="gen-promo-badge">Новое · ИИ-генератор</div>
+                    <h2>Нет готовой статьи?</h2>
+                    <p>Искусственный интеллект напишет педагогическую статью по вашей теме за 3 минуты. Вам останется проверить и опубликовать.</p>
+                </div>
+                <div class="gen-promo-action">
+                    <span class="gen-promo-btn">Сгенерировать статью</span>
+                </div>
+            </a>
+        </div>
+    </section>
+
     <!-- Hero Section -->
     <section class="submit-hero">
         <div class="container">

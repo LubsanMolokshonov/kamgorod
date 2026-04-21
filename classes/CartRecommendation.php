@@ -546,7 +546,7 @@ class CartRecommendation {
                 'title' => $row['title'],
                 'slug' => $row['slug'],
                 'price' => (float)$row['price'],
-                'meta' => $this->getCategoryLabel($row['category']),
+                'meta' => $this->getCategoryLabel($row['category']) . ' • 2 минуты',
                 'quick_add' => false,
                 'add_data' => null,
             ];
@@ -762,7 +762,7 @@ class CartRecommendation {
                 'title' => $row['title'],
                 'slug' => $row['slug'],
                 'price' => (float)($row['diploma_price'] ?? 169),
-                'meta' => $this->getOlympiadAudienceLabel($row['target_audience'] ?? ''),
+                'meta' => $this->getOlympiadAudienceLabel($row['target_audience'] ?? '') . ' • 3 минуты',
                 'quick_add' => false,
                 'add_data' => null,
             ];
@@ -903,7 +903,7 @@ class CartRecommendation {
         );
 
         return array_map(function ($row) {
-            $meta = 'Видеолекция • ' . ($row['certificate_hours'] ?? 2) . ' ч.';
+            $meta = 'Видеолекция • ' . ($row['certificate_hours'] ?? 2) . ' ч. • 15 минут';
 
             return [
                 'type' => 'webinar_browse',

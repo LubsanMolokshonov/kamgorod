@@ -432,6 +432,7 @@ include __DIR__ . '/../includes/header.php';
                         <a href="/olimpiady/" class="btn btn-outline">Олимпиады</a>
                         <a href="/vebinary/" class="btn btn-outline">Вебинары</a>
                         <a href="/opublikovat/" class="btn btn-outline">Опубликовать</a>
+                        <a href="/generator-statej/" class="btn btn-outline">Генератор статей</a>
                     </div>
                 </div>
             <?php else: ?>
