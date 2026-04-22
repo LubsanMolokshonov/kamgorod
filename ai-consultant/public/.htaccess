@@ -1,6 +1,10 @@
 RewriteEngine On
 
-# Все запросы идут в api/*.php напрямую по путям
+# /api/<name> → /api/<name>.php (все запросы идут в api/*.php напрямую по путям)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^api/([a-z0-9_-]+)/?$ api/$1.php [L]
+
 # Для корня возвращаем health
 DirectoryIndex api/health.php
 

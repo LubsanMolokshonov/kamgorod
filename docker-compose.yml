@@ -49,6 +49,8 @@ services:
       context: .
       dockerfile: ai-consultant/Dockerfile
     container_name: pedagogy_ai
+    ports:
+      - "127.0.0.1:8083:80"
     depends_on:
       - db
     environment:
