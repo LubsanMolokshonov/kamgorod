@@ -263,6 +263,9 @@ class TelegramNotifier
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT => 5,
                 CURLOPT_CONNECTTIMEOUT => 3,
+                // Принудительно IPv4: у прод-хоста нет IPv6-маршрута,
+                // а api.telegram.org резолвится в AAAA → иначе connect timeout.
+                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
             ]);
             $resp = curl_exec($ch);
             $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
