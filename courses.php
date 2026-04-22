@@ -183,36 +183,34 @@ $audienceSpecializations = array_filter($audienceSpecializations, function($spec
 // === Динамические мета-теги на основе фильтров ===
 $courseTypeUrlMap = defined('COURSE_TYPE_URL_MAP') ? COURSE_TYPE_URL_MAP : [];
 
-$titleParts = [];
-$descParts = [];
-$h1Text = '';
-
 if ($programType === 'kpk') {
-    $titleParts[] = 'Курсы повышения квалификации';
-    $descParts[] = 'Курсы повышения квалификации';
-    $h1Text = 'Курсы повышения квалификации';
+    $baseTitle = 'Курсы повышения квалификации';
 } elseif ($programType === 'pp') {
-    $titleParts[] = 'Курсы профессиональной переподготовки';
-    $descParts[] = 'Курсы профессиональной переподготовки';
-    $h1Text = 'Курсы профессиональной переподготовки';
+    $baseTitle = 'Курсы профессиональной переподготовки';
 } else {
-    $titleParts[] = 'Курсы повышения квалификации и переподготовки';
-    $descParts[] = 'Курсы повышения квалификации и профессиональной переподготовки';
-    $h1Text = 'Курсы повышения квалификации для педагогов';
+    $baseTitle = 'Курсы повышения квалификации и переподготовки';
 }
 
-if ($selectedCategoryData) {
-    $audienceLabel = $selectedCategoryData['name'];
-    $titleParts[] = $audienceLabel;
-    $descParts[] = 'для ' . mb_strtolower($audienceLabel);
+// Аудитория в родительном падеже: наша ЦА — педагоги, поэтому
+// на любой категорийной странице явно указываем, для кого курсы.
+$audienceCategoryGenitiveMap = [
+    'pedagogi' => 'педагогов',
+    'doshkolnikam' => 'педагогов дошкольного образования',
+    'shkolnikam' => 'учителей школ',
+    'studentam-spo' => 'преподавателей СПО',
+];
+
+if ($selectedTypeData && !empty($selectedTypeData['target_participants_genitive'])) {
+    $audiencePhrase = $selectedTypeData['target_participants_genitive'];
+} elseif ($selectedCategoryData && isset($audienceCategoryGenitiveMap[$selectedCategoryData['slug']])) {
+    $audiencePhrase = $audienceCategoryGenitiveMap[$selectedCategoryData['slug']];
 } else {
-    $descParts[] = 'для педагогов';
+    $audiencePhrase = 'педагогов';
 }
 
-if ($selectedTypeData) {
-    $titleParts[] = $selectedTypeData['name'];
-    $descParts[] = '(' . $selectedTypeData['name'] . ')';
-}
+$h1Text = $baseTitle . ' для ' . $audiencePhrase;
+$titleParts = [$baseTitle . ' для ' . $audiencePhrase];
+$descParts = [$baseTitle . ' для ' . $audiencePhrase];
 
 if (!empty($selectedSpecData)) {
     $titleParts[] = $selectedSpecData['name'];

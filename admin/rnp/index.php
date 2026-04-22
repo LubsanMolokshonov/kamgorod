@@ -74,7 +74,8 @@ foreach ($dayReport['periods'] as $d) {
  * Суммировать метрики по нескольким channel×section ячейкам.
  */
 function rnpSumChannels(array $rows, array $channels): array {
-    $s = ['cost'=>0,'revenue'=>0,'payments'=>0,'created_orders'=>0,'paid_orders'=>0];
+    $s = ['cost'=>0,'revenue'=>0,'payments'=>0,'created_orders'=>0,'paid_orders'=>0,'leads'=>0];
+    $hasCourse = false;
     foreach ($channels as [$ch, $sec]) {
         $c = $rows[$ch][$sec];
         $s['cost']           += $c['cost'];
@@ -82,12 +83,16 @@ function rnpSumChannels(array $rows, array $channels): array {
         $s['payments']       += $c['payments'];
         $s['created_orders'] += $c['created_orders'];
         $s['paid_orders']    += $c['paid_orders'];
+        $s['leads']          += $c['leads'] ?? 0;
+        if ($sec === 'course') $hasCourse = true;
     }
     $s['cpa']        = $s['payments'] > 0 ? $s['cost'] / $s['payments'] : null;
     $s['avg_check']  = $s['payments'] > 0 ? $s['revenue'] / $s['payments'] : null;
     $s['profit']     = $s['revenue'] - $s['cost'];
     $s['romi']       = $s['cost'] > 0 ? ($s['revenue'] - $s['cost']) / $s['cost'] : null;
     $s['conversion'] = $s['created_orders'] > 0 ? $s['paid_orders'] / $s['created_orders'] : null;
+    $s['lead_cost']  = ($hasCourse && $s['leads'] > 0) ? $s['cost'] / $s['leads'] : null;
+    $s['_has_course'] = $hasCourse;
     return $s;
 }
 
@@ -154,12 +159,23 @@ $groups = [
 
 $metrics = [
     ['key' => 'cost',     'label' => 'Расход',           'format' => 'money', 'editable' => true],
+    ['key' => 'leads',    'label' => 'Заявки',           'format' => 'int',   'course_only' => true],
+    ['key' => 'lead_cost','label' => 'Цена заявки',      'format' => 'money', 'course_only' => true],
     ['key' => 'revenue',  'label' => 'Выручка',          'format' => 'money'],
     ['key' => 'payments', 'label' => 'Оплаты',           'format' => 'int'],
     ['key' => 'cpa',      'label' => 'CPA',              'format' => 'money'],
     ['key' => 'avg_check','label' => 'Средний чек',      'format' => 'money'],
     ['key' => 'profit',   'label' => 'Маркетинг. прибыль','format' => 'money', 'highlight' => true],
 ];
+
+// Флаг «в группе есть курсовый канал» — для отображения метрик «Заявки / Цена заявки».
+foreach ($groups as &$__grp) {
+    $__grp['has_course'] = false;
+    foreach ($__grp['channels'] as [$__ch, $__sec]) {
+        if ($__sec === 'course') { $__grp['has_course'] = true; break; }
+    }
+}
+unset($__grp);
 
 // ============================================================
 // Предрасчёт: для каждого столбца × каждой группы — значения
@@ -274,13 +290,16 @@ include __DIR__ . '/../includes/header.php';
                         $cell = $grid[$grp['key']][$ci];
                         $val = $cell[$metric['key']] ?? null;
                         $isDay = ($col['type'] === 'day');
+                        $hideForPortalOnly = !empty($metric['course_only']) && empty($grp['has_course']);
                         $cssExtra = '';
                         if ($isProfit && $val !== null) {
                             $cssExtra = $val < 0 ? ' is-negative' : ($val > 0 ? ' is-positive' : '');
                         }
                     ?>
                     <td class="rnp-pivot-val rnp-pivot-col-<?= $col['type'] ?><?= $isCost ? ' rnp-cost-cell' : '' ?><?= $cssExtra ?>">
-                        <?php if ($isCost && $isEditable && $isDay): ?>
+                        <?php if ($hideForPortalOnly): ?>
+                            —
+                        <?php elseif ($isCost && $isEditable && $isDay): ?>
                             <input
                                 type="number"
                                 step="1"

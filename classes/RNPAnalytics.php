@@ -60,6 +60,7 @@ class RNPAnalytics
         $paidRows = $this->fetchOrderSplit($dateFrom, $dateTo, 'paid_at', $granularity);
         $createdRows = $this->fetchOrderSplit($dateFrom, $dateTo, 'created_at', $granularity);
         $costs = $this->fetchCosts($dateFrom, $dateTo, $granularity);
+        $leadRows = $this->fetchCourseLeads($dateFrom, $dateTo, $granularity);
         $periods = $this->buildPeriods($dateFrom, $dateTo, $granularity);
 
         // Индексы для быстрого слияния
@@ -75,6 +76,10 @@ class RNPAnalytics
         foreach ($costs as $c) {
             $costsIdx[$c['period_key']] = $c;
         }
+        $leadsIdx = [];
+        foreach ($leadRows as $l) {
+            $leadsIdx[$l['period_key']][$l['channel']] = (float)$l['leads'];
+        }
 
         $report = [];
         $grandRows = $this->blankCellMatrix();
@@ -87,6 +92,11 @@ class RNPAnalytics
                     $paid = $paidIdx[$period['key']][$channel][$section] ?? null;
                     $created = $createdIdx[$period['key']][$channel][$section] ?? null;
 
+                    $leadsVal = 0.0;
+                    if ($section === 'course') {
+                        $leadsVal = $leadsIdx[$period['key']][$channel] ?? 0.0;
+                    }
+
                     $cell = [
                         'channel' => $channel,
                         'section' => $section,
@@ -95,6 +105,7 @@ class RNPAnalytics
                         'payments' => $paid['payments'] ?? 0.0,
                         'created_orders' => $created['orders_count'] ?? 0.0,
                         'paid_orders' => $paid['orders_count'] ?? 0.0,
+                        'leads' => $leadsVal,
                     ];
                     $rows[$channel][$section] = $cell;
 
@@ -103,6 +114,7 @@ class RNPAnalytics
                     $grandRows[$channel][$section]['payments'] += $cell['payments'];
                     $grandRows[$channel][$section]['created_orders'] += $cell['created_orders'];
                     $grandRows[$channel][$section]['paid_orders'] += $cell['paid_orders'];
+                    $grandRows[$channel][$section]['leads'] += $cell['leads'];
                 }
             }
 
@@ -320,6 +332,41 @@ class RNPAnalytics
     }
 
     /**
+     * Заявки по курсам: регистрации на курс (course_enrollments) +
+     * заявки на обратный звонок (course_consultations).
+     * Дедупликация по нормализованному телефону в пределах (period × channel).
+     */
+    private function fetchCourseLeads(string $dateFrom, string $dateTo, string $granularity): array
+    {
+        $periodExprEnr = $this->periodExpr('created_at', $granularity);
+        $channelExpr   = $this->channelExpr('utm_source');
+
+        $sql = "
+            SELECT period_key, channel, COUNT(DISTINCT phone_norm) AS leads
+            FROM (
+                SELECT
+                    {$periodExprEnr} AS period_key,
+                    {$channelExpr}   AS channel,
+                    REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '') AS phone_norm
+                FROM course_enrollments
+                WHERE DATE(created_at) BETWEEN ? AND ?
+                  AND phone IS NOT NULL AND phone <> ''
+                UNION ALL
+                SELECT
+                    {$periodExprEnr} AS period_key,
+                    {$channelExpr}   AS channel,
+                    REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '') AS phone_norm
+                FROM course_consultations
+                WHERE DATE(created_at) BETWEEN ? AND ?
+                  AND phone IS NOT NULL AND phone <> ''
+            ) t
+            WHERE phone_norm <> ''
+            GROUP BY period_key, channel
+        ";
+        return $this->db->query($sql, [$dateFrom, $dateTo, $dateFrom, $dateTo]);
+    }
+
+    /**
      * Расходы по конкретной дате (для inline-редактирования).
      */
     public function getCostsForDate(string $date): array
@@ -444,6 +491,7 @@ class RNPAnalytics
                     'payments' => 0.0,
                     'created_orders' => 0.0,
                     'paid_orders' => 0.0,
+                    'leads' => 0.0,
                 ];
             }
         }
@@ -459,7 +507,7 @@ class RNPAnalytics
     {
         $total = [
             'cost' => 0.0, 'revenue' => 0.0, 'payments' => 0.0,
-            'created_orders' => 0.0, 'paid_orders' => 0.0,
+            'created_orders' => 0.0, 'paid_orders' => 0.0, 'leads' => 0.0,
         ];
 
         foreach (self::CHANNELS as $ch) {
@@ -470,6 +518,7 @@ class RNPAnalytics
                 $cell['profit'] = $cell['revenue'] - $cell['cost'];
                 $cell['romi'] = $cell['cost'] > 0 ? ($cell['revenue'] - $cell['cost']) / $cell['cost'] : null;
                 $cell['conversion'] = $cell['created_orders'] > 0 ? $cell['paid_orders'] / $cell['created_orders'] : null;
+                $cell['lead_cost'] = ($sec === 'course' && $cell['leads'] > 0) ? $cell['cost'] / $cell['leads'] : null;
                 $matrix[$ch][$sec] = $cell;
 
                 $total['cost']           += $cell['cost'];
@@ -477,6 +526,7 @@ class RNPAnalytics
                 $total['payments']       += $cell['payments'];
                 $total['created_orders'] += $cell['created_orders'];
                 $total['paid_orders']    += $cell['paid_orders'];
+                $total['leads']          += $cell['leads'];
             }
         }
 
@@ -485,6 +535,7 @@ class RNPAnalytics
         $total['profit']     = $total['revenue'] - $total['cost'];
         $total['romi']       = $total['cost'] > 0 ? ($total['revenue'] - $total['cost']) / $total['cost'] : null;
         $total['conversion'] = $total['created_orders'] > 0 ? $total['paid_orders'] / $total['created_orders'] : null;
+        $total['lead_cost']  = $total['leads'] > 0 ? $total['cost'] / $total['leads'] : null;
 
         return ['cells' => $matrix, 'total' => $total];
     }
