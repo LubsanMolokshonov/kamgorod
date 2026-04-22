@@ -1110,3 +1110,34 @@
         flex-wrap: wrap;
     }
 }
+
+/* Loyalty badge — бейдж постоянного клиента */
+.loyalty-badge {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: linear-gradient(135deg, #f5f0ff 0%, #ede7ff 100%);
+    border: 2px solid #a78bfa;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin: 0 0 24px;
+}
+.loyalty-badge-icon {
+    font-size: 32px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.loyalty-badge-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.loyalty-badge-body strong {
+    color: #6d28d9;
+    font-size: 16px;
+}
+.loyalty-badge-body span {
+    color: #4c1d95;
+    font-size: 14px;
+    line-height: 1.5;
+}

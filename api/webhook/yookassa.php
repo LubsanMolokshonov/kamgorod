@@ -42,6 +42,7 @@ require_once __DIR__ . '/../../classes/OlympiadDiploma.php';
 require_once __DIR__ . '/../../classes/EmailJourney.php';
 require_once __DIR__ . '/../../classes/PublicationEmailChain.php';
 require_once __DIR__ . '/../../classes/User.php';
+require_once __DIR__ . '/../../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -504,6 +505,20 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
             // Send success email with all attachments
             try {
                 sendPaymentSuccessEmail($userId, $orderId);
+
+                // Пожизненная скидка лояльности: выдать статус и отправить
+                // приветственное письмо после первого успешного платежа.
+                try {
+                    if (LoyaltyDiscount::isFirstSuccessfulOrder($GLOBALS['db'], (int)$userId, (int)$orderId)) {
+                        $userObjLocal = new User($GLOBALS['db']);
+                        if ($userObjLocal->grantLifetimeDiscount((int)$userId)) {
+                            sendLifetimeDiscountGrantedEmail((int)$userId, (int)$orderId);
+                            logWebhook('SUCCESS', $paymentId, "Lifetime discount granted for user {$userId}", '');
+                        }
+                    }
+                } catch (Exception $e) {
+                    logWebhook('WARNING', $paymentId, "Lifetime discount grant failed: " . $e->getMessage(), '');
+                }
 
                 // Mark certificate_email_sent for webinar registrations
                 $webRegObj = new WebinarRegistration($GLOBALS['db']);

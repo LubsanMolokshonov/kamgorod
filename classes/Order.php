@@ -6,9 +6,32 @@
 
 class Order {
     private $db;
+    private static $columnCache = [];
 
     public function __construct($pdo) {
         $this->db = new Database($pdo);
+    }
+
+    /**
+     * Проверить наличие колонки в таблице (с кэшем на процесс).
+     * Используется, чтобы опциональные поля (например, добавленные поздними
+     * миграциями) не ломали вставки до применения миграции.
+     */
+    private function hasColumn(string $table, string $column): bool {
+        $key = $table . '.' . $column;
+        if (isset(self::$columnCache[$key])) {
+            return self::$columnCache[$key];
+        }
+        try {
+            $row = $this->db->queryOne(
+                "SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+                [$table, $column]
+            );
+            return self::$columnCache[$key] = !empty($row) && (int)$row['cnt'] > 0;
+        } catch (\Exception $e) {
+            return self::$columnCache[$key] = false;
+        }
     }
 
     /**
@@ -25,6 +48,7 @@ class Order {
         // Use totals from cartData (already includes all items with unified 2+1 promotion)
         $subtotal = $cartData['subtotal'] ?? 0;
         $discount = $cartData['discount'] ?? 0;
+        $loyaltyDiscount = $cartData['loyalty_discount'] ?? 0;
         $finalAmount = $grandTotal ?? ($cartData['total'] ?? 0);
 
         $insertData = [
@@ -36,6 +60,12 @@ class Order {
             'promotion_applied' => ($cartData['promotion_applied'] ?? false) ? 1 : 0,
             'payment_status' => 'pending'
         ];
+
+        // loyalty_discount_amount добавлен миграцией 085. Записываем опционально,
+        // чтобы создание заказа не ломалось, если миграция ещё не применена.
+        if ($loyaltyDiscount > 0 && $this->hasColumn('orders', 'loyalty_discount_amount')) {
+            $insertData['loyalty_discount_amount'] = $loyaltyDiscount;
+        }
 
         $orderId = $this->db->insert('orders', $insertData);
 
@@ -93,11 +123,11 @@ class Order {
     /**
      * Create order for course enrollment (direct payment, no cart)
      */
-    public function createForCourseEnrollment($userId, $enrollmentId, $courseTitle, $price, $discountAmount = 0) {
+    public function createForCourseEnrollment($userId, $enrollmentId, $courseTitle, $price, $discountAmount = 0, $loyaltyDiscountAmount = 0) {
         $orderNumber = self::generateOrderNumber();
         $finalAmount = $price - $discountAmount;
 
-        $orderId = $this->db->insert('orders', [
+        $insertData = [
             'user_id' => $userId,
             'order_number' => $orderNumber,
             'total_amount' => $price,
@@ -105,7 +135,11 @@ class Order {
             'final_amount' => $finalAmount,
             'promotion_applied' => $discountAmount > 0 ? 1 : 0,
             'payment_status' => 'pending'
-        ]);
+        ];
+        if ($loyaltyDiscountAmount > 0 && $this->hasColumn('orders', 'loyalty_discount_amount')) {
+            $insertData['loyalty_discount_amount'] = $loyaltyDiscountAmount;
+        }
+        $orderId = $this->db->insert('orders', $insertData);
 
         if ($orderId) {
             $this->db->insert('order_items', [

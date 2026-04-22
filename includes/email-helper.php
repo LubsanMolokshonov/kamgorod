@@ -473,6 +473,209 @@ TEXT;
 }
 
 /**
+ * Отправить приветственное письмо о пожизненной скидке лояльности.
+ * Вызывается один раз — сразу после первого успешного платежа пользователя.
+ * Включает персональную рекомендацию продукта под аудиторию пользователя.
+ */
+function sendLifetimeDiscountGrantedEmail($userId, $orderId) {
+    global $db;
+
+    try {
+        require_once __DIR__ . '/../classes/Order.php';
+        require_once __DIR__ . '/../classes/User.php';
+        require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
+        require_once __DIR__ . '/../classes/CartRecommendation.php';
+
+        $orderObj = new Order($db);
+        $userObj = new User($db);
+
+        $order = $orderObj->getById($orderId);
+        $user = $userObj->getById($userId);
+
+        if (!$order || !$user) {
+            throw new Exception('Order or user not found');
+        }
+
+        // Формируем псевдо-корзину из позиций заказа в формате,
+        // совместимом с CartRecommendation::getRecommendations.
+        $mockCart = buildRecommendationCartFromOrder($db, $order['items'] ?? []);
+
+        $recommendation = null;
+        try {
+            $cartRec = new CartRecommendation($db);
+            $cards = $cartRec->getRecommendations($mockCart, (int)$userId, 1);
+            if (!empty($cards)) {
+                $recommendation = $cards[0];
+            }
+        } catch (Exception $e) {
+            // Рекомендации не критичны — письмо уйдёт с общим CTA в каталог.
+            error_log('Lifetime discount recommendation build failed: ' . $e->getMessage());
+        }
+
+        // Отписка: HMAC-совместимый токен по тому же формату, что и в CourseEmailChain.
+        $unsubscribeToken = base64_encode($user['email'] . ':' . substr(md5($user['email'] . SITE_URL), 0, 16));
+        $unsubscribeUrl = SITE_URL . '/pages/unsubscribe.php?token=' . urlencode($unsubscribeToken);
+
+        $cabinetUrl = generateMagicUrl($user['id'], '/pages/cabinet.php');
+
+        $templateData = [
+            'user_name'               => $user['full_name'] ?: 'коллега',
+            'order_number'            => $order['order_number'],
+            'cart_discount_percent'   => (int)round(LoyaltyDiscount::RATE_CART * 100),
+            'course_discount_percent' => (int)round(LoyaltyDiscount::RATE_COURSE * 100),
+            'has_recommendation'      => !empty($recommendation),
+            'recommended_title'       => $recommendation['title'] ?? '',
+            'recommended_url'         => $recommendation ? recommendationUrl($recommendation) : '',
+            'recommended_type_label'  => recommendationTypeLabel($recommendation['type'] ?? ''),
+            'recommended_price'       => $recommendation['price'] ?? 0,
+            'cabinet_url'             => $cabinetUrl,
+            'catalog_url'             => SITE_URL . '/',
+            'unsubscribe_url'         => $unsubscribeUrl,
+            'site_url'                => SITE_URL,
+            'email_subject'           => 'Ваша пожизненная скидка активирована',
+        ];
+
+        $htmlBody = renderLifetimeDiscountEmail($templateData);
+
+        $mail = new PHPMailer(true);
+        configureMailer($mail);
+        $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
+        $mail->addAddress($user['email'], $user['full_name']);
+        $mail->isHTML(true);
+        $mail->Subject = mb_encode_mimeheader($templateData['email_subject'], 'UTF-8', 'B');
+        $mail->Body = $htmlBody;
+        $mail->AltBody = buildLifetimeDiscountTextBody($templateData);
+        $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
+
+        require_once __DIR__ . '/../classes/EmailTracker.php';
+        EmailTracker::prepareAndSend($mail, [
+            'email_type'      => 'loyalty',
+            'touchpoint_code' => 'lifetime_discount_granted',
+            'user_id'         => $userId,
+            'recipient_email' => $user['email'],
+        ]);
+
+        logEmail('SUCCESS', $user['email'], $order['order_number'], 'Lifetime discount email sent');
+        return true;
+
+    } catch (Exception $e) {
+        logEmail('ERROR', $user['email'] ?? 'unknown', $orderId, 'Lifetime discount email failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Построить псевдо-корзину для CartRecommendation из позиций заказа.
+ * CartRecommendation ожидает элементы вида ['type' => ..., 'raw_data' => [...]].
+ */
+function buildRecommendationCartFromOrder(PDO $db, array $orderItems): array {
+    $cart = [];
+    foreach ($orderItems as $item) {
+        if (!empty($item['registration_id'])) {
+            $row = $db->prepare("SELECT competition_id FROM registrations WHERE id = ?");
+            $row->execute([$item['registration_id']]);
+            $data = $row->fetch(PDO::FETCH_ASSOC) ?: [];
+            $cart[] = ['type' => 'registration', 'raw_data' => $data];
+        } elseif (!empty($item['certificate_id'])) {
+            $row = $db->prepare("SELECT publication_id FROM publication_certificates WHERE id = ?");
+            $row->execute([$item['certificate_id']]);
+            $data = $row->fetch(PDO::FETCH_ASSOC) ?: [];
+            $cart[] = ['type' => 'certificate', 'raw_data' => $data];
+        } elseif (!empty($item['webinar_certificate_id'])) {
+            $row = $db->prepare("SELECT webinar_id FROM webinar_certificates WHERE id = ?");
+            $row->execute([$item['webinar_certificate_id']]);
+            $data = $row->fetch(PDO::FETCH_ASSOC) ?: [];
+            $cart[] = ['type' => 'webinar_certificate', 'raw_data' => $data];
+        } elseif (!empty($item['olympiad_registration_id'])) {
+            $row = $db->prepare("SELECT olympiad_id FROM olympiad_registrations WHERE id = ?");
+            $row->execute([$item['olympiad_registration_id']]);
+            $data = $row->fetch(PDO::FETCH_ASSOC) ?: [];
+            $cart[] = ['type' => 'olympiad_registration', 'raw_data' => $data];
+        } elseif (!empty($item['course_enrollment_id'])) {
+            $row = $db->prepare("SELECT course_id FROM course_enrollments WHERE id = ?");
+            $row->execute([$item['course_enrollment_id']]);
+            $data = $row->fetch(PDO::FETCH_ASSOC) ?: [];
+            $cart[] = ['type' => 'course_enrollment', 'raw_data' => $data];
+        }
+    }
+    return $cart;
+}
+
+function recommendationTypeLabel(string $type): string {
+    return match($type) {
+        'competition'            => 'Конкурс',
+        'olympiad'               => 'Олимпиада',
+        'webinar', 'webinar_browse', 'webinar_certificate', 'webinar_listing_cta' => 'Видеолекция',
+        'publication', 'publication_certificate', 'publication_cta'               => 'Публикация',
+        'course', 'course_cta'   => 'Курс',
+        default                  => ''
+    };
+}
+
+/**
+ * Построить абсолютный URL для карточки рекомендации.
+ */
+function recommendationUrl(array $card): string {
+    $type = $card['type'] ?? '';
+    $slug = $card['slug'] ?? '';
+
+    $buildDetail = function(string $section, string $slug) {
+        if ($slug === '') {
+            return SITE_URL . '/' . ltrim($section, '/');
+        }
+        return SITE_URL . '/' . trim($section, '/') . '/' . $slug . '/';
+    };
+
+    return match($type) {
+        'competition'                                 => $buildDetail('konkursy', $slug),
+        'olympiad'                                    => $buildDetail('olimpiady', $slug),
+        'webinar', 'webinar_browse', 'webinar_certificate' => $buildDetail('vebinary', $slug),
+        'webinar_listing_cta'                         => SITE_URL . '/vebinary/',
+        'course'                                      => $buildDetail('kursy', $slug),
+        'course_cta'                                  => SITE_URL . '/kursy/',
+        'publication_certificate', 'publication'      => SITE_URL . '/zhurnal/',
+        'publication_cta'                             => SITE_URL . '/opublikovat/',
+        default                                       => SITE_URL . '/',
+    };
+}
+
+function renderLifetimeDiscountEmail(array $data): string {
+    // Экспортируем переменные в область видимости шаблона.
+    extract($data, EXTR_SKIP);
+    ob_start();
+    include __DIR__ . '/email-templates/lifetime_discount_granted.php';
+    return ob_get_clean();
+}
+
+function buildLifetimeDiscountTextBody(array $d): string {
+    $lines = [];
+    $lines[] = 'Здравствуйте, ' . $d['user_name'] . '!';
+    $lines[] = '';
+    $lines[] = 'Ваш заказ №' . $d['order_number'] . ' успешно оплачен — спасибо!';
+    $lines[] = '';
+    $lines[] = 'Теперь за вами закреплена пожизненная скидка:';
+    $lines[] = '  • ' . $d['cart_discount_percent'] . '% на конкурсы, олимпиады, вебинары и публикации';
+    $lines[] = '  • ' . $d['course_discount_percent'] . '% на курсы повышения квалификации и переподготовки';
+    $lines[] = 'Скидки применяются автоматически.';
+    $lines[] = '';
+    if (!empty($d['has_recommendation'])) {
+        $lines[] = 'Рекомендуем забрать со скидкой:';
+        $lines[] = $d['recommended_title'];
+        if (!empty($d['recommended_url'])) {
+            $lines[] = $d['recommended_url'];
+        }
+    } else {
+        $lines[] = 'Каталог: ' . $d['catalog_url'];
+    }
+    $lines[] = '';
+    $lines[] = 'Личный кабинет: ' . $d['cabinet_url'];
+    $lines[] = '';
+    $lines[] = '---';
+    $lines[] = 'Отписаться: ' . $d['unsubscribe_url'];
+    return implode("\n", $lines);
+}
+
+/**
  * Send payment failure notification email
  */
 function sendPaymentFailureEmail($userId, $orderId) {

@@ -28,6 +28,28 @@ class User {
     }
 
     /**
+     * Выдать пользователю статус пожизненной скидки.
+     * Идемпотентно: возвращает true только если флаг реально был проставлен
+     * этим вызовом (используется как сигнал «только что выдано» — нужен для
+     * однократной отправки приветственного письма).
+     */
+    public function grantLifetimeDiscount(int $userId): bool {
+        try {
+            $affected = $this->db->execute(
+                "UPDATE users
+                 SET has_lifetime_discount = 1,
+                     lifetime_discount_granted_at = NOW()
+                 WHERE id = ? AND has_lifetime_discount = 0",
+                [$userId]
+            );
+            return (int)$affected > 0;
+        } catch (\Exception $e) {
+            // Миграция 085 ещё не применена — молча игнорируем.
+            return false;
+        }
+    }
+
+    /**
      * Find user by email
      */
     public function findByEmail($email) {

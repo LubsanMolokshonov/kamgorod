@@ -539,3 +539,31 @@
 .cart-loading .spinner {
     margin: 0 auto;
 }
+
+/* Loyalty banner — пожизненная скидка */
+.loyalty-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(135deg, #f5f0ff 0%, #ede7ff 100%);
+    border: 2px solid #a78bfa;
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin-bottom: 20px;
+}
+.loyalty-banner-icon {
+    font-size: 40px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.loyalty-banner-content h3 {
+    margin: 0 0 4px;
+    color: #6d28d9;
+    font-size: 18px;
+}
+.loyalty-banner-content p {
+    margin: 0;
+    color: #4c1d95;
+    font-size: 14px;
+    line-height: 1.5;
+}

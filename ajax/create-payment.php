@@ -17,6 +17,7 @@ require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Order.php';
+require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -161,11 +162,38 @@ try {
 
     $grandTotal = $subtotal - $discount;
 
+    // Пожизненная скидка лояльности (25%) для постоянных клиентов — стакается поверх 2+1.
+    // Определяем userId заранее (из сессии/корзины), чтобы применить скидку до создания заказа.
+    $sessionUserId = $_SESSION['user_id'] ?? null;
+    if (!$sessionUserId) {
+        if (!empty($registrations)) {
+            $stmt = $db->prepare("SELECT user_id FROM registrations WHERE id = ? LIMIT 1");
+            $stmt->execute([$registrations[0]]);
+            $sessionUserId = $stmt->fetchColumn() ?: null;
+        } elseif (!empty($certificatesData)) {
+            $sessionUserId = $certificatesData[0]['user_id'] ?? null;
+        } elseif (!empty($webinarCertificatesData)) {
+            $sessionUserId = $webinarCertificatesData[0]['user_id'] ?? null;
+        } elseif (!empty($olympiadRegsData)) {
+            $sessionUserId = $olympiadRegsData[0]['user_id'] ?? null;
+        }
+    }
+
+    $loyaltyDiscount = 0;
+    if ($sessionUserId && LoyaltyDiscount::isEligible($db, (int)$sessionUserId)) {
+        $calc = LoyaltyDiscount::calculateCartDiscount((float)$grandTotal);
+        if ($calc['amount'] > 0) {
+            $loyaltyDiscount = $calc['amount'];
+            $grandTotal = $calc['final'];
+        }
+    }
+
     // Build cartData for backward compatibility with Order class
     $cartData = [
         'items' => [],
         'subtotal' => $subtotal,
         'discount' => $discount,
+        'loyalty_discount' => $loyaltyDiscount,
         'total' => $grandTotal,
         'promotion_applied' => $promotionApplied
     ];
@@ -332,6 +360,27 @@ try {
 
         // Clear the cart
         clearCart();
+
+        // Пожизненная скидка лояльности: локальный bypass не проходит через
+        // Yookassa webhook, поэтому выдаём статус здесь. В local-режиме заказ
+        // в таблице orders не создаётся — шлём письмо только если есть хоть
+        // один succeeded-заказ в истории.
+        if ($userId) {
+            try {
+                if ($userObj->grantLifetimeDiscount((int)$userId)) {
+                    $lastOrder = (new Database($db))->queryOne(
+                        "SELECT id FROM orders WHERE user_id = ? AND payment_status = 'succeeded' ORDER BY id DESC LIMIT 1",
+                        [$userId]
+                    );
+                    if ($lastOrder) {
+                        require_once __DIR__ . '/../includes/email-helper.php';
+                        @sendLifetimeDiscountGrantedEmail((int)$userId, (int)$lastOrder['id']);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log('Local loyalty grant failed: ' . $e->getMessage());
+            }
+        }
 
         // Return success with redirect to cabinet
         echo json_encode([
@@ -518,9 +567,26 @@ try {
     // Prepare receipt items for 54-ФЗ compliance (with unified 2+1 promotion)
     $receiptItems = [];
 
+    // Распределяем loyalty-скидку пропорционально по оплачиваемым позициям,
+    // чтобы сумма строк чека совпала с итоговой суммой платежа.
+    $payablePrices = [];
+    $payableIndex = [];
+    foreach ($allItems as $i => $item) {
+        if (!$item['is_free'] && $item['price'] > 0) {
+            $payablePrices[$i] = (float)$item['price'];
+            $payableIndex[$i] = count($payablePrices) - 1;
+        }
+    }
+    $adjustedPrices = $loyaltyDiscount > 0
+        ? LoyaltyDiscount::distributePricesWithDiscount(array_values($payablePrices), $loyaltyDiscount)
+        : array_values($payablePrices);
+
     // Add ALL items (registrations and certificates) with promotion applied
-    foreach ($allItems as $item) {
+    foreach ($allItems as $i => $item) {
         $itemPrice = $item['is_free'] ? 0 : $item['price'];
+        if ($itemPrice > 0 && isset($payableIndex[$i])) {
+            $itemPrice = $adjustedPrices[$payableIndex[$i]];
+        }
         if ($itemPrice > 0) {
             if ($item['type'] === 'certificate') {
                 $description = 'Свидетельство о публикации: ' . mb_substr($item['name'], 0, 100);

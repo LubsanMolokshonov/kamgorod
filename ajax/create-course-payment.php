@@ -13,6 +13,7 @@ require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
+require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../includes/session.php';
 
 use YooKassa\Client;
@@ -103,13 +104,26 @@ try {
         }
     }
 
+    // Пожизненная скидка лояльности (10% на курсы) для постоянных клиентов.
+    // Применяется, если другие скидки не сработали. Сохраняем величину отдельно
+    // в loyalty_discount_amount для аналитики.
+    $loyaltyAmount = 0;
+    if (!$discountAmount && LoyaltyDiscount::isEligible($db, (int)$userId)) {
+        $calc = LoyaltyDiscount::calculateCourseDiscount((float)$price);
+        if ($calc['amount'] > 0) {
+            $discountAmount = $calc['amount'];
+            $finalPrice = $calc['final'];
+            $loyaltyAmount = $calc['amount'];
+        }
+    }
+
     // Убедимся, что user_id есть в enrollment
     $enrollmentUserId = $enrollment['user_id'] ?? $userId;
 
     // LOCAL DEV: обновить статус без Юкассы
     if (defined('APP_ENV') && APP_ENV === 'local') {
         $orderId = $orderObj->createForCourseEnrollment(
-            $enrollmentUserId, $enrollmentId, $enrollment['title'], $price, $discountAmount
+            $enrollmentUserId, $enrollmentId, $enrollment['title'], $price, $discountAmount, $loyaltyAmount
         );
 
         // Обновить статус enrollment
@@ -176,6 +190,19 @@ try {
                 $db->rollBack();
             }
             error_log('Local course payment Bitrix24 error: ' . $e->getMessage());
+        }
+
+        // Пожизненная скидка лояльности: local bypass минует webhook,
+        // выдаём статус напрямую (идемпотентно).
+        try {
+            $userObjLocal = new User($db);
+            if (LoyaltyDiscount::isFirstSuccessfulOrder($db, (int)$enrollmentUserId, (int)$orderId)
+                && $userObjLocal->grantLifetimeDiscount((int)$enrollmentUserId)) {
+                require_once __DIR__ . '/../includes/email-helper.php';
+                @sendLifetimeDiscountGrantedEmail((int)$enrollmentUserId, (int)$orderId);
+            }
+        } catch (Exception $e) {
+            error_log('Local course loyalty grant failed: ' . $e->getMessage());
         }
 
         echo json_encode([

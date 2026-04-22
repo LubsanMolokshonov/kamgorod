@@ -13,11 +13,17 @@ require_once __DIR__ . '/../classes/Registration.php';
 require_once __DIR__ . '/../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../classes/OlympiadRegistration.php';
+require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Check if cart exists
 $registrations = getCart();
 $certificates = getCartCertificates();
+
+// Общие дефолты для loyalty (перекрываются ниже при наличии статуса)
+$loyaltyDiscount = 0;
+$hasLoyalty = false;
+$loyaltyRatePercent = (int)round(LoyaltyDiscount::RATE_CART * 100);
 
 if (isCartEmpty()) {
     // Show empty cart page
@@ -135,6 +141,17 @@ if (isCartEmpty()) {
     }
 
     $grandTotal = $subtotal - $discount;
+
+    // Пожизненная скидка 25% для постоянных клиентов — стакается поверх 2+1.
+    $currentUserId = $_SESSION['user_id'] ?? null;
+    if ($currentUserId && LoyaltyDiscount::isEligible($db, (int)$currentUserId)) {
+        $calc = LoyaltyDiscount::calculateCartDiscount((float)$grandTotal);
+        if ($calc['amount'] > 0) {
+            $loyaltyDiscount = $calc['amount'];
+            $grandTotal = $calc['final'];
+            $hasLoyalty = true;
+        }
+    }
 }
 
 // Page metadata
@@ -194,6 +211,16 @@ include __DIR__ . '/../includes/header.php';
                             Добавьте еще 1 мероприятие, чтобы получить его бесплатно!
                         <?php endif; ?>
                         </p>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($hasLoyalty && $loyaltyDiscount > 0): ?>
+                <div class="loyalty-banner">
+                    <div class="loyalty-banner-icon">🏆</div>
+                    <div class="loyalty-banner-content">
+                        <h3>Действует пожизненная скидка <?php echo $loyaltyRatePercent; ?>%</h3>
+                        <p>Вы уже оплачивали у нас заказ — скидка применена автоматически. Экономия: <?php echo number_format($loyaltyDiscount, 0, ',', ' '); ?> ₽.</p>
                     </div>
                 </div>
             <?php endif; ?>
@@ -264,6 +291,13 @@ include __DIR__ . '/../includes/header.php';
                     <div class="summary-row discount">
                         <span>Скидка (акция 2+1):</span>
                         <span>-<?php echo number_format($discount, 0, ',', ' '); ?> ₽</span>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($hasLoyalty && $loyaltyDiscount > 0): ?>
+                    <div class="summary-row discount">
+                        <span>Пожизненная скидка <?php echo $loyaltyRatePercent; ?>%:</span>
+                        <span>-<?php echo number_format($loyaltyDiscount, 0, ',', ' '); ?> ₽</span>
                     </div>
                 <?php endif; ?>
 

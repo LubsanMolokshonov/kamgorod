@@ -18,6 +18,7 @@ require_once __DIR__ . '/../classes/OlympiadQuiz.php';
 require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
+require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Auto-login via cookie if session doesn't exist
@@ -162,6 +163,16 @@ include __DIR__ . '/../includes/header.php';
                 <?php echo htmlspecialchars($_SESSION['user_email']); ?>
             </p>
         </div>
+
+        <?php if (LoyaltyDiscount::isEligible($db, (int)($_SESSION['user_id'] ?? 0))): ?>
+            <div class="loyalty-badge">
+                <div class="loyalty-badge-icon">🏆</div>
+                <div class="loyalty-badge-body">
+                    <strong>Действует пожизненная скидка <?php echo (int)round(LoyaltyDiscount::RATE_CART * 100); ?>%</strong>
+                    <span>На конкурсы, олимпиады, вебинары и публикации. Плюс <?php echo (int)round(LoyaltyDiscount::RATE_COURSE * 100); ?>% на курсы повышения квалификации. Скидка применяется автоматически.</span>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- Tabs -->
         <div class="cabinet-tabs">
