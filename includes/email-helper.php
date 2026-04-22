@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/magic-link-helper.php';
+require_once __DIR__ . '/../classes/TelegramNotifier.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -100,6 +101,17 @@ function sendPaymentSuccessEmail($userId, $orderId) {
 
     } catch (Exception $e) {
         logEmail('ERROR', $user['email'] ?? 'unknown', $orderId, 'Email failed: ' . $e->getMessage());
+        TelegramNotifier::instance()->alert(
+            'smtp_send_failure',
+            '[Email] Сбой отправки (payment_success)',
+            [
+                'email'     => $user['email'] ?? 'unknown',
+                'order_id'  => $orderId,
+                'error'     => $e->getMessage(),
+                'smtp_host' => defined('SMTP_HOST') ? SMTP_HOST : '',
+            ],
+            'critical'
+        );
         return false;
     }
 }
@@ -542,6 +554,17 @@ HTML;
 
     } catch (Exception $e) {
         logEmail('ERROR', $user['email'] ?? 'unknown', $orderId, 'Failure email failed: ' . $e->getMessage());
+        TelegramNotifier::instance()->alert(
+            'smtp_send_failure',
+            '[Email] Сбой отправки (payment_failure)',
+            [
+                'email'     => $user['email'] ?? 'unknown',
+                'order_id'  => $orderId,
+                'error'     => $e->getMessage(),
+                'smtp_host' => defined('SMTP_HOST') ? SMTP_HOST : '',
+            ],
+            'critical'
+        );
         return false;
     }
 }

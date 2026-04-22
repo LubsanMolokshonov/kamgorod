@@ -78,6 +78,15 @@ if (!defined('YANDEX_GPT_API_KEY')) define('YANDEX_GPT_API_KEY', $_ENV['YANDEX_G
 if (!defined('YANDEX_GPT_FOLDER_ID')) define('YANDEX_GPT_FOLDER_ID', $_ENV['YANDEX_GPT_FOLDER_ID'] ?? '');
 if (!defined('YANDEX_GPT_MODEL')) define('YANDEX_GPT_MODEL', $_ENV['YANDEX_GPT_MODEL'] ?? 'yandexgpt-lite');
 
+// Telegram Alerts (тех. уведомления в бот ИИ-консультанта)
+// Тот же бот используется в ai-consultant/src/bootstrap.php (AI_TELEGRAM_BOT_TOKEN)
+if (!defined('TELEGRAM_BOT_TOKEN')) {
+    define('TELEGRAM_BOT_TOKEN', $_ENV['TELEGRAM_BOT_TOKEN'] ?? '8287484412:AAH6g1iymi7oEv1zcFBMY0YB03e9_4MAwNs');
+}
+if (!defined('TELEGRAM_ALERT_CHAT_ID')) {
+    define('TELEGRAM_ALERT_CHAT_ID', $_ENV['TELEGRAM_ALERT_CHAT_ID'] ?? '1177793865,-5215729575');
+}
+
 // Email Configuration
 if (!defined('SMTP_HOST')) define('SMTP_HOST', $_ENV['SMTP_HOST'] ?? '');
 if (!defined('SMTP_PORT')) define('SMTP_PORT', $_ENV['SMTP_PORT'] ?? 587);

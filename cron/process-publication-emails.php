@@ -27,15 +27,25 @@ define('BASE_PATH', dirname(__DIR__));
 require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/database.php';
 require_once BASE_PATH . '/classes/PublicationEmailChain.php';
+require_once BASE_PATH . '/classes/TelegramNotifier.php';
+
+TelegramNotifier::registerFatalHandler('process-publication-emails');
 
 // Lock file to prevent overlapping runs
 $lockFile = '/tmp/publication_email_cron.lock';
 
 if (file_exists($lockFile)) {
     $lockTime = filemtime($lockFile);
-    if (time() - $lockTime > 600) {
+    $lockAge = time() - $lockTime;
+    if ($lockAge > 600) {
         unlink($lockFile);
         echo date('Y-m-d H:i:s') . " - Removed stale lock file.\n";
+        TelegramNotifier::instance($db)->alert(
+            'cron_stale_lock_publication_emails',
+            '[Cron] Удалён зависший lock: publication_emails',
+            ['lock_file' => $lockFile, 'age_sec' => $lockAge],
+            'warning'
+        );
     } else {
         echo date('Y-m-d H:i:s') . " - Another instance is running. Exiting.\n";
         exit(0);
@@ -52,9 +62,21 @@ try {
 
     echo date('Y-m-d H:i:s') . " - Completed. Sent: {$results['sent']}, Failed: {$results['failed']}, Skipped: {$results['skipped']}\n";
 
-} catch (Exception $e) {
+    TelegramNotifier::instance($db)->checkEmailFailureThreshold(
+        'publication_email_log',
+        'publication_email_mass_failures',
+        'цепочка публикаций'
+    );
+
+} catch (Throwable $e) {
     echo date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n";
     error_log("Publication Email Cron Error: " . $e->getMessage());
+    TelegramNotifier::instance($db)->alert(
+        'cron_exception_process-publication-emails',
+        '[Cron] Exception: process-publication-emails',
+        ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()],
+        'critical'
+    );
 
 } finally {
     if (file_exists($lockFile)) {

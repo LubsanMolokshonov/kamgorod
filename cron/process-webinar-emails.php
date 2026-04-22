@@ -30,16 +30,26 @@ define('BASE_PATH', dirname(__DIR__));
 require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/database.php';
 require_once BASE_PATH . '/classes/WebinarEmailJourney.php';
+require_once BASE_PATH . '/classes/TelegramNotifier.php';
+
+TelegramNotifier::registerFatalHandler('process-webinar-emails');
 
 // Create lock file to prevent overlapping runs
 $lockFile = '/tmp/webinar_email_cron.lock';
 
 if (file_exists($lockFile)) {
     $lockTime = filemtime($lockFile);
+    $lockAge = time() - $lockTime;
     // If lock is older than 10 minutes, remove it (stale lock)
-    if (time() - $lockTime > 600) {
+    if ($lockAge > 600) {
         unlink($lockFile);
         echo date('Y-m-d H:i:s') . " - Removed stale lock file.\n";
+        TelegramNotifier::instance($db)->alert(
+            'cron_stale_lock_webinar_emails',
+            '[Cron] Удалён зависший lock: webinar_emails',
+            ['lock_file' => $lockFile, 'age_sec' => $lockAge],
+            'warning'
+        );
     } else {
         echo date('Y-m-d H:i:s') . " - Another instance is running. Exiting.\n";
         exit(0);
@@ -64,9 +74,21 @@ try {
 
     echo date('Y-m-d H:i:s') . " - Completed. Sent: {$results['sent']}, Failed: {$results['failed']}, Skipped: {$results['skipped']}\n";
 
-} catch (Exception $e) {
+    TelegramNotifier::instance($db)->checkEmailFailureThreshold(
+        'email_journey_log',
+        'webinar_email_mass_failures',
+        'цепочка вебинаров'
+    );
+
+} catch (Throwable $e) {
     echo date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n";
     error_log("Webinar Email Cron Error: " . $e->getMessage());
+    TelegramNotifier::instance($db)->alert(
+        'cron_exception_process-webinar-emails',
+        '[Cron] Exception: process-webinar-emails',
+        ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()],
+        'critical'
+    );
 
 } finally {
     // Remove lock

@@ -22,14 +22,24 @@ require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/database.php';
 require_once BASE_PATH . '/classes/CourseEmailChain.php';
 require_once BASE_PATH . '/classes/CoursePriceAB.php';
+require_once BASE_PATH . '/classes/TelegramNotifier.php';
+
+TelegramNotifier::registerFatalHandler('process-course-emails');
 
 // Lock
 $lockFile = '/tmp/course_email_chain_cron.lock';
 
 if (file_exists($lockFile)) {
-    if (time() - filemtime($lockFile) > 600) {
+    $lockAge = time() - filemtime($lockFile);
+    if ($lockAge > 600) {
         unlink($lockFile);
         echo date('Y-m-d H:i:s') . " - Removed stale lock.\n";
+        TelegramNotifier::instance($db)->alert(
+            'cron_stale_lock_course_emails',
+            '[Cron] Удалён зависший lock: course_emails',
+            ['lock_file' => $lockFile, 'age_sec' => $lockAge],
+            'warning'
+        );
     } else {
         echo date('Y-m-d H:i:s') . " - Another instance running. Exit.\n";
         exit(0);
@@ -53,9 +63,21 @@ try {
 
     echo date('Y-m-d H:i:s') . " - Done. Sent: {$results['sent']}, Failed: {$results['failed']}, Skipped: {$results['skipped']}\n";
 
-} catch (Exception $e) {
+    TelegramNotifier::instance($db)->checkEmailFailureThreshold(
+        'course_email_log',
+        'course_email_mass_failures',
+        'цепочка курсов'
+    );
+
+} catch (Throwable $e) {
     echo date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n";
     error_log("Course Email Chain Cron Error: " . $e->getMessage());
+    TelegramNotifier::instance($db)->alert(
+        'cron_exception_process-course-emails',
+        '[Cron] Exception: process-course-emails',
+        ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()],
+        'critical'
+    );
 
 } finally {
     if (file_exists($lockFile)) {
