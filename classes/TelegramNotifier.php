@@ -263,9 +263,12 @@ class TelegramNotifier
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT => 5,
                 CURLOPT_CONNECTTIMEOUT => 3,
-                // Принудительно IPv4: у прод-хоста нет IPv6-маршрута,
-                // а api.telegram.org резолвится в AAAA → иначе connect timeout.
+                // На проде DNS возвращает только AAAA (IPv6) для api.telegram.org,
+                // а IPv6-маршрута нет → connect timeout. Хардкодим пул IPv4 Telegram DC.
                 CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                CURLOPT_RESOLVE => [
+                    'api.telegram.org:443:149.154.167.220',
+                ],
             ]);
             $resp = curl_exec($ch);
             $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
