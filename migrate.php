@@ -100,7 +100,8 @@ $migrations = [
     '080_seed_pp_courses.sql',
     '081_create_email_tracking.sql',
     '082_add_email_message_id_to_orders.sql',
-    '083_create_telegram_alert_log.sql'
+    '083_create_telegram_alert_log.sql',
+    '084_add_bitrix_to_course_consultations.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';
