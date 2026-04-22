@@ -35,7 +35,7 @@ $courseTitle = $consultation['course_title'];
 try {
     $bitrix = new Bitrix24Integration();
     if ($bitrix->isConfigured()) {
-        $bitrix->createCourseConsultationDeal([
+        $dealId = $bitrix->createCourseConsultationDeal([
             'phone' => $phone,
             'course_title' => $courseTitle,
             'utm_source' => $consultation['utm_source'] ?? '',
@@ -46,9 +46,30 @@ try {
             'ym_uid' => $consultation['ym_uid'] ?? '',
             'source_page' => $consultation['source_page'] ?? '',
         ]);
+
+        if ($dealId) {
+            $categoryId = defined('BITRIX24_COURSE_PIPELINE_ID') ? BITRIX24_COURSE_PIPELINE_ID : 108;
+            $initialStage = defined('BITRIX24_COURSE_STAGE_NEW') ? BITRIX24_COURSE_STAGE_NEW : ('C' . $categoryId . ':NEW');
+            $dbObj->update('course_consultations', [
+                'bitrix_lead_id' => $dealId,
+                'bitrix_stage' => $initialStage,
+                'bitrix_stage_updated_at' => date('Y-m-d H:i:s'),
+            ], 'id = ?', [$consultationId]);
+        } else {
+            $dbObj->execute(
+                "UPDATE course_consultations SET bitrix_attempts = bitrix_attempts + 1 WHERE id = ?",
+                [$consultationId]
+            );
+        }
     }
 } catch (Exception $e) {
     error_log('Bitrix24 consultation error: ' . $e->getMessage());
+    try {
+        $dbObj->execute(
+            "UPDATE course_consultations SET bitrix_attempts = bitrix_attempts + 1 WHERE id = ?",
+            [$consultationId]
+        );
+    } catch (Exception $ignore) {}
 }
 
 // Email админу
