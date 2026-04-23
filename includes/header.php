@@ -40,6 +40,7 @@ initSession();
     <link rel="dns-prefetch" href="https://code.jquery.com">
     <link rel="dns-prefetch" href="https://mc.yandex.ru">
 
+    <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/assets/css/main.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/main.css'); ?>">
     <link rel="stylesheet" href="/assets/css/search.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/search.css'); ?>">

@@ -128,9 +128,35 @@ if ($currentTag) {
 if ($currentType) {
     $pageTitle = $currentType['name'] . ' — журнал публикаций';
 }
+// Уникальные заголовки для страниц аудитории журнала (исправление GSC: дубликаты канонических)
+if ($selectedCategoryData || $selectedTypeData || !empty($selectedSpecData)) {
+    $audienceLabel = $selectedSpecData['name'] ?? $selectedTypeData['name'] ?? $selectedCategoryData['name'] ?? '';
+    if ($audienceLabel) {
+        $pageTitle = 'Публикации для ' . mb_strtolower($audienceLabel) . ' — педагогический онлайн-журнал';
+    }
+}
 $pageTitle .= ' | ' . SITE_NAME;
 
 $pageDescription = $currentTag['meta_description'] ?? 'Бесплатная публикация статей, методических разработок и материалов в электронном педагогическом журнале. Получите свидетельство о публикации с QR-кодом.';
+if ($selectedCategoryData || $selectedTypeData || !empty($selectedSpecData)) {
+    $audienceLabel = $selectedSpecData['name'] ?? $selectedTypeData['name'] ?? $selectedCategoryData['name'] ?? '';
+    if ($audienceLabel) {
+        $pageDescription = 'Бесплатная публикация статей и методических разработок для ' . mb_strtolower($audienceLabel) . '. Свидетельство о публикации с QR-кодом за 5 минут.';
+    }
+}
+
+// Явный canonical для отфильтрованных страниц (защита от вариантов с query-параметрами)
+$canonicalPath = '/zhurnal/';
+if (!empty($selectedCategory)) {
+    $canonicalPath .= $selectedCategory . '/';
+    if (!empty($selectedType)) {
+        $canonicalPath .= $selectedType . '/';
+        if (!empty($selectedSpec)) {
+            $canonicalPath .= $selectedSpec . '/';
+        }
+    }
+}
+$canonicalUrl = SITE_URL . $canonicalPath;
 
 $additionalCSS = ['/assets/css/journal.css?v=' . filemtime(__DIR__ . '/../assets/css/journal.css'), '/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/../assets/css/audience-filter.css')];
 $additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/../assets/js/audience-filter.js')];

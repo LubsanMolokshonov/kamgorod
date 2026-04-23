@@ -50,6 +50,7 @@ $specializations = $competitionObj->getSpecializations($competition['id']);
 // Page metadata
 $pageTitle = htmlspecialchars($competition['title']) . ' | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr($competition['description'], 0, 150));
+$canonicalUrl = SITE_URL . '/konkursy/' . $competition['slug'] . '/';
 
 // JSON-LD Event
 $jsonLd = [

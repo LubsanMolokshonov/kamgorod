@@ -21,6 +21,12 @@ RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
 RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
 # ================================================
+# APPLE UNIVERSAL LINKS (iOS-приложения у сайта нет)
+# Возвращаем 410 Gone, чтобы iOS и GSC прекратили запросы
+# ================================================
+RewriteRule ^(\.well-known/)?apple-app-site-association$ - [R=410,L]
+
+# ================================================
 # OG-КАРТИНКИ ДЛЯ СОЦСЕТЕЙ
 # ================================================
 RewriteRule ^og-image/ad/([a-z]+)/([a-z0-9-]+)\.jpg$ api/og-image.php?mode=ad&type=$1&slug=$2 [L]
@@ -38,6 +44,10 @@ RewriteRule ^feeds/(competitions-ad|competitions|olympiads-ad|olympiads|courses-
 # SEO files
 RewriteRule ^robots\.txt$ robots.php [L]
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
+# 301 /index.php → / (избегаем дубликата главной для Google)
+RewriteCond %{THE_REQUEST} \s/+index\.php[\s?]
+RewriteRule ^index\.php$ / [R=301,L]
 
 # Главная страница портала
 RewriteRule ^$ index.php [L]

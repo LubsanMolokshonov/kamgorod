@@ -56,6 +56,7 @@ $isAutowebinar = $webinar['status'] === 'videolecture';
 // Page meta
 $pageTitle = ($webinar['meta_title'] ?: 'Вебинар: ' . $webinar['title']) . ' | Каменный город';
 $pageDescription = $webinar['meta_description'] ?: $webinar['short_description'];
+$canonicalUrl = SITE_URL . '/vebinar/' . $webinar['slug'] . '/';
 $additionalCSS = ['/assets/css/webinars.css?v=' . filemtime(__DIR__ . '/../assets/css/webinars.css')];
 
 // JSON-LD Event
