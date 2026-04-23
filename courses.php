@@ -467,10 +467,12 @@ include __DIR__ . '/includes/header.php';
 
                             <?php
                                 $basePrice = (float)$course['price'];
-                                $abPrice = CoursePriceAB::getAdjustedPrice($basePrice, $abVariant);
+                                $coursePT = $course['program_type'] ?? null;
+                                $abPrice = CoursePriceAB::getAdjustedPrice($basePrice, $abVariant, $coursePT);
+                                $itemDiscountPercent = CoursePriceAB::getDiscountPercent($abVariant, $coursePT);
                             ?>
                             <div class="competition-price">
-                                <?php if ($discountPercent > 0): ?>
+                                <?php if ($itemDiscountPercent > 0): ?>
                                     <span class="price-old"><?= number_format($basePrice, 0, ',', ' ') ?> ₽</span>
                                     <span class="price-current"><?= number_format($abPrice, 0, ',', ' ') ?> ₽</span>
                                 <?php else: ?>
@@ -819,14 +821,21 @@ document.addEventListener('DOMContentLoaded', function() {
     var allCourses = <?php echo json_encode(array_slice($allCourses, $perPage), JSON_UNESCAPED_UNICODE); ?>;
     var perPage = <?php echo $perPage; ?>;
     var currentOffset = 0;
-    var discountPercent = <?= $discountPercent ?>;
+    var discountByType = {
+        kpk: <?= CoursePriceAB::getDiscountPercent($abVariant, 'kpk') ?>,
+        pp:  <?= CoursePriceAB::getDiscountPercent($abVariant, 'pp') ?>
+    };
 
     function formatPrice(num) {
         return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     }
-    function calcAbPrice(basePrice) {
-        if (discountPercent > 0) {
-            return Math.round(basePrice * (1 - discountPercent / 100));
+    function discountFor(course) {
+        return discountByType[course.program_type] || 0;
+    }
+    function calcAbPrice(basePrice, course) {
+        var d = discountFor(course);
+        if (d > 0) {
+            return Math.round(basePrice * (1 - d / 100));
         }
         return basePrice;
     }
@@ -845,10 +854,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 var desc = course.description ? course.description.substring(0, 120) + '...' : '';
                 var slug = course.slug || '';
                 var hours = course.hours || 72;
+                var typeLabel = course.program_type === 'pp' ? 'Профессиональная переподготовка' : 'Повышение квалификации';
+                var courseDiscount = discountFor(course);
                 html += '<div class="competition-card course-card" data-course-id="' + course.id + '">' +
                     '<div class="course-badges">' +
                     '<span class="course-badge course-badge--hours">' + hours + ' ч.</span>' +
-                    '<span class="course-badge course-badge--type">Повышение квалификации</span>' +
+                    '<span class="course-badge course-badge--type">' + typeLabel + '</span>' +
                     '</div>' +
                     '<h3>' + (course.title || '') + '</h3>' +
                     '<p>' + desc + '</p>' +
@@ -856,8 +867,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>' +
                     ' Удостоверение в ФИС ФРДО</div>' +
                     '<div class="competition-price">' +
-                    (discountPercent > 0
-                        ? '<span class="price-old">' + formatPrice(course.price) + ' ₽</span> <span class="price-current">' + formatPrice(calcAbPrice(course.price)) + ' ₽</span>'
+                    (courseDiscount > 0
+                        ? '<span class="price-old">' + formatPrice(course.price) + ' ₽</span> <span class="price-current">' + formatPrice(calcAbPrice(course.price, course)) + ' ₽</span>'
                         : '<span class="price-current">' + formatPrice(course.price) + ' ₽</span>') +
                     '</div>' +
                     '<a href="/kursy/' + slug + '/" class="btn btn-primary btn-block">Смотреть программу</a>' +
