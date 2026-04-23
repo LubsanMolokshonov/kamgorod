@@ -41,10 +41,10 @@ if (!$course) {
 
 // Ценообразование (фиксированная скидка / A/B-тест)
 $abVariant = CoursePriceAB::getVariant();
-$abPrice = CoursePriceAB::getAdjustedPrice((float)$course['price'], $abVariant);
+$abPrice = CoursePriceAB::getAdjustedPrice((float)$course['price'], $abVariant, $course['program_type'] ?? null);
 $abBasePrice = (float)$course['price'];
 $hasDiscount = $abVariant !== 'A';
-$discountPercent = CoursePriceAB::getDiscountPercent($abVariant);
+$discountPercent = CoursePriceAB::getDiscountPercent($abVariant, $course['program_type'] ?? null);
 
 // Get course data
 $experts = $courseObj->getExperts($course['id']);

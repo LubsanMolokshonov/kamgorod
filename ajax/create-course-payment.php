@@ -14,6 +14,7 @@ require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
+require_once __DIR__ . '/../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../includes/session.php';
 
 use YooKassa\Client;
@@ -80,7 +81,7 @@ try {
 
     // Ценообразование: фиксированная скидка / A/B-тест
     $abVariant = CoursePriceAB::getVariant();
-    $price = CoursePriceAB::getAdjustedPrice(floatval($enrollment['price']), $abVariant);
+    $price = CoursePriceAB::getAdjustedPrice(floatval($enrollment['price']), $abVariant, $enrollment['program_type'] ?? null);
 
     // Серверная проверка скидки (10% в течение 10 минут) — поверх AB-цены
     $discountAmount = 0;
@@ -114,6 +115,20 @@ try {
             $discountAmount = $calc['amount'];
             $finalPrice = $calc['final'];
             $loyaltyAmount = $calc['amount'];
+        }
+    }
+
+    // Скидка по email-кампании (10% реактивации молчащих пользователей).
+    // Применяется только если ни email-токен курса, ни AB-цена, ни loyalty не сработали.
+    if (!$discountAmount) {
+        $campaignRate = EmailCampaignDiscount::getActiveRate($db, (int)$userId);
+        if ($campaignRate > 0) {
+            $calc = EmailCampaignDiscount::calculate((float)$price, $campaignRate);
+            if ($calc['amount'] > 0) {
+                $discountAmount = $calc['amount'];
+                $finalPrice = $calc['final'];
+                $loyaltyAmount = $calc['amount'];
+            }
         }
     }
 
@@ -154,7 +169,7 @@ try {
                     $course = $courseObj->getById($freshEnrollment['course_id']);
                     if ($course) {
                         // A/B-тест: фактическая цена для CRM
-                        $abPriceCrm = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
+                        $abPriceCrm = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null);
 
                         $dealId = $bitrix->createCourseDeal([
                             'full_name' => $freshEnrollment['full_name'],
@@ -190,6 +205,13 @@ try {
                 $db->rollBack();
             }
             error_log('Local course payment Bitrix24 error: ' . $e->getMessage());
+        }
+
+        // Погасить скидку email-кампании (если применялась).
+        try {
+            EmailCampaignDiscount::markUsed($db, (int)$enrollmentUserId, (int)$orderId);
+        } catch (Exception $e) {
+            error_log('Local course campaign discount mark-used failed: ' . $e->getMessage());
         }
 
         // Пожизненная скидка лояльности: local bypass минует webhook,

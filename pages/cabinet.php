@@ -96,8 +96,12 @@ $userCourseEnrollments = $courseObj->getEnrollmentsByEmail($_SESSION['user_email
 
 // Index olympiad registrations by olympiad_id for quick lookup
 $olympRegsByResultId = [];
+$pendingOlympRegsCount = 0;
 foreach ($userOlympiadRegs as $reg) {
     $olympRegsByResultId[$reg['olympiad_result_id']] = $reg;
+    if (($reg['status'] ?? '') === 'pending') {
+        $pendingOlympRegsCount++;
+    }
 }
 
 // Сохранить discount_token из email-цепочки курсов в сессию
@@ -226,11 +230,12 @@ include __DIR__ . '/../includes/header.php';
 
                 // Ценообразование (фиксированная скидка / A/B-тест)
                 $abVariant = CoursePriceAB::getVariant();
-                $courseHasDiscount = $abVariant !== 'A';
-                $courseDiscountPercent = CoursePriceAB::getDiscountPercent($abVariant);
 
                 foreach ($unpaidEnrollments as $enrollment) {
-                    $priceRaw = CoursePriceAB::getAdjustedPrice(floatval($enrollment['price']), $abVariant);
+                    $programType = $enrollment['program_type'] ?? null;
+                    $itemDiscountPercent = CoursePriceAB::getDiscountPercent($abVariant, $programType);
+                    $itemHasDiscount = $abVariant !== 'A' && $itemDiscountPercent > 0;
+                    $priceRaw = CoursePriceAB::getAdjustedPrice(floatval($enrollment['price']), $abVariant, $programType);
                     $enrolledAtUtc = new DateTime($enrollment['enrolled_at'], new DateTimeZone('UTC'));
                     $enrolledAtUtc->setTimezone(new DateTimeZone(date_default_timezone_get()));
                     $discountDeadline = $enrolledAtUtc->getTimestamp() + 600;
@@ -260,6 +265,8 @@ include __DIR__ . '/../includes/header.php';
                         'discountedPrice' => $discountedPrice,
                         'discountedPriceFormatted' => number_format($discountedPrice, 0, ',', ' '),
                         'programLabel' => Course::getProgramTypeLabel($enrollment['program_type']),
+                        'hasFixedDiscount' => $itemHasDiscount,
+                        'discountPercent' => $itemDiscountPercent,
                     ];
                 }
 
@@ -317,11 +324,11 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
                             </div>
                             <div class="checkout-item-price">
-                                <?php if ($courseHasDiscount): ?>
+                                <?php if ($item['hasFixedDiscount']): ?>
                                     <span class="price-original"><?php echo $item['basePriceFormatted']; ?> ₽</span>
                                 <?php endif; ?>
                                 <?php if ($item['isDiscountActive']): ?>
-                                    <?php if (!$courseHasDiscount): ?>
+                                    <?php if (!$item['hasFixedDiscount']): ?>
                                         <span class="price-original"><?php echo $item['price']; ?> ₽</span>
                                     <?php endif; ?>
                                     <span class="price-discounted"><?php echo $item['discountedPriceFormatted']; ?> ₽</span>
@@ -431,6 +438,35 @@ include __DIR__ . '/../includes/header.php';
                         <p>Информация будет отправлена на вашу почту</p>
                     </div>
                 </div>
+            <?php endif; ?>
+
+            <?php if ($pendingOlympRegsCount > 0): ?>
+                <div class="pending-olymp-banner">
+                    <div class="pending-olymp-icon">⏳</div>
+                    <div class="pending-olymp-body">
+                        <strong>
+                            <?php if ($pendingOlympRegsCount === 1): ?>
+                                У вас 1 диплом олимпиады ждёт оплаты
+                            <?php else: ?>
+                                У вас <?php echo $pendingOlympRegsCount; ?> диплом(а/ов) олимпиады ждут оплаты
+                            <?php endif; ?>
+                        </strong>
+                        <span>Завершите оформление, чтобы получить PDF‑диплом с печатью организатора.</span>
+                    </div>
+                    <a href="/korzina/" class="btn btn-primary">Перейти в корзину</a>
+                </div>
+                <style>
+                    .pending-olymp-banner { display: flex; align-items: center; gap: 16px; padding: 16px 20px; margin-bottom: 24px; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #fbbf24; border-radius: 12px; }
+                    .pending-olymp-icon { font-size: 32px; line-height: 1; }
+                    .pending-olymp-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+                    .pending-olymp-body strong { color: #92400e; font-size: 16px; }
+                    .pending-olymp-body span { color: #78350f; font-size: 13px; }
+                    .pending-olymp-banner .btn { white-space: nowrap; }
+                    @media (max-width: 640px) {
+                        .pending-olymp-banner { flex-direction: column; align-items: flex-start; text-align: left; }
+                        .pending-olymp-banner .btn { width: 100%; text-align: center; }
+                    }
+                </style>
             <?php endif; ?>
 
             <?php if (empty($allEvents)): ?>
@@ -706,6 +742,7 @@ include __DIR__ . '/../includes/header.php';
                                 $hasPlace = in_array($result['placement'], ['1', '2', '3']);
                                 $olympReg = $olympRegsByResultId[$result['id']] ?? null;
                                 $diplomaPaid = $olympReg && in_array($olympReg['status'], ['paid', 'diploma_ready']);
+                                $diplomaPending = $olympReg && ($olympReg['status'] ?? '') === 'pending';
                             ?>
                                 <div class="registration-card">
                                     <div class="card-header">
@@ -731,6 +768,11 @@ include __DIR__ . '/../includes/header.php';
                                             <span class="label">Диплом:</span>
                                             <span class="value" style="color: #10b981;">Оплачен</span>
                                         </div>
+                                        <?php elseif ($diplomaPending): ?>
+                                        <div class="info-row">
+                                            <span class="label">Диплом:</span>
+                                            <span class="value" style="color: #d97706; font-weight: 600;">Ожидает оплаты</span>
+                                        </div>
                                         <?php endif; ?>
                                     </div>
                                     <div class="card-actions">
@@ -745,6 +787,14 @@ include __DIR__ . '/../includes/header.php';
                                                     Диплом руководителя
                                                 </a>
                                             <?php endif; ?>
+                                        <?php elseif ($diplomaPending): ?>
+                                            <a href="/korzina/" class="btn btn-primary" style="background: #d97706; border-color: #d97706;">
+                                                Завершить оплату
+                                            </a>
+                                            <a href="/olimpiada-diplom/<?php echo $result['id']; ?>"
+                                               class="btn btn-outline" style="border-color: #d1d5db; color: #6b7280;">
+                                                Изменить данные
+                                            </a>
                                         <?php elseif ($hasPlace): ?>
                                             <a href="/olimpiada-diplom/<?php echo $result['id']; ?>" class="btn btn-primary">
                                                 Оформить диплом (<?php echo OLYMPIAD_DIPLOMA_PRICE; ?> ₽)

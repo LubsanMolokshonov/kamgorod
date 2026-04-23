@@ -239,7 +239,9 @@ date_default_timezone_set('Europe/Moscow');
 if (!defined('COURSE_AB_TEST_ACTIVE')) define('COURSE_AB_TEST_ACTIVE', false);
 if (!defined('COURSE_AB_TEST_SECRET')) define('COURSE_AB_TEST_SECRET', $_ENV['COURSE_AB_TEST_SECRET'] ?? 'kG7x2pL9qR4mN8vW3jF5');
 if (!defined('COURSE_AB_TEST_COOKIE')) define('COURSE_AB_TEST_COOKIE', 'cab_v');
-if (!defined('COURSE_FIXED_DISCOUNT')) define('COURSE_FIXED_DISCOUNT', 55); // фиксированная скидка в %
+if (!defined('COURSE_FIXED_DISCOUNT')) define('COURSE_FIXED_DISCOUNT', 55); // фолбэк, если program_type неизвестен
+if (!defined('COURSE_FIXED_DISCOUNT_KPK')) define('COURSE_FIXED_DISCOUNT_KPK', 55); // повышение квалификации
+if (!defined('COURSE_FIXED_DISCOUNT_PP')) define('COURSE_FIXED_DISCOUNT_PP', 10);   // переподготовка
 
 // E-mail трекинг
 // Окно, в течение которого письмо считается причиной оплаты (дни)

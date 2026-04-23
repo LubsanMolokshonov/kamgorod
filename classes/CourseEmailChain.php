@@ -223,7 +223,7 @@ class CourseEmailChain {
             $abVariant = $emailData['ab_variant'] ?? 'A';
             $basePrice = floatval($emailData['course_price']);
             if (class_exists('CoursePriceAB')) {
-                $abPrice = CoursePriceAB::getAdjustedPrice($basePrice, $abVariant);
+                $abPrice = CoursePriceAB::getAdjustedPrice($basePrice, $abVariant, $emailData['course_program_type'] ?? null);
             } else {
                 $abPrice = $basePrice;
             }
@@ -395,7 +395,7 @@ class CourseEmailChain {
             $abVariant = $enrollment['ab_variant'] ?? 'A';
             $basePrice = floatval($enrollment['course_price']);
             if (class_exists('CoursePriceAB')) {
-                $abPrice = CoursePriceAB::getAdjustedPrice($basePrice, $abVariant);
+                $abPrice = CoursePriceAB::getAdjustedPrice($basePrice, $abVariant, $enrollment['course_program_type'] ?? null);
             } else {
                 $abPrice = $basePrice;
             }

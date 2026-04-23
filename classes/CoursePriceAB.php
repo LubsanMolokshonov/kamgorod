@@ -82,10 +82,10 @@ class CoursePriceAB
     /**
      * Применить множитель варианта к базовой цене.
      */
-    public static function getAdjustedPrice(float $basePrice, string $variant): float
+    public static function getAdjustedPrice(float $basePrice, string $variant, ?string $programType = null): float
     {
         if ($variant === 'D' || self::hasFixedDiscount()) {
-            $discount = defined('COURSE_FIXED_DISCOUNT') ? COURSE_FIXED_DISCOUNT : 0;
+            $discount = self::fixedDiscountFor($programType);
             return round($basePrice * (1 - $discount / 100));
         }
 
@@ -96,10 +96,10 @@ class CoursePriceAB
     /**
      * Получить процент скидки для варианта (для отображения).
      */
-    public static function getDiscountPercent(string $variant): int
+    public static function getDiscountPercent(string $variant, ?string $programType = null): int
     {
         if ($variant === 'D' || self::hasFixedDiscount()) {
-            return defined('COURSE_FIXED_DISCOUNT') ? (int) COURSE_FIXED_DISCOUNT : 0;
+            return (int) self::fixedDiscountFor($programType);
         }
 
         return match ($variant) {
@@ -107,6 +107,21 @@ class CoursePriceAB
             'C' => 70,
             default => 0,
         };
+    }
+
+    /**
+     * Размер фиксированной скидки в % с учётом типа программы.
+     * KPK — повышение квалификации, PP — переподготовка.
+     */
+    private static function fixedDiscountFor(?string $programType): int
+    {
+        if ($programType === 'pp' && defined('COURSE_FIXED_DISCOUNT_PP')) {
+            return (int) COURSE_FIXED_DISCOUNT_PP;
+        }
+        if ($programType === 'kpk' && defined('COURSE_FIXED_DISCOUNT_KPK')) {
+            return (int) COURSE_FIXED_DISCOUNT_KPK;
+        }
+        return defined('COURSE_FIXED_DISCOUNT') ? (int) COURSE_FIXED_DISCOUNT : 0;
     }
 
     /**

@@ -166,7 +166,7 @@ try {
         'ecommerce' => [
             'id'       => 'course-' . $course['id'],
             'name'     => $course['title'],
-            'price'    => CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant),
+            'price'    => CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null),
             'category' => 'Курсы',
         ]
     ], JSON_UNESCAPED_UNICODE);

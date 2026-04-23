@@ -43,6 +43,7 @@ require_once __DIR__ . '/../../classes/EmailJourney.php';
 require_once __DIR__ . '/../../classes/PublicationEmailChain.php';
 require_once __DIR__ . '/../../classes/User.php';
 require_once __DIR__ . '/../../classes/LoyaltyDiscount.php';
+require_once __DIR__ . '/../../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -354,7 +355,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                             if ($course) {
                                 // A/B-тест: фактическая цена из варианта enrollment
                                 $abVariant = $enrollment['ab_variant'] ?? 'A';
-                                $abPriceCrm = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
+                                $abPriceCrm = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null);
 
                                 $dealId = $bitrix->createCourseDeal([
                                     'full_name' => $enrollment['full_name'],
@@ -505,6 +506,14 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
             // Send success email with all attachments
             try {
                 sendPaymentSuccessEmail($userId, $orderId);
+
+                // Погасить скидку email-кампании (если применялась) — чтобы
+                // ей нельзя было воспользоваться повторно.
+                try {
+                    EmailCampaignDiscount::markUsed($GLOBALS['db'], (int)$userId, (int)$orderId);
+                } catch (Exception $e) {
+                    logWebhook('WARNING', $paymentId, "Campaign discount mark-used failed: " . $e->getMessage(), '');
+                }
 
                 // Пожизненная скидка лояльности: выдать статус и отправить
                 // приветственное письмо после первого успешного платежа.
