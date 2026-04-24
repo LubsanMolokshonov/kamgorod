@@ -53,6 +53,7 @@ Thumbs.db
 /backup_*.sql
 *.bak
 *.bak.*
+*.bak_*
 *_backup_*
 *.backup_*
 
