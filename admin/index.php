@@ -70,13 +70,17 @@ $pedportalRevenue = (float)$pedportalPaid['revenue'];
 $pedportalConversion = $pedportalOrders > 0 ? round($pedportalPaidCount / $pedportalOrders * 100, 1) : 0;
 $pedportalAvgCheck = $pedportalPaidCount > 0 ? round($pedportalRevenue / $pedportalPaidCount) : 0;
 
-// === КУРСЫ: Заявки ===
+// === КУРСЫ: Заявки (регистрации на курс + заявки на консультацию) ===
 $stmt = $db->prepare("
-    SELECT COUNT(*) as total_applications
-    FROM course_enrollments
-    WHERE created_at >= ? AND created_at <= ?
+    SELECT COUNT(*) as total_applications FROM (
+        SELECT created_at FROM course_enrollments
+        WHERE created_at >= ? AND created_at <= ?
+        UNION ALL
+        SELECT created_at FROM course_consultations
+        WHERE created_at >= ? AND created_at <= ?
+    ) t
 ");
-$stmt->execute([$startDate, $endDate]);
+$stmt->execute([$startDate, $endDate, $startDate, $endDate]);
 $coursesApps = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total_applications'];
 
 // === КУРСЫ: Оплаты и выручка ===
@@ -192,15 +196,20 @@ foreach ($allPedportalDates as $date) {
 }
 
 // === Дневной breakdown: Курсы (заявки + оплаты по дням) ===
-// Заявки по дням
+// Заявки по дням (регистрации на курс + заявки на консультацию)
 $stmt = $db->prepare("
     SELECT DATE(created_at) as sale_date,
            COUNT(*) as apps_count
-    FROM course_enrollments
-    WHERE created_at >= ? AND created_at <= ?
+    FROM (
+        SELECT created_at FROM course_enrollments
+        WHERE created_at >= ? AND created_at <= ?
+        UNION ALL
+        SELECT created_at FROM course_consultations
+        WHERE created_at >= ? AND created_at <= ?
+    ) t
     GROUP BY DATE(created_at)
 ");
-$stmt->execute([$startDate, $endDate]);
+$stmt->execute([$startDate, $endDate, $startDate, $endDate]);
 $coursesAppsByDay = [];
 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
     $coursesAppsByDay[$row['sale_date']] = (int)$row['apps_count'];
