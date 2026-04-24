@@ -105,7 +105,7 @@ try {
     $userId = $_SESSION['user_id'] ?? null;
     $recommendation = new CartRecommendation($db);
 
-    $recommendations = $recommendation->getRecommendations($allItems, $userId, 3);
+    $recommendations = $recommendation->getRecommendationsLegacy($allItems, $userId, 3);
     $promotionHint = $recommendation->getPromotionHint(count($allItems));
 
     // Determine if adding 1 item would complete a 2+1 set
