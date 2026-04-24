@@ -125,6 +125,18 @@ class UTMAnalytics
     // Заявки на курсы
     // ========================================
 
+    /**
+     * Источник «заявок по курсам» — UNION регистраций на курс и заявок на консультацию.
+     * Используется как виртуальная таблица с алиасом ce.
+     */
+    private const COURSE_LEADS_SOURCE = "(
+        SELECT utm_source, utm_medium, utm_campaign, utm_content, utm_term, created_at
+          FROM course_enrollments
+        UNION ALL
+        SELECT utm_source, utm_medium, utm_campaign, utm_content, utm_term, created_at
+          FROM course_consultations
+    ) ce";
+
     private function queryCourseApplications(array $filters, array $groupColumns, array $parentUtm): array
     {
         $groupBy = implode(', ', array_map(fn($c) => str_replace('v.', 'ce.', $c), $groupColumns));
@@ -135,11 +147,12 @@ class UTMAnalytics
         $this->addParentUtmFilter($where, $params, $parentUtm, 'ce');
 
         $whereSql = implode(' AND ', $where);
+        $source = self::COURSE_LEADS_SOURCE;
 
         $rows = $this->db->query(
             "SELECT {$groupBy},
                     COUNT(*) as course_applications
-             FROM course_enrollments ce
+             FROM {$source}
              WHERE {$whereSql}
              GROUP BY {$groupBy}",
             $params
@@ -156,9 +169,10 @@ class UTMAnalytics
         $this->addDateFilter($where, $params, 'ce.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
 
         $whereSql = implode(' AND ', $where);
+        $source = self::COURSE_LEADS_SOURCE;
 
         return $this->db->queryOne(
-            "SELECT COUNT(*) as course_applications FROM course_enrollments ce WHERE {$whereSql}",
+            "SELECT COUNT(*) as course_applications FROM {$source} WHERE {$whereSql}",
             $params
         ) ?: ['course_applications' => 0];
     }
@@ -269,9 +283,10 @@ class UTMAnalytics
         $params = [];
         $this->addDateFilter($where, $params, 'ce.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
         $whereSql = implode(' AND ', $where);
+        $source = self::COURSE_LEADS_SOURCE;
 
         return $this->db->queryOne(
-            "SELECT COUNT(*) as course_applications FROM course_enrollments ce WHERE {$whereSql}",
+            "SELECT COUNT(*) as course_applications FROM {$source} WHERE {$whereSql}",
             $params
         ) ?: ['course_applications' => 0];
     }

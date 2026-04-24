@@ -50,10 +50,224 @@ class CartRecommendation {
 
         // Collect IDs of items already in cart to exclude
         $excludeCompetitionIds = [];
+        $excludeOlympiadIds    = [];
+        $excludeWebinarIds     = [];
+        $excludePublicationIds = [];
+
+        $cartHasCompetition = false;
+        $cartHasOlympiad    = false;
+        $cartHasWebinar     = false;
+        $cartHasPublication = false;
+
+        $cartPrices = [];
+
+        foreach ($allItems as $item) {
+            $raw = $item['raw_data'] ?? [];
+            if (isset($item['price'])) {
+                $cartPrices[] = (float)$item['price'];
+            }
+            if ($item['type'] === 'registration') {
+                $excludeCompetitionIds[] = (int)($raw['competition_id'] ?? 0);
+                $cartHasCompetition = true;
+            } elseif ($item['type'] === 'olympiad_registration') {
+                $excludeOlympiadIds[] = (int)($raw['olympiad_id'] ?? 0);
+                $cartHasOlympiad = true;
+            } elseif ($item['type'] === 'webinar_certificate') {
+                $excludeWebinarIds[] = (int)($raw['webinar_id'] ?? 0);
+                $cartHasWebinar = true;
+            } elseif ($item['type'] === 'certificate') {
+                $excludePublicationIds[] = (int)($raw['publication_id'] ?? 0);
+                $cartHasPublication = true;
+            }
+        }
+
+        $itemCount    = count($allItems);
+        $cartMinPrice = !empty($cartPrices) ? min($cartPrices) : 0.0;
+        // Акция 2+1: добавление одного товара завершает тройку, один из трёх станет бесплатным
+        $isPromoUpsell = ($itemCount >= 2) && (($itemCount + 1) % 3 === 0);
+
+        // Есть ли у залогиненного пользователя невыкупленное свидетельство о публикации?
+        $publicationAvailable = false;
+        if ($userId) {
+            try {
+                $row = $this->db->queryOne(
+                    "SELECT 1
+                     FROM publications p
+                     LEFT JOIN publication_certificates pc ON p.id = pc.publication_id
+                     WHERE p.user_id = ? AND p.status = 'published' AND pc.id IS NULL
+                     LIMIT 1",
+                    [$userId]
+                );
+                $publicationAvailable = !empty($row);
+            } catch (\Throwable $e) {
+                $publicationAvailable = false;
+            }
+        }
+
+        // Phase 1: Score and rank slot categories
+        // Ценность слота = ожидаемая цена карточки (publication > webinar > olympiad > competition)
+        // Бонус +30 за диверсификацию (категории нет в корзине)
+        $expectedPrice = [
+            'publication' => 299.0,
+            'webinar'     => 200.0,
+            'olympiad'    => 169.0,
+            'competition' => 150.0,
+        ];
+        $categoryAvailable = [
+            'publication' => $publicationAvailable,
+            'webinar'     => true,
+            'olympiad'    => true,
+            'competition' => true,
+        ];
+        $categoryInCart = [
+            'publication' => $cartHasPublication,
+            'webinar'     => $cartHasWebinar,
+            'olympiad'    => $cartHasOlympiad,
+            'competition' => $cartHasCompetition,
+        ];
+
+        // В режиме promo-upsell отсекаем категории, чья ожидаемая цена меньше минимума в корзине:
+        // иначе добавленный «третий» сам станет бесплатным, и мы потеряем на скидке.
+        $scored = [];
+        foreach ($expectedPrice as $cat => $price) {
+            if (!$categoryAvailable[$cat]) continue;
+            if ($isPromoUpsell && $cartMinPrice > 0 && $price < $cartMinPrice) continue;
+            $scored[$cat] = $price + ($categoryInCart[$cat] ? 0 : 30);
+        }
+        // Fallback: если фильтр по цене всё отсёк — отдаём все доступные категории
+        if (empty($scored)) {
+            foreach ($expectedPrice as $cat => $price) {
+                if (!$categoryAvailable[$cat]) continue;
+                $scored[$cat] = $price + ($categoryInCart[$cat] ? 0 : 30);
+            }
+        }
+        arsort($scored);
+        $slotPriority = array_keys($scored);
+
+        if (empty($slotPriority)) {
+            $slotPriority = ['olympiad', 'competition', 'webinar'];
+        }
+
+        // Build exactly $limit slots, cycling through priorities if needed
+        $slots = [];
+        for ($i = 0; $i < $limit; $i++) {
+            $slots[] = $slotPriority[$i % count($slotPriority)];
+        }
+
+        // Phase 2: Fill each slot using cascading fallbacks
+        $recommendations = [];
+        $usedCompetitionIds = $excludeCompetitionIds;
+        $usedOlympiadIds    = $excludeOlympiadIds;
+        $usedWebinarIds     = $excludeWebinarIds;
+        $usedPublicationIds = $excludePublicationIds;
+
+        foreach ($slots as $category) {
+            $card = $this->fillSlotByCategory(
+                $category, $audienceSlugs, $context, $userId,
+                $usedCompetitionIds, $usedOlympiadIds, $usedWebinarIds, $usedPublicationIds
+            );
+            if (!$card) continue;
+
+            // Пометка «будет бесплатно»: в режиме promo-upsell именно самый дешёвый
+            // из итоговой тройки (корзина + эта рекомендация) становится бесплатным
+            $card['will_be_free'] = $isPromoUpsell
+                && $cartMinPrice > 0
+                && (float)($card['price'] ?? 0) <= $cartMinPrice;
+
+            $recommendations[] = $card;
+        }
+
+        return $recommendations;
+    }
+
+    /**
+     * Заполнить слот по категории с каскадным fallback: если запрошенная категория
+     * не даёт кандидата (типично для publication без пользовательских работ), падаем
+     * на следующие категории в порядке competition → olympiad → webinar.
+     */
+    private function fillSlotByCategory(
+        string $category,
+        array $audienceSlugs,
+        array $context,
+        ?int $userId,
+        array &$usedCompetitionIds,
+        array &$usedOlympiadIds,
+        array &$usedWebinarIds,
+        array &$usedPublicationIds
+    ): ?array {
+        $card = $this->tryFillCategory(
+            $category, $audienceSlugs, $context, $userId,
+            $usedCompetitionIds, $usedOlympiadIds, $usedWebinarIds, $usedPublicationIds
+        );
+        if ($card) return $card;
+
+        foreach (['competition', 'olympiad', 'webinar'] as $fallback) {
+            if ($fallback === $category) continue;
+            $card = $this->tryFillCategory(
+                $fallback, $audienceSlugs, $context, $userId,
+                $usedCompetitionIds, $usedOlympiadIds, $usedWebinarIds, $usedPublicationIds
+            );
+            if ($card) return $card;
+        }
+        return null;
+    }
+
+    private function tryFillCategory(
+        string $category,
+        array $audienceSlugs,
+        array $context,
+        ?int $userId,
+        array &$usedCompetitionIds,
+        array &$usedOlympiadIds,
+        array &$usedWebinarIds,
+        array &$usedPublicationIds
+    ): ?array {
+        if ($category === 'publication') {
+            if (!$userId) return null;
+            try {
+                $certs = $this->getPublicationRecommendations(
+                    $audienceSlugs, $usedPublicationIds, $userId, 1, $context
+                );
+                if (!empty($certs)) {
+                    $usedPublicationIds[] = $certs[0]['id'];
+                    return $certs[0];
+                }
+            } catch (\Throwable $e) {
+                error_log("Cart rec (publication slot) error: " . $e->getMessage());
+            }
+            return null;
+        }
+        if ($category === 'competition') {
+            $card = $this->fillCompetitionSlot($audienceSlugs, $usedCompetitionIds, $context);
+            if ($card) $usedCompetitionIds[] = $card['id'];
+            return $card;
+        }
+        if ($category === 'olympiad') {
+            $card = $this->fillOlympiadSlot($audienceSlugs, $usedOlympiadIds, $context);
+            if ($card) $usedOlympiadIds[] = $card['id'];
+            return $card;
+        }
+        if ($category === 'webinar') {
+            $card = $this->fillWebinarSlot($audienceSlugs, $usedWebinarIds, $userId, $context);
+            if ($card && $card['id'] > 0) $usedWebinarIds[] = $card['id'];
+            return $card;
+        }
+        return null;
+    }
+
+    /**
+     * Legacy-версия алгоритма (вариант A для A/B теста).
+     * Совпадает с поведением до правок от 2026-04-23: слоты competition/olympiad/webinar,
+     * приоритет «категория не в корзине», без publication и promo-upsell фильтра.
+     */
+    public function getRecommendationsLegacy(array $allItems, ?int $userId, int $limit = 3): array {
+        $context = $this->detectAudienceContext($allItems, $userId);
+        $audienceSlugs = $context['type_slugs'];
+
+        $excludeCompetitionIds = [];
         $excludeOlympiadIds = [];
         $excludeWebinarIds = [];
 
-        // Detect which product categories are already in the cart
         $cartHasCompetition = false;
         $cartHasOlympiad = false;
         $cartHasWebinar = false;
@@ -72,23 +286,18 @@ class CartRecommendation {
             }
         }
 
-        // Phase 1: Determine slot priorities (cross-sell categories first)
         $notInCart = [];
         $inCart = [];
-
         if (!$cartHasCompetition) $notInCart[] = 'competition'; else $inCart[] = 'competition';
         if (!$cartHasOlympiad)    $notInCart[] = 'olympiad';     else $inCart[] = 'olympiad';
         if (!$cartHasWebinar)     $notInCart[] = 'webinar';      else $inCart[] = 'webinar';
-
         $slotPriority = array_merge($notInCart, $inCart);
 
-        // Build exactly $limit slots, cycling through priorities if needed
         $slots = [];
         for ($i = 0; $i < $limit; $i++) {
             $slots[] = $slotPriority[$i % count($slotPriority)];
         }
 
-        // Phase 2: Fill each slot using cascading fallbacks
         $recommendations = [];
         $usedCompetitionIds = $excludeCompetitionIds;
         $usedOlympiadIds = $excludeOlympiadIds;
@@ -96,25 +305,18 @@ class CartRecommendation {
 
         foreach ($slots as $category) {
             $card = null;
-
             if ($category === 'competition') {
                 $card = $this->fillCompetitionSlot($audienceSlugs, $usedCompetitionIds, $context);
-                if ($card) {
-                    $usedCompetitionIds[] = $card['id'];
-                }
+                if ($card) $usedCompetitionIds[] = $card['id'];
             } elseif ($category === 'olympiad') {
                 $card = $this->fillOlympiadSlot($audienceSlugs, $usedOlympiadIds, $context);
-                if ($card) {
-                    $usedOlympiadIds[] = $card['id'];
-                }
+                if ($card) $usedOlympiadIds[] = $card['id'];
             } elseif ($category === 'webinar') {
                 $card = $this->fillWebinarSlot($audienceSlugs, $usedWebinarIds, $userId, $context);
-                if ($card && $card['id'] > 0) {
-                    $usedWebinarIds[] = $card['id'];
-                }
+                if ($card && $card['id'] > 0) $usedWebinarIds[] = $card['id'];
             }
-
             if ($card) {
+                $card['will_be_free'] = false;
                 $recommendations[] = $card;
             }
         }

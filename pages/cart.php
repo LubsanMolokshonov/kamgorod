@@ -14,6 +14,7 @@ require_once __DIR__ . '/../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
+require_once __DIR__ . '/../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Check if cart exists
@@ -24,6 +25,11 @@ $certificates = getCartCertificates();
 $loyaltyDiscount = 0;
 $hasLoyalty = false;
 $loyaltyRatePercent = (int)round(LoyaltyDiscount::RATE_CART * 100);
+// Скидка по email-кампании (10% молчащим пользователям)
+$campaignDiscount = 0;
+$hasCampaignDiscount = false;
+$campaignRatePercent = 0;
+$campaignExpiresAt = null;
 
 if (isCartEmpty()) {
     // Show empty cart page
@@ -152,6 +158,21 @@ if (isCartEmpty()) {
             $hasLoyalty = true;
         }
     }
+
+    // Скидка email-кампании — только если не действует loyalty (не комбинируется).
+    if ($currentUserId && !$hasLoyalty) {
+        $campaignRow = EmailCampaignDiscount::getActive($db, (int)$currentUserId);
+        if ($campaignRow) {
+            $calc = EmailCampaignDiscount::calculate((float)$grandTotal, (float)$campaignRow['rate']);
+            if ($calc['amount'] > 0) {
+                $campaignDiscount = $calc['amount'];
+                $grandTotal = $calc['final'];
+                $hasCampaignDiscount = true;
+                $campaignRatePercent = (int)round((float)$campaignRow['rate'] * 100);
+                $campaignExpiresAt = $campaignRow['expires_at'];
+            }
+        }
+    }
 }
 
 // Page metadata
@@ -221,6 +242,16 @@ include __DIR__ . '/../includes/header.php';
                     <div class="loyalty-banner-content">
                         <h3>Действует пожизненная скидка <?php echo $loyaltyRatePercent; ?>%</h3>
                         <p>Вы уже оплачивали у нас заказ — скидка применена автоматически. Экономия: <?php echo number_format($loyaltyDiscount, 0, ',', ' '); ?> ₽.</p>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($hasCampaignDiscount && $campaignDiscount > 0): ?>
+                <div class="loyalty-banner" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+                    <div class="loyalty-banner-icon">🎁</div>
+                    <div class="loyalty-banner-content">
+                        <h3>Скидка <?php echo $campaignRatePercent; ?>% по персональному предложению</h3>
+                        <p>Применена автоматически. Экономия: <?php echo number_format($campaignDiscount, 0, ',', ' '); ?> ₽<?php if ($campaignExpiresAt): ?>. Действует до <?php echo date('d.m.Y', strtotime($campaignExpiresAt)); ?><?php endif; ?>.</p>
                     </div>
                 </div>
             <?php endif; ?>
@@ -298,6 +329,13 @@ include __DIR__ . '/../includes/header.php';
                     <div class="summary-row discount">
                         <span>Пожизненная скидка <?php echo $loyaltyRatePercent; ?>%:</span>
                         <span>-<?php echo number_format($loyaltyDiscount, 0, ',', ' '); ?> ₽</span>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($hasCampaignDiscount && $campaignDiscount > 0): ?>
+                    <div class="summary-row discount">
+                        <span>Скидка по персональному предложению <?php echo $campaignRatePercent; ?>%:</span>
+                        <span>-<?php echo number_format($campaignDiscount, 0, ',', ' '); ?> ₽</span>
                     </div>
                 <?php endif; ?>
 

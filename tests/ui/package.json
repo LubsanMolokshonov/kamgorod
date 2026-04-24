@@ -1,0 +1,15 @@
+{
+  "name": "pedagogy-ui-tests",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:prod": "BASE_URL=https://fgos.pro playwright test",
+    "test:smoke": "playwright test smoke.spec.js",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0"
+  }
+}

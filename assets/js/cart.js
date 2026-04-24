@@ -35,10 +35,15 @@ function loadRecommendations() {
     var section = $('#recommendations-section');
     if (!section.length) return;
 
+    // Передаём visit_id для A/B-сплита рекомендаций на сервере
+    var visitId = null;
+    try { visitId = sessionStorage.getItem('_fgos_visit_id'); } catch (e) {}
+
     $.ajax({
         url: '/ajax/get-cart-recommendations.php',
         type: 'GET',
         dataType: 'json',
+        data: visitId ? { visit_id: visitId } : {},
         success: function(data) {
             if (!data.success || !data.recommendations || !data.recommendations.length) {
                 console.log('Cart recommendations: no data', data);
@@ -53,7 +58,7 @@ function loadRecommendations() {
                 hint.text(data.promotionHint);
             }
 
-            // Find cheapest recommendation price (for "will be free" highlight)
+            // Find cheapest recommendation price (fallback, если сервер не прислал will_be_free)
             var cheapestPrice = Infinity;
             if (data.oneMoreForFree) {
                 data.recommendations.forEach(function(rec) {
@@ -65,7 +70,11 @@ function loadRecommendations() {
 
             // Render recommendation cards
             data.recommendations.forEach(function(rec) {
-                var willBeFree = data.oneMoreForFree && rec.price <= cheapestPrice;
+                // Сервер присылает точный флаг (учитывает минимум цен корзины).
+                // Фоллбэк — старая клиентская эвристика для обратной совместимости.
+                var willBeFree = (typeof rec.will_be_free === 'boolean')
+                    ? rec.will_be_free
+                    : (data.oneMoreForFree && rec.price <= cheapestPrice);
                 grid.append(buildRecommendationCard(rec, willBeFree));
             });
 
@@ -91,14 +100,18 @@ function buildRecommendationCard(rec, willBeFree) {
         'olympiad': 'Олимпиада',
         'webinar_certificate': 'Сертификат вебинара',
         'webinar_browse': 'Вебинар',
-        'webinar_listing_cta': 'Вебинар'
+        'webinar_listing_cta': 'Вебинар',
+        'publication_certificate': 'Свидетельство о публикации',
+        'publication_cta': 'Публикация'
     };
     var typeClasses = {
         'competition': 'rec-type-competition',
         'olympiad': 'rec-type-olympiad',
         'webinar_certificate': 'rec-type-webinar',
         'webinar_browse': 'rec-type-webinar',
-        'webinar_listing_cta': 'rec-type-webinar'
+        'webinar_listing_cta': 'rec-type-webinar',
+        'publication_certificate': 'rec-type-publication',
+        'publication_cta': 'rec-type-publication'
     };
 
     var badgeLabel = typeLabels[rec.type] || '';

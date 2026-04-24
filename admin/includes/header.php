@@ -89,6 +89,11 @@ $currentAdmin = Admin::verifySession();
                     <span>UTM-аналитика</span>
                 </a>
 
+                <a href="/admin/ab-test/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/ab-test/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">🧪</span>
+                    <span>A/B-тест корзины</span>
+                </a>
+
                 <a href="/admin/email-tracking/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/email-tracking/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">📧</span>
                     <span>E-mail трекинг</span>

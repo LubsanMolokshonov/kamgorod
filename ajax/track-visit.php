@@ -47,12 +47,16 @@ try {
 
     // Проверяем существующий визит с этим session_id за последние 30 минут
     $existing = $dbObj->queryOne(
-        "SELECT id FROM visits WHERE session_id = ? AND started_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE) LIMIT 1",
+        "SELECT id, ab_variant FROM visits WHERE session_id = ? AND started_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE) LIMIT 1",
         [$sessionId]
     );
 
     if ($existing) {
-        echo json_encode(['success' => true, 'visit_id' => (int)$existing['id']]);
+        echo json_encode([
+            'success' => true,
+            'visit_id' => (int)$existing['id'],
+            'ab_variant' => $existing['ab_variant'],
+        ]);
         exit;
     }
 
@@ -66,6 +70,10 @@ try {
     $referrer = mb_substr(trim($_POST['referrer'] ?? ''), 0, 2048) ?: null;
     $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
 
+    // A/B сплит рекомендаций корзины: 50/50 детерминированно по session_id,
+    // чтобы в рамках одной сессии пользователь всегда попадал в одну и ту же ветку
+    $abVariant = (crc32($sessionId) % 2 === 0) ? 'A' : 'B';
+
     $visitId = $dbObj->insert('visits', [
         'session_id' => $sessionId,
         'utm_source' => $utmSource,
@@ -78,9 +86,10 @@ try {
         'user_agent' => mb_substr($userAgent, 0, 512),
         'ip_address' => $ipAddress,
         'is_bot' => $isBot,
+        'ab_variant' => $abVariant,
     ]);
 
-    echo json_encode(['success' => true, 'visit_id' => (int)$visitId]);
+    echo json_encode(['success' => true, 'visit_id' => (int)$visitId, 'ab_variant' => $abVariant]);
 
 } catch (Exception $e) {
     error_log('Track visit error: ' . $e->getMessage());

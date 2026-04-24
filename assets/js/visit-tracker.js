@@ -52,6 +52,30 @@
 
     var visitId = sessionStorage.getItem('_fgos_visit_id');
     var sessionId = getSessionId();
+    var YM_COUNTER = 106465857;
+
+    // Отправить вариант A/B-теста рекомендаций корзины в Метрику как параметр визита.
+    // Будет виден в отчёте «Параметры визитов» → cart_ab_variant.
+    function sendAbVariantToMetrika(variant) {
+        if (!variant || (variant !== 'A' && variant !== 'B')) return;
+        if (typeof window.ym !== 'function') {
+            // Метрика могла ещё не загрузиться — повторим через 500мс один раз
+            setTimeout(function () {
+                if (typeof window.ym === 'function') {
+                    window.ym(YM_COUNTER, 'params', { cart_ab_variant: variant });
+                }
+            }, 500);
+            return;
+        }
+        window.ym(YM_COUNTER, 'params', { cart_ab_variant: variant });
+    }
+
+    // Если вариант уже известен из предыдущей страницы сессии — сразу шлём в Метрику,
+    // не дожидаясь ответа /ajax/track-visit.php
+    var cachedVariant = sessionStorage.getItem('_fgos_ab_variant');
+    if (cachedVariant) {
+        sendAbVariantToMetrika(cachedVariant);
+    }
 
     // Создаём визит если ещё не создан в этой сессии
     if (!visitId) {
@@ -74,6 +98,10 @@
                     if (resp.success && resp.visit_id) {
                         visitId = resp.visit_id;
                         sessionStorage.setItem('_fgos_visit_id', visitId);
+                        if (resp.ab_variant && resp.ab_variant !== cachedVariant) {
+                            sessionStorage.setItem('_fgos_ab_variant', resp.ab_variant);
+                            sendAbVariantToMetrika(resp.ab_variant);
+                        }
                         startPinging();
                     }
                 } catch(e) {}

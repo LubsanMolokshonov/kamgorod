@@ -511,22 +511,103 @@
 }
 
 @media (max-width: 640px) {
-    .recommendations-grid {
-        grid-template-columns: 1fr;
+    .recommendations-section {
+        margin-bottom: 20px;
     }
 
     .recommendations-header {
-        flex-direction: column;
-        gap: 4px;
+        margin-bottom: 10px;
+        gap: 2px;
+    }
+
+    .recommendations-header h3 {
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .promo-hint {
+        font-size: 12px;
+    }
+
+    .recommendations-grid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .recommendation-card {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+        column-gap: 10px;
+        row-gap: 2px;
+        align-items: center;
+        padding: 8px 10px;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .recommendation-card:hover {
+        transform: none;
+    }
+
+    .rec-card-will-be-free {
+        border-width: 1px;
+    }
+
+    .rec-badge {
+        display: none;
+    }
+
+    .rec-title {
+        font-size: 13px;
+        font-weight: 500;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+        grid-column: 1;
+        grid-row: 1;
+        margin: 0;
+    }
+
+    .rec-meta {
+        display: none;
     }
 
     .rec-footer {
-        flex-direction: column;
-        align-items: stretch;
+        display: contents;
+    }
+
+    .rec-price {
+        font-size: 14px;
+        grid-column: 1;
+        grid-row: 2;
+        justify-self: start;
+    }
+
+    .rec-price-free s {
+        font-size: 11px;
+    }
+
+    .rec-free-badge {
+        padding: 1px 5px;
+        font-size: 10px;
+    }
+
+    .rec-price-from {
+        font-size: 13px;
     }
 
     .rec-btn {
-        text-align: center;
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        align-self: center;
+        padding: 6px 10px;
+        font-size: 12px;
+        min-width: 0;
+    }
+
+    .rec-btn-link {
+        padding: 5px 10px;
+        border-width: 1px;
     }
 }
 

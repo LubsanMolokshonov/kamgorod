@@ -42,3 +42,25 @@ Thumbs.db
 /uploads/webinars/certificates/*.pdf
 /uploads/publications/certificates/*.pdf
 /uploads/publications/20*/**
+
+# Runtime OG cache
+/uploads/og-cache/
+
+# DB dumps and backup archives
+/*.sql
+/*.sql.gz
+/backup_*.tar.gz
+/backup_*.sql
+*.bak
+*.bak.*
+*_backup_*
+*.backup_*
+
+# Personal root-level materials (non-code)
+/Дипломы/
+/Сертификат/
+/Сертификаты/
+/ПП*.csv
+/выбор_курсов_*.md
+/rnp.md
+/pedagogy_prod_*.sql.gz
