@@ -18,6 +18,7 @@ require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
+require_once __DIR__ . '/../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -185,6 +186,21 @@ try {
         if ($calc['amount'] > 0) {
             $loyaltyDiscount = $calc['amount'];
             $grandTotal = $calc['final'];
+        }
+    }
+
+    // Скидка по email-кампании (10% молчащим пользователям).
+    // Применяется только если не сработала loyalty-скидка — чтобы не комбинировать.
+    $campaignDiscount = 0;
+    if ($sessionUserId && $loyaltyDiscount == 0) {
+        $campaignRate = EmailCampaignDiscount::getActiveRate($db, (int)$sessionUserId);
+        if ($campaignRate > 0) {
+            $calc = EmailCampaignDiscount::calculate((float)$grandTotal, $campaignRate);
+            if ($calc['amount'] > 0) {
+                $campaignDiscount = $calc['amount'];
+                $loyaltyDiscount = $calc['amount']; // пишем в ту же колонку loyalty_discount_amount
+                $grandTotal = $calc['final'];
+            }
         }
     }
 
