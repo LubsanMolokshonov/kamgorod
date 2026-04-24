@@ -36,6 +36,8 @@ try {
     // Get and sanitize input
     $email = trim($_POST['email'] ?? '');
     $fio = trim($_POST['fio'] ?? '');
+    $school = trim($_POST['school'] ?? '');
+    $city = trim($_POST['city'] ?? '');
 
     // ========================================
     // Validation
@@ -97,27 +99,68 @@ try {
 
     $email = mb_strtolower($email, 'UTF-8');
 
+    // Validate school
+    if (empty($school) || mb_strlen($school, 'UTF-8') < 2) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Укажите школу или организацию'
+        ]);
+        exit;
+    }
+    if (mb_strlen($school, 'UTF-8') > 255) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Название организации не должно превышать 255 символов'
+        ]);
+        exit;
+    }
+    $school = htmlspecialchars($school, ENT_QUOTES, 'UTF-8');
+
+    // Validate city
+    if (empty($city) || mb_strlen($city, 'UTF-8') < 2) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Укажите город'
+        ]);
+        exit;
+    }
+    if (mb_strlen($city, 'UTF-8') > 100) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Название города не должно превышать 100 символов'
+        ]);
+        exit;
+    }
+    $city = htmlspecialchars($city, ENT_QUOTES, 'UTF-8');
+
     // ========================================
     // Find or create user (using PDO directly)
     // ========================================
 
     // Check if user exists by email
-    $stmt = $db->prepare("SELECT id, full_name, email FROM users WHERE email = ? LIMIT 1");
+    $stmt = $db->prepare("SELECT id, full_name, organization, city, email FROM users WHERE email = ? LIMIT 1");
     $stmt->execute([$email]);
     $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($existingUser) {
-        // User exists - update full_name if it's empty
+        // Existing user — don't overwrite non-empty profile fields
         $userId = $existingUser['id'];
 
-        if (empty($existingUser['full_name'])) {
-            $updateStmt = $db->prepare("UPDATE users SET full_name = ? WHERE id = ?");
-            $updateStmt->execute([$fio, $userId]);
-        }
+        $updateStmt = $db->prepare(
+            "UPDATE users SET
+                full_name    = COALESCE(NULLIF(full_name, ''), ?),
+                organization = COALESCE(NULLIF(organization, ''), ?),
+                city         = COALESCE(NULLIF(city, ''), ?)
+             WHERE id = ?"
+        );
+        $updateStmt->execute([$fio, $school, $city, $userId]);
     } else {
-        // Create new user
-        $insertStmt = $db->prepare("INSERT INTO users (email, full_name, created_at) VALUES (?, ?, NOW())");
-        $insertStmt->execute([$email, $fio]);
+        // Create new user with all fields
+        $insertStmt = $db->prepare(
+            "INSERT INTO users (email, full_name, organization, city, created_at)
+             VALUES (?, ?, ?, ?, NOW())"
+        );
+        $insertStmt->execute([$email, $fio, $school, $city]);
         $userId = $db->lastInsertId();
     }
 

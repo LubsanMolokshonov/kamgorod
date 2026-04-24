@@ -104,7 +104,8 @@ $migrations = [
     '084_add_bitrix_to_course_consultations.sql',
     '085_loyalty_discount.sql',
     '086_ab_variant_cart_recommendations.sql',
-    '087_silent_reengagement_campaign.sql'
+    '087_silent_reengagement_campaign.sql',
+    '088_olympiad_pay_14d.sql'
 ];
 
 $basePath = __DIR__ . '/database/migrations/';

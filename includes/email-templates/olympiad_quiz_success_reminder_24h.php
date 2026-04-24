@@ -34,9 +34,12 @@ ob_start();
     </div>
 
     <div class="text-center">
-        <?php $oly_link = $olympiad_url . (strpos($olympiad_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <?php
+        $target = !empty($diploma_url) ? $diploma_url : $olympiad_url;
+        $oly_link = $target . (strpos($target, '?') !== false ? '&' : '?') . $utm;
+        ?>
         <a href="<?php echo htmlspecialchars($oly_link); ?>" class="cta-button">
-            Оформить диплом
+            Оформить диплом за <?php echo intval($olympiad_price); ?> &#8381;
         </a>
     </div>
 

@@ -579,6 +579,18 @@ include __DIR__ . '/../includes/header.php';
                         <div class="olympiad-reg-error" id="regEmailError">Укажите корректный email</div>
                     </div>
 
+                    <div class="olympiad-reg-field">
+                        <label for="regSchool">Школа / организация</label>
+                        <input type="text" id="regSchool" name="school" placeholder="МБОУ СОШ №1" maxlength="255" autocomplete="organization">
+                        <div class="olympiad-reg-error" id="regSchoolError">Укажите школу или организацию</div>
+                    </div>
+
+                    <div class="olympiad-reg-field">
+                        <label for="regCity">Город</label>
+                        <input type="text" id="regCity" name="city" placeholder="Москва" maxlength="100" autocomplete="address-level2">
+                        <div class="olympiad-reg-error" id="regCityError">Укажите город</div>
+                    </div>
+
                     <button type="submit" class="olympiad-reg-submit" id="regSubmitBtn">
                         Начать олимпиаду
                     </button>
@@ -675,12 +687,18 @@ include __DIR__ . '/../includes/header.php';
             // Reset errors
             document.getElementById('regFioError').classList.remove('visible');
             document.getElementById('regEmailError').classList.remove('visible');
+            document.getElementById('regSchoolError').classList.remove('visible');
+            document.getElementById('regCityError').classList.remove('visible');
             document.getElementById('regGlobalError').classList.remove('visible');
             document.getElementById('regFio').classList.remove('input-error');
             document.getElementById('regEmail').classList.remove('input-error');
+            document.getElementById('regSchool').classList.remove('input-error');
+            document.getElementById('regCity').classList.remove('input-error');
 
             var fio = document.getElementById('regFio').value.trim();
             var email = document.getElementById('regEmail').value.trim();
+            var school = document.getElementById('regSchool').value.trim();
+            var city = document.getElementById('regCity').value.trim();
             var hasError = false;
 
             // Validate FIO
@@ -705,6 +723,32 @@ include __DIR__ . '/../includes/header.php';
                 hasError = true;
             }
 
+            // Validate school
+            if (!school || school.length < 2) {
+                document.getElementById('regSchoolError').textContent = 'Укажите школу или организацию';
+                document.getElementById('regSchoolError').classList.add('visible');
+                document.getElementById('regSchool').classList.add('input-error');
+                hasError = true;
+            } else if (school.length > 255) {
+                document.getElementById('regSchoolError').textContent = 'Название не должно превышать 255 символов';
+                document.getElementById('regSchoolError').classList.add('visible');
+                document.getElementById('regSchool').classList.add('input-error');
+                hasError = true;
+            }
+
+            // Validate city
+            if (!city || city.length < 2) {
+                document.getElementById('regCityError').textContent = 'Укажите город';
+                document.getElementById('regCityError').classList.add('visible');
+                document.getElementById('regCity').classList.add('input-error');
+                hasError = true;
+            } else if (city.length > 100) {
+                document.getElementById('regCityError').textContent = 'Название города не должно превышать 100 символов';
+                document.getElementById('regCityError').classList.add('visible');
+                document.getElementById('regCity').classList.add('input-error');
+                hasError = true;
+            }
+
             if (hasError) return;
 
             // Disable button
@@ -719,6 +763,8 @@ include __DIR__ . '/../includes/header.php';
                 data: {
                     fio: fio,
                     email: email,
+                    school: school,
+                    city: city,
                     olympiad_id: olympiadId,
                     csrf_token: csrfToken
                 },

@@ -82,6 +82,38 @@ $noPlaceData = [
 
 $display = $placement ? $placementData[$placement] : $noPlaceData;
 
+// Quick-checkout: подтягиваем prefill из результата (email/fio/organization/city)
+$prefillEmail = $result['email'] ?? '';
+$prefillFio = $result['full_name'] ?? '';
+$prefillOrg = $result['organization'] ?? '';
+$prefillCity = $result['city'] ?? '';
+// Полный набор данных собирается на этапе регистрации (форма /olimpiada-test/).
+// Если в профиле не хватает organization или city (легаси-пользователи) —
+// fallback на полную форму /olimpiada-diplom/{result_id}.
+$canQuickCheckout = $placement
+    && !empty($prefillEmail)
+    && !empty($prefillFio)
+    && !empty($prefillOrg)
+    && !empty($prefillCity);
+
+// Дефолтный шаблон диплома (первый активный для участника).
+$defaultTemplate = null;
+if ($canQuickCheckout) {
+    $tplStmt = $db->prepare(
+        "SELECT id, name, thumbnail_image FROM diploma_templates
+          WHERE is_active = 1 AND type = 'participant'
+          ORDER BY display_order ASC, id ASC
+          LIMIT 1"
+    );
+    $tplStmt->execute();
+    $defaultTemplate = $tplStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$defaultTemplate) {
+        $canQuickCheckout = false;
+    }
+}
+
+$csrfToken = generateCSRFToken();
+
 // Page metadata
 $pageTitle = 'Результат олимпиады — ' . htmlspecialchars($olympiadTitle) . ' | ' . SITE_NAME;
 $pageDescription = 'Результат олимпиады «' . htmlspecialchars($olympiadTitle) . '». Оформите диплом с указанием места.';
@@ -351,27 +383,64 @@ include __DIR__ . '/../includes/header.php';
 /* ---------- Responsive ---------- */
 @media (max-width: 768px) {
     .olympiad-result-page {
-        padding: 24px 0 60px;
+        padding: 12px 0 60px;
     }
 
     .olympiad-result-card {
-        padding: 36px 24px;
+        padding: 20px 20px 28px;
         border-radius: 24px;
     }
 
+    .olympiad-result-medal {
+        margin-bottom: 10px;
+    }
+    .olympiad-result-medal svg {
+        width: 56px;
+        height: 56px;
+    }
+
     .olympiad-result-title {
-        font-size: 24px;
+        font-size: 20px;
+        margin-bottom: 6px;
+    }
+
+    .olympiad-result-subtitle {
+        font-size: 13px;
+        margin-bottom: 14px;
     }
 
     .olympiad-score-display {
         min-width: auto;
         width: 100%;
         box-sizing: border-box;
-        padding: 24px 20px;
+        padding: 12px 16px;
+        margin-bottom: 14px;
+        border-radius: 14px;
+    }
+    .olympiad-score-label {
+        font-size: 12px;
+        margin-bottom: 2px;
+        letter-spacing: 0.5px;
+    }
+    .olympiad-score-value {
+        font-size: 28px;
+    }
+    .olympiad-score-value span {
+        font-size: 18px;
+    }
+    .olympiad-score-total {
+        font-size: 12px;
     }
 
-    .olympiad-score-value {
-        font-size: 40px;
+    .olympiad-placement-badge {
+        padding: 6px 16px;
+        font-size: 13px;
+        margin-bottom: 12px;
+    }
+
+    .olympiad-result-name {
+        font-size: 13px;
+        margin-bottom: 14px;
     }
 
     .olympiad-cta-primary {
@@ -391,24 +460,200 @@ include __DIR__ . '/../includes/header.php';
     }
 
     .olympiad-result-card {
-        padding: 28px 18px;
+        padding: 16px 16px 24px;
         border-radius: 20px;
     }
+}
 
-    .olympiad-result-title {
-        font-size: 21px;
+/* ---------- Quick Checkout (A1) ---------- */
+.olympiad-quickform {
+    margin: 8px 0 8px;
+    padding: 16px 16px 18px;
+    background: linear-gradient(135deg, #F0F7FF, #E8F1FF);
+    border: 1px solid #BCDCFF;
+    border-radius: 18px;
+    text-align: left;
+}
+
+.olympiad-quickform-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1E3A8A;
+    margin: 0 0 4px;
+}
+
+.olympiad-quickform-hint {
+    font-size: 13px;
+    color: #64748B;
+    margin: 0 0 14px;
+}
+
+.olympiad-quickform-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.olympiad-quickform-row {
+    display: flex;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.4;
+    align-items: baseline;
+}
+
+.olympiad-quickform-row .label {
+    min-width: 96px;
+    color: #7F8C9B;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.olympiad-quickform-row .value {
+    color: #1E293B;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.olympiad-quickform-template {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #475569;
+}
+
+.olympiad-quickform-template strong {
+    color: #1E293B;
+    font-weight: 600;
+}
+
+.olympiad-quickform-input {
+    margin-bottom: 14px;
+}
+
+.olympiad-quickform-input label {
+    display: block;
+    font-size: 13px;
+    color: #475569;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.olympiad-quickform-input input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border: 1px solid #CBD5E1;
+    border-radius: 10px;
+    background: #fff;
+    color: #1E293B;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.olympiad-quickform-input input:focus {
+    outline: none;
+    border-color: #0077FF;
+    box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.12);
+}
+
+.olympiad-quickform-edit {
+    display: inline-block;
+    margin-top: 6px;
+    color: #0077FF;
+    font-size: 13px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.olympiad-quickform-edit:hover {
+    text-decoration: underline;
+}
+
+.olympiad-quickform-error {
+    display: none;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #FECACA;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+/* ---------- Diploma Preview ---------- */
+.olympiad-diploma-preview {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    margin: 4px auto 16px;
+    aspect-ratio: 1.414 / 1;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+    border: 1px solid #E2E8F0;
+}
+
+.olympiad-diploma-preview-skeleton {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%);
+    background-size: 200% 100%;
+    animation: olympiad-skeleton 1.4s linear infinite;
+}
+
+.olympiad-diploma-preview.loaded .olympiad-diploma-preview-skeleton {
+    display: none;
+}
+
+.olympiad-diploma-preview img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes olympiad-skeleton {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ---------- Sticky CTA (A4) ---------- */
+.olympiad-sticky-cta {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .olympiad-sticky-cta {
+        display: block;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+        background: #fff;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+        border-top: 1px solid #E2E8F0;
+        z-index: 90;
     }
-
-    .olympiad-result-subtitle {
-        font-size: 14px;
+    .olympiad-sticky-cta .olympiad-cta-primary {
+        padding: 14px 20px;
+        font-size: 15px;
+        max-width: none;
+        box-shadow: none;
     }
-
-    .olympiad-score-value {
-        font-size: 36px;
-    }
-
-    .olympiad-score-value span {
-        font-size: 20px;
+    .olympiad-result-page {
+        padding-bottom: 96px;
     }
 }
 </style>
@@ -459,14 +704,55 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
             <!-- Name -->
-            <?php if (!empty($fullName)): ?>
+            <?php if (!empty($fullName) && !$canQuickCheckout): ?>
             <p class="olympiad-result-name">Участник: <strong><?php echo htmlspecialchars($fullName); ?></strong></p>
             <?php endif; ?>
 
             <!-- CTA Buttons -->
-            <div class="olympiad-cta-section">
+            <div class="olympiad-cta-section" id="olympiad-quickform">
 
-                <?php if ($placement): ?>
+                <?php if ($canQuickCheckout): ?>
+                <div class="olympiad-quickform">
+                    <p class="olympiad-quickform-title">Ваш диплом готов</p>
+                    <p class="olympiad-quickform-hint">Проверьте данные — именно так они будут указаны в дипломе.</p>
+
+                    <div class="olympiad-diploma-preview" id="olympiadDiplomaPreviewBox">
+                        <div class="olympiad-diploma-preview-skeleton"></div>
+                        <img id="olympiadDiplomaPreview" alt="Пример вашего диплома" style="display:none;">
+                    </div>
+
+                    <div class="olympiad-quickform-rows">
+                        <div class="olympiad-quickform-row">
+                            <span class="label">ФИО:</span>
+                            <span class="value"><?php echo htmlspecialchars($prefillFio); ?></span>
+                        </div>
+                        <div class="olympiad-quickform-row">
+                            <span class="label">Организация:</span>
+                            <span class="value"><?php echo htmlspecialchars($prefillOrg); ?></span>
+                        </div>
+                        <div class="olympiad-quickform-row">
+                            <span class="label">Город:</span>
+                            <span class="value"><?php echo htmlspecialchars($prefillCity); ?></span>
+                        </div>
+                        <div class="olympiad-quickform-row">
+                            <span class="label">Email:</span>
+                            <span class="value"><?php echo htmlspecialchars($prefillEmail); ?></span>
+                        </div>
+                    </div>
+                    <button type="button" id="olympiadQuickSubmit" class="olympiad-cta-primary">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 12L11 14L15 10M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Добавить диплом в корзину за <?php echo intval($diplomaPrice); ?> ₽</span>
+                    </button>
+                    <div style="margin-top: 10px; text-align: center;">
+                        <a href="/olimpiada-diplom/<?php echo $resultId; ?>" class="olympiad-quickform-edit">
+                            Изменить данные или добавить диплом руководителя →
+                        </a>
+                    </div>
+                    <div class="olympiad-quickform-error" id="olympiadQuickError"></div>
+                </div>
+                <?php elseif ($placement): ?>
                 <a href="/olimpiada-diplom/<?php echo $resultId; ?>" class="olympiad-cta-primary">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 12L11 14L15 10M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -493,6 +779,138 @@ include __DIR__ . '/../includes/header.php';
 
     </div>
 </div>
+
+<?php if ($placement): ?>
+<div class="olympiad-sticky-cta" aria-hidden="true">
+    <?php if ($canQuickCheckout): ?>
+        <a href="#olympiad-quickform" class="olympiad-cta-primary" id="olympiadStickyCta">
+            Оформить диплом за <?php echo intval($diplomaPrice); ?> ₽
+        </a>
+    <?php else: ?>
+        <a href="/olimpiada-diplom/<?php echo $resultId; ?>" class="olympiad-cta-primary">
+            Оформить диплом за <?php echo intval($diplomaPrice); ?> ₽
+        </a>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($canQuickCheckout): ?>
+<script>
+(function() {
+    'use strict';
+    var btn = document.getElementById('olympiadQuickSubmit');
+    var errBox = document.getElementById('olympiadQuickError');
+    if (!btn) return;
+
+    var payload = {
+        csrf_token: <?php echo json_encode($csrfToken); ?>,
+        result_id: <?php echo (int)$resultId; ?>,
+        template_id: <?php echo (int)$defaultTemplate['id']; ?>,
+        email: <?php echo json_encode($prefillEmail); ?>,
+        fio: <?php echo json_encode($prefillFio); ?>,
+        organization: <?php echo json_encode($prefillOrg); ?>,
+        city: <?php echo json_encode($prefillCity); ?>,
+        competition_type: 'всероссийская',
+        participation_date: <?php echo json_encode(date('Y-m-d')); ?>,
+        placement: <?php echo json_encode((string)$placement); ?>,
+        agreement: '1'
+    };
+
+    function showError(msg) {
+        errBox.textContent = msg || 'Произошла ошибка. Попробуйте оформить через полную форму.';
+        errBox.style.display = 'block';
+    }
+
+    // Загрузка превью диплома с данными участника
+    (function loadDiplomaPreview() {
+        var previewBox = document.getElementById('olympiadDiplomaPreviewBox');
+        var previewImg = document.getElementById('olympiadDiplomaPreview');
+        if (!previewBox || !previewImg) return;
+
+        var fd = new FormData();
+        fd.append('template_id', payload.template_id);
+        fd.append('result_id', payload.result_id);
+        fd.append('recipient_type', 'participant');
+        fd.append('fio', payload.fio);
+        fd.append('email', payload.email);
+        fd.append('organization', payload.organization);
+        fd.append('city', payload.city);
+        fd.append('placement', payload.placement);
+        fd.append('competition_type', payload.competition_type);
+        fd.append('participation_date', payload.participation_date);
+
+        fetch('/ajax/preview-olympiad-diploma.php', {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin'
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data && data.success && data.preview_url) {
+                previewImg.onload = function() {
+                    previewBox.classList.add('loaded');
+                    previewImg.style.display = 'block';
+                };
+                previewImg.src = data.preview_url;
+            } else {
+                // Не блокируем оформление — просто прячем блок превью
+                previewBox.style.display = 'none';
+            }
+        })
+        .catch(function() {
+            previewBox.style.display = 'none';
+        });
+    })();
+
+    btn.addEventListener('click', function() {
+        btn.disabled = true;
+        var originalHTML = btn.innerHTML;
+        btn.innerHTML = '<span>Добавляем в корзину…</span>';
+        errBox.style.display = 'none';
+
+        var formData = new FormData();
+        Object.keys(payload).forEach(function(k) { formData.append(k, payload[k]); });
+
+        fetch('/ajax/save-olympiad-registration.php', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data && data.success) {
+                if (window.dataLayer && data.ecommerce) {
+                    window.dataLayer.push({ event: 'add_to_cart', ecommerce: data.ecommerce });
+                }
+                window.location.href = '/korzina/';
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+                showError((data && data.message) || 'Не удалось добавить в корзину.');
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+            showError('Ошибка сети. Попробуйте ещё раз.');
+        });
+    });
+
+    // Плавный скролл при клике на sticky-кнопку
+    var sticky = document.getElementById('olympiadStickyCta');
+    if (sticky) {
+        sticky.addEventListener('click', function(e) {
+            e.preventDefault();
+            var target = document.getElementById('olympiad-quickform');
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                btn.focus({ preventScroll: true });
+            }
+        });
+    }
+})();
+</script>
+<?php endif; ?>
 
 <?php if ($display['showConfetti']): ?>
 <!-- Confetti Animation -->

@@ -5,6 +5,8 @@
  */
 
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/EmailCampaignDiscount.php';
+require_once __DIR__ . '/LoyaltyDiscount.php';
 require_once __DIR__ . '/../includes/magic-link-helper.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -105,7 +107,7 @@ class OlympiadEmailChain {
         $pendingEmails = $this->db->query(
             "SELECT oel.*,
                     t.email_subject, t.email_template, t.code as touchpoint_code,
-                    r.olympiad_id, r.placement, r.score, r.has_supervisor, r.supervisor_name,
+                    r.olympiad_id, r.olympiad_result_id, r.placement, r.score, r.has_supervisor, r.supervisor_name,
                     u.full_name,
                     o.title as olympiad_title, o.slug as olympiad_slug, o.diploma_price
              FROM olympiad_email_log oel
@@ -139,6 +141,15 @@ class OlympiadEmailChain {
 
             if ($this->isUnsubscribed($email['email'])) {
                 $this->updateEmailStatus($email['id'], 'skipped', 'User unsubscribed');
+                $results['skipped']++;
+                continue;
+            }
+
+            // Для финальной скидки (14d): пользователи с loyalty уже получают 25% —
+            // не дразним их скидкой 15%, которая не применится.
+            if (($email['touchpoint_code'] ?? '') === 'olymp_pay_14d'
+                && LoyaltyDiscount::isEligible($this->pdo, (int)$email['user_id'])) {
+                $this->updateEmailStatus($email['id'], 'skipped', 'User has loyalty discount — 14d offer not applicable');
                 $results['skipped']++;
                 continue;
             }
@@ -217,12 +228,35 @@ class OlympiadEmailChain {
                 'supervisor_name' => $emailData['supervisor_name'] ?? '',
                 'payment_url' => generateMagicUrl($emailData['user_id'], '/pages/cart.php'),
                 'olympiad_url' => SITE_URL . '/olimpiady/' . $emailData['olympiad_slug'],
+                'diploma_url' => SITE_URL . '/olimpiada-diplom/' . ($emailData['olympiad_result_id'] ?? ''),
                 'unsubscribe_url' => $unsubscribeUrl,
                 'site_url' => SITE_URL,
                 'site_name' => SITE_NAME ?? 'Каменный город',
                 'touchpoint_code' => $emailData['touchpoint_code'],
                 'footer_reason' => 'прошли олимпиаду на нашем портале'
             ];
+
+            // 14d: выписать персональную скидку 15% на 48 часов. Скидка применяется
+            // автоматически в корзине через EmailCampaignDiscount::getActive().
+            if (($emailData['touchpoint_code'] ?? '') === 'olymp_pay_14d') {
+                $discountRate = 0.15;
+                $discountHours = 48;
+                try {
+                    EmailCampaignDiscount::upsert(
+                        $this->pdo,
+                        'olymp_final_14d',
+                        (int)$emailData['user_id'],
+                        $emailData['email'],
+                        $discountRate,
+                        date('Y-m-d H:i:s', time() + $discountHours * 3600)
+                    );
+                    $this->log("DISCOUNT_UPSERT | User {$emailData['user_id']} | olymp_final_14d | rate={$discountRate} | expires +{$discountHours}h");
+                } catch (\Exception $e) {
+                    $this->log("DISCOUNT_ERROR | User {$emailData['user_id']} | " . $e->getMessage());
+                }
+                $templateData['discount_rate'] = $discountRate;
+                $templateData['discount_hours'] = $discountHours;
+            }
 
             $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
             $textBody = $this->renderTextTemplate($templateData);
@@ -578,8 +612,8 @@ class OlympiadEmailChain {
         $templateMap = [
             'reg_welcome' => ['template' => 'olympiad_reg_welcome', 'subject' => 'Добро пожаловать на олимпиаду!'],
             'reg_reminder_1h' => ['template' => 'olympiad_reg_reminder_1h', 'subject' => 'Олимпиада ждёт вас — начните тест!'],
-            'quiz_success' => ['template' => 'olympiad_quiz_success', 'subject' => 'Поздравляем! Вы заняли {placement} в олимпиаде'],
-            'quiz_success_reminder_24h' => ['template' => 'olympiad_quiz_success_reminder_24h', 'subject' => 'Ваш диплом олимпиады ждёт оформления'],
+            'quiz_success' => ['template' => 'olympiad_quiz_success', 'subject' => '{user_name}, поздравляем с {placement}! Ваш диплом готов к оформлению'],
+            'quiz_success_reminder_24h' => ['template' => 'olympiad_quiz_success_reminder_24h', 'subject' => '{user_name}, ваш диплом за {placement} ждёт оформления'],
             'quiz_fail' => ['template' => 'olympiad_quiz_fail', 'subject' => 'Спасибо за участие в олимпиаде!'],
         ];
 
@@ -626,6 +660,9 @@ class OlympiadEmailChain {
             elseif ($placement == '2') $placementText = '2 место';
             elseif ($placement == '3') $placementText = '3 место';
 
+            $resultId = $emailData['olympiad_result_id'] ?? '';
+            $diplomaUrl = $resultId ? (SITE_URL . '/olimpiada-diplom/' . $resultId) : SITE_URL . '/olimpiady/' . $emailData['olympiad_slug'];
+
             $templateData = [
                 'user_name' => $emailData['full_name'],
                 'user_email' => $emailData['email'],
@@ -637,6 +674,8 @@ class OlympiadEmailChain {
                 'placement' => $placement,
                 'placement_text' => $placementText,
                 'olympiad_url' => SITE_URL . '/olimpiady/' . $emailData['olympiad_slug'],
+                'diploma_url' => $diplomaUrl,
+                'result_id' => $resultId,
                 'unsubscribe_url' => $unsubscribeUrl,
                 'site_url' => SITE_URL,
                 'site_name' => SITE_NAME ?? 'Каменный город',
