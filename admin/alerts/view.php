@@ -33,6 +33,20 @@ if ($alert['chat_session_id']) {
     $chatMessages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+// Переписка с пользователем по email (исходящие из админки + входящие через IMAP-cron, когда подключим)
+$emailMessages = [];
+try {
+    $stmt = $db->prepare(
+        "SELECT id, direction, from_email, from_name, to_email, subject,
+                body_text, body_html, attachments_json, created_at
+         FROM alert_messages WHERE alert_id = ? ORDER BY created_at ASC, id ASC"
+    );
+    $stmt->execute([$id]);
+    $emailMessages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // Таблица ещё не создана — миграция 089 не применена
+}
+
 $pageTitle = 'Алерт #' . $alert['id'];
 $statusNames = [
     'new' => 'Новый',
@@ -81,6 +95,36 @@ include __DIR__ . '/../includes/header.php';
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php if (!empty($emailMessages)): ?>
+            <div class="content-card" style="margin-top: 20px;">
+                <div class="card-body">
+                    <h3 style="margin-top: 0;">Переписка по email</h3>
+                    <?php foreach ($emailMessages as $m):
+                        $isOut = $m['direction'] === 'outbound';
+                        $atts = !empty($m['attachments_json']) ? json_decode($m['attachments_json'], true) : [];
+                    ?>
+                        <div style="margin-bottom: 14px; padding: 12px 16px; border-radius: 10px; <?php echo $isOut ? 'background: #EEF4FF; border-left: 3px solid #2E5BFF;' : 'background: #F0FDF4; border-left: 3px solid #16A34A;'; ?>">
+                            <div style="font-size: 12px; color: #6B7280; margin-bottom: 6px;">
+                                <strong><?php echo $isOut ? '↗ Исходящее' : '↘ Входящее'; ?></strong>
+                                • <?php echo htmlspecialchars($m['from_email']); ?>
+                                → <?php echo htmlspecialchars($m['to_email']); ?>
+                                • <?php echo date('d.m.Y H:i', strtotime($m['created_at'])); ?>
+                            </div>
+                            <?php if (!empty($m['subject'])): ?>
+                                <div style="font-weight: 600; margin-bottom: 6px;"><?php echo htmlspecialchars($m['subject']); ?></div>
+                            <?php endif; ?>
+                            <div style="white-space: pre-wrap; line-height: 1.5; font-size: 14px;"><?php echo htmlspecialchars($m['body_text'] ?: strip_tags($m['body_html'] ?? '')); ?></div>
+                            <?php if (!empty($atts) && is_array($atts)): ?>
+                                <div style="margin-top: 8px; font-size: 12px; color: #6B7280;">
+                                    📎 Вложения: <?php echo htmlspecialchars(implode(', ', array_column($atts, 'name'))); ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php if (!empty($chatMessages)): ?>
             <div class="content-card" style="margin-top: 20px;">
