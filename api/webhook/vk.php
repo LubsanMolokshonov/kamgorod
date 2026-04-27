@@ -17,6 +17,18 @@ define('BASE_PATH', dirname(__DIR__, 2));
 
 require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/database.php';
+
+// bootstrap.php читает ключи через getenv(), но у нас они в PHP-константах из .env
+// Прокидываем перед загрузкой bootstrap
+putenv('YANDEX_GPT_API_KEY=' . YANDEX_GPT_API_KEY);
+putenv('YANDEX_GPT_FOLDER_ID=' . YANDEX_GPT_FOLDER_ID);
+putenv('YANDEX_GPT_MODEL=' . (defined('YANDEX_GPT_MODEL') ? YANDEX_GPT_MODEL : 'yandexgpt-lite'));
+putenv('DB_HOST=' . DB_HOST);
+putenv('DB_NAME=' . DB_NAME);
+putenv('DB_USER=' . DB_USER);
+putenv('DB_PASS=' . DB_PASS);
+putenv('SITE_URL=' . SITE_URL);
+
 require_once BASE_PATH . '/ai-consultant/src/bootstrap.php';
 
 // Всегда отвечать 200 — VK повторяет запрос при любом другом коде
