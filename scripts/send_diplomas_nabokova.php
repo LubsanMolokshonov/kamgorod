@@ -133,11 +133,9 @@ try {
     $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
     $mail->addAddress($email, $fullName);
     $mail->isHTML(true);
-    $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
+    $mail->Subject = $subject;
     $mail->Body    = $htmlBody;
     $mail->AltBody = $textBody;
-    $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
-    $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
     $mail->send();
     echo "[OK] Письмо отправлено!\n";
 } catch (Exception $e) {
