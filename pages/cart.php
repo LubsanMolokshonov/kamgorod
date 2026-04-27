@@ -24,7 +24,7 @@ $certificates = getCartCertificates();
 // Общие дефолты для loyalty (перекрываются ниже при наличии статуса)
 $loyaltyDiscount = 0;
 $hasLoyalty = false;
-$loyaltyRatePercent = (int)round(LoyaltyDiscount::RATE_CART * 100);
+$loyaltyRatePercent = (int)round(LoyaltyDiscount::RATE_CART * 100); // дефолт; перезапишется ниже если пользователь авторизован
 // Скидка по email-кампании (10% молчащим пользователям)
 $campaignDiscount = 0;
 $hasCampaignDiscount = false;
@@ -151,7 +151,9 @@ if (isCartEmpty()) {
     // Пожизненная скидка 25% для постоянных клиентов — стакается поверх 2+1.
     $currentUserId = $_SESSION['user_id'] ?? null;
     if ($currentUserId && LoyaltyDiscount::isEligible($db, (int)$currentUserId)) {
-        $calc = LoyaltyDiscount::calculateCartDiscount((float)$grandTotal);
+        $loyaltyRates = LoyaltyDiscount::getEffectiveRates($db, (int)$currentUserId);
+        $loyaltyRatePercent = (int)round($loyaltyRates['cart'] * 100);
+        $calc = LoyaltyDiscount::calculateCartDiscount((float)$grandTotal, $loyaltyRates['cart']);
         if ($calc['amount'] > 0) {
             $loyaltyDiscount = $calc['amount'];
             $grandTotal = $calc['final'];

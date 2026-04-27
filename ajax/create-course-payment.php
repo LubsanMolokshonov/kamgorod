@@ -110,7 +110,8 @@ try {
     // в loyalty_discount_amount для аналитики.
     $loyaltyAmount = 0;
     if (!$discountAmount && LoyaltyDiscount::isEligible($db, (int)$userId)) {
-        $calc = LoyaltyDiscount::calculateCourseDiscount((float)$price);
+        $loyaltyRates = LoyaltyDiscount::getEffectiveRates($db, (int)$userId);
+        $calc = LoyaltyDiscount::calculateCourseDiscount((float)$price, $loyaltyRates['course']);
         if ($calc['amount'] > 0) {
             $discountAmount = $calc['amount'];
             $finalPrice = $calc['final'];

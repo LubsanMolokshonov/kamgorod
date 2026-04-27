@@ -7,29 +7,58 @@
  *  - к корзине (конкурсы/олимпиады/вебинары/публикации) применяется RATE_CART (25%)
  *    поверх акции 2+1 (сначала 2+1, потом процент от остатка);
  *  - к оплате курсов КПК/ПП применяется RATE_COURSE (10%).
+ *
+ * Индивидуальные ставки (миграция 092): если у пользователя заполнены
+ * individual_cart_discount / individual_course_discount — они перекрывают стандартные.
  */
 class LoyaltyDiscount {
-    /** Ставка скидки на корзину */
+    /** Ставка скидки на корзину (стандарт) */
     const RATE_CART = 0.25;
 
-    /** Ставка скидки на курсы */
+    /** Ставка скидки на курсы (стандарт) */
     const RATE_COURSE = 0.10;
 
     /**
      * Имеет ли пользователь активный статус пожизненной скидки.
+     * Также возвращает true, если у пользователя заданы индивидуальные ставки.
      */
     public static function isEligible(PDO $pdo, ?int $userId): bool {
         if (!$userId) {
             return false;
         }
         try {
-            $stmt = $pdo->prepare("SELECT has_lifetime_discount FROM users WHERE id = ? LIMIT 1");
+            $stmt = $pdo->prepare("SELECT has_lifetime_discount, individual_cart_discount FROM users WHERE id = ? LIMIT 1");
             $stmt->execute([$userId]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            return !empty($row) && (int)$row['has_lifetime_discount'] === 1;
+            if (empty($row)) return false;
+            return (int)$row['has_lifetime_discount'] === 1 || $row['individual_cart_discount'] !== null;
         } catch (\Exception $e) {
-            // Колонка может отсутствовать до применения миграции 085.
+            // Колонки могут отсутствовать до применения миграции.
             return false;
+        }
+    }
+
+    /**
+     * Возвращает эффективные ставки скидки для пользователя.
+     * Если заданы индивидуальные ставки — они используются вместо стандартных.
+     *
+     * @return array ['cart' => float, 'course' => float]
+     */
+    public static function getEffectiveRates(PDO $pdo, int $userId): array {
+        try {
+            $stmt = $pdo->prepare("SELECT individual_cart_discount, individual_course_discount FROM users WHERE id = ? LIMIT 1");
+            $stmt->execute([$userId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return [
+                'cart'   => $row && $row['individual_cart_discount'] !== null
+                    ? (float)$row['individual_cart_discount']
+                    : self::RATE_CART,
+                'course' => $row && $row['individual_course_discount'] !== null
+                    ? (float)$row['individual_course_discount']
+                    : self::RATE_COURSE,
+            ];
+        } catch (\Exception $e) {
+            return ['cart' => self::RATE_CART, 'course' => self::RATE_COURSE];
         }
     }
 
@@ -51,31 +80,35 @@ class LoyaltyDiscount {
     /**
      * Рассчитать loyalty-скидку для корзины (поверх акции 2+1).
      *
-     * @param float $amountAfterPromotion сумма после применения 2+1
+     * @param float      $amountAfterPromotion сумма после применения 2+1
+     * @param float|null $rate                 ставка (null = RATE_CART)
      * @return array ['rate' => float, 'amount' => float, 'final' => float]
      */
-    public static function calculateCartDiscount(float $amountAfterPromotion): array {
+    public static function calculateCartDiscount(float $amountAfterPromotion, ?float $rate = null): array {
+        $rate = $rate ?? self::RATE_CART;
         if ($amountAfterPromotion <= 0) {
-            return ['rate' => self::RATE_CART, 'amount' => 0.0, 'final' => 0.0];
+            return ['rate' => $rate, 'amount' => 0.0, 'final' => 0.0];
         }
-        $amount = round($amountAfterPromotion * self::RATE_CART, 2);
+        $amount = round($amountAfterPromotion * $rate, 2);
         $final = round($amountAfterPromotion - $amount, 2);
-        return ['rate' => self::RATE_CART, 'amount' => $amount, 'final' => $final];
+        return ['rate' => $rate, 'amount' => $amount, 'final' => $final];
     }
 
     /**
      * Рассчитать loyalty-скидку для курса.
      *
-     * @param float $price базовая цена
+     * @param float      $price базовая цена
+     * @param float|null $rate  ставка (null = RATE_COURSE)
      * @return array ['rate' => float, 'amount' => float, 'final' => float]
      */
-    public static function calculateCourseDiscount(float $price): array {
+    public static function calculateCourseDiscount(float $price, ?float $rate = null): array {
+        $rate = $rate ?? self::RATE_COURSE;
         if ($price <= 0) {
-            return ['rate' => self::RATE_COURSE, 'amount' => 0.0, 'final' => 0.0];
+            return ['rate' => $rate, 'amount' => 0.0, 'final' => 0.0];
         }
-        $amount = round($price * self::RATE_COURSE, 2);
+        $amount = round($price * $rate, 2);
         $final = round($price - $amount, 2);
-        return ['rate' => self::RATE_COURSE, 'amount' => $amount, 'final' => $final];
+        return ['rate' => $rate, 'amount' => $amount, 'final' => $final];
     }
 
     /**

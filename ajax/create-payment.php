@@ -182,7 +182,8 @@ try {
 
     $loyaltyDiscount = 0;
     if ($sessionUserId && LoyaltyDiscount::isEligible($db, (int)$sessionUserId)) {
-        $calc = LoyaltyDiscount::calculateCartDiscount((float)$grandTotal);
+        $loyaltyRates = LoyaltyDiscount::getEffectiveRates($db, (int)$sessionUserId);
+        $calc = LoyaltyDiscount::calculateCartDiscount((float)$grandTotal, $loyaltyRates['cart']);
         if ($calc['amount'] > 0) {
             $loyaltyDiscount = $calc['amount'];
             $grandTotal = $calc['final'];

@@ -169,11 +169,12 @@ include __DIR__ . '/../includes/header.php';
         </div>
 
         <?php if (LoyaltyDiscount::isEligible($db, (int)($_SESSION['user_id'] ?? 0))): ?>
+            <?php $loyaltyRates = LoyaltyDiscount::getEffectiveRates($db, (int)$_SESSION['user_id']); ?>
             <div class="loyalty-badge">
                 <div class="loyalty-badge-icon">🏆</div>
                 <div class="loyalty-badge-body">
-                    <strong>Действует пожизненная скидка <?php echo (int)round(LoyaltyDiscount::RATE_CART * 100); ?>%</strong>
-                    <span>На конкурсы, олимпиады, вебинары и публикации. Плюс <?php echo (int)round(LoyaltyDiscount::RATE_COURSE * 100); ?>% на курсы повышения квалификации. Скидка применяется автоматически.</span>
+                    <strong>Действует персональная скидка <?php echo (int)round($loyaltyRates['cart'] * 100); ?>%</strong>
+                    <span>На конкурсы, олимпиады, вебинары и публикации. Плюс <?php echo (int)round($loyaltyRates['course'] * 100); ?>% на курсы повышения квалификации. Скидка применяется автоматически.</span>
                 </div>
             </div>
         <?php endif; ?>
