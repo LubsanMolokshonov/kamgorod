@@ -102,23 +102,7 @@ $vkEvent = [
     'date'       => (int)($msgObj['date'] ?? time()),
 ];
 
-// Продолжать выполнение даже если клиент (VK) закрыл соединение
-ignore_user_abort(true);
-
-echo 'ok';
-
-// Закрываем соединение с клиентом, но PHP продолжает выполнение
-if (function_exists('fastcgi_finish_request')) {
-    fastcgi_finish_request();
-} else {
-    // mod_php: сбросить буфер и закрыть соединение вручную
-    if (ob_get_level() > 0) {
-        ob_end_flush();
-    }
-    flush();
-}
-
-// Основная обработка
+// Основная обработка (синхронно — VK ждёт до 5 сек, YandexGPT укладывается в 3-4 сек)
 try {
     error_log('[VK webhook] Обработка message_id=' . $vkEvent['message_id'] . ' from_id=' . $vkEvent['from_id'] . ' text=' . mb_substr($vkEvent['text'], 0, 80));
 
@@ -133,3 +117,5 @@ try {
 } catch (Throwable $e) {
     error_log('[VK webhook] Ошибка обработки message_id=' . $vkEvent['message_id'] . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
 }
+
+echo 'ok';
