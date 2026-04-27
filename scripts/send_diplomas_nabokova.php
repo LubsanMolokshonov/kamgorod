@@ -133,9 +133,10 @@ try {
     $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
     $mail->addAddress($email, $fullName);
     $mail->isHTML(true);
-    $mail->Subject = $subject;
-    $mail->Body    = $htmlBody;
-    $mail->AltBody = $textBody;
+    $mail->Encoding = 'base64';
+    $mail->Subject  = $subject;
+    $mail->Body     = $htmlBody;
+    $mail->AltBody  = $textBody;
     $mail->send();
     echo "[OK] Письмо отправлено!\n";
 } catch (Exception $e) {
