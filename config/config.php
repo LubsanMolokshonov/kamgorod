@@ -87,13 +87,22 @@ if (!defined('TELEGRAM_ALERT_CHAT_ID')) {
     define('TELEGRAM_ALERT_CHAT_ID', $_ENV['TELEGRAM_ALERT_CHAT_ID'] ?? '1177793865,-5215729575');
 }
 
-// Email Configuration
+// Email Configuration (транзакционные письма — info@fgos.pro)
 if (!defined('SMTP_HOST')) define('SMTP_HOST', $_ENV['SMTP_HOST'] ?? '');
 if (!defined('SMTP_PORT')) define('SMTP_PORT', $_ENV['SMTP_PORT'] ?? 587);
 if (!defined('SMTP_USERNAME')) define('SMTP_USERNAME', $_ENV['SMTP_USERNAME'] ?? '');
 if (!defined('SMTP_PASSWORD')) define('SMTP_PASSWORD', $_ENV['SMTP_PASSWORD'] ?? '');
 if (!defined('SMTP_FROM_EMAIL')) define('SMTP_FROM_EMAIL', $_ENV['SMTP_FROM_EMAIL'] ?? 'noreply@localhost');
 if (!defined('SMTP_FROM_NAME')) define('SMTP_FROM_NAME', defined('SITE_NAME') ? SITE_NAME : 'Педагогический портал');
+
+// Bulk SMTP Pool (массовые рассылки — ротация по двум ящикам Яндекс 360)
+// Если SMTP_BULK_USERNAME_1 пуст — fallback на основной SMTP (обратная совместимость до миграции)
+if (!defined('SMTP_BULK_HOST')) define('SMTP_BULK_HOST', $_ENV['SMTP_BULK_HOST'] ?? SMTP_HOST);
+if (!defined('SMTP_BULK_PORT')) define('SMTP_BULK_PORT', (int)($_ENV['SMTP_BULK_PORT'] ?? SMTP_PORT));
+if (!defined('SMTP_BULK_USERNAME_1')) define('SMTP_BULK_USERNAME_1', $_ENV['SMTP_BULK_USERNAME_1'] ?? '');
+if (!defined('SMTP_BULK_PASSWORD_1')) define('SMTP_BULK_PASSWORD_1', $_ENV['SMTP_BULK_PASSWORD_1'] ?? '');
+if (!defined('SMTP_BULK_USERNAME_2')) define('SMTP_BULK_USERNAME_2', $_ENV['SMTP_BULK_USERNAME_2'] ?? '');
+if (!defined('SMTP_BULK_PASSWORD_2')) define('SMTP_BULK_PASSWORD_2', $_ENV['SMTP_BULK_PASSWORD_2'] ?? '');
 
 // Session Configuration
 if (!defined('SESSION_LIFETIME')) define('SESSION_LIFETIME', $_ENV['SESSION_LIFETIME'] ?? 86400);

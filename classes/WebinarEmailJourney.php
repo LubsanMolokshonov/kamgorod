@@ -251,30 +251,9 @@ class WebinarEmailJourney {
         require_once BASE_PATH . '/classes/EmailTracker.php';
 
         try {
+            require_once BASE_PATH . '/includes/email-helper.php';
             $mail = new PHPMailer(true);
-
-            $mail->isSMTP();
-            $mail->Host = SMTP_HOST;
-            $mail->Port = SMTP_PORT;
-            $mail->CharSet = 'UTF-8';
-
-            if (!empty(SMTP_USERNAME) && !empty(SMTP_PASSWORD)) {
-                $mail->SMTPAuth = true;
-                $mail->Username = SMTP_USERNAME;
-                $mail->Password = SMTP_PASSWORD;
-
-                if (SMTP_PORT == 465) {
-                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-                } elseif (SMTP_PORT == 587) {
-                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                }
-            } else {
-                $mail->SMTPAuth = false;
-                $mail->SMTPSecure = false;
-                $mail->SMTPAutoTLS = false;
-            }
-
-            $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
+            configureBulkMailer($mail, $emailData['email']);
             $mail->addAddress($emailData['email'], $emailData['full_name']);
 
             // Prepare template data

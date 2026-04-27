@@ -40,6 +40,41 @@ function configureMailer($mail) {
 }
 
 /**
+ * Configure PHPMailer для массовых рассылок с ротацией по двум ящикам.
+ * Выбор аккаунта детерминирован по адресу получателя — у одного получателя
+ * всегда один и тот же отправитель (важно для репутации в почтовом клиенте),
+ * нагрузка делится 50/50 между двумя ящиками Яндекс 360.
+ *
+ * Если SMTP_BULK_USERNAME_1 пуст (до завершения миграции) — fallback на configureMailer().
+ * В этом случае setFrom не устанавливается — вызывающий код задаёт его сам.
+ */
+function configureBulkMailer($mail, string $recipientEmail) {
+    if (empty(SMTP_BULK_USERNAME_1) || empty(SMTP_BULK_USERNAME_2)) {
+        return configureMailer($mail);
+    }
+
+    $mail->isSMTP();
+    $mail->Host = SMTP_BULK_HOST;
+    $mail->Port = SMTP_BULK_PORT;
+    $mail->CharSet = 'UTF-8';
+    $mail->SMTPAuth = true;
+
+    $useFirst = (crc32(strtolower(trim($recipientEmail))) % 2 === 0);
+    $username = $useFirst ? SMTP_BULK_USERNAME_1 : SMTP_BULK_USERNAME_2;
+    $password = $useFirst ? SMTP_BULK_PASSWORD_1 : SMTP_BULK_PASSWORD_2;
+
+    $mail->Username = $username;
+    $mail->Password = $password;
+    $mail->SMTPSecure = (SMTP_BULK_PORT == 465)
+        ? PHPMailer::ENCRYPTION_SMTPS
+        : PHPMailer::ENCRYPTION_STARTTLS;
+
+    // Яндекс отбивает письма, у которых From не совпадает с аутентифицированным ящиком
+    $mail->setFrom($username, SMTP_FROM_NAME);
+    return $mail;
+}
+
+/**
  * Send payment success notification email with PDF attachments
  */
 function sendPaymentSuccessEmail($userId, $orderId) {
