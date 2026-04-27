@@ -56,13 +56,16 @@ if ($secret !== '' && ($body['secret'] ?? '') !== $secret) {
 }
 
 // Обрабатываем только новые входящие сообщения
-if (($body['type'] ?? '') !== 'message_new') {
+$eventType = $body['type'] ?? '';
+error_log('[VK webhook] Получен тип события: ' . $eventType);
+if ($eventType !== 'message_new') {
     echo 'ok';
     exit;
 }
 
 $msgObj = $body['object']['message'] ?? $body['object'] ?? null;
 if (!is_array($msgObj)) {
+    error_log('[VK webhook] msgObj не массив');
     echo 'ok';
     exit;
 }
@@ -74,6 +77,7 @@ $text    = trim((string)($msgObj['text'] ?? ''));
 
 // Игнорировать исходящие (from_id < 0 — это группа/бот) и сообщения без ID
 if ($fromId <= 0 || $msgId <= 0) {
+    error_log('[VK webhook] Пропуск: fromId=' . $fromId . ' msgId=' . $msgId);
     echo 'ok';
     exit;
 }
@@ -83,6 +87,7 @@ try {
     $stmt = $db->prepare('SELECT id FROM inbound_vk_log WHERE vk_message_id = ? LIMIT 1');
     $stmt->execute([$msgId]);
     if ($stmt->fetch()) {
+        error_log('[VK webhook] Дедуп: message_id=' . $msgId . ' уже обработан');
         echo 'ok';
         exit;
     }
