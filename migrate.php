@@ -107,7 +107,8 @@ $migrations = [
     '087_silent_reengagement_campaign.sql',
     '088_olympiad_pay_14d.sql',
     '089_alert_messages.sql',
-    '090_alerts_email_source.sql'
+    '090_alerts_email_source.sql',
+    '091_alerts_vk_source.sql',
 ];
 
 $basePath = __DIR__ . '/database/migrations/';
