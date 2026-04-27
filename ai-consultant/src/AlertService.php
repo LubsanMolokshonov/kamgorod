@@ -109,6 +109,202 @@ class AlertService
         ];
     }
 
+    /**
+     * Создать алерт из входящего email (вызывается из cron/process-inbound-emails.php).
+     * В отличие от create() не валидирует длину/формат под форму чата и не делает повторный YandexGPT-вызов
+     * (классификация уже выполнена InboundEmailProcessor'ом).
+     *
+     * @param array{from_email:string, from_name:?string, subject:?string, body_text:string, body_html:?string, message_id:string, attachments:array} $email
+     * @param array{summary:?string, category:?string} $classification
+     */
+    public function createFromEmail(array $email, array $classification): int
+    {
+        $fromEmail = trim((string)$email['from_email']);
+        $fromName  = trim((string)($email['from_name'] ?? '')) ?: 'Email-обращение';
+        $subject   = trim((string)($email['subject'] ?? ''));
+        $bodyText  = (string)$email['body_text'];
+        $bodyHtml  = $email['body_html'] ?? null;
+        $messageId = (string)$email['message_id'];
+
+        $description = $bodyText !== '' ? $bodyText : strip_tags((string)$bodyHtml);
+        $description = trim($description);
+        if ($subject !== '') {
+            $description = "Тема: {$subject}\n\n{$description}";
+        }
+        $description = mb_substr($description, 0, 5000);
+        if ($description === '') {
+            $description = '(пустое тело письма)';
+        }
+
+        $aiSummary  = isset($classification['summary']) ? mb_substr((string)$classification['summary'], 0, 500) : null;
+        $aiCategory = null;
+        $cat = $classification['category'] ?? null;
+        if (in_array($cat, ['payment','technical','content','access','other'], true)) {
+            $aiCategory = $cat;
+        }
+
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO support_alerts
+             (chat_session_id, source, source_message_id, user_id, user_name, user_email, user_phone,
+              page_url, description, ai_summary, ai_category, status)
+             VALUES (NULL, ?, ?, NULL, ?, ?, NULL, NULL, ?, ?, ?, ?)'
+        );
+        $stmt->execute([
+            'email',
+            $messageId !== '' ? $messageId : null,
+            $fromName,
+            $fromEmail,
+            $description,
+            $aiSummary,
+            $aiCategory,
+            'new',
+        ]);
+        $alertId = (int)$this->pdo->lastInsertId();
+
+        // Сохраняем оригинал письма в alert_messages как первое inbound-сообщение треда.
+        $attachmentsJson = !empty($email['attachments'])
+            ? json_encode(array_map(static fn($a) => ['name' => $a['name'] ?? '', 'size' => $a['size'] ?? 0], $email['attachments']), JSON_UNESCAPED_UNICODE)
+            : null;
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO alert_messages
+             (alert_id, direction, from_email, from_name, to_email, subject, body_html, body_text, attachments_json, message_id)
+             VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+        $stmt->execute([
+            $alertId,
+            $fromEmail,
+            $fromName,
+            SMTP_FROM_EMAIL,
+            $subject !== '' ? mb_substr($subject, 0, 500) : null,
+            $bodyHtml,
+            $bodyText,
+            $attachmentsJson,
+            $messageId !== '' ? $messageId : null,
+        ]);
+
+        ai_log('ALERT', 'Alert created from email', ['id' => $alertId, 'email' => $fromEmail, 'category' => $aiCategory]);
+
+        $this->notifyAdmin($alertId, $fromName, $fromEmail, '', $description, null, $aiSummary, $aiCategory);
+        $this->notifyTelegram($alertId, $fromName, $fromEmail, '', $description, null, $aiSummary, $aiCategory);
+
+        return $alertId;
+    }
+
+    /**
+     * Создать алерт из входящего VK-сообщения (вызывается из VkInboundProcessor).
+     *
+     * @param array{message_id:int, peer_id:int, from_id:int, from_name:string, text:string, received_at:string} $vkMsg
+     * @param array{summary:?string, category:?string} $classification
+     */
+    public function createFromVk(array $vkMsg, array $classification): int
+    {
+        $fromId     = (int)$vkMsg['from_id'];
+        $peerId     = (int)$vkMsg['peer_id'];
+        $msgId      = (int)$vkMsg['message_id'];
+        $fromName   = trim((string)($vkMsg['from_name'] ?? '')) ?: 'VK-пользователь';
+        $text       = trim((string)($vkMsg['text'] ?? ''));
+        $receivedAt = (string)($vkMsg['received_at'] ?? date('Y-m-d H:i:s'));
+
+        $userEmail = 'vk_' . $fromId . '@vk.fgos.pro';
+        $description = mb_substr($text !== '' ? $text : '(пустое сообщение)', 0, 5000);
+
+        $aiSummary  = isset($classification['summary']) ? mb_substr((string)$classification['summary'], 0, 500) : null;
+        $aiCategory = null;
+        $cat = $classification['category'] ?? null;
+        if (in_array($cat, ['payment','technical','content','access','other'], true)) {
+            $aiCategory = $cat;
+        }
+
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO support_alerts
+             (chat_session_id, source, source_message_id, vk_peer_id, user_id, user_name, user_email, user_phone,
+              page_url, description, ai_summary, ai_category, status)
+             VALUES (NULL, ?, ?, ?, NULL, ?, ?, NULL, NULL, ?, ?, ?, ?)'
+        );
+        $stmt->execute([
+            'vk',
+            'vk_' . $msgId,
+            $peerId,
+            $fromName,
+            $userEmail,
+            $description,
+            $aiSummary,
+            $aiCategory,
+            'new',
+        ]);
+        $alertId = (int)$this->pdo->lastInsertId();
+
+        // Первое сообщение треда
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO alert_messages
+             (alert_id, direction, from_email, from_name, to_email, subject, body_text, message_id)
+             VALUES (?, 'inbound', ?, ?, ?, NULL, ?, ?)"
+        );
+        $stmt->execute([
+            $alertId,
+            $userEmail,
+            $fromName,
+            defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : 'info@fgos.pro',
+            $description,
+            'vk_' . $msgId,
+        ]);
+
+        ai_log('VK', 'Alert created from VK', ['id' => $alertId, 'from_id' => $fromId, 'category' => $aiCategory]);
+
+        $this->notifyAdmin($alertId, $fromName, $userEmail, '', $description, null, $aiSummary, $aiCategory);
+        $this->notifyTelegram($alertId, $fromName, $userEmail, '', $description, null, $aiSummary, $aiCategory);
+
+        return $alertId;
+    }
+
+    /**
+     * Добавить inbound-сообщение в существующий тред алерта (ответ пользователя).
+     * Возвращает id вставленной записи alert_messages, либо 0 если уже сохранено (дедуп по message_id).
+     */
+    public function appendInboundReply(int $alertId, array $email): int
+    {
+        $messageId = (string)($email['message_id'] ?? '');
+        if ($messageId !== '') {
+            $stmt = $this->pdo->prepare('SELECT id FROM alert_messages WHERE message_id = ? LIMIT 1');
+            $stmt->execute([$messageId]);
+            if ($stmt->fetch()) {
+                return 0;
+            }
+        }
+
+        $attachmentsJson = !empty($email['attachments'])
+            ? json_encode(array_map(static fn($a) => ['name' => $a['name'] ?? '', 'size' => $a['size'] ?? 0], $email['attachments']), JSON_UNESCAPED_UNICODE)
+            : null;
+
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO alert_messages
+             (alert_id, direction, from_email, from_name, to_email, subject, body_html, body_text, attachments_json, message_id, in_reply_to)
+             VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+        $stmt->execute([
+            $alertId,
+            (string)($email['from_email'] ?? ''),
+            (string)($email['from_name'] ?? ''),
+            SMTP_FROM_EMAIL,
+            isset($email['subject']) ? mb_substr((string)$email['subject'], 0, 500) : null,
+            $email['body_html'] ?? null,
+            (string)($email['body_text'] ?? ''),
+            $attachmentsJson,
+            $messageId !== '' ? $messageId : null,
+            isset($email['in_reply_to']) ? (string)$email['in_reply_to'] : null,
+        ]);
+        $msgId = (int)$this->pdo->lastInsertId();
+
+        // Если алерт был закрыт — возвращаем в работу.
+        $this->pdo->prepare(
+            "UPDATE support_alerts SET status = 'in_progress' WHERE id = ? AND status IN ('resolved','closed')"
+        )->execute([$alertId]);
+
+        ai_log('ALERT', 'Inbound reply appended', ['alert_id' => $alertId, 'message_id' => $messageId]);
+
+        return $msgId;
+    }
+
     private function notifyAdmin(
         int $alertId,
         string $name,

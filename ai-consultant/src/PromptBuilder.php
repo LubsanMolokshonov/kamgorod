@@ -75,6 +75,26 @@ class PromptBuilder
         ];
     }
 
+    /**
+     * Промпт для классификации входящего email: алерт это или нет.
+     */
+    public static function buildEmailClassificationMessages(string $subject, string $body, string $fromEmail): array
+    {
+        $sys = "Ты — модератор техподдержки образовательного портала fgos.pro (педагогам: конкурсы, олимпиады, вебинары, курсы, публикации).\n";
+        $sys .= "Перед тобой входящее письмо на ящик поддержки. Реши: это обращение пользователя по проблеме (оплата, доступ к диплому/курсу, ошибка на сайте, жалоба, вопрос о заказе) — или нет (рассылка, реклама, авто-уведомление, спам, личная переписка не по продукту, нотификация от платёжной системы/Telegram).\n";
+        $sys .= "Если письмо явно от партнёрской системы или массовая рассылка — это НЕ алерт.\n";
+        $sys .= "Верни СТРОГО JSON без markdown, без пояснений:\n";
+        $sys .= '{"is_alert": true|false, "category": "payment|technical|content|access|other|not_alert", "summary": "краткая суть 1-2 предложения", "confidence": 0.0-1.0}';
+
+        $bodyTrim = mb_substr($body, 0, 4000);
+        $user = "От: {$fromEmail}\nТема: {$subject}\n\nТело:\n{$bodyTrim}";
+
+        return [
+            ['role' => 'system', 'text' => $sys],
+            ['role' => 'user', 'text' => $user],
+        ];
+    }
+
     private static function systemPrompt(array $products, ?string $pageUrl, array $cartItems): string
     {
         $p = <<<PROMPT

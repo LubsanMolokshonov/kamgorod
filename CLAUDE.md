@@ -154,6 +154,10 @@ $validator->getData();        // sanitized array
 ### Email
 PHPMailer через хелпер `includes/email-helper.php`. HTML-шаблоны в `includes/email-templates/`. Базовый layout: `_base_layout.php`.
 
+Транзакционные письма (оплаты, дипломы, magic-link, поддержка) идут через `info@fgos.pro` (`configureMailer`). Массовые цепочки идут через пул `rodion@fgos.pro` / `kazakova@fgos.pro` с детерминированной ротацией по `crc32(email) % 2` (`configureBulkMailer`). Все три ящика — Яндекс 360.
+
+⚠️ **Карантин на массовые рассылки до 2026-05-11** (прогрев Яндекс-ящиков после миграции 27.04.2026). НЕ ЗАПУСКАТЬ: `cron/send_broadcast_v2.php`, `send_broadcast_temp.php`, `send_broadcast_bizon.php`, `scripts/send_recording_*.php`, `send_webinar_invitation.php`, `send_alert_*.php`, `send_apology_*.php`. Эти скрипты используют `SMTP_HOST` напрямую (через `info@`) и одним запуском могут отправить тысячи писем — мгновенно убьёт репутацию транзакционного ящика и сломает доставку оплат/дипломов. После 11.05 — запускать только разбив на батчи ≤ 50/день и через `configureBulkMailer`.
+
 ### Миграции
 Нумерованные SQL-файлы в `database/migrations/` (формат: `NNN_description.sql`). Запуск: `php migrate.php`. Трекинг — таблица `migrations`.
 
@@ -222,8 +226,7 @@ php migrate.php                   # Применить миграции
 php scripts/build-search-index.php  # Построить поисковый индекс
 
 # Деплой (продакшн: 141.105.69.45)
-bash deploy.sh                    # Основной деплой
-bash deploy-courses.sh            # Деплой курсов
+# Используй скилл /deploy — git-based, через docker exec pedagogy_web
 ```
 
 ## Важные замечания

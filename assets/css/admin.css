@@ -262,6 +262,11 @@
     color: #1E3A5F;
 }
 
+.badge-blue {
+    background: #CCE3FF;
+    color: #0055AA;
+}
+
 /* Buttons */
 .btn {
     display: inline-block;

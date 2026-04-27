@@ -60,6 +60,19 @@ $statusBadges = [
     'resolved' => 'badge-success',
     'closed' => 'badge-purple',
 ];
+$sourceNames = [
+    'ai_chat' => 'AI-чат',
+    'email'   => 'Email',
+    'manual'  => 'Ручной',
+    'vk'      => 'ВКонтакте',
+];
+$sourceBadges = [
+    'ai_chat' => 'badge-info',
+    'email'   => 'badge-purple',
+    'manual'  => 'badge-warning',
+    'vk'      => 'badge-blue',
+];
+$alertSource = $alert['source'] ?? 'ai_chat';
 
 require_once __DIR__ . '/../../includes/session.php';
 $csrfToken = generateCSRFToken();
@@ -69,8 +82,20 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="page-header">
     <a href="/admin/alerts/" style="font-size: 13px; color: #6B7280; text-decoration: none;">← Все алерты</a>
-    <h1>Алерт #<?php echo $alert['id']; ?></h1>
-    <p>Создан: <?php echo date('d.m.Y H:i', strtotime($alert['created_at'])); ?></p>
+    <h1>
+        Алерт #<?php echo $alert['id']; ?>
+        <span class="badge <?php echo $sourceBadges[$alertSource] ?? 'badge-info'; ?>" style="margin-left: 8px; font-size: 12px; vertical-align: middle;">
+            <?php echo $sourceNames[$alertSource] ?? $alertSource; ?>
+        </span>
+    </h1>
+    <p>
+        Создан: <?php echo date('d.m.Y H:i', strtotime($alert['created_at'])); ?>
+        <?php if ($alertSource === 'email'): ?>
+            <span style="color: #7F56D9; margin-left: 8px;">· получено письмом на <?php echo htmlspecialchars(SMTP_FROM_EMAIL ?? 'info@fgos.pro'); ?></span>
+        <?php elseif ($alertSource === 'vk'): ?>
+            <span style="color: #0077FF; margin-left: 8px;">· сообщение из группы ВКонтакте</span>
+        <?php endif; ?>
+    </p>
 </div>
 
 <div style="display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start;">
@@ -124,6 +149,101 @@ include __DIR__ . '/../includes/header.php';
                     <?php endforeach; ?>
                 </div>
             </div>
+        <?php endif; ?>
+
+        <?php if ($alertSource === 'vk' && !empty($alert['vk_peer_id'])): ?>
+            <div class="content-card" style="margin-top: 20px;">
+                <div class="card-body">
+                    <h3 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                        Переписка ВКонтакте
+                        <span style="font-size: 12px; font-weight: 400; color: #6B7280;">peer_id: <?php echo (int)$alert['vk_peer_id']; ?></span>
+                    </h3>
+
+                    <?php if (!empty($emailMessages)):
+                        foreach ($emailMessages as $m):
+                            $isOut = $m['direction'] === 'outbound';
+                    ?>
+                        <div style="margin-bottom: 12px; padding: 12px 16px; border-radius: 10px; <?php echo $isOut ? 'background: #EEF4FF; border-left: 3px solid #0077FF;' : 'background: #F0F7FF; border-left: 3px solid #2DACE2;'; ?>">
+                            <div style="font-size: 12px; color: #6B7280; margin-bottom: 6px;">
+                                <strong><?php echo $isOut ? '↗ Ответ поддержки' : '↘ Сообщение от пользователя'; ?></strong>
+                                • <?php echo date('d.m.Y H:i', strtotime($m['created_at'])); ?>
+                            </div>
+                            <div style="white-space: pre-wrap; line-height: 1.5; font-size: 14px;"><?php echo htmlspecialchars($m['body_text'] ?: strip_tags($m['body_html'] ?? '')); ?></div>
+                        </div>
+                    <?php endforeach; endif; ?>
+
+                    <div id="vk-messages-feed"></div>
+
+                    <div style="margin-top: 16px; border-top: 1px solid #E5E7EB; padding-top: 16px;">
+                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;">Ответить пользователю в ВК</label>
+                        <textarea id="vk-reply-text" rows="3" placeholder="Введите сообщение..." style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 8px; resize: vertical; font-family: inherit; font-size: 14px; box-sizing: border-box;"></textarea>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
+                            <button id="vk-reply-btn" class="btn btn-primary" type="button">Отправить во ВКонтакте</button>
+                            <span id="vk-reply-status" style="font-size: 13px; color: #6B7280;"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+            (function () {
+                const alertId   = <?php echo (int)$alert['id']; ?>;
+                const csrfToken = <?php echo json_encode($csrfToken); ?>;
+                const btn       = document.getElementById('vk-reply-btn');
+                const textarea  = document.getElementById('vk-reply-text');
+                const status    = document.getElementById('vk-reply-status');
+                const feed      = document.getElementById('vk-messages-feed');
+
+                btn.addEventListener('click', function () {
+                    const message = textarea.value.trim();
+                    if (!message) {
+                        status.textContent = 'Введите сообщение';
+                        status.style.color = '#DC2626';
+                        return;
+                    }
+
+                    btn.disabled = true;
+                    status.textContent = 'Отправляем…';
+                    status.style.color = '#6B7280';
+
+                    const data = new URLSearchParams({
+                        alert_id: alertId,
+                        message: message,
+                        csrf_token: csrfToken,
+                    });
+
+                    fetch('/ajax/alert_reply_vk.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: data.toString(),
+                    })
+                    .then(r => r.json())
+                    .then(function (json) {
+                        if (json.success) {
+                            const now = new Date().toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+                            const div = document.createElement('div');
+                            div.style.cssText = 'margin-bottom:12px;padding:12px 16px;border-radius:10px;background:#EEF4FF;border-left:3px solid #0077FF;';
+                            div.innerHTML = '<div style="font-size:12px;color:#6B7280;margin-bottom:6px;"><strong>↗ Ответ поддержки</strong> • ' + now + '</div>'
+                                + '<div style="white-space:pre-wrap;line-height:1.5;font-size:14px;">' + message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+                            feed.appendChild(div);
+                            textarea.value = '';
+                            status.textContent = 'Отправлено';
+                            status.style.color = '#16A34A';
+                        } else {
+                            status.textContent = 'Ошибка: ' + (json.message || 'неизвестная ошибка');
+                            status.style.color = '#DC2626';
+                        }
+                    })
+                    .catch(function () {
+                        status.textContent = 'Сетевая ошибка';
+                        status.style.color = '#DC2626';
+                    })
+                    .finally(function () {
+                        btn.disabled = false;
+                    });
+                });
+            })();
+            </script>
         <?php endif; ?>
 
         <?php if (!empty($chatMessages)): ?>

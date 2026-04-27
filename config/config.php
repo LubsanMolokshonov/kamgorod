@@ -104,6 +104,20 @@ if (!defined('SMTP_BULK_PASSWORD_1')) define('SMTP_BULK_PASSWORD_1', $_ENV['SMTP
 if (!defined('SMTP_BULK_USERNAME_2')) define('SMTP_BULK_USERNAME_2', $_ENV['SMTP_BULK_USERNAME_2'] ?? '');
 if (!defined('SMTP_BULK_PASSWORD_2')) define('SMTP_BULK_PASSWORD_2', $_ENV['SMTP_BULK_PASSWORD_2'] ?? '');
 
+// IMAP (приём входящих писем поддержки — для cron/process-inbound-emails.php)
+if (!defined('IMAP_HOST')) define('IMAP_HOST', $_ENV['IMAP_HOST'] ?? SMTP_HOST);
+if (!defined('IMAP_PORT')) define('IMAP_PORT', (int)($_ENV['IMAP_PORT'] ?? 993));
+if (!defined('IMAP_USERNAME')) define('IMAP_USERNAME', $_ENV['IMAP_USERNAME'] ?? SMTP_USERNAME);
+if (!defined('IMAP_PASSWORD')) define('IMAP_PASSWORD', $_ENV['IMAP_PASSWORD'] ?? SMTP_PASSWORD);
+if (!defined('IMAP_ENCRYPTION')) define('IMAP_ENCRYPTION', $_ENV['IMAP_ENCRYPTION'] ?? 'ssl');
+if (!defined('IMAP_MAILBOX')) define('IMAP_MAILBOX', $_ENV['IMAP_MAILBOX'] ?? 'INBOX');
+
+// ВКонтакте Callback API (алерты из сообщений группы)
+if (!defined('VK_CALLBACK_SECRET')) define('VK_CALLBACK_SECRET', $_ENV['VK_CALLBACK_SECRET'] ?? '');
+if (!defined('VK_CONFIRMATION_STRING')) define('VK_CONFIRMATION_STRING', $_ENV['VK_CONFIRMATION_STRING'] ?? '');
+if (!defined('VK_COMMUNITY_TOKEN')) define('VK_COMMUNITY_TOKEN', $_ENV['VK_COMMUNITY_TOKEN'] ?? '');
+if (!defined('VK_GROUP_ID')) define('VK_GROUP_ID', (int)($_ENV['VK_GROUP_ID'] ?? 0));
+
 // Session Configuration
 if (!defined('SESSION_LIFETIME')) define('SESSION_LIFETIME', $_ENV['SESSION_LIFETIME'] ?? 86400);
 if (!defined('COOKIE_LIFETIME')) define('COOKIE_LIFETIME', $_ENV['COOKIE_LIFETIME'] ?? 2592000); // 30 days
