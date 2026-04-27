@@ -99,8 +99,10 @@ class VkInboundProcessor
             ]);
 
         } catch (Throwable $e) {
-            ai_log('VK', 'Ошибка классификации message_id=' . $msgId, ['error' => $e->getMessage()]);
-            $this->logEntry($msgId, $peerId, $fromId, $fromName, $text, $receivedAt, 'error', 'exception', null, null);
+            $errMsg = $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine();
+            ai_log('VK', 'Ошибка классификации message_id=' . $msgId, ['error' => $errMsg]);
+            error_log('[VkInboundProcessor] exception message_id=' . $msgId . ': ' . $errMsg);
+            $this->logEntry($msgId, $peerId, $fromId, $fromName ?? null, $text, $receivedAt, 'error', 'exception', null, null);
             return $this->result('error', 'exception');
         }
 
