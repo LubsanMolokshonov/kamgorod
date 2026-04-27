@@ -123,6 +123,7 @@ try {
     $mail->Host     = SMTP_HOST;
     $mail->Port     = SMTP_PORT;
     $mail->CharSet  = 'UTF-8';
+    $mail->Timeout  = 15;
     if (!empty(SMTP_USERNAME)) {
         $mail->SMTPAuth   = true;
         $mail->Username   = SMTP_USERNAME;
