@@ -68,8 +68,7 @@ try {
         exit;
     }
 
-    // Sanitize FIO (remove potentially dangerous characters but keep Cyrillic, Latin, spaces, dots, dashes)
-    $fio = htmlspecialchars($fio, ENT_QUOTES, 'UTF-8');
+    // ФИО хранится как сырой текст; HTML-экранирование — на выводе.
 
     // Validate email format
     if (empty($email)) {
@@ -114,7 +113,6 @@ try {
         ]);
         exit;
     }
-    $school = htmlspecialchars($school, ENT_QUOTES, 'UTF-8');
 
     // Validate city
     if (empty($city) || mb_strlen($city, 'UTF-8') < 2) {
@@ -131,7 +129,6 @@ try {
         ]);
         exit;
     }
-    $city = htmlspecialchars($city, ENT_QUOTES, 'UTF-8');
 
     // ========================================
     // Find or create user (using PDO directly)

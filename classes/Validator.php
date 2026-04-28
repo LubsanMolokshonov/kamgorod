@@ -164,13 +164,17 @@ class Validator {
 
     /**
      * Sanitize string
+     *
+     * Только trim. HTML-экранирование выполняется на выводе
+     * (htmlspecialchars в шаблонах/генераторах дипломов).
+     * Хранение HTML-сущностей в БД ломает PDF/SVG-рендер дипломов.
      */
     public static function sanitize($value) {
         if (is_array($value)) {
             return array_map([self::class, 'sanitize'], $value);
         }
 
-        return htmlspecialchars(trim($value), ENT_QUOTES, 'UTF-8');
+        return is_string($value) ? trim($value) : $value;
     }
 
     /**

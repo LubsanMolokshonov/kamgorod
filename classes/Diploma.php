@@ -593,8 +593,7 @@ HTML;
         $color = $position['color'] ?? '#000000';
         $maxWidth = $position['max_width'] ?? '200';
 
-        // Properly escape HTML but preserve UTF-8
-        $escapedText = htmlspecialchars(html_entity_decode($text, ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
+        $escapedText = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
 
         // Calculate positioning
         $width = $maxWidth . 'mm';

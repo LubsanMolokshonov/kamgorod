@@ -377,8 +377,7 @@ class DiplomaPreview
         // Truncate long text
         $text = $this->truncateText($text, $maxLength);
 
-        // Escape text for XML
-        $escapedText = htmlspecialchars(html_entity_decode($text, ENT_QUOTES, 'UTF-8'), ENT_XML1, 'UTF-8');
+        $escapedText = htmlspecialchars($text, ENT_XML1, 'UTF-8');
 
         // Use DejaVu Sans for Cyrillic support (matches PDF)
         return sprintf(
