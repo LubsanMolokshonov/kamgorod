@@ -211,28 +211,35 @@ function sendPaymentSuccessEmail($userId, $orderId) {
             throw new Exception('Order or user not found');
         }
 
-        // PDF-вложения сознательно не прикладываем — letting Yandex/Mail.ru не нравятся
-        // тяжёлые base64-письма с PDF, ловят их в spam-фильтр (554 5.7.1).
-        // Документы доступны по magic-link-кнопкам в теле письма + в личном кабинете.
+        // ⚠️ ВРЕМЕННЫЙ РЕЖИМ до 2026-05-11 (warmup info@fgos.pro в Яндекс 360):
+        // HTML-шаблон payment_success режется Яндексом как СПАМ
+        // (554 5.7.1 Message rejected under suspicion of SPAM).
+        // Шлём упрощённый plain-text с magic-link на личный кабинет —
+        // он проходит фильтр.
+        // После 2026-05-11 вернуть HTML-вариант (см. git history этого блока).
+        require_once __DIR__ . '/magic-link-helper.php';
 
-        // Initialize and configure PHPMailer
         $mail = new PHPMailer(true);
         configureMailer($mail);
-
-        // Recipients
         $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
         $mail->addAddress($user['email'], $user['full_name']);
 
-        // Content
-        $mail->isHTML(true);
-        $mail->Subject = mb_encode_mimeheader('Ваши документы по заказу ' . $order['order_number'], 'UTF-8', 'B');
+        $cabinetUrl = generateMagicUrl((int)$userId, '/kabinet/', 14);
+        $name  = trim((string)($user['full_name'] ?? ''));
+        $greet = $name !== '' ? "Здравствуйте, {$name}!" : 'Здравствуйте!';
 
-        // Build email body
-        $htmlBody = buildSuccessEmailBody($order, $user, []);
-        $textBody = buildSuccessEmailBodyText($order, $user, []);
+        $textBody  = $greet . "\n\n";
+        $textBody .= "Спасибо за оплату заказа {$order['order_number']} на сайте Педагогического портала «Каменный город» (fgos.pro).\n\n";
+        $textBody .= "Все ваши документы (дипломы и сертификаты) сформированы и доступны в личном кабинете по ссылке:\n";
+        $textBody .= $cabinetUrl . "\n\n";
+        $textBody .= "Ссылка действует 14 дней и автоматически авторизует вас на сайте.\n\n";
+        $textBody .= "Если возникнут вопросы — ответьте на это письмо или напишите на info@fgos.pro.\n\n";
+        $textBody .= "С уважением,\nКоманда Педагогического портала «Каменный город»\nfgos.pro\n";
 
-        $mail->Body = $htmlBody;
-        $mail->AltBody = $textBody;
+        $mail->isHTML(false);
+        $mail->CharSet = 'UTF-8';
+        $mail->Subject = 'Документы по заказу ' . $order['order_number'] . ' (личный кабинет)';
+        $mail->Body = $textBody;
 
         sendWithRetry($mail, [
             'email_type'      => 'payment',
@@ -241,7 +248,7 @@ function sendPaymentSuccessEmail($userId, $orderId) {
             'recipient_email' => $user['email'],
         ]);
 
-        logEmail('SUCCESS', $user['email'], $order['order_number'], "Payment success email sent (no attachments — links via magic-auth)");
+        logEmail('SUCCESS', $user['email'], $order['order_number'], "Payment success email sent (plain-text fallback during Yandex warmup)");
         return true;
 
     } catch (Exception $e) {
