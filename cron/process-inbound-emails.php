@@ -9,9 +9,10 @@
  *   - явные алерты → создаёт запись в support_alerts с source='email';
  *   - всё остальное → помечает \Seen и оставляет в INBOX (лог в inbound_email_log).
  *
- * Расписание: каждые 5 минут.
- * Crontab (Docker prod):
- *   0,5,10,15,20,25,30,35,40,45,50,55 * * * * docker exec pedagogy_web php /var/www/html/cron/process-inbound-emails.php >> /var/log/cron-inbound.log 2>&1
+ * IMAP-доступ через webklex/php-imap (pure PHP), чтобы не тащить native imap-extension
+ * (libc-client deprecated в Debian Bookworm).
+ *
+ * Расписание: каждые 5 минут (см. Dockerfile, /etc/cron.d/email-automation).
  *
  * Флаги окружения:
  *   DRY_RUN=1 — не пишет в support_alerts/alert_messages, не ставит \Seen, только лог в inbound_email_log.
@@ -21,19 +22,34 @@ if (php_sapi_name() !== 'cli') {
     die('CLI only');
 }
 
-set_time_limit(0);
-
-if (!function_exists('imap_open')) {
-    fwrite(STDERR, "PHP IMAP extension is not enabled\n");
-    exit(1);
-}
+// Хард-лимит по времени: cron запускается каждые 5 минут, поэтому скрипт обязан
+// уложиться, иначе предыдущий процесс будет держать lock и блокировать следующие.
+// 28.04.2026 был случай: webklex IMAP завис на 22 часа, lock не снимался — все
+// последующие запуски выходили из-за «Another instance is running».
+set_time_limit(240);
+ini_set('default_socket_timeout', '30'); // и для IMAP-сокета вебклекса
 
 define('BASE_PATH', dirname(__DIR__));
 
 require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/database.php';
+
+// bootstrap.php читает ключи через getenv() — прокидываем PHP-константы в env
+putenv('YANDEX_GPT_API_KEY=' . YANDEX_GPT_API_KEY);
+putenv('YANDEX_GPT_FOLDER_ID=' . YANDEX_GPT_FOLDER_ID);
+putenv('YANDEX_GPT_MODEL=' . (defined('YANDEX_GPT_MODEL') ? YANDEX_GPT_MODEL : 'yandexgpt-lite'));
+putenv('DB_HOST=' . DB_HOST);
+putenv('DB_NAME=' . DB_NAME);
+putenv('DB_USER=' . DB_USER);
+putenv('DB_PASS=' . DB_PASS);
+putenv('SITE_URL=' . SITE_URL);
+
+require_once BASE_PATH . '/vendor/autoload.php';
 require_once BASE_PATH . '/ai-consultant/src/bootstrap.php';
 require_once BASE_PATH . '/classes/TelegramNotifier.php';
+
+use Webklex\PHPIMAP\ClientManager;
+use Webklex\PHPIMAP\Message;
 
 TelegramNotifier::registerFatalHandler('process-inbound-emails');
 
@@ -43,50 +59,82 @@ $lockFile = '/tmp/inbound_emails.lock';
 
 if (file_exists($lockFile)) {
     $lockAge = time() - filemtime($lockFile);
-    if ($lockAge > 600) {
+    $lockPid = (int)trim((string)@file_get_contents($lockFile));
+    // Считаем lock протухшим, если: (а) старше 5 минут (= cron-интервалу); либо
+    // (б) процесса с таким PID уже нет (предыдущий упал, не успев убрать lock).
+    $pidAlive = $lockPid > 0 && posix_kill($lockPid, 0);
+    if ($lockAge > 300 || !$pidAlive) {
         unlink($lockFile);
-        echo date('Y-m-d H:i:s') . " - Stale lock removed (age={$lockAge}s)\n";
+        echo date('Y-m-d H:i:s') . " - Stale lock removed (age={$lockAge}s, pid={$lockPid}, alive=" . ($pidAlive ? 'yes' : 'no') . ")\n";
     } else {
-        echo date('Y-m-d H:i:s') . " - Another instance is running. Exiting.\n";
+        echo date('Y-m-d H:i:s') . " - Another instance is running (pid={$lockPid}, age={$lockAge}s). Exiting.\n";
         exit(0);
     }
 }
 file_put_contents($lockFile, getmypid());
 
-$mbx = null;
+// Гарантированное снятие lock-а на любом выходе из скрипта (включая fatal).
+register_shutdown_function(static function () use ($lockFile) {
+    if (file_exists($lockFile) && (int)trim((string)@file_get_contents($lockFile)) === getmypid()) {
+        @unlink($lockFile);
+    }
+});
+
+$client = null;
 try {
     if (IMAP_USERNAME === '' || IMAP_PASSWORD === '') {
         throw new RuntimeException('IMAP credentials not configured (IMAP_USERNAME / IMAP_PASSWORD)');
     }
 
-    $mailboxRef = sprintf('{%s:%d/imap/%s}%s', IMAP_HOST, IMAP_PORT, IMAP_ENCRYPTION, IMAP_MAILBOX);
-    echo date('Y-m-d H:i:s') . " - Opening {$mailboxRef} ...\n";
+    $cm = new ClientManager();
+    $client = $cm->make([
+        'host'           => IMAP_HOST,
+        'port'           => IMAP_PORT,
+        'encryption'     => IMAP_ENCRYPTION === 'ssl' ? 'ssl' : (IMAP_ENCRYPTION ?: 'ssl'),
+        'validate_cert'  => true,
+        'username'       => IMAP_USERNAME,
+        'password'       => IMAP_PASSWORD,
+        'protocol'       => 'imap',
+        'authentication' => null,
+        'timeout'        => 30,
+    ]);
+    // На случай если клиент уже был построен с дефолтом — пробросим явно.
+    if (method_exists($client, 'getConnection') && $client->getConnection()) {
+        $conn = $client->getConnection();
+        if (method_exists($conn, 'setConnectionTimeout')) {
+            $conn->setConnectionTimeout(30);
+        }
+    }
+    echo date('Y-m-d H:i:s') . sprintf(" - Connecting to %s:%d as %s ...\n", IMAP_HOST, IMAP_PORT, IMAP_USERNAME);
+    $client->connect();
 
-    // 0 = read-write (нужно, чтобы ставить флаг \Seen)
-    $mbx = @imap_open($mailboxRef, IMAP_USERNAME, IMAP_PASSWORD, 0);
-    if (!$mbx) {
-        throw new RuntimeException('imap_open failed: ' . imap_last_error());
+    $folder = $client->getFolderByPath(IMAP_MAILBOX);
+    if (!$folder) {
+        throw new RuntimeException('IMAP folder not found: ' . IMAP_MAILBOX);
     }
 
-    $uids = imap_search($mbx, 'UNSEEN', SE_UID) ?: [];
-    if (empty($uids)) {
+    /** @var \Webklex\PHPIMAP\Support\MessageCollection $messages */
+    $messages = $folder->query()
+        ->unseen()
+        ->setFetchOrder('asc')
+        ->limit($batchLimit)
+        ->get();
+
+    if ($messages->isEmpty()) {
         echo date('Y-m-d H:i:s') . " - No unseen messages.\n";
         exit(0);
     }
-    if (count($uids) > $batchLimit) {
-        $uids = array_slice($uids, 0, $batchLimit);
-    }
-    echo date('Y-m-d H:i:s') . " - Processing " . count($uids) . " unseen message(s)" . ($dryRun ? ' [DRY_RUN]' : '') . "\n";
+    echo date('Y-m-d H:i:s') . " - Processing " . $messages->count() . " unseen message(s)" . ($dryRun ? ' [DRY_RUN]' : '') . "\n";
 
     $alertService = new AlertService($db);
     $processor = new InboundEmailProcessor($db, $alertService, 0.6, $dryRun);
 
     $stats = ['alert_new' => 0, 'alert_reply' => 0, 'not_alert' => 0, 'skipped' => 0, 'error' => 0];
 
-    foreach ($uids as $uid) {
-        $uid = (int)$uid;
+    foreach ($messages as $message) {
+        $uid = (int)$message->getUid();
         try {
-            $email = fetch_message($mbx, $uid);
+            $email = normalize_message($message);
             if ($email === null) {
                 $stats['error']++;
                 continue;
@@ -97,7 +145,7 @@ try {
 
             $shouldMarkSeen = !$dryRun && in_array($result['classification'], ['alert_new', 'alert_reply', 'not_alert', 'skipped'], true);
             if ($shouldMarkSeen) {
-                @imap_setflag_full($mbx, (string)$uid, '\\Seen', ST_UID);
+                try { $message->setFlag('Seen'); } catch (Throwable $ignored) {}
             }
 
             echo date('Y-m-d H:i:s') . sprintf(
@@ -130,8 +178,8 @@ try {
     } catch (Throwable $ignored) {
     }
 } finally {
-    if ($mbx) {
-        @imap_close($mbx);
+    if ($client) {
+        try { $client->disconnect(); } catch (Throwable $ignored) {}
     }
     if (file_exists($lockFile)) {
         unlink($lockFile);
@@ -141,47 +189,75 @@ try {
 // ---------------- helpers ----------------
 
 /**
- * Извлечь Message-ID из заголовков (имя отправителя, тело, attachments) одного письма по UID.
- *
- * @return array|null нормализованный массив для InboundEmailProcessor::process(), либо null при ошибке
+ * Преобразует Webklex\PHPIMAP\Message в нормализованный массив
+ * для InboundEmailProcessor::process().
  */
-function fetch_message($mbx, int $uid): ?array
+function normalize_message(Message $msg): ?array
 {
-    $headersRaw = imap_fetchheader($mbx, $uid, FT_UID);
-    if (!is_string($headersRaw) || $headersRaw === '') return null;
-    $headerObj = imap_rfc822_parse_headers($headersRaw);
+    $uid = (int)$msg->getUid();
 
-    $structure = imap_fetchstructure($mbx, $uid, FT_UID);
-    if (!$structure) return null;
+    $fromList = $msg->getFrom();
+    $fromEmail = '';
+    $fromName = null;
+    if (!empty($fromList) && isset($fromList[0])) {
+        $f = $fromList[0];
+        $fromEmail = strtolower(trim((string)($f->mail ?? '')));
+        $fromName = !empty($f->personal) ? (string)$f->personal : null;
+    }
 
-    $bodyText = '';
-    $bodyHtml = '';
-    $attachments = [];
-    collect_parts($mbx, $uid, $structure, '', $bodyText, $bodyHtml, $attachments);
+    $subject = decode_mime_header(trim((string)$msg->getSubject()));
+    if ($fromName !== null) {
+        $fromName = decode_mime_header($fromName);
+    }
 
+    $messageId = trim((string)$msg->getMessageId());
+    if ($messageId !== '' && $messageId[0] !== '<') {
+        $messageId = '<' . $messageId . '>';
+    }
+
+    $inReplyTo = trim((string)$msg->getInReplyTo());
+    if ($inReplyTo === '') $inReplyTo = null;
+    elseif ($inReplyTo[0] !== '<') $inReplyTo = '<' . $inReplyTo . '>';
+
+    $referencesAttr = $msg->getReferences();
+    $references = null;
+    if ($referencesAttr) {
+        $referencesArr = is_array($referencesAttr->get()) ? $referencesAttr->get() : [(string)$referencesAttr];
+        $referencesArr = array_filter(array_map('strval', $referencesArr));
+        if ($referencesArr) {
+            $references = implode(' ', array_map(static fn($r) => $r[0] === '<' ? $r : '<' . $r . '>', $referencesArr));
+        }
+    }
+
+    try {
+        $dt = $msg->getDate();
+        $receivedAt = $dt ? $dt->format('Y-m-d H:i:s') : date('Y-m-d H:i:s');
+    } catch (Throwable $e) {
+        $receivedAt = date('Y-m-d H:i:s');
+    }
+
+    $bodyText = (string)$msg->getTextBody();
+    $bodyHtml = (string)$msg->getHTMLBody();
     if ($bodyText === '' && $bodyHtml !== '') {
         $bodyText = trim(strip_tags(preg_replace('/<br\s*\/?>/i', "\n", $bodyHtml) ?? $bodyHtml));
     }
 
-    $fromEmail = '';
-    $fromName = null;
-    if (isset($headerObj->from[0])) {
-        $f = $headerObj->from[0];
-        $fromEmail = strtolower(trim(($f->mailbox ?? '') . '@' . ($f->host ?? '')));
-        $fromName = isset($f->personal) ? decode_mime_str($f->personal) : null;
+    $attachments = [];
+    foreach ($msg->getAttachments() as $att) {
+        $attachments[] = [
+            'name' => (string)($att->getName() ?: 'attachment'),
+            'size' => (int)$att->getSize(),
+        ];
     }
 
-    $subject = isset($headerObj->subject) ? decode_mime_str($headerObj->subject) : null;
-    $messageId = isset($headerObj->message_id) ? trim((string)$headerObj->message_id) : '';
-    $inReplyTo = isset($headerObj->in_reply_to) ? trim((string)$headerObj->in_reply_to) : null;
-    $references = null;
-    if (preg_match('/^References:\s*(.+)$/im', $headersRaw, $m)) {
-        $references = trim($m[1]);
+    $headersMap = [];
+    $headerObj = $msg->getHeader();
+    if ($headerObj) {
+        foreach ($headerObj->getAttributes() as $name => $attr) {
+            $val = $attr->toString();
+            $headersMap[strtolower((string)$name)] = $val;
+        }
     }
-    $receivedAt = isset($headerObj->date) ? date('Y-m-d H:i:s', strtotime((string)$headerObj->date) ?: time()) : date('Y-m-d H:i:s');
-
-    // Дополнительно собираем все заголовки в map (для эвристик: Auto-Submitted, Precedence, List-Unsubscribe и т.д.)
-    $headersMap = parse_headers_map($headersRaw);
 
     return [
         'uid' => $uid,
@@ -190,97 +266,30 @@ function fetch_message($mbx, int $uid): ?array
         'references' => $references,
         'from_email' => $fromEmail,
         'from_name' => $fromName,
-        'subject' => $subject,
+        'subject' => $subject !== '' ? $subject : null,
         'body_text' => $bodyText,
         'body_html' => $bodyHtml !== '' ? $bodyHtml : null,
         'attachments' => $attachments,
         'received_at' => $receivedAt,
         'headers' => $headersMap,
-        'raw_size' => strlen($headersRaw) + strlen($bodyText) + strlen($bodyHtml),
+        'raw_size' => strlen($bodyText) + strlen($bodyHtml),
     ];
 }
 
-function collect_parts($mbx, int $uid, $structure, string $partNum, string &$bodyText, string &$bodyHtml, array &$attachments): void
+/**
+ * Декодирует MIME-encoded-word (`=?utf-8?Q?...?=`) → plain UTF-8.
+ * Webklex возвращает Subject/From-name «как есть», поэтому декодируем сами.
+ */
+function decode_mime_header(string $value): string
 {
-    $isMulti = isset($structure->parts) && is_array($structure->parts);
-    if ($isMulti) {
-        foreach ($structure->parts as $i => $sub) {
-            $sub_partNum = $partNum === '' ? (string)($i + 1) : $partNum . '.' . ($i + 1);
-            collect_parts($mbx, $uid, $sub, $sub_partNum, $bodyText, $bodyHtml, $attachments);
-        }
-        return;
+    if ($value === '') return '';
+    if (function_exists('mb_decode_mimeheader')) {
+        $decoded = @mb_decode_mimeheader($value);
+        if ($decoded !== false && $decoded !== '') return $decoded;
     }
-
-    $section = $partNum === '' ? '1' : $partNum;
-    $data = imap_fetchbody($mbx, $uid, $section, FT_UID);
-    if ($data === false || $data === '') return;
-
-    // декодирование передачи
-    switch ((int)($structure->encoding ?? 0)) {
-        case 3: $data = base64_decode($data) ?: ''; break;
-        case 4: $data = quoted_printable_decode($data); break;
+    if (function_exists('iconv_mime_decode')) {
+        $decoded = @iconv_mime_decode($value, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
+        if ($decoded !== false && $decoded !== '') return $decoded;
     }
-
-    $params = [];
-    foreach (($structure->parameters ?? []) as $p) $params[strtolower($p->attribute)] = $p->value;
-    foreach (($structure->dparameters ?? []) as $p) $params[strtolower($p->attribute)] = $p->value;
-    $charset = $params['charset'] ?? 'UTF-8';
-    if (strtoupper($charset) !== 'UTF-8') {
-        $converted = @iconv($charset, 'UTF-8//IGNORE', $data);
-        if ($converted !== false) $data = $converted;
-    }
-
-    $disposition = strtoupper((string)($structure->disposition ?? ''));
-    $filename = $params['filename'] ?? $params['name'] ?? null;
-
-    if ($disposition === 'ATTACHMENT' || $filename) {
-        $attachments[] = [
-            'name' => $filename ?: ('attachment-' . $section),
-            'size' => strlen($data),
-        ];
-        return;
-    }
-
-    $type = (int)($structure->type ?? 0);
-    $subtype = strtoupper((string)($structure->subtype ?? ''));
-    if ($type === 0 /* TYPETEXT */) {
-        if ($subtype === 'PLAIN' && $bodyText === '') {
-            $bodyText = $data;
-        } elseif ($subtype === 'HTML' && $bodyHtml === '') {
-            $bodyHtml = $data;
-        }
-    }
-}
-
-function decode_mime_str(?string $s): ?string
-{
-    if ($s === null || $s === '') return $s;
-    $elements = imap_mime_header_decode($s);
-    $out = '';
-    foreach ($elements as $el) {
-        $charset = $el->charset === 'default' ? 'UTF-8' : $el->charset;
-        $text = $el->text;
-        if (strtoupper($charset) !== 'UTF-8') {
-            $converted = @iconv($charset, 'UTF-8//IGNORE', $text);
-            if ($converted !== false) $text = $converted;
-        }
-        $out .= $text;
-    }
-    return $out;
-}
-
-function parse_headers_map(string $raw): array
-{
-    $map = [];
-    $current = null;
-    foreach (preg_split('/\r?\n/', $raw) as $line) {
-        if ($line === '') continue;
-        if (preg_match('/^([A-Za-z0-9\-]+):\s*(.*)$/', $line, $m)) {
-            $current = strtolower($m[1]);
-            $map[$current] = isset($map[$current]) ? $map[$current] . ',' . $m[2] : $m[2];
-        } elseif ($current !== null && (str_starts_with($line, ' ') || str_starts_with($line, "\t"))) {
-            $map[$current] .= ' ' . trim($line);
-        }
-    }
-    return $map;
+    return $value;
 }
