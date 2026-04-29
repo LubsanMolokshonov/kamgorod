@@ -104,6 +104,12 @@ if (!defined('SMTP_BULK_PASSWORD_1')) define('SMTP_BULK_PASSWORD_1', $_ENV['SMTP
 if (!defined('SMTP_BULK_USERNAME_2')) define('SMTP_BULK_USERNAME_2', $_ENV['SMTP_BULK_USERNAME_2'] ?? '');
 if (!defined('SMTP_BULK_PASSWORD_2')) define('SMTP_BULK_PASSWORD_2', $_ENV['SMTP_BULK_PASSWORD_2'] ?? '');
 
+// Прогрев Яндекс-ящиков rodion@/kazakova@: пока дата в будущем — chain-кроны выходят без отправки.
+// Чтобы снять паузу досрочно — выставить пустую строку или прошедшую дату.
+if (!defined('CHAINS_PAUSED_UNTIL')) define('CHAINS_PAUSED_UNTIL', $_ENV['CHAINS_PAUSED_UNTIL'] ?? '2026-05-11');
+// Минимальный интервал между chain-письмами одному получателю (минуты). 0 = отключено.
+if (!defined('CHAIN_MIN_INTERVAL_MINUTES')) define('CHAIN_MIN_INTERVAL_MINUTES', (int)($_ENV['CHAIN_MIN_INTERVAL_MINUTES'] ?? 240));
+
 // IMAP (приём входящих писем поддержки — для cron/process-inbound-emails.php)
 if (!defined('IMAP_HOST')) define('IMAP_HOST', $_ENV['IMAP_HOST'] ?? SMTP_HOST);
 if (!defined('IMAP_PORT')) define('IMAP_PORT', (int)($_ENV['IMAP_PORT'] ?? 993));

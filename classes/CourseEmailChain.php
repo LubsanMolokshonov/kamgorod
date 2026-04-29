@@ -105,6 +105,12 @@ class CourseEmailChain {
      * Отправить все письма, у которых наступило время
      */
     public function processPendingEmails() {
+        require_once BASE_PATH . '/includes/email-helper.php';
+        if (chainEmailsPaused()) {
+            $this->log("PROCESS | PAUSED until " . CHAINS_PAUSED_UNTIL . " — skip");
+            return ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'paused' => true];
+        }
+
         $now = date('Y-m-d H:i:s');
 
         $pendingEmails = $this->db->query(
@@ -155,6 +161,11 @@ class CourseEmailChain {
 
             if ($this->isUnsubscribed($email['email'])) {
                 $this->updateEmailStatus($email['id'], 'skipped', 'User unsubscribed');
+                $results['skipped']++;
+                continue;
+            }
+
+            if (recipientRecentlyEmailed($this->pdo, $email['email'], CHAIN_MIN_INTERVAL_MINUTES)) {
                 $results['skipped']++;
                 continue;
             }

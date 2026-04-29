@@ -110,6 +110,12 @@ class SilentReengagementCampaign {
      * @return array ['sent'=>N, 'skipped'=>N, 'failed'=>N]
      */
     public function send(int $limit, bool $dryRun = false): array {
+        require_once BASE_PATH . '/includes/email-helper.php';
+        if (chainEmailsPaused() && !$dryRun) {
+            $this->log("SEND | PAUSED until " . CHAINS_PAUSED_UNTIL . " — skip");
+            return ['sent' => 0, 'skipped' => 0, 'failed' => 0, 'paused' => true];
+        }
+
         $rows = $this->db->query(
             "SELECT id, user_id, email, segment FROM silent_reengagement_log
               WHERE campaign_code=? AND status='pending'

@@ -237,6 +237,12 @@ class CoursePromoEmailCampaign {
      * Обработать один batch писем
      */
     public function processBatch(): array {
+        require_once BASE_PATH . '/includes/email-helper.php';
+        if (chainEmailsPaused()) {
+            $this->log("BATCH | PAUSED until " . CHAINS_PAUSED_UNTIL . " — skip");
+            return ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'paused' => true];
+        }
+
         $results = ['sent' => 0, 'failed' => 0, 'skipped' => 0];
 
         $pending = $this->db->query(
@@ -259,6 +265,11 @@ class CoursePromoEmailCampaign {
             // Проверка отписки
             if ($this->isUnsubscribed($emailData['email'])) {
                 $this->updateStatus($emailData['id'], 'skipped', 'User unsubscribed');
+                $results['skipped']++;
+                continue;
+            }
+
+            if (recipientRecentlyEmailed($this->pdo, $emailData['email'], CHAIN_MIN_INTERVAL_MINUTES)) {
                 $results['skipped']++;
                 continue;
             }

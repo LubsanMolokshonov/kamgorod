@@ -181,6 +181,12 @@ class WebinarEmailJourney {
      * @return array Results with counts
      */
     public function processPendingEmails() {
+        require_once BASE_PATH . '/includes/email-helper.php';
+        if (chainEmailsPaused()) {
+            $this->log("PROCESS | PAUSED until " . CHAINS_PAUSED_UNTIL . " — skip");
+            return ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'paused' => true];
+        }
+
         $now = date('Y-m-d H:i:s');
 
         $pendingEmails = $this->db->query(
@@ -219,6 +225,11 @@ class WebinarEmailJourney {
             // Check unsubscribe
             if ($this->isUnsubscribed($emailData['email'])) {
                 $this->updateEmailStatus($emailData['id'], 'skipped', 'User unsubscribed');
+                $results['skipped']++;
+                continue;
+            }
+
+            if (recipientRecentlyEmailed($this->pdo, $emailData['email'], CHAIN_MIN_INTERVAL_MINUTES)) {
                 $results['skipped']++;
                 continue;
             }

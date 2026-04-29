@@ -227,6 +227,12 @@ class PublicationEmailChain {
         }
 
         // Шаг 3: Обработать очередь отправки
+        require_once BASE_PATH . '/includes/email-helper.php';
+        if (chainEmailsPaused()) {
+            $this->log("PROCESS | PAUSED until " . CHAINS_PAUSED_UNTIL . " — schedule only, skip send");
+            return ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'paused' => true];
+        }
+
         $pendingEmails = $this->db->query(
             "SELECT pel.*, t.email_subject, t.email_template, t.code as touchpoint_code, t.chain_type,
                     p.title as publication_title, p.slug as publication_slug,
@@ -276,6 +282,11 @@ class PublicationEmailChain {
 
             if ($this->isUnsubscribed($emailData['email'])) {
                 $this->updateEmailStatus($emailData['id'], 'skipped', 'User unsubscribed');
+                $results['skipped']++;
+                continue;
+            }
+
+            if (recipientRecentlyEmailed($this->pdo, $emailData['email'], CHAIN_MIN_INTERVAL_MINUTES)) {
                 $results['skipped']++;
                 continue;
             }

@@ -12,6 +12,35 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 /**
+ * Включена ли пауза на chain-рассылки.
+ * Используется в cron/process-*-emails.php и в send-методах chain-классов:
+ * пока новые ящики rodion@/kazakova@ прогреваются, лучше не отправлять
+ * массовые цепочки — они тянут вниз репутацию и блокируют транзакционку.
+ */
+function chainEmailsPaused(): bool {
+    if (!defined('CHAINS_PAUSED_UNTIL') || CHAINS_PAUSED_UNTIL === '') return false;
+    $until = strtotime(CHAINS_PAUSED_UNTIL);
+    return $until !== false && time() < $until;
+}
+
+/**
+ * Был ли получателю отправлен какой-либо учётный email за последние N минут.
+ * Используется для дросселирования chain-кронов: если человек уже получал
+ * письмо недавно — пропускаем (оставляем в pending), чтобы не выглядеть
+ * спам-ботом перед фильтрами Яндекса/Mail.ru.
+ */
+function recipientRecentlyEmailed(PDO $pdo, string $email, int $minutes): bool {
+    if ($minutes <= 0 || $email === '') return false;
+    $stmt = $pdo->prepare(
+        "SELECT 1 FROM email_events
+         WHERE recipient_email = ? AND sent_at >= NOW() - INTERVAL ? MINUTE
+         LIMIT 1"
+    );
+    $stmt->execute([$email, $minutes]);
+    return (bool)$stmt->fetchColumn();
+}
+
+/**
  * Configure PHPMailer with SMTP settings
  * Supports both authenticated and relay modes
  */
@@ -182,8 +211,9 @@ function sendPaymentSuccessEmail($userId, $orderId) {
             throw new Exception('Order or user not found');
         }
 
-        // Collect PDF attachments for all order items
-        $attachments = collectOrderAttachments($db, $order['items']);
+        // PDF-вложения сознательно не прикладываем — letting Yandex/Mail.ru не нравятся
+        // тяжёлые base64-письма с PDF, ловят их в spam-фильтр (554 5.7.1).
+        // Документы доступны по magic-link-кнопкам в теле письма + в личном кабинете.
 
         // Initialize and configure PHPMailer
         $mail = new PHPMailer(true);
@@ -198,16 +228,11 @@ function sendPaymentSuccessEmail($userId, $orderId) {
         $mail->Subject = mb_encode_mimeheader('Ваши документы по заказу ' . $order['order_number'], 'UTF-8', 'B');
 
         // Build email body
-        $htmlBody = buildSuccessEmailBody($order, $user, $attachments);
-        $textBody = buildSuccessEmailBodyText($order, $user, $attachments);
+        $htmlBody = buildSuccessEmailBody($order, $user, []);
+        $textBody = buildSuccessEmailBodyText($order, $user, []);
 
         $mail->Body = $htmlBody;
         $mail->AltBody = $textBody;
-
-        // Attach PDF documents
-        foreach ($attachments as $att) {
-            $mail->addAttachment($att['path'], $att['name']);
-        }
 
         sendWithRetry($mail, [
             'email_type'      => 'payment',
@@ -216,8 +241,7 @@ function sendPaymentSuccessEmail($userId, $orderId) {
             'recipient_email' => $user['email'],
         ]);
 
-        $attachCount = count($attachments);
-        logEmail('SUCCESS', $user['email'], $order['order_number'], "Payment success email sent with {$attachCount} attachment(s)");
+        logEmail('SUCCESS', $user['email'], $order['order_number'], "Payment success email sent (no attachments — links via magic-auth)");
         return true;
 
     } catch (Exception $e) {
@@ -354,61 +378,54 @@ function collectOrderAttachments($db, $items) {
  */
 function buildSuccessEmailBody($order, $user, $attachments = []) {
     $siteUrl = SITE_URL;
-    $cabinetLink = generateMagicUrl($user['id'], '/pages/cabinet.php');
+    $cabinetLink = generateMagicUrl($user['id'], '/pages/cabinet.php?tab=diplomas');
     $orderNumber = htmlspecialchars($order['order_number']);
     $fullName = htmlspecialchars($user['full_name']);
     $finalAmount = number_format($order['final_amount'], 0, ',', ' ');
     $discountAmount = number_format($order['discount_amount'], 0, ',', ' ');
     $paidDate = date('d.m.Y H:i', strtotime($order['paid_at'] ?? $order['created_at']));
 
-    // Build items list for all document types
+    // Каждая строка таблицы — название документа + кнопка «Скачать», ведущая через
+    // magic-auth (авто-логин по токену) на соответствующий /ajax/download-*-эндпоинт.
+    // PDF не вкладываем в письмо — это давит спам-фильтры Яндекса/Mail.ru.
+    $btnStyle = 'display:inline-block;background:#667eea;color:#ffffff;text-decoration:none;padding:6px 16px;border-radius:4px;font-size:13px;font-weight:600;white-space:nowrap;';
+    $tdStyle  = 'padding:10px 12px;border-bottom:1px solid #eee;vertical-align:middle;';
+
     $itemsHtml = '';
     foreach ($order['items'] as $item) {
-        if (!empty($item['registration_id']) && !empty($item['competition_title'])) {
-            $title = htmlspecialchars($item['competition_title']);
-            $nomination = htmlspecialchars($item['nomination'] ?? '');
-            $nominationText = $nomination ? ", номинация: {$nomination}" : '';
-            $itemsHtml .= "<tr><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\">Диплом</td><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\"><strong>{$title}</strong>{$nominationText}</td></tr>";
-        }
-        if (!empty($item['certificate_id']) && !empty($item['publication_title'])) {
-            $title = htmlspecialchars($item['publication_title']);
-            $itemsHtml .= "<tr><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\">Свидетельство</td><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\"><strong>{$title}</strong></td></tr>";
-        }
-        if (!empty($item['webinar_certificate_id']) && !empty($item['webinar_title'])) {
-            $title = htmlspecialchars($item['webinar_title']);
-            $itemsHtml .= "<tr><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\">Сертификат</td><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\"><strong>{$title}</strong></td></tr>";
-        }
-        if (!empty($item['olympiad_registration_id']) && !empty($item['olympiad_title'])) {
-            $title = htmlspecialchars($item['olympiad_title']);
-            $placement = !empty($item['olympiad_placement']) ? ', ' . htmlspecialchars($item['olympiad_placement']) . ' место' : '';
-            $itemsHtml .= "<tr><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\">Диплом олимпиады</td><td style=\"padding: 8px 12px; border-bottom: 1px solid #eee;\"><strong>{$title}</strong>{$placement}</td></tr>";
-        }
-    }
+        $docType = null; $title = null; $extra = ''; $downloadUrl = null;
 
-    // Attachment notice
-    $attachmentHtml = '';
-    if (!empty($attachments)) {
-        $attachCount = count($attachments);
-        $attachmentHtml = <<<HTML
-            <div style="background: #e8f5e9; padding: 16px 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #4caf50;">
-                <p style="margin: 0 0 8px 0; font-weight: bold; color: #2e7d32;">К этому письму прикреплены ваши документы ({$attachCount} шт.):</p>
-                <ul style="margin: 0; padding-left: 20px; color: #333;">
-HTML;
-        foreach ($attachments as $att) {
-            $docType = match($att['type']) {
-                'diploma' => 'Диплом',
-                'certificate' => 'Свидетельство о публикации',
-                'webinar_certificate' => 'Сертификат участника вебинара',
-                'olympiad_diploma' => 'Диплом олимпиады',
-                default => 'Документ'
-            };
-            $attTitle = htmlspecialchars($att['title']);
-            $attachmentHtml .= "<li>{$docType}: {$attTitle}</li>";
+        if (!empty($item['registration_id']) && !empty($item['competition_title'])) {
+            $docType = 'Диплом';
+            $title = $item['competition_title'];
+            $nomination = $item['nomination'] ?? '';
+            if ($nomination !== '') $extra = ', номинация: ' . htmlspecialchars($nomination);
+            $downloadUrl = generateMagicUrl((int)$user['id'], '/ajax/download-diploma.php?registration_id=' . (int)$item['registration_id'] . '&type=participant');
+        } elseif (!empty($item['certificate_id']) && !empty($item['publication_title'])) {
+            $docType = 'Свидетельство';
+            $title = $item['publication_title'];
+            $downloadUrl = generateMagicUrl((int)$user['id'], '/ajax/download-certificate.php?id=' . (int)$item['certificate_id']);
+        } elseif (!empty($item['webinar_certificate_id']) && !empty($item['webinar_title'])) {
+            $docType = 'Сертификат';
+            $title = $item['webinar_title'];
+            $downloadUrl = generateMagicUrl((int)$user['id'], '/ajax/download-webinar-certificate.php?id=' . (int)$item['webinar_certificate_id']);
+        } elseif (!empty($item['olympiad_registration_id']) && !empty($item['olympiad_title'])) {
+            $docType = 'Диплом олимпиады';
+            $title = $item['olympiad_title'];
+            if (!empty($item['olympiad_placement'])) $extra = ', ' . htmlspecialchars($item['olympiad_placement']) . ' место';
+            $downloadUrl = generateMagicUrl((int)$user['id'], '/ajax/download-olympiad-diploma.php?id=' . (int)$item['olympiad_registration_id'] . '&type=participant');
         }
-        $attachmentHtml .= <<<HTML
-                </ul>
-            </div>
-HTML;
+
+        if (!$docType) continue;
+        $titleHtml = htmlspecialchars($title);
+        $downloadCell = $downloadUrl
+            ? "<a href=\"{$downloadUrl}\" style=\"{$btnStyle}\">Скачать</a>"
+            : '<span style="color:#999;font-size:13px;">Готовится</span>';
+        $itemsHtml .= "<tr>"
+            . "<td style=\"{$tdStyle}\">{$docType}</td>"
+            . "<td style=\"{$tdStyle}\"><strong>{$titleHtml}</strong>{$extra}</td>"
+            . "<td style=\"{$tdStyle}text-align:right;\">{$downloadCell}</td>"
+            . "</tr>";
     }
 
     // Discount row
@@ -471,9 +488,7 @@ WEBINAR;
         <div class="content">
             <p>Здравствуйте, <strong>{$fullName}</strong>!</p>
 
-            <p>Спасибо, что выбрали наш портал! Ваш заказ успешно оплачен, и мы рады отправить вам ваши документы.</p>
-
-            {$attachmentHtml}
+            <p>Ваш заказ успешно оплачен. Документы готовы — скачайте их по кнопкам ниже или откройте в личном кабинете.</p>
 
             <div class="order-details">
                 <h3>Детали заказа:</h3>
@@ -488,15 +503,14 @@ WEBINAR;
                     <tr>
                         <th>Тип</th>
                         <th>Название</th>
+                        <th style="text-align:right;">Файл</th>
                     </tr>
                     {$itemsHtml}
                 </table>
             </div>
 
-            <p>Все документы также доступны для скачивания в вашем личном кабинете.</p>
-
             <center>
-                <a href="{$cabinetLink}" class="button">Перейти в личный кабинет</a>
+                <a href="{$cabinetLink}" class="button">Открыть в личном кабинете</a>
             </center>
 
             {$webinarRecommendationHtml}
@@ -547,11 +561,8 @@ function buildSuccessEmailBodyText($order, $user, $attachments = []) {
         }
     }
 
-    // Attachment notice
+    // PDF не вкладываем — ссылки на скачивание идут через кабинет (см. ниже).
     $attachText = '';
-    if (!empty($attachments)) {
-        $attachText = "\nК этому письму прикреплены ваши документы (" . count($attachments) . " шт.).\n";
-    }
 
     // Discount line
     $discountLine = '';
@@ -578,15 +589,15 @@ function buildSuccessEmailBodyText($order, $user, $attachments = []) {
 
 Здравствуйте, {$fullName}!
 
-Спасибо, что выбрали наш портал! Ваш заказ успешно оплачен.
-{$attachText}
+Ваш заказ успешно оплачен. Документы готовы — скачайте их в личном кабинете.
+
 Детали заказа:
 - Дата оплаты: {$paidDate}
 - Сумма: {$finalAmount} руб.
 {$discountLine}
 Ваши документы:
 {$itemsText}
-Все документы также доступны для скачивания в личном кабинете:
+Открыть в личном кабинете:
 {$cabinetLink}
 {$webinarRecommendationText}
 Если у вас возникли вопросы, свяжитесь с нами через форму обратной связи на сайте.
