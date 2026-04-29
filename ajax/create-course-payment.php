@@ -193,10 +193,28 @@ try {
                         }
                     }
                 } elseif ($freshEnrollment && !empty($freshEnrollment['bitrix_lead_id'])) {
-                    $bitrix->moveDeal($freshEnrollment['bitrix_lead_id'], $paidStage);
-                    $dbObj->update('course_enrollments', [
-                        'bitrix_stage' => $paidStage,
-                    ], 'id = ?', [$enrollmentId]);
+                    // Не двигаем сделку, если менеджер уже перенёс её в другую воронку (например, ЦДО)
+                    $coursePipelineId = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
+                    $dealData = $bitrix->getDeal($freshEnrollment['bitrix_lead_id']);
+                    $dealCategory = $dealData ? (int)($dealData['CATEGORY_ID'] ?? -1) : -1;
+
+                    if ($dealCategory !== $coursePipelineId) {
+                        if ($dealData && !empty($dealData['STAGE_ID'])) {
+                            $dbObj->update('course_enrollments', [
+                                'bitrix_stage' => $dealData['STAGE_ID'],
+                            ], 'id = ?', [$enrollmentId]);
+                        }
+                        error_log("Local course payment: deal {$freshEnrollment['bitrix_lead_id']} in pipeline {$dealCategory} — not moving");
+                    } else {
+                        $moved = $bitrix->moveDeal($freshEnrollment['bitrix_lead_id'], $paidStage);
+                        if ($moved) {
+                            $dbObj->update('course_enrollments', [
+                                'bitrix_stage' => $paidStage,
+                            ], 'id = ?', [$enrollmentId]);
+                        } else {
+                            error_log("Local course payment: moveDeal FAILED for deal {$freshEnrollment['bitrix_lead_id']} → {$paidStage}");
+                        }
+                    }
                 }
 
                 $db->commit();

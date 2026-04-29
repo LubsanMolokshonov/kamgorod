@@ -379,12 +379,31 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                                 }
                             }
                         } else {
-                            // Cron уже создал сделку — переместить на этап "Оплата на сайте"
-                            $bitrix->moveDeal($enrollment['bitrix_lead_id'], $paidStage);
-                            $dbHelper->update('course_enrollments', [
-                                'bitrix_stage' => $paidStage,
-                            ], 'id = ?', [$item['course_enrollment_id']]);
-                            logWebhook('INFO', $paymentId, "Bitrix24 deal {$enrollment['bitrix_lead_id']} moved to {$paidStage} for enrollment {$item['course_enrollment_id']}", '');
+                            // Сделка уже создана (cron-ом или ajax-ом) — пытаемся перевести в "Сделка успешна".
+                            // Сначала проверяем CATEGORY_ID: если сделка перенесена менеджером в чужую воронку
+                            // (например, ЦДО для подготовки документов), не трогаем — она уже в работе.
+                            $coursePipelineId = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
+                            $dealData = $bitrix->getDeal($enrollment['bitrix_lead_id']);
+                            $dealCategory = $dealData ? (int)($dealData['CATEGORY_ID'] ?? -1) : -1;
+
+                            if ($dealCategory !== $coursePipelineId) {
+                                logWebhook('INFO', $paymentId, "Bitrix24 deal {$enrollment['bitrix_lead_id']} is in pipeline {$dealCategory} (not {$coursePipelineId}) — leaving as-is for enrollment {$item['course_enrollment_id']}", '');
+                                if ($dealData && !empty($dealData['STAGE_ID'])) {
+                                    $dbHelper->update('course_enrollments', [
+                                        'bitrix_stage' => $dealData['STAGE_ID'],
+                                    ], 'id = ?', [$item['course_enrollment_id']]);
+                                }
+                            } else {
+                                $moved = $bitrix->moveDeal($enrollment['bitrix_lead_id'], $paidStage);
+                                if ($moved) {
+                                    $dbHelper->update('course_enrollments', [
+                                        'bitrix_stage' => $paidStage,
+                                    ], 'id = ?', [$item['course_enrollment_id']]);
+                                    logWebhook('INFO', $paymentId, "Bitrix24 deal {$enrollment['bitrix_lead_id']} moved to {$paidStage} for enrollment {$item['course_enrollment_id']}", '');
+                                } else {
+                                    logWebhook('ERROR', $paymentId, "Bitrix24 moveDeal FAILED for deal {$enrollment['bitrix_lead_id']} → {$paidStage} (enrollment {$item['course_enrollment_id']})", '');
+                                }
+                            }
                         }
 
                         $GLOBALS['db']->commit();
