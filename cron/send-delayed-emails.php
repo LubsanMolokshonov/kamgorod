@@ -29,6 +29,7 @@ define('BASE_PATH', dirname(__DIR__));
 
 require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/database.php';
+require_once BASE_PATH . '/classes/Database.php';
 require_once BASE_PATH . '/includes/email-helper.php';
 require_once BASE_PATH . '/classes/TelegramNotifier.php';
 
