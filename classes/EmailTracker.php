@@ -33,14 +33,23 @@ class EmailTracker {
         $messageId = bin2hex(random_bytes(16));
         $subject   = self::extractSubject($mail);
 
-        // 1. Трекинг-пиксель перед </body>
-        $pixelUrl = rtrim(SITE_URL, '/') . '/api/email-track/open.php?mid=' . $messageId;
-        $pixelTag = '<img src="' . htmlspecialchars($pixelUrl, ENT_QUOTES, 'UTF-8')
-                  . '" width="1" height="1" alt="" style="display:none;max-width:1px;max-height:1px;opacity:0">';
-        $mail->Body = self::injectPixel($mail->Body, $pixelTag);
+        // Если письмо plain-text — не вставляем HTML-пиксель и не трогаем
+        // тело: HTML-теги внутри text/plain ловятся Яндексом как СПАМ
+        // (554 5.7.1). На время warmup info@/rodion@/kazakova@ (до 2026-05-11)
+        // это критично. Open-tracking для таких писем недоступен — это
+        // осознанный компромисс ради доставляемости.
+        $isHtml = isset($mail->ContentType) && stripos((string)$mail->ContentType, 'html') !== false;
 
-        // 2. Rewrite всех <a href="..."> → /api/email-track/click.php?mid=...&u=<b64>
-        $mail->Body = self::rewriteLinks($mail->Body, $messageId, $meta['unsubscribe_url'] ?? null);
+        if ($isHtml) {
+            // 1. Трекинг-пиксель перед </body>
+            $pixelUrl = rtrim(SITE_URL, '/') . '/api/email-track/open.php?mid=' . $messageId;
+            $pixelTag = '<img src="' . htmlspecialchars($pixelUrl, ENT_QUOTES, 'UTF-8')
+                      . '" width="1" height="1" alt="" style="display:none;max-width:1px;max-height:1px;opacity:0">';
+            $mail->Body = self::injectPixel($mail->Body, $pixelTag);
+
+            // 2. Rewrite всех <a href="..."> → /api/email-track/click.php?mid=...&u=<b64>
+            $mail->Body = self::rewriteLinks($mail->Body, $messageId, $meta['unsubscribe_url'] ?? null);
+        }
 
         // 3. SMTP Message-ID (для корреляции с логами релея)
         $host = parse_url(SITE_URL, PHP_URL_HOST) ?: 'fgos.pro';
