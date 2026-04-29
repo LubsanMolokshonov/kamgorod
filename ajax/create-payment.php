@@ -391,7 +391,7 @@ try {
                     );
                     if ($lastOrder) {
                         require_once __DIR__ . '/../includes/email-helper.php';
-                        @sendLifetimeDiscountGrantedEmail((int)$userId, (int)$lastOrder['id']);
+                        scheduleDelayedEmail('lifetime_discount_granted', (int)$userId, (int)$lastOrder['id'], 10);
                     }
                 }
             } catch (Exception $e) {

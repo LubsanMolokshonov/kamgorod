@@ -36,7 +36,26 @@ function configureMailer($mail) {
         $mail->SMTPAutoTLS = false;
     }
 
+    attachSmtpDebugLogger($mail);
     return $mail;
+}
+
+/**
+ * Включить детальное логирование SMTP-диалога в logs/smtp-debug.log.
+ * Нужно для разбора ответов Яндекс 360 (550/451/554), которые PHPMailer
+ * иначе сворачивает в общую строку «SMTP Error: data not accepted».
+ */
+function attachSmtpDebugLogger($mail) {
+    $mail->SMTPDebug   = 2; // 2 = client+server messages
+    $mail->Debugoutput = function ($str, $level) {
+        $logFile = BASE_PATH . '/logs/smtp-debug.log';
+        $logDir  = dirname($logFile);
+        if (!file_exists($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+        $line = '[' . date('Y-m-d H:i:s') . '] [' . $level . '] ' . rtrim($str) . "\n";
+        @file_put_contents($logFile, $line, FILE_APPEND);
+    };
 }
 
 /**
@@ -71,7 +90,75 @@ function configureBulkMailer($mail, string $recipientEmail) {
 
     // Яндекс отбивает письма, у которых From не совпадает с аутентифицированным ящиком
     $mail->setFrom($username, SMTP_FROM_NAME);
+    attachSmtpDebugLogger($mail);
     return $mail;
+}
+
+/**
+ * Отправка письма с автоматическим ретраем транзакционных сбоев.
+ *
+ * Стратегия: до $maxAttempts попыток (по умолчанию 2 — итого 3 запуска).
+ * После каждой неудачной попытки — пауза с экспоненциальным ростом (5с, 15с).
+ * Перевыполняет SMTP-handshake целиком (новое соединение), потому что Яндекс
+ * после отказа на DATA закрывает сессию.
+ *
+ * Имеет смысл вызывать только для одиночных транзакционных писем (платежи,
+ * дипломы, magic-link). Для bulk-цепочек ретраи делает их собственный
+ * шедулер по таблице *_log.
+ *
+ * Бросает Exception от последней попытки, если все провалились.
+ */
+function sendWithRetry($mail, array $trackerMeta, int $maxAttempts = 2): bool {
+    require_once __DIR__ . '/../classes/EmailTracker.php';
+    $attempt = 0;
+    $delays  = [5, 15];
+    $lastErr = null;
+    while ($attempt <= $maxAttempts) {
+        try {
+            return EmailTracker::prepareAndSend($mail, $trackerMeta);
+        } catch (Exception $e) {
+            $lastErr = $e;
+            $info = isset($mail->ErrorInfo) ? $mail->ErrorInfo : '';
+            $msg  = $e->getMessage();
+            // Не ретраим явно постоянные отказы (5xx auth/from/policy),
+            // на которые повтор не поможет.
+            if (preg_match('~\b(53[0-5]|55[0-7])\b|authentication|from address|sender address rejected~i', $info . ' ' . $msg)) {
+                throw $e;
+            }
+            error_log("sendWithRetry attempt " . ($attempt + 1) . " failed: " . $msg . ' | ErrorInfo: ' . $info);
+            $attempt++;
+            if ($attempt <= $maxAttempts) {
+                sleep($delays[$attempt - 1] ?? 30);
+            }
+        }
+    }
+    throw $lastErr ?? new Exception('sendWithRetry: exhausted retries');
+}
+
+/**
+ * Поставить письмо в очередь pending_delayed_emails для отложенной отправки.
+ * Обрабатывается cron/send-delayed-emails.php (раз в 5 минут).
+ *
+ * Используется, чтобы:
+ *   - не слать «второй» транзакционный email тому же получателю back-to-back
+ *     (Яндекс 360 классифицирует это как outbound-spam);
+ *   - перезапланировать письмо после временного SMTP-сбоя без блокировки
+ *     вебхука/AJAX-запроса.
+ */
+function scheduleDelayedEmail(string $emailType, int $userId, int $orderId, int $delayMinutes = 10, int $maxAttempts = 3): bool {
+    global $db;
+    try {
+        $stmt = $db->prepare(
+            "INSERT INTO pending_delayed_emails
+                (email_type, user_id, order_id, send_after, max_attempts)
+             VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), ?)"
+        );
+        $stmt->execute([$emailType, $userId, $orderId, max(0, $delayMinutes), $maxAttempts]);
+        return true;
+    } catch (Exception $e) {
+        error_log('scheduleDelayedEmail failed: ' . $e->getMessage());
+        return false;
+    }
 }
 
 /**
@@ -122,8 +209,7 @@ function sendPaymentSuccessEmail($userId, $orderId) {
             $mail->addAttachment($att['path'], $att['name']);
         }
 
-        require_once __DIR__ . '/../classes/EmailTracker.php';
-        EmailTracker::prepareAndSend($mail, [
+        sendWithRetry($mail, [
             'email_type'      => 'payment',
             'touchpoint_code' => 'payment_success',
             'user_id'         => $userId,
@@ -135,14 +221,20 @@ function sendPaymentSuccessEmail($userId, $orderId) {
         return true;
 
     } catch (Exception $e) {
-        logEmail('ERROR', $user['email'] ?? 'unknown', $orderId, 'Email failed: ' . $e->getMessage());
+        $errorInfo = isset($mail) && isset($mail->ErrorInfo) ? $mail->ErrorInfo : '';
+        $detail    = trim($e->getMessage() . ($errorInfo ? ' | ErrorInfo: ' . $errorInfo : ''));
+        logEmail('ERROR', $user['email'] ?? 'unknown', $orderId, 'Email failed: ' . $detail);
+        // Перенесём отправку в очередь — cron повторит через 10 минут.
+        if (!empty($userId) && !empty($orderId)) {
+            scheduleDelayedEmail('payment_success', (int)$userId, (int)$orderId, 10);
+        }
         TelegramNotifier::instance()->alert(
             'smtp_send_failure',
             '[Email] Сбой отправки (payment_success)',
             [
                 'email'     => $user['email'] ?? 'unknown',
                 'order_id'  => $orderId,
-                'error'     => $e->getMessage(),
+                'error'     => $detail,
                 'smtp_host' => defined('SMTP_HOST') ? SMTP_HOST : '',
             ],
             'critical'
@@ -582,8 +674,7 @@ function sendLifetimeDiscountGrantedEmail($userId, $orderId) {
         $mail->AltBody = buildLifetimeDiscountTextBody($templateData);
         $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
 
-        require_once __DIR__ . '/../classes/EmailTracker.php';
-        EmailTracker::prepareAndSend($mail, [
+        sendWithRetry($mail, [
             'email_type'      => 'loyalty',
             'touchpoint_code' => 'lifetime_discount_granted',
             'user_id'         => $userId,
@@ -594,7 +685,9 @@ function sendLifetimeDiscountGrantedEmail($userId, $orderId) {
         return true;
 
     } catch (Exception $e) {
-        logEmail('ERROR', $user['email'] ?? 'unknown', $orderId, 'Lifetime discount email failed: ' . $e->getMessage());
+        $errorInfo = isset($mail) && isset($mail->ErrorInfo) ? $mail->ErrorInfo : '';
+        $detail    = trim($e->getMessage() . ($errorInfo ? ' | ErrorInfo: ' . $errorInfo : ''));
+        logEmail('ERROR', $user['email'] ?? 'unknown', $orderId, 'Lifetime discount email failed: ' . $detail);
         return false;
     }
 }

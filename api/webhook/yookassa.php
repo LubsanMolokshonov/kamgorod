@@ -521,8 +521,11 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                     if (LoyaltyDiscount::isFirstSuccessfulOrder($GLOBALS['db'], (int)$userId, (int)$orderId)) {
                         $userObjLocal = new User($GLOBALS['db']);
                         if ($userObjLocal->grantLifetimeDiscount((int)$userId)) {
-                            sendLifetimeDiscountGrantedEmail((int)$userId, (int)$orderId);
-                            logWebhook('SUCCESS', $paymentId, "Lifetime discount granted for user {$userId}", '');
+                            // Откладываем приветственное письмо: payment_success
+                            // только что улетел тому же получателю, и Яндекс 360
+                            // классифицирует back-to-back пары как outbound-spam.
+                            scheduleDelayedEmail('lifetime_discount_granted', (int)$userId, (int)$orderId, 10);
+                            logWebhook('SUCCESS', $paymentId, "Lifetime discount granted for user {$userId} (email scheduled +10m)", '');
                         }
                     }
                 } catch (Exception $e) {

@@ -222,7 +222,7 @@ try {
             if (LoyaltyDiscount::isFirstSuccessfulOrder($db, (int)$enrollmentUserId, (int)$orderId)
                 && $userObjLocal->grantLifetimeDiscount((int)$enrollmentUserId)) {
                 require_once __DIR__ . '/../includes/email-helper.php';
-                @sendLifetimeDiscountGrantedEmail((int)$enrollmentUserId, (int)$orderId);
+                scheduleDelayedEmail('lifetime_discount_granted', (int)$enrollmentUserId, (int)$orderId, 10);
             }
         } catch (Exception $e) {
             error_log('Local course loyalty grant failed: ' . $e->getMessage());
