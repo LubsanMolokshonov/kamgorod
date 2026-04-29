@@ -511,14 +511,28 @@ class AutowebinarEmailChain {
                 'touchpoint_code'   => $emailData['touchpoint_code'],
             ];
 
-            $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
             $textBody = $this->renderTextTemplate($emailData['touchpoint_code'], $templateData);
+            $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
-            $mail->isHTML(true);
-            $subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
-            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-            $mail->Body = $htmlBody;
-            $mail->AltBody = $textBody;
+            // ⚠️ ВРЕМЕННЫЙ РЕЖИМ до 2026-05-11 (warmup info@fgos.pro в Яндекс 360):
+            // HTML-шаблон aw_welcome шлётся немедленно (мимо cron-паузы) и
+            // отбивается Яндексом как СПАМ ("SMTP Error: data not accepted").
+            // Для этого touchpoint шлём plain-text — он проходит фильтр.
+            // Остальные touchpoint'ы цепочки идут через cron, который сейчас
+            // в режиме PAUSED, поэтому их режим не меняем.
+            // После 2026-05-11 — убрать ветку и оставить общий HTML-путь.
+            if (str_starts_with((string)$emailData['touchpoint_code'], 'aw_welcome')) {
+                $mail->isHTML(false);
+                $mail->CharSet = 'UTF-8';
+                $mail->Subject = $subject;
+                $mail->Body    = $textBody;
+            } else {
+                $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
+                $mail->isHTML(true);
+                $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
+                $mail->Body    = $htmlBody;
+                $mail->AltBody = $textBody;
+            }
 
             $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
             $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');

@@ -630,7 +630,6 @@ function sendLifetimeDiscountGrantedEmail($userId, $orderId) {
         require_once __DIR__ . '/../classes/Order.php';
         require_once __DIR__ . '/../classes/User.php';
         require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
-        require_once __DIR__ . '/../classes/CartRecommendation.php';
 
         $orderObj = new Order($db);
         $userObj = new User($db);
@@ -642,55 +641,43 @@ function sendLifetimeDiscountGrantedEmail($userId, $orderId) {
             throw new Exception('Order or user not found');
         }
 
-        // Формируем псевдо-корзину из позиций заказа в формате,
-        // совместимом с CartRecommendation::getRecommendations.
-        $mockCart = buildRecommendationCartFromOrder($db, $order['items'] ?? []);
+        // ⚠️ ВРЕМЕННЫЙ РЕЖИМ до 2026-05-11 (warmup info@fgos.pro в Яндекс 360):
+        // HTML-шаблон lifetime_discount_granted режется Яндексом как СПАМ
+        // ("SMTP Error: data not accepted") — то же поведение, что было
+        // у payment_success до коммита 24df167.
+        // Шлём упрощённый plain-text с magic-link на личный кабинет —
+        // он проходит фильтр.
+        // После 2026-05-11 вернуть HTML-вариант (см. git history этого блока).
+        require_once __DIR__ . '/magic-link-helper.php';
 
-        $recommendation = null;
-        try {
-            $cartRec = new CartRecommendation($db);
-            $cards = $cartRec->getRecommendations($mockCart, (int)$userId, 1);
-            if (!empty($cards)) {
-                $recommendation = $cards[0];
-            }
-        } catch (Exception $e) {
-            // Рекомендации не критичны — письмо уйдёт с общим CTA в каталог.
-            error_log('Lifetime discount recommendation build failed: ' . $e->getMessage());
-        }
-
-        // Отписка: HMAC-совместимый токен по тому же формату, что и в CourseEmailChain.
         $unsubscribeToken = base64_encode($user['email'] . ':' . substr(md5($user['email'] . SITE_URL), 0, 16));
-        $unsubscribeUrl = SITE_URL . '/pages/unsubscribe.php?token=' . urlencode($unsubscribeToken);
+        $unsubscribeUrl   = SITE_URL . '/pages/unsubscribe.php?token=' . urlencode($unsubscribeToken);
+        $cabinetUrl       = generateMagicUrl((int)$user['id'], '/kabinet/', 14);
+        $cartPct          = (int)round(LoyaltyDiscount::RATE_CART * 100);
+        $coursePct        = (int)round(LoyaltyDiscount::RATE_COURSE * 100);
 
-        $cabinetUrl = generateMagicUrl($user['id'], '/pages/cabinet.php');
+        $name  = trim((string)($user['full_name'] ?? ''));
+        $greet = $name !== '' ? "Здравствуйте, {$name}!" : 'Здравствуйте!';
 
-        $templateData = [
-            'user_name'               => $user['full_name'] ?: 'коллега',
-            'order_number'            => $order['order_number'],
-            'cart_discount_percent'   => (int)round(LoyaltyDiscount::RATE_CART * 100),
-            'course_discount_percent' => (int)round(LoyaltyDiscount::RATE_COURSE * 100),
-            'has_recommendation'      => !empty($recommendation),
-            'recommended_title'       => $recommendation['title'] ?? '',
-            'recommended_url'         => $recommendation ? recommendationUrl($recommendation) : '',
-            'recommended_type_label'  => recommendationTypeLabel($recommendation['type'] ?? ''),
-            'recommended_price'       => $recommendation['price'] ?? 0,
-            'cabinet_url'             => $cabinetUrl,
-            'catalog_url'             => SITE_URL . '/',
-            'unsubscribe_url'         => $unsubscribeUrl,
-            'site_url'                => SITE_URL,
-            'email_subject'           => 'Ваша пожизненная скидка активирована',
-        ];
-
-        $htmlBody = renderLifetimeDiscountEmail($templateData);
+        $textBody  = $greet . "\n\n";
+        $textBody .= "Спасибо за заказ {$order['order_number']} на сайте Педагогического портала «Каменный город» (fgos.pro).\n\n";
+        $textBody .= "Мы активировали для вас пожизненную скидку лояльности:\n";
+        $textBody .= "  • {$cartPct}% на конкурсы, олимпиады, видеолекции и публикации;\n";
+        $textBody .= "  • {$coursePct}% на курсы повышения квалификации и переподготовки.\n\n";
+        $textBody .= "Скидка применяется автоматически при следующих заказах из вашего личного кабинета:\n";
+        $textBody .= $cabinetUrl . "\n\n";
+        $textBody .= "Ссылка действует 14 дней и автоматически авторизует вас на сайте.\n\n";
+        $textBody .= "Если возникнут вопросы — ответьте на это письмо или напишите на info@fgos.pro.\n\n";
+        $textBody .= "С уважением,\nКоманда Педагогического портала «Каменный город»\nfgos.pro\n";
 
         $mail = new PHPMailer(true);
         configureMailer($mail);
         $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
         $mail->addAddress($user['email'], $user['full_name']);
-        $mail->isHTML(true);
-        $mail->Subject = mb_encode_mimeheader($templateData['email_subject'], 'UTF-8', 'B');
-        $mail->Body = $htmlBody;
-        $mail->AltBody = buildLifetimeDiscountTextBody($templateData);
+        $mail->isHTML(false);
+        $mail->CharSet = 'UTF-8';
+        $mail->Subject = 'Ваша пожизненная скидка активирована';
+        $mail->Body    = $textBody;
         $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
 
         sendWithRetry($mail, [
@@ -700,7 +687,7 @@ function sendLifetimeDiscountGrantedEmail($userId, $orderId) {
             'recipient_email' => $user['email'],
         ]);
 
-        logEmail('SUCCESS', $user['email'], $order['order_number'], 'Lifetime discount email sent');
+        logEmail('SUCCESS', $user['email'], $order['order_number'], 'Lifetime discount email sent (plain-text fallback during Yandex warmup)');
         return true;
 
     } catch (Exception $e) {
