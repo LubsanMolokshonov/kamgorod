@@ -131,10 +131,14 @@ class AlertService
         if ($subject !== '') {
             $description = "Тема: {$subject}\n\n{$description}";
         }
-        $description = mb_substr($description, 0, 5000);
+        $description = self::sanitizeUtf8(mb_substr($description, 0, 5000));
         if ($description === '') {
             $description = '(пустое тело письма)';
         }
+        $fromName = self::sanitizeUtf8($fromName);
+        $bodyText = self::sanitizeUtf8($bodyText);
+        $bodyHtml = $bodyHtml !== null ? self::sanitizeUtf8((string)$bodyHtml) : null;
+        $cleanSubject = $subject !== '' ? self::sanitizeUtf8(mb_substr($subject, 0, 500)) : null;
 
         $aiSummary  = isset($classification['summary']) ? mb_substr((string)$classification['summary'], 0, 500) : null;
         $aiCategory = null;
@@ -143,51 +147,90 @@ class AlertService
             $aiCategory = $cat;
         }
 
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO support_alerts
-             (chat_session_id, source, source_message_id, user_id, user_name, user_email, user_phone,
-              page_url, description, ai_summary, ai_category, status)
-             VALUES (NULL, ?, ?, NULL, ?, ?, NULL, NULL, ?, ?, ?, ?)'
-        );
-        $stmt->execute([
-            'email',
-            $messageId !== '' ? $messageId : null,
-            $fromName,
-            $fromEmail,
-            $description,
-            $aiSummary,
-            $aiCategory,
-            'new',
-        ]);
-        $alertId = (int)$this->pdo->lastInsertId();
-
-        // Сохраняем оригинал письма в alert_messages как первое inbound-сообщение треда.
         $attachmentsJson = !empty($email['attachments'])
             ? json_encode(array_map(static fn($a) => ['name' => $a['name'] ?? '', 'size' => $a['size'] ?? 0], $email['attachments']), JSON_UNESCAPED_UNICODE)
             : null;
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO alert_messages
-             (alert_id, direction, from_email, from_name, to_email, subject, body_html, body_text, attachments_json, message_id)
-             VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?)"
-        );
-        $stmt->execute([
-            $alertId,
-            $fromEmail,
-            $fromName,
-            SMTP_FROM_EMAIL,
-            $subject !== '' ? mb_substr($subject, 0, 500) : null,
-            $bodyHtml,
-            $bodyText,
-            $attachmentsJson,
-            $messageId !== '' ? $messageId : null,
-        ]);
+
+        // Транзакция: support_alerts + alert_messages пишутся атомарно. Если хоть
+        // один INSERT упал — обе строки откатываются, Telegram-уведомление не уходит,
+        // и мы не получаем «алерт #N в Telegram, но ничего нет в БД» (инцидент 28.04.2026).
+        $this->pdo->beginTransaction();
+        try {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO support_alerts
+                 (chat_session_id, source, source_message_id, user_id, user_name, user_email, user_phone,
+                  page_url, description, ai_summary, ai_category, status)
+                 VALUES (NULL, ?, ?, NULL, ?, ?, NULL, NULL, ?, ?, ?, ?)'
+            );
+            $stmt->execute([
+                'email',
+                $messageId !== '' ? $messageId : null,
+                $fromName,
+                $fromEmail,
+                $description,
+                $aiSummary,
+                $aiCategory,
+                'new',
+            ]);
+            $alertId = (int)$this->pdo->lastInsertId();
+
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO alert_messages
+                 (alert_id, direction, from_email, from_name, to_email, subject, body_html, body_text, attachments_json, message_id)
+                 VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+            $stmt->execute([
+                $alertId,
+                $fromEmail,
+                $fromName,
+                SMTP_FROM_EMAIL,
+                $cleanSubject,
+                $bodyHtml,
+                $bodyText,
+                $attachmentsJson,
+                $messageId !== '' ? $messageId : null,
+            ]);
+
+            $this->pdo->commit();
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log(sprintf(
+                'AlertService::createFromEmail SQL fail from=%s msgid=%s err=%s',
+                $fromEmail,
+                $messageId,
+                $e->getMessage()
+            ));
+            ai_log('ALERT', 'createFromEmail SQL fail', ['from' => $fromEmail, 'message_id' => $messageId, 'error' => $e->getMessage()]);
+            throw $e;
+        }
 
         ai_log('ALERT', 'Alert created from email', ['id' => $alertId, 'email' => $fromEmail, 'category' => $aiCategory]);
 
+        // Уведомления — только после COMMIT-а: если не доехали до этой точки,
+        // Telegram-сообщение про несуществующий алерт не уйдёт.
         $this->notifyAdmin($alertId, $fromName, $fromEmail, '', $description, null, $aiSummary, $aiCategory);
         $this->notifyTelegram($alertId, $fromName, $fromEmail, '', $description, null, $aiSummary, $aiCategory);
 
         return $alertId;
+    }
+
+    /**
+     * Чистит строку от невалидных UTF-8 байтов (типичная проблема входящих писем,
+     * где тело идёт в windows-1251/koi8-r и MIME-декодер не справился).
+     * Колонка `description text COLLATE utf8mb4_unicode_ci` отвергает такие строки
+     * с MySQL 1366: «Incorrect string value».
+     */
+    private static function sanitizeUtf8(string $s): string
+    {
+        // mb_convert_encoding с UTF-8→UTF-8 + substitute_character заменяет
+        // невалидные байты на U+FFFD вместо падения.
+        $prev = mb_substitute_character();
+        mb_substitute_character(0xFFFD);
+        $clean = mb_convert_encoding($s, 'UTF-8', 'UTF-8');
+        mb_substitute_character($prev);
+        return is_string($clean) ? $clean : '';
     }
 
     /**
@@ -206,7 +249,8 @@ class AlertService
         $receivedAt = (string)($vkMsg['received_at'] ?? date('Y-m-d H:i:s'));
 
         $userEmail = 'vk_' . $fromId . '@vk.fgos.pro';
-        $description = mb_substr($text !== '' ? $text : '(пустое сообщение)', 0, 5000);
+        $description = self::sanitizeUtf8(mb_substr($text !== '' ? $text : '(пустое сообщение)', 0, 5000));
+        $fromName = self::sanitizeUtf8($fromName);
 
         $aiSummary  = isset($classification['summary']) ? mb_substr((string)$classification['summary'], 0, 500) : null;
         $aiCategory = null;
@@ -215,39 +259,55 @@ class AlertService
             $aiCategory = $cat;
         }
 
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO support_alerts
-             (chat_session_id, source, source_message_id, vk_peer_id, user_id, user_name, user_email, user_phone,
-              page_url, description, ai_summary, ai_category, status)
-             VALUES (NULL, ?, ?, ?, NULL, ?, ?, NULL, NULL, ?, ?, ?, ?)'
-        );
-        $stmt->execute([
-            'vk',
-            'vk_' . $msgId,
-            $peerId,
-            $fromName,
-            $userEmail,
-            $description,
-            $aiSummary,
-            $aiCategory,
-            'new',
-        ]);
-        $alertId = (int)$this->pdo->lastInsertId();
+        $this->pdo->beginTransaction();
+        try {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO support_alerts
+                 (chat_session_id, source, source_message_id, vk_peer_id, user_id, user_name, user_email, user_phone,
+                  page_url, description, ai_summary, ai_category, status)
+                 VALUES (NULL, ?, ?, ?, NULL, ?, ?, NULL, NULL, ?, ?, ?, ?)'
+            );
+            $stmt->execute([
+                'vk',
+                'vk_' . $msgId,
+                $peerId,
+                $fromName,
+                $userEmail,
+                $description,
+                $aiSummary,
+                $aiCategory,
+                'new',
+            ]);
+            $alertId = (int)$this->pdo->lastInsertId();
 
-        // Первое сообщение треда
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO alert_messages
-             (alert_id, direction, from_email, from_name, to_email, subject, body_text, message_id)
-             VALUES (?, 'inbound', ?, ?, ?, NULL, ?, ?)"
-        );
-        $stmt->execute([
-            $alertId,
-            $userEmail,
-            $fromName,
-            defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : 'info@fgos.pro',
-            $description,
-            'vk_' . $msgId,
-        ]);
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO alert_messages
+                 (alert_id, direction, from_email, from_name, to_email, subject, body_text, message_id)
+                 VALUES (?, 'inbound', ?, ?, ?, NULL, ?, ?)"
+            );
+            $stmt->execute([
+                $alertId,
+                $userEmail,
+                $fromName,
+                defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : 'info@fgos.pro',
+                $description,
+                'vk_' . $msgId,
+            ]);
+
+            $this->pdo->commit();
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log(sprintf(
+                'AlertService::createFromVk SQL fail from_id=%d msg=%d err=%s',
+                $fromId,
+                $msgId,
+                $e->getMessage()
+            ));
+            ai_log('VK', 'createFromVk SQL fail', ['from_id' => $fromId, 'message_id' => $msgId, 'error' => $e->getMessage()]);
+            throw $e;
+        }
 
         ai_log('VK', 'Alert created from VK', ['id' => $alertId, 'from_id' => $fromId, 'category' => $aiCategory]);
 
