@@ -248,10 +248,9 @@ function sendPaymentSuccessEmail($userId, $orderId) {
         $errorInfo = isset($mail) && isset($mail->ErrorInfo) ? $mail->ErrorInfo : '';
         $detail    = trim($e->getMessage() . ($errorInfo ? ' | ErrorInfo: ' . $errorInfo : ''));
         logEmail('ERROR', $user['email'] ?? 'unknown', $orderId, 'Email failed: ' . $detail);
-        // Перенесём отправку в очередь — cron повторит через 10 минут.
-        if (!empty($userId) && !empty($orderId)) {
-            scheduleDelayedEmail('payment_success', (int)$userId, (int)$orderId, 10);
-        }
+        // ВАЖНО: не ставим в pending_delayed_emails из catch — этим занимается
+        // вызывающая сторона (webhook), а cron-обработчик очереди сам делает
+        // backoff-ретрай. Иначе при провале из cron возникает каскад дубликатов.
         TelegramNotifier::instance()->alert(
             'smtp_send_failure',
             '[Email] Сбой отправки (payment_success)',
@@ -263,7 +262,9 @@ function sendPaymentSuccessEmail($userId, $orderId) {
             ],
             'critical'
         );
-        return false;
+        // Пробрасываем исключение, чтобы вызывающий мог принять решение
+        // (webhook ставит в очередь; cron видит exception и делает retry с backoff).
+        throw $e;
     }
 }
 
@@ -699,7 +700,9 @@ function sendLifetimeDiscountGrantedEmail($userId, $orderId) {
         $errorInfo = isset($mail) && isset($mail->ErrorInfo) ? $mail->ErrorInfo : '';
         $detail    = trim($e->getMessage() . ($errorInfo ? ' | ErrorInfo: ' . $errorInfo : ''));
         logEmail('ERROR', $user['email'] ?? 'unknown', $orderId, 'Lifetime discount email failed: ' . $detail);
-        return false;
+        // Пробрасываем — cron-обработчик очереди запишет осмысленный last_error
+        // и сделает retry с backoff'ом.
+        throw $e;
     }
 }
 

@@ -524,7 +524,14 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
         if ($allDocsReady) {
             // Send success email with all attachments
             try {
-                sendPaymentSuccessEmail($userId, $orderId);
+                try {
+                    sendPaymentSuccessEmail($userId, $orderId);
+                } catch (Exception $sendErr) {
+                    // Временный SMTP-сбой — переносим в очередь, cron повторит
+                    // через 10 минут с экспоненциальным backoff'ом.
+                    logWebhook('WARNING', $paymentId, "payment_success send failed, queued for retry: " . $sendErr->getMessage(), '');
+                    scheduleDelayedEmail('payment_success', (int)$userId, (int)$orderId, 10);
+                }
 
                 // Погасить скидку email-кампании (если применялась) — чтобы
                 // ей нельзя было воспользоваться повторно.

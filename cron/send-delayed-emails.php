@@ -91,6 +91,12 @@ try {
             $err = $e->getMessage();
         }
 
+        // Страховка: если sender вернул false без exception — записать
+        // хотя бы это, чтобы last_error не был пустым.
+        if (!$ok && $err === null) {
+            $err = "{$type}() returned false (см. error_log / logEmail)";
+        }
+
         if ($ok) {
             $upd = $db->prepare("UPDATE pending_delayed_emails SET sent_at = NOW(), attempts = attempts + 1 WHERE id = ?");
             $upd->execute([$id]);
