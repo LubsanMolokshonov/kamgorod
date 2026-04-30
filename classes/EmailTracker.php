@@ -49,6 +49,18 @@ class EmailTracker {
 
             // 2. Rewrite всех <a href="..."> → /api/email-track/click.php?mid=...&u=<b64>
             $mail->Body = self::rewriteLinks($mail->Body, $messageId, $meta['unsubscribe_url'] ?? null);
+        } else {
+            // Plain-text: пиксель невозможен (HTML-тег в text/plain ловится Яндексом
+            // как 554 SPAM), но ссылки переписать можно — это чистый текст-URL,
+            // не SPAM-триггер. Click автоматически проставляет opened_at в click.php,
+            // поэтому click-tracking работает как proxy для open-tracking.
+            // Это рабочая стратегия трекинга на время warmup до 2026-05-11.
+            $mail->Body = self::rewriteTextLinks($mail->Body, $messageId, $meta['unsubscribe_url'] ?? null);
+            // AltBody у plain-text писем обычно пуст, но для multipart-сценариев
+            // (если кто-то пришлёт plain-text с AltBody) — переписываем и его.
+            if (!empty($mail->AltBody)) {
+                $mail->AltBody = self::rewriteTextLinks($mail->AltBody, $messageId, $meta['unsubscribe_url'] ?? null);
+            }
         }
 
         // 3. SMTP Message-ID (для корреляции с логами релея)
@@ -195,6 +207,34 @@ class EmailTracker {
             return preg_replace('~</body>~i', $pixelTag . '</body>', $html, 1);
         }
         return $html . $pixelTag;
+    }
+
+    /**
+     * Переписать голые URL https?://... в plain-text → /api/email-track/click.php?mid=X&u=<b64>
+     * Хвостовая пунктуация (`.,;:!?)`) и пробельные/HTML-символы границей не считаются.
+     * Skip: unsubscribe_url, сам редирект-эндпоинт, любые /api/email-track/.
+     */
+    private static function rewriteTextLinks(string $text, string $messageId, ?string $skipUrl): string {
+        if ($text === '') return $text;
+        $redirectBase = rtrim(SITE_URL, '/') . '/api/email-track/click.php';
+
+        return preg_replace_callback(
+            '~https?://[^\s<>"\']+~i',
+            function ($m) use ($messageId, $redirectBase, $skipUrl) {
+                $raw = $m[0];
+                // Срезаем хвостовую пунктуацию (она почти никогда не часть URL)
+                $url  = rtrim($raw, '.,;:!?)\'');
+                $tail = substr($raw, strlen($url));
+
+                if ($skipUrl && strcasecmp($url, $skipUrl) === 0)        return $raw;
+                if (stripos($url, $redirectBase) === 0)                  return $raw;
+                if (stripos($url, '/api/email-track/') !== false)        return $raw;
+
+                $encoded = rtrim(strtr(base64_encode($url), '+/', '-_'), '=');
+                return $redirectBase . '?mid=' . $messageId . '&u=' . $encoded . $tail;
+            },
+            $text
+        ) ?? $text;
     }
 
     /**
