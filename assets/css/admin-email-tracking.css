@@ -75,7 +75,8 @@
     font-weight: 500;
 }
 .tag-success { background: #d1fae5; color: #065f46; }
-.tag-muted { background: #f3f4f6; color: #9ca3af; }
+.tag-danger  { background: #fee2e2; color: #991b1b; }
+.tag-muted   { background: #f3f4f6; color: #9ca3af; }
 
 @media (max-width: 1024px) {
     .email-kpi-grid { grid-template-columns: repeat(2, 1fr); }

@@ -55,7 +55,8 @@ class EmailTracker {
         $host = parse_url(SITE_URL, PHP_URL_HOST) ?: 'fgos.pro';
         $mail->MessageID = '<' . $messageId . '@' . $host . '>';
 
-        // 4. Регистрация в email_events (до send, чтобы пиксель не опередил insert)
+        // 4. Регистрация в email_events (до send, чтобы пиксель не опередил insert).
+        // delivery_status='pending' — будет переведён в 'sent'/'failed' после send().
         try {
             self::register([
                 'message_id'      => $messageId,
@@ -72,8 +73,37 @@ class EmailTracker {
             // не блокируем отправку — лучше отправить без трекинга, чем не отправить
         }
 
-        // 5. Отправка
-        return $mail->send();
+        // 5. Отправка с фиксацией исхода в delivery_status. Исключение пробрасывается
+        // дальше — sendWithRetry/cron-обработчики опираются на throw для retry-логики.
+        try {
+            $sent = $mail->send();
+            self::markDelivery($messageId, $sent ? 'sent' : 'failed', $sent ? null : 'send() returned false');
+            return $sent;
+        } catch (\Throwable $e) {
+            self::markDelivery($messageId, 'failed', $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Обновить delivery_status (sent/failed) после $mail->send().
+     */
+    private static function markDelivery(string $messageId, string $status, ?string $error): void {
+        try {
+            $pdo = self::pdo();
+            $stmt = $pdo->prepare(
+                "UPDATE email_events
+                    SET delivery_status = ?, delivery_error = ?
+                  WHERE message_id = ?"
+            );
+            $stmt->execute([
+                $status,
+                $error !== null ? mb_substr($error, 0, 500) : null,
+                $messageId,
+            ]);
+        } catch (\Throwable $e) {
+            error_log('EmailTracker markDelivery failed: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -131,8 +161,8 @@ class EmailTracker {
         $stmt = $pdo->prepare(
             "INSERT INTO email_events
                 (message_id, email_type, touchpoint_code, chain_log_id, chain_log_table,
-                 user_id, recipient_email, subject, sent_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+                 user_id, recipient_email, subject, sent_at, delivery_status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'pending')"
         );
         $stmt->execute([
             $data['message_id'],

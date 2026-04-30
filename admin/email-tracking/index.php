@@ -77,11 +77,22 @@ include __DIR__ . '/../includes/header.php';
     <div class="kpi-card">
         <div class="kpi-label">Отправлено</div>
         <div class="kpi-value"><?= number_format((int)$totals['sent'], 0, ',', ' ') ?></div>
+        <div class="kpi-sub">попыток отправки (включая отбивки SMTP)</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Доставлено</div>
+        <div class="kpi-value"><?= number_format((int)$totals['delivered'], 0, ',', ' ') ?></div>
+        <div class="kpi-sub">
+            Delivery rate: <strong><?= $totals['delivery_rate'] ?>%</strong>
+            <?php if ((int)$totals['failed'] > 0): ?>
+                · Отбито: <strong><?= number_format((int)$totals['failed'], 0, ',', ' ') ?></strong>
+            <?php endif; ?>
+        </div>
     </div>
     <div class="kpi-card">
         <div class="kpi-label">Открыто</div>
         <div class="kpi-value"><?= number_format((int)$totals['opened'], 0, ',', ' ') ?></div>
-        <div class="kpi-sub">Open rate: <strong><?= $totals['open_rate'] ?>%</strong></div>
+        <div class="kpi-sub">Open rate: <strong><?= $totals['open_rate'] ?>%</strong> от доставленных</div>
     </div>
     <div class="kpi-card">
         <div class="kpi-label">Переходов</div>
@@ -108,10 +119,12 @@ include __DIR__ . '/../includes/header.php';
                 <tr>
                     <th>Направление</th>
                     <th class="num">Отправлено</th>
+                    <th class="num" title="Доставлено = $mail->send() вернул true. Исторические записи (до миграции 094) считаются доставленными.">Доставлено</th>
+                    <th class="num">Deliv %</th>
                     <th class="num">Открыто</th>
-                    <th class="num">Open %</th>
+                    <th class="num" title="Open rate от доставленных">Open %</th>
                     <th class="num">Переходов</th>
-                    <th class="num">CTR %</th>
+                    <th class="num" title="CTR от доставленных">CTR %</th>
                     <th class="num">Оплат</th>
                     <th class="num">Конв. %</th>
                     <th class="num">Выручка</th>
@@ -119,7 +132,7 @@ include __DIR__ . '/../includes/header.php';
             </thead>
             <tbody>
                 <?php if (empty($byType)): ?>
-                    <tr><td colspan="9" class="empty">Нет данных за выбранный период.</td></tr>
+                    <tr><td colspan="11" class="empty">Нет данных за выбранный период.</td></tr>
                 <?php else: foreach ($byType as $r): ?>
                     <tr>
                         <td>
@@ -128,6 +141,13 @@ include __DIR__ . '/../includes/header.php';
                             </a>
                         </td>
                         <td class="num"><?= number_format((int)$r['sent'], 0, ',', ' ') ?></td>
+                        <td class="num">
+                            <?= number_format((int)$r['delivered'], 0, ',', ' ') ?>
+                            <?php if ((int)$r['failed'] > 0): ?>
+                                <small style="color:#c33">−<?= number_format((int)$r['failed'], 0, ',', ' ') ?></small>
+                            <?php endif; ?>
+                        </td>
+                        <td class="num"><?= $r['delivery_rate'] ?>%</td>
                         <td class="num"><?= number_format((int)$r['opened'], 0, ',', ' ') ?></td>
                         <td class="num"><?= $r['open_rate'] ?>%</td>
                         <td class="num"><?= number_format((int)$r['clicked'], 0, ',', ' ') ?></td>
@@ -152,6 +172,8 @@ include __DIR__ . '/../includes/header.php';
                     <th>Направление</th>
                     <th>Touchpoint</th>
                     <th class="num">Отправлено</th>
+                    <th class="num">Доставлено</th>
+                    <th class="num">Deliv %</th>
                     <th class="num">Открыто</th>
                     <th class="num">Open %</th>
                     <th class="num">Переходов</th>
@@ -163,12 +185,19 @@ include __DIR__ . '/../includes/header.php';
             </thead>
             <tbody>
                 <?php if (empty($byTouchpoint)): ?>
-                    <tr><td colspan="10" class="empty">Нет данных за выбранный период.</td></tr>
+                    <tr><td colspan="12" class="empty">Нет данных за выбранный период.</td></tr>
                 <?php else: foreach ($byTouchpoint as $r): ?>
                     <tr>
                         <td><?= htmlspecialchars($r['type_label']) ?></td>
                         <td><code><?= htmlspecialchars($r['touchpoint_code']) ?></code></td>
                         <td class="num"><?= number_format((int)$r['sent'], 0, ',', ' ') ?></td>
+                        <td class="num">
+                            <?= number_format((int)$r['delivered'], 0, ',', ' ') ?>
+                            <?php if ((int)$r['failed'] > 0): ?>
+                                <small style="color:#c33">−<?= number_format((int)$r['failed'], 0, ',', ' ') ?></small>
+                            <?php endif; ?>
+                        </td>
+                        <td class="num"><?= $r['delivery_rate'] ?>%</td>
                         <td class="num"><?= number_format((int)$r['opened'], 0, ',', ' ') ?></td>
                         <td class="num"><?= $r['open_rate'] ?>%</td>
                         <td class="num"><?= number_format((int)$r['clicked'], 0, ',', ' ') ?></td>
@@ -195,6 +224,7 @@ include __DIR__ . '/../includes/header.php';
                     <th>Touchpoint</th>
                     <th>Получатель</th>
                     <th>Тема</th>
+                    <th>Статус</th>
                     <th class="num">Открытий</th>
                     <th class="num">Кликов</th>
                     <th>Оплата</th>
@@ -202,8 +232,11 @@ include __DIR__ . '/../includes/header.php';
             </thead>
             <tbody>
                 <?php if (empty($recent)): ?>
-                    <tr><td colspan="8" class="empty">Нет писем за выбранный период.</td></tr>
-                <?php else: foreach ($recent as $e): ?>
+                    <tr><td colspan="9" class="empty">Нет писем за выбранный период.</td></tr>
+                <?php else: foreach ($recent as $e):
+                    $status = $e['delivery_status'] ?? null;
+                    $err    = (string)($e['delivery_error'] ?? '');
+                ?>
                     <tr>
                         <td><?= htmlspecialchars(date('d.m.Y H:i', strtotime($e['sent_at']))) ?></td>
                         <td><?= htmlspecialchars($e['type_label']) ?></td>
@@ -211,6 +244,17 @@ include __DIR__ . '/../includes/header.php';
                         <td><?= htmlspecialchars($e['recipient_email']) ?></td>
                         <td class="subject-col" title="<?= htmlspecialchars((string)($e['subject'] ?? '')) ?>">
                             <?= htmlspecialchars(mb_substr((string)($e['subject'] ?? ''), 0, 60)) ?>
+                        </td>
+                        <td>
+                            <?php if ($status === 'sent'): ?>
+                                <span class="tag tag-success">✓ доставлено</span>
+                            <?php elseif ($status === 'failed'): ?>
+                                <span class="tag tag-danger" title="<?= htmlspecialchars($err) ?>">✗ отбито</span>
+                            <?php elseif ($status === 'pending'): ?>
+                                <span class="tag tag-muted">⋯ pending</span>
+                            <?php else: ?>
+                                <span class="tag tag-muted" title="до миграции 094 — статус не фиксировался">— н/д</span>
+                            <?php endif; ?>
                         </td>
                         <td class="num"><?= (int)$e['opens_count'] ?></td>
                         <td class="num"><?= (int)$e['clicks_count'] ?></td>
