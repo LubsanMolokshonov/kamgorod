@@ -695,24 +695,35 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (response.success) {
-                // E-commerce dataLayer push if available
-                if (typeof dataLayer !== 'undefined' && response.ecommerce) {
-                    dataLayer.push({
-                        'event': 'add_to_cart',
-                        'ecommerce': {
-                            'items': [{
-                                'item_id': response.ecommerce.id,
-                                'item_name': response.ecommerce.name,
-                                'price': response.ecommerce.price,
-                                'item_category': response.ecommerce.category,
-                                'quantity': 1
-                            }]
+                if (response.ecommerce) {
+                    window.dataLayer = window.dataLayer || [];
+                    window.dataLayer.push({
+                        "ecommerce": {
+                            "currencyCode": "RUB",
+                            "add": {
+                                "products": [{
+                                    "id": String(response.ecommerce.id),
+                                    "name": response.ecommerce.name,
+                                    "price": parseFloat(response.ecommerce.price),
+                                    "brand": "Педпортал",
+                                    "category": response.ecommerce.category,
+                                    "variant": response.ecommerce.placement,
+                                    "quantity": 1
+                                }]
+                            }
                         }
                     });
                 }
-
-                // Redirect to cart
-                window.location.href = '/korzina';
+                var redirected = false;
+                function olympDiplomaRedirect() {
+                    if (!redirected) { redirected = true; window.location.href = '/korzina'; }
+                }
+                if (typeof ym === 'function') {
+                    ym(106465857, 'reachGoal', 'add_to_cart_olympiad', null, olympDiplomaRedirect);
+                    setTimeout(olympDiplomaRedirect, 1000);
+                } else {
+                    setTimeout(olympDiplomaRedirect, 300);
+                }
             } else {
                 alert(response.message || 'Произошла ошибка. Попробуйте снова.');
             }

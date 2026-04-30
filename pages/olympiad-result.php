@@ -879,10 +879,35 @@ include __DIR__ . '/../includes/header.php';
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data && data.success) {
-                if (window.dataLayer && data.ecommerce) {
-                    window.dataLayer.push({ event: 'add_to_cart', ecommerce: data.ecommerce });
+                if (data.ecommerce) {
+                    window.dataLayer = window.dataLayer || [];
+                    window.dataLayer.push({
+                        "ecommerce": {
+                            "currencyCode": "RUB",
+                            "add": {
+                                "products": [{
+                                    "id": String(data.ecommerce.id),
+                                    "name": data.ecommerce.name,
+                                    "price": parseFloat(data.ecommerce.price),
+                                    "brand": "Педпортал",
+                                    "category": data.ecommerce.category,
+                                    "variant": data.ecommerce.placement,
+                                    "quantity": 1
+                                }]
+                            }
+                        }
+                    });
                 }
-                window.location.href = '/korzina/';
+                var redirected = false;
+                function olympResultRedirect() {
+                    if (!redirected) { redirected = true; window.location.href = '/korzina/'; }
+                }
+                if (typeof ym === 'function') {
+                    ym(106465857, 'reachGoal', 'add_to_cart_olympiad', null, olympResultRedirect);
+                    setTimeout(olympResultRedirect, 1000);
+                } else {
+                    setTimeout(olympResultRedirect, 300);
+                }
             } else {
                 btn.disabled = false;
                 btn.innerHTML = originalHTML;
