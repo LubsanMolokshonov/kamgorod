@@ -16,6 +16,10 @@
  *  - Retry-создание сделки для консультаций без bitrix_lead_id (fallback).
  *  - После «перевода на менеджера» — проверка ЦДО: если сделка ушла дальше
  *    «Подготовки документов», помечаем status='processed'.
+ *  - Тот же цикл этапов (15MIN → 1H → MANAGER) и проверка ЦДО
+ *    применяется к course_enrollments (status='new' с заведённой сделкой);
+ *    при попадании в ЦДО за «Подготовкой документов» status='enrolled'.
+ *    Создание сделки для course_enrollments — в process-course-bitrix.php.
  *
  * Crontab (каждые 5 минут):
  *   docker exec pedagogy_web php /var/www/html/cron/process-course-consultation-stages.php
@@ -228,7 +232,105 @@ try {
         }
     }
 
-    log_line("DONE | Moved: {$moved}, CDO_processed: {$cdoClosed}, Retry_pending: " . count($pending));
+    // ─────────────────────────────────────────────────────────────
+    // 4) Автопродвижение этапов для course_enrollments
+    //    Создание сделки делает process-course-bitrix.php; здесь
+    //    только двигаем по тем же этапам прозвона и закрываем по ЦДО.
+    // ─────────────────────────────────────────────────────────────
+    $enrollRows = $dbObj->query(
+        "SELECT id, bitrix_lead_id, bitrix_stage, created_at,
+                TIMESTAMPDIFF(MINUTE, created_at, NOW()) AS age_minutes
+         FROM course_enrollments
+         WHERE status = 'new'
+           AND bitrix_lead_id IS NOT NULL
+           AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+         ORDER BY created_at ASC",
+        [$MAX_AGE_DAYS]
+    );
+
+    $enrollMoved = 0;
+    foreach ($enrollRows as $r) {
+        $age = (int)$r['age_minutes'];
+        $current = $r['bitrix_stage'] ?? $STAGE_NEW;
+        $target = null;
+
+        if ($age >= 90 && $current !== $STAGE_MANAGER) {
+            $target = $STAGE_MANAGER;
+        } elseif ($age >= 60 && in_array($current, [$STAGE_NEW, $STAGE_15MIN], true)) {
+            $target = $STAGE_1H;
+        } elseif ($age >= 15 && $current === $STAGE_NEW) {
+            $target = $STAGE_15MIN;
+        }
+
+        if ($target === null) {
+            continue;
+        }
+
+        try {
+            $bitrix->moveDeal($r['bitrix_lead_id'], $target);
+            $dbObj->update('course_enrollments', [
+                'bitrix_stage' => $target,
+            ], 'id = ?', [$r['id']]);
+            $enrollMoved++;
+            log_line("MOVE | Enrollment #{$r['id']} | Deal #{$r['bitrix_lead_id']} | {$current} → {$target} | age {$age}min");
+        } catch (Exception $e) {
+            log_line("MOVE_ERROR | Enrollment #{$r['id']} | Deal #{$r['bitrix_lead_id']} | " . $e->getMessage());
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 5) Проверка ЦДО для course_enrollments: если сделка ушла в ЦДО
+    //    и прошла «Подготовку документов» — статус enrolled.
+    // ─────────────────────────────────────────────────────────────
+    $enrollOnManager = $dbObj->query(
+        "SELECT id, bitrix_lead_id FROM course_enrollments
+         WHERE status = 'new'
+           AND bitrix_lead_id IS NOT NULL
+           AND bitrix_stage = ?
+           AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)",
+        [$STAGE_MANAGER, $MAX_AGE_DAYS]
+    );
+
+    if (!empty($enrollOnManager) && empty($cdoStages)) {
+        $url = rtrim(defined('BITRIX24_WEBHOOK_URL') ? BITRIX24_WEBHOOK_URL : '', '/');
+        if ($url !== '') {
+            $resp = @file_get_contents($url . '/crm.dealcategory.stage.list.json?' . http_build_query(['id' => $CDO_PIPELINE_ID]));
+            if ($resp !== false) {
+                $data = json_decode($resp, true);
+                foreach (($data['result'] ?? []) as $stage) {
+                    $cdoStages[$stage['STATUS_ID']] = (int)$stage['SORT'];
+                }
+            }
+        }
+    }
+
+    $enrollCdoClosed = 0;
+    foreach ($enrollOnManager as $r) {
+        try {
+            $deal = $bitrix->getDeal($r['bitrix_lead_id']);
+            if (!$deal) continue;
+
+            $dealStage    = $deal['STAGE_ID']    ?? '';
+            $dealCategory = $deal['CATEGORY_ID'] ?? '';
+
+            if ((int)$dealCategory !== (int)$CDO_PIPELINE_ID) continue;
+
+            $sort = $cdoStages[$dealStage] ?? 0;
+            if ($sort > $CDO_DOCS_SORT) {
+                $dbObj->update('course_enrollments', [
+                    'status' => 'enrolled',
+                    'bitrix_stage' => $dealStage,
+                ], 'id = ?', [$r['id']]);
+                $enrollCdoClosed++;
+                log_line("CDO_PROCESSED | Enrollment #{$r['id']} | Deal #{$r['bitrix_lead_id']} at {$dealStage}");
+            }
+        } catch (Exception $e) {
+            log_line("CDO_CHECK_ERROR | Enrollment #{$r['id']} | " . $e->getMessage());
+        }
+    }
+
+    log_line("DONE | Moved: {$moved}, CDO_processed: {$cdoClosed}, Retry_pending: " . count($pending)
+        . " | Enroll_moved: {$enrollMoved}, Enroll_CDO: {$enrollCdoClosed}");
 
 } catch (Exception $e) {
     log_line('FATAL: ' . $e->getMessage());
