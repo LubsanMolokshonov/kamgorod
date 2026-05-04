@@ -204,6 +204,7 @@ class CourseEmailChain {
             require_once BASE_PATH . '/includes/email-helper.php';
             $mail = new PHPMailer(true);
             configureBulkMailer($mail, $emailData['email']);
+            self::applyPersonalSender($mail);
             $mail->addAddress($emailData['email'], $emailData['full_name']);
 
             // Unsubscribe
@@ -264,6 +265,7 @@ class CourseEmailChain {
 
             // Яндекс жёстко фильтрует «красивый» HTML — отправляем plain-text,
             // ссылки сохраняем как есть (см. memory/project_payment_success_plaintext.md)
+            $templateData['_sender_name'] = self::extractFirstName($mail->FromName);
             $textBody = $this->renderTextTemplate($templateData, $emailData['email_template']);
 
             $subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
@@ -361,6 +363,7 @@ class CourseEmailChain {
             require_once BASE_PATH . '/includes/email-helper.php';
             $mail = new PHPMailer(true);
             configureBulkMailer($mail, $enrollment['email']);
+            self::applyPersonalSender($mail);
             $mail->addAddress($enrollment['email'], $enrollment['full_name']);
 
             // Цена с учётом скидки
@@ -404,6 +407,7 @@ class CourseEmailChain {
 
             $templateData['payment_amount'] = $abPrice;
             $templateData['order_number']   = $orderNumber;
+            $templateData['_sender_name']   = self::extractFirstName($mail->FromName);
             $textBody = $this->renderTextTemplate($templateData, 'course_payment_success');
 
             $subject = 'Оплата курса «' . mb_substr($enrollment['course_title'], 0, 60) . '» подтверждена';
@@ -644,6 +648,39 @@ class CourseEmailChain {
         return !empty($result);
     }
 
+    /**
+     * Заменяет brand-имя в From на личное (имя сотрудника по выбранному ящику пула)
+     * и добавляет Reply-To на info@fgos.pro. Снижает срабатывание Gmail-эвристики
+     * «Промоакции» — личный отправитель попадает во «Входящие».
+     */
+    public static function applyPersonalSender(PHPMailer $mail): void {
+        $username = $mail->Username ?: '';
+        $personalNames = [
+            'rodion@fgos.pro'   => 'Родион, ФГОС-Практикум',
+            'kazakova@fgos.pro' => 'Анна Казакова, ФГОС-Практикум',
+        ];
+        $fromName = $personalNames[strtolower($username)] ?? 'Команда ФГОС-Практикум';
+
+        try {
+            $mail->setFrom($mail->From ?: $username, $fromName);
+        } catch (\Throwable $e) {
+            // не критично — оставим то, что задал configureBulkMailer
+        }
+
+        try {
+            $mail->addReplyTo('info@fgos.pro', 'Поддержка ФГОС-Практикум');
+        } catch (\Throwable $e) {
+            // молча
+        }
+    }
+
+    /** «Родион, ФГОС-Практикум» → «Родион»; «Анна Казакова, ФГОС-Практикум» → «Анна». */
+    public static function extractFirstName(string $fromName): string {
+        $first = trim(explode(',', $fromName, 2)[0]);
+        $first = trim(explode(' ', $first, 2)[0]);
+        return $first !== '' ? $first : 'Команда ФГОС-Практикум';
+    }
+
     public function generateUnsubscribeToken($email) {
         $hash = substr(md5($email . SITE_URL), 0, 16);
         return base64_encode($email . ':' . $hash);
@@ -691,66 +728,48 @@ class CourseEmailChain {
             return $url . $sep . 'utm_source=email&utm_campaign=' . $campaign;
         };
 
-        $signature  = "---\n";
-        $signature .= "С уважением,\nКоманда ФГОС-Практикум\n";
-        $signature .= "ООО «Едурегионлаб» — участник проекта «Сколково»,\n";
-        $signature .= "разрешение Фонда «Сколково» № 068.\n\n";
-        $signature .= "Отписаться от рассылки: {$unsubUrl}\n";
+        // Подпись намеренно короткая и личная — снижает promo-сигналы Gmail.
+        $signature  = "С уважением,\n";
+        $signature .= ($data['_sender_name'] ?? 'Родион') . "\n";
+        $signature .= "ФГОС-Практикум\n\n";
+        $signature .= "Отписаться: {$unsubUrl}";
 
         switch ($templateName) {
             case 'course_enroll_welcome': {
                 $link = $appendUtm($payUrl, 'course-enroll-welcome');
-                $t  = "Здравствуйте, {$name}!\n\n";
-                $t .= "Заявка на курс принята. Осталось завершить оплату, чтобы начать обучение.\n\n";
-                $t .= "Курс: {$title}\n";
-                $t .= "Программа: {$progLabel}\n";
-                $t .= "Объём: {$hours} часов\n";
-                $t .= "Формат: заочная с применением ДОТ\n";
-                $t .= "Документ: {$docLabel}\n";
-                $t .= "Стоимость: {$price} руб.\n\n";
-                $t .= "Перейти к оплате:\n{$link}\n\n";
-                $t .= "Страница курса: {$courseUrl}\n\n";
-                $t .= "Если есть вопросы — просто ответьте на это письмо.\n\n";
+                $t  = "Здравствуйте, {$name}.\n\n";
+                $t .= "Получили вашу заявку на курс «{$title}» ({$hours} ч., {$progLabel}).\n";
+                $t .= "Чтобы зачислить вас в группу, нужно завершить оплату — {$price} руб.\n\n";
+                $t .= "Ссылка для оплаты: {$link}\n\n";
+                $t .= "Если есть вопросы по программе или порядку оплаты — ответьте на это письмо, я помогу.\n\n";
                 return $t . $signature;
             }
 
             case 'course_enroll_15min': {
                 $link = $appendUtm($payUrl, 'course-enroll-15min');
-                $t  = "Здравствуйте, {$name}!\n\n";
-                $t .= "Ваше место на курсе «{$title}» забронировано.\n";
-                $t .= "Чтобы приступить к обучению, нужно завершить оплату.\n\n";
-                $t .= "Программа: {$progLabel}\n";
-                $t .= "Объём: {$hours} часов\n";
-                $t .= "Документ: {$docLabel}\n";
-                $t .= "Стоимость: {$price} руб.\n\n";
-                $t .= "Что даёт {$docName}:\n";
-                $t .= "- соответствие требованиям аттестации и Рособрнадзора;\n";
-                $t .= "- подтверждение квалификации перед работодателем;\n";
-                $t .= "- запись в ФИС ФРДО;\n";
-                $t .= "- основание для надбавок и карьерного роста.\n\n";
-                $t .= "Оплатить курс:\n{$link}\n\n";
-                $t .= "Страница курса: {$courseUrl}\n\n";
+                $t  = "Здравствуйте, {$name}.\n\n";
+                $t .= "Ваше место на курсе «{$title}» зарезервировано.\n";
+                $t .= "Программа: {$progLabel}, {$hours} ч., документ — {$docLabel}.\n";
+                $t .= "Сумма к оплате: {$price} руб.\n\n";
+                $t .= "Ссылка для оплаты: {$link}\n\n";
+                $t .= "Если возникли вопросы — просто ответьте на это письмо.\n\n";
                 return $t . $signature;
             }
 
             case 'course_enroll_1h': {
                 $link = $appendUtm($payUrl, 'course-enroll-1h');
-                $t  = "Здравствуйте, {$name}!\n\n";
-                $t .= "Вы оставили заявку на курс «{$title}», но ещё не завершили оплату.\n\n";
-                $t .= "Внимание: с 1 сентября 2025 года изменились правила повышения квалификации\n";
-                $t .= "(Федеральный закон от 21.04.2025 № 86-ФЗ — новая ч. 5.2 ст. 47 273-ФЗ).\n\n";
-                $t .= "Риски обучения в неуполномоченных организациях:\n";
-                $t .= "- документ не примут при аттестации и проверке Рособрнадзора;\n";
-                $t .= "- работодатель вправе не засчитать повышение квалификации;\n";
-                $t .= "- потеря денег и времени — придётся переучиваться заново.\n\n";
-                $t .= "Почему «ФГОС-практикум» — надёжный выбор:\n";
-                $t .= "- разрешение Фонда «Сколково» № 068;\n";
-                $t .= "- данные вносятся в ФИС ФРДО в течение 30 дней;\n";
-                $t .= "- {$docLabel} принимают при любой проверке.\n\n";
-                $t .= "Курс: {$title} ({$hours} ч., {$price} руб., дистанционно)\n\n";
-                $t .= "Записаться на обучение:\n{$link}\n\n";
-                $t .= "Основание: ч. 5.2 ст. 47 ФЗ от 29.12.2012 № 273-ФЗ (в ред. ФЗ от 21.04.2025 № 86-ФЗ),\n";
-                $t .= "Постановление Правительства РФ № 850.\n\n";
+                $t  = "Здравствуйте, {$name}.\n\n";
+                $t .= "Хотел уточнить по вашей заявке на курс «{$title}» — оплата пока не поступила.\n";
+                $t .= "Если что-то пошло не так с формой оплаты, напишите мне в ответ, разберёмся.\n\n";
+                $t .= "Пара слов о программе:\n";
+                $t .= "{$progLabel}, {$hours} ч., заочно с применением ДОТ.\n";
+                $t .= "Документ — {$docLabel}, вносится в ФИС ФРДО.\n";
+                $t .= "Обучение проводит ООО «Едурегионлаб», участник проекта «Сколково»\n";
+                $t .= "(разрешение Фонда № 068).\n\n";
+                $t .= "С 01.09.2025 действуют новые требования к организациям, повышающим\n";
+                $t .= "квалификацию педагогов (ФЗ от 21.04.2025 № 86-ФЗ). Наша лицензия и\n";
+                $t .= "разрешение этим требованиям соответствуют.\n\n";
+                $t .= "Ссылка для оплаты: {$link}\n\n";
                 return $t . $signature;
             }
 
@@ -758,16 +777,13 @@ class CourseEmailChain {
                 $url  = $discUrl ?: $payUrl;
                 $link = $appendUtm($url, 'course-enroll-24h');
                 $disc = $discPrice !== null ? number_format((float)$discPrice, 0, ',', ' ') : $price;
-                $t  = "Здравствуйте, {$name}!\n\n";
-                $t .= "Вчера вы подали заявку на курс «{$title}», но не завершили оплату.\n";
-                $t .= "Мы подготовили для вас персональную скидку 10% — она действует 48 часов.\n\n";
-                $t .= "Программа: {$progLabel}\n";
-                $t .= "Объём: {$hours} часов\n";
-                $t .= "Документ: {$docLabel}\n";
-                $t .= "Обычная цена: {$price} руб.\n";
-                $t .= "Цена со скидкой 10%: {$disc} руб.\n\n";
-                $t .= "Оплатить со скидкой:\n{$link}\n\n";
-                $t .= "Скидка действует 48 часов — после этого стоимость вернётся к {$price} руб.\n\n";
+                $t  = "Здравствуйте, {$name}.\n\n";
+                $t .= "Вы вчера оставили заявку на курс «{$title}», но оплата не поступила.\n";
+                $t .= "Подготовили для вас условия — {$disc} руб. вместо {$price} руб.\n";
+                $t .= "Они будут действовать ближайшие двое суток.\n\n";
+                $t .= "Программа: {$progLabel}, {$hours} ч., документ — {$docLabel}.\n\n";
+                $t .= "Ссылка для оплаты: {$link}\n\n";
+                $t .= "Если что-то непонятно — напишите в ответ, я помогу.\n\n";
                 return $t . $signature;
             }
 
@@ -775,18 +791,13 @@ class CourseEmailChain {
                 $url  = $discUrl ?: $payUrl;
                 $link = $appendUtm($url, 'course-enroll-2d');
                 $disc = $discPrice !== null ? number_format((float)$discPrice, 0, ',', ' ') : $price;
-                $t  = "Здравствуйте, {$name}!\n\n";
-                $t .= "Напоминаем: ваша персональная скидка 10% на курс «{$title}» ещё активна.\n";
-                $t .= "Осталось менее 24 часов до её сгорания.\n\n";
-                $t .= "Программа: {$progLabel} ({$hours} ч., дистанционно)\n";
-                $t .= "Обычная цена: {$price} руб.\n";
-                $t .= "Цена со скидкой: {$disc} руб.\n\n";
-                $t .= "Воспользоваться скидкой:\n{$link}\n\n";
-                $t .= "Почему педагоги выбирают нас:\n";
-                $t .= "- более 28 000 педагогов уже прошли обучение;\n";
-                $t .= "- лицензия на образовательную деятельность + разрешение Фонда «Сколково»;\n";
-                $t .= "- данные о {$docName} вносятся в ФИС ФРДО;\n";
-                $t .= "- учитесь в любое время, из любого места.\n\n";
+                $t  = "Здравствуйте, {$name}.\n\n";
+                $t .= "Напомню по вашей заявке на курс «{$title}» — подготовленные условия\n";
+                $t .= "({$disc} руб. вместо {$price} руб.) ещё в силе, но истекают завтра.\n\n";
+                $t .= "Программа: {$progLabel}, {$hours} ч., заочно.\n\n";
+                $t .= "Ссылка для оплаты: {$link}\n\n";
+                $t .= "Если по какой-то причине курс уже не актуален — просто ответьте,\n";
+                $t .= "и я перестану напоминать.\n\n";
                 return $t . $signature;
             }
 
@@ -794,49 +805,31 @@ class CourseEmailChain {
                 $url  = $discUrl ?: $payUrl;
                 $link = $appendUtm($url, 'course-enroll-3d');
                 $disc = $discPrice !== null ? number_format((float)$discPrice, 0, ',', ' ') : $price;
-                $save = $discPrice !== null
-                    ? number_format((float)$data['course_price'] - (float)$discPrice, 0, ',', ' ')
-                    : '';
-                $t  = "Здравствуйте, {$name}!\n\n";
-                $t .= "Это последнее напоминание: ваша скидка 10% на курс «{$title}» истекает сегодня.\n";
-                $t .= "После этого стоимость вернётся к полной цене.\n\n";
-                $t .= "Программа: {$progLabel}\n";
-                $t .= "Объём: {$hours} часов\n";
-                $t .= "Документ: {$docLabel}\n";
-                $t .= "Обычная цена: {$price} руб.\n";
-                $t .= "Цена со скидкой: {$disc} руб.\n";
-                if ($save !== '') {
-                    $t .= "Вы экономите: {$save} руб.\n";
-                }
-                $t .= "\nОплатить сейчас со скидкой:\n{$link}\n\n";
-                $t .= "Преимущества:\n";
-                $t .= "- участник проекта «Сколково», разрешение № 068;\n";
-                $t .= "- документ вносится в ФИС ФРДО — примут при любой проверке;\n";
-                $t .= "- дистанционное обучение без отрыва от работы;\n";
-                $t .= "- более 28 000 педагогов уже прошли обучение.\n\n";
+                $t  = "Здравствуйте, {$name}.\n\n";
+                $t .= "Последнее напоминание по вашей заявке на курс «{$title}».\n";
+                $t .= "Сегодня — последний день, когда стоимость обучения останется {$disc} руб.\n";
+                $t .= "С завтрашнего дня — {$price} руб.\n\n";
+                $t .= "Ссылка для оплаты: {$link}\n\n";
+                $t .= "Если планы изменились — ответьте, и я закрою заявку.\n\n";
                 return $t . $signature;
             }
 
             case 'course_payment_success': {
                 $link = $appendUtm($cabinetUrl ?? '', 'course-payment-success');
-                $t  = "Здравствуйте, {$name}!\n\n";
-                $t .= "Оплата прошла успешно — благодарим вас!\n";
-                $t .= "Ваш доступ к курсу активирован.\n\n";
+                $t  = "Здравствуйте, {$name}.\n\n";
+                $t .= "Оплата по курсу «{$title}» поступила, спасибо.\n";
                 if ($orderNumber !== '') {
-                    $t .= "Заказ: {$orderNumber}\n";
+                    $t .= "Заказ {$orderNumber}, сумма {$payAmount} руб.\n";
+                } else {
+                    $t .= "Сумма: {$payAmount} руб.\n";
                 }
-                $t .= "Сумма: {$payAmount} руб.\n\n";
-                $t .= "Курс: {$title}\n";
-                $t .= "Программа: {$progLabel}\n";
-                $t .= "Объём: {$hours} часов\n";
-                $t .= "Формат: заочная с применением ДОТ\n";
-                $t .= "Документ: {$docLabel}\n\n";
-                $t .= "Что будет дальше:\n";
-                $t .= "1. Доступ к учебным материалам — наш методист свяжется с вами для организации доступа.\n";
-                $t .= "2. Обучение в удобном темпе — изучайте материалы дистанционно, без отрыва от работы.\n";
-                $t .= "3. Получение {$docName} — {$docLabel} с внесением данных в ФИС ФРДО в течение 30 дней.\n\n";
+                $t .= "Программа: {$progLabel}, {$hours} ч., документ — {$docLabel}.\n\n";
+                $t .= "Что дальше: наш методист свяжется с вами в течение рабочего дня и\n";
+                $t .= "откроет доступ к учебным материалам. Учиться можно в своём темпе,\n";
+                $t .= "без отрыва от работы. По итогам — {$docLabel} с внесением данных\n";
+                $t .= "в ФИС ФРДО в течение 30 дней.\n\n";
                 if ($link !== '') {
-                    $t .= "Перейти в личный кабинет:\n{$link}\n\n";
+                    $t .= "Личный кабинет: {$link}\n\n";
                 }
                 $t .= "Если возникнут вопросы — просто ответьте на это письмо.\n\n";
                 return $t . $signature;

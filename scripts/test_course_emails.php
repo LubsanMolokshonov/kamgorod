@@ -56,13 +56,13 @@ $rPromo     = new ReflectionMethod($promo, 'renderTextVersion');
 $rPromo->setAccessible(true);
 
 $cases = [
-    ['course_enroll_welcome',   '[ТЕСТ] Заявка на курс принята'],
-    ['course_enroll_15min',     '[ТЕСТ] Ваше место на курсе забронировано'],
-    ['course_enroll_1h',        '[ТЕСТ] Не откладывайте профессиональный рост'],
-    ['course_enroll_24h',       '[ТЕСТ] Скидка 10% на курс — 48 часов'],
-    ['course_enroll_2d',        '[ТЕСТ] Скидка 10% ещё действует'],
-    ['course_enroll_3d',        '[ТЕСТ] Последний день скидки 10%'],
-    ['course_payment_success',  '[ТЕСТ] Оплата курса подтверждена'],
+    ['course_enroll_welcome',   'Заявка на курс «' . $baseData['course_title'] . '»'],
+    ['course_enroll_15min',     $testName . ', по вашей записи на курс'],
+    ['course_enroll_1h',        'Уточняем по записи на курс «' . $baseData['course_title'] . '»'],
+    ['course_enroll_24h',       $testName . ', подготовили для вас условия по курсу'],
+    ['course_enroll_2d',        'Напомним по вашей записи на курс'],
+    ['course_enroll_3d',        $testName . ', последнее напоминание по курсу'],
+    ['course_payment_success',  'Оплата курса принята'],
 ];
 
 $sent = 0; $failed = 0;
@@ -70,10 +70,12 @@ foreach ($cases as $i => [$tpl, $subject]) {
     $num = $i + 1;
     echo "[{$num}/8] {$tpl} ... ";
     try {
-        $body = $rChain->invoke($chain, $baseData, $tpl);
-
         $mail = new PHPMailer(true);
         configureBulkMailer($mail, $testEmail);
+        CourseEmailChain::applyPersonalSender($mail);
+        $bodyData = $baseData + ['_sender_name' => CourseEmailChain::extractFirstName($mail->FromName)];
+        $body = $rChain->invoke($chain, $bodyData, $tpl);
+
         $mail->addAddress($testEmail, $testName);
         $mail->isHTML(false);
         $mail->CharSet = 'UTF-8';
@@ -94,15 +96,20 @@ foreach ($cases as $i => [$tpl, $subject]) {
 // course_promo
 echo "[8/8] course_promo ... ";
 try {
-    $promoData = $baseData + ['course_description' => 'Программа охватывает актуальные требования ФГОС, методику работы с цифровыми инструментами и подготовку к аттестации.'];
-    $body = $rPromo->invoke($promo, $promoData);
-
     $mail = new PHPMailer(true);
     configureBulkMailer($mail, $testEmail);
+    CourseEmailChain::applyPersonalSender($mail);
+
+    $promoData = $baseData + [
+        'course_description' => 'Программа охватывает актуальные требования ФГОС, методику работы с цифровыми инструментами и подготовку к аттестации.',
+        '_sender_name'       => CourseEmailChain::extractFirstName($mail->FromName),
+    ];
+    $body = $rPromo->invoke($promo, $promoData);
+
     $mail->addAddress($testEmail, $testName);
     $mail->isHTML(false);
     $mail->CharSet = 'UTF-8';
-    $mail->Subject = mb_encode_mimeheader('[ТЕСТ] Повышение квалификации: ' . $baseData['course_title'], 'UTF-8', 'B');
+    $mail->Subject = mb_encode_mimeheader($testName . ', по программе «' . $baseData['course_title'] . '»', 'UTF-8', 'B');
     $mail->Body    = $body;
     $mail->addCustomHeader('List-Unsubscribe', '<' . $baseData['unsubscribe_url'] . '>');
     $mail->send();

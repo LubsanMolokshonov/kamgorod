@@ -375,6 +375,8 @@ class CoursePromoEmailCampaign {
             require_once BASE_PATH . '/includes/email-helper.php';
             $mail = new PHPMailer(true);
             configureBulkMailer($mail, $emailData['email']);
+            require_once BASE_PATH . '/classes/CourseEmailChain.php';
+            CourseEmailChain::applyPersonalSender($mail);
             $mail->addAddress($emailData['email'], $emailData['full_name']);
 
             // Unsubscribe headers (RFC 8058)
@@ -388,7 +390,12 @@ class CoursePromoEmailCampaign {
             $programLabel = $emailData['course_program_type'] === 'pp'
                 ? 'Профессиональная переподготовка'
                 : 'Повышение квалификации';
-            $subject = $programLabel . ': ' . mb_substr($emailData['course_title'], 0, 60);
+            // Сабж в личной форме — снижает срабатывание Gmail «Промоакции»
+            $shortTitle = mb_substr($emailData['course_title'], 0, 60);
+            $firstName  = trim(explode(' ', (string)$emailData['full_name'], 2)[0]);
+            $subject    = $firstName !== ''
+                ? "{$firstName}, по программе «{$shortTitle}»"
+                : "По программе «{$shortTitle}»";
 
             // Plain-text: Яндекс блокирует «красивый» HTML
             // (см. memory/project_payment_success_plaintext.md)
@@ -409,7 +416,8 @@ class CoursePromoEmailCampaign {
                 'unsubscribe_url' => $unsubscribeUrl,
                 'site_url' => SITE_URL,
                 'site_name' => SITE_NAME ?? 'Каменный город',
-                'footer_reason' => 'зарегистрированы на нашей платформе'
+                'footer_reason' => 'зарегистрированы на нашей платформе',
+                '_sender_name'  => CourseEmailChain::extractFirstName($mail->FromName),
             ];
 
             $mail->Body = $this->renderTextVersion($templateData);
@@ -459,11 +467,11 @@ class CoursePromoEmailCampaign {
      */
     private function renderTextVersion(array $data): string {
         $programLabel = $data['course_program_type'] === 'pp'
-            ? 'Профессиональная переподготовка'
-            : 'Повышение квалификации';
+            ? 'профессиональная переподготовка'
+            : 'повышение квалификации';
         $document = $data['course_program_type'] === 'pp'
-            ? 'Диплом о профессиональной переподготовке'
-            : 'Удостоверение о повышении квалификации';
+            ? 'диплом о профессиональной переподготовке'
+            : 'удостоверение о повышении квалификации';
         $price = number_format($data['course_price'], 0, ',', ' ');
         $hours = (int)$data['course_hours'];
 
@@ -471,46 +479,27 @@ class CoursePromoEmailCampaign {
             . (strpos($data['course_url'], '?') !== false ? '&' : '?')
             . 'utm_source=email&utm_medium=promo&utm_campaign=course_promo';
 
-        $text  = "Здравствуйте, {$data['user_name']}!\n\n";
-        $text .= "Мы подобрали для вас курс, который поможет подтвердить и повысить вашу квалификацию\n";
-        $text .= "в соответствии с актуальными требованиями законодательства.\n\n";
-        $text .= "Курс: {$data['course_title']}\n";
-        $text .= "Программа: {$programLabel}\n";
+        $senderName = $data['_sender_name'] ?? 'Родион';
+
+        $text  = "Здравствуйте, {$data['user_name']}.\n\n";
+        $text .= "Подумал, что вам может быть интересна наша программа {$programLabel}\n";
+        $text .= "«{$data['course_title']}» — {$hours} ч., заочно с применением ДОТ.\n";
+        $text .= "По итогам — {$document}, данные вносятся в ФИС ФРДО.\n";
+        $text .= "Стоимость обучения — {$price} руб.\n\n";
         if (!empty($data['course_description'])) {
             $desc = trim(preg_replace('/\s+/', ' ', strip_tags($data['course_description'])));
-            $desc = mb_substr($desc, 0, 300);
-            $text .= "Описание: {$desc}\n";
+            $desc = mb_substr($desc, 0, 280);
+            $text .= "Кратко о программе: {$desc}\n\n";
         }
-        $text .= "Объём: {$hours} часов\n";
-        $text .= "Формат: заочная с применением ДОТ\n";
-        $text .= "Документ: {$document}\n";
-        $text .= "Стоимость: {$price} руб.\n\n";
-        $text .= "Записаться на курс:\n{$courseUrl}\n\n";
-
-        $text .= "Внимание: с 1 сентября 2025 года изменились правила повышения квалификации\n";
-        $text .= "(Федеральный закон от 21.04.2025 № 86-ФЗ — новая ч. 5.2 ст. 47 273-ФЗ).\n\n";
-
-        $text .= "Риски обучения в неуполномоченных организациях:\n";
-        $text .= "- документ не примут при аттестации и проверке Рособрнадзора;\n";
-        $text .= "- работодатель вправе не засчитать повышение квалификации;\n";
-        $text .= "- запись в ФИС ФРДО не подтверждает право организации обучать педагогов;\n";
-        $text .= "- потеря денег и времени — придётся переучиваться заново.\n\n";
-
-        $text .= "Почему «ФГОС-практикум» — надёжный выбор:\n";
-        $text .= "- ООО «Едурегионлаб» — участник проекта «Сколково»;\n";
-        $text .= "- разрешение Фонда «Сколково» № 068 на образовательную деятельность;\n";
-        $text .= "- {$document} установленного образца — примут при любой проверке;\n";
-        $text .= "- все данные вносятся в ФИС ФРДО в течение 30 дней;\n";
-        $text .= "- действующая лицензия на образовательную деятельность.\n\n";
-
-        $text .= "Записаться:\n{$courseUrl}\n\n";
-
-        $text .= "Основание: ч. 5.2 ст. 47 ФЗ от 29.12.2012 № 273-ФЗ (в ред. ФЗ от 21.04.2025 № 86-ФЗ),\n";
-        $text .= "Постановление Правительства РФ № 850.\n\n";
-
-        $text .= "---\n";
-        $text .= "С уважением,\nКоманда «ФГОС-практикум»\n\n";
-        $text .= "Отписаться от рассылки: {$data['unsubscribe_url']}\n";
+        $text .= "Подробности и форма записи: {$courseUrl}\n\n";
+        $text .= "Обучение проводит ООО «Едурегионлаб», участник проекта «Сколково»\n";
+        $text .= "(разрешение Фонда № 068), лицензия на образовательную деятельность.\n";
+        $text .= "Это важно: с 01.09.2025 действуют новые требования ФЗ от 21.04.2025 № 86-ФЗ\n";
+        $text .= "к организациям, обучающим педагогов.\n\n";
+        $text .= "Если программа не подходит или не нужна сейчас — просто ответьте,\n";
+        $text .= "и я не буду больше беспокоить.\n\n";
+        $text .= "С уважением,\n{$senderName}\nФГОС-Практикум\n\n";
+        $text .= "Отписаться: {$data['unsubscribe_url']}";
 
         return $text;
     }
