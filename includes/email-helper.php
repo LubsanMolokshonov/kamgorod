@@ -26,7 +26,18 @@ function chainEmailsPaused(?string $touchpointCode = null): bool {
     $until = strtotime(CHAINS_PAUSED_UNTIL);
     if ($until === false || time() >= $until) return false;
 
-    static $alwaysAllowed = ['webinar_confirmation', 'aw_welcome'];
+    static $alwaysAllowed = [
+        'webinar_confirmation',
+        'aw_welcome',
+        // Конкурсная цепочка дожимов: minimal-HTML версии
+        // (journey_touch_*_simple) проходят антиспам Яндекса, поэтому
+        // не блокируем их на время прогрева ящиков. EmailJourney сам
+        // подменяет шаблон на _simple, пока действует CHAINS_PAUSED_UNTIL.
+        'touch_1h',
+        'touch_24h',
+        'touch_3d',
+        'touch_7d',
+    ];
     if ($touchpointCode !== null && in_array($touchpointCode, $alwaysAllowed, true)) {
         return false;
     }

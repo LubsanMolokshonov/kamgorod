@@ -99,10 +99,9 @@ class EmailJourney {
      */
     public function processPendingEmails() {
         require_once BASE_PATH . '/includes/email-helper.php';
-        if (chainEmailsPaused()) {
-            $this->log("PROCESS | PAUSED until " . CHAINS_PAUSED_UNTIL . " — skip");
-            return ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'paused' => true];
-        }
+        // Глобальная пауза CHAINS_PAUSED_UNTIL проверяется per-touchpoint
+        // ниже в цикле через chainEmailsPaused($code) — конкурсные touch_*
+        // теперь в whitelist'е (отправляются как minimal-HTML).
 
         $now = date('Y-m-d H:i:s');
 
@@ -142,6 +141,12 @@ class EmailJourney {
 
             if ($this->isUnsubscribed($email['email'])) {
                 $this->updateEmailStatus($email['id'], 'skipped', 'User unsubscribed');
+                $results['skipped']++;
+                continue;
+            }
+
+            if (chainEmailsPaused($email['touchpoint_code'])) {
+                // Не в whitelist'е — оставляем pending, отправим после 2026-05-11.
                 $results['skipped']++;
                 continue;
             }
@@ -197,11 +202,24 @@ class EmailJourney {
                 'competition_url' => SITE_URL . '/konkursy/' . $emailData['competition_slug'],
                 'unsubscribe_url' => $unsubscribeUrl,
                 'site_url' => SITE_URL,
-                'site_name' => SITE_NAME ?? 'Каменный город',
+                'site_name' => SITE_NAME ?? 'ФГОС-Практикум',
                 'touchpoint_code' => $emailData['touchpoint_code']
             ];
 
-            $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
+            // Во время прогрева Яндекс-ящиков (CHAINS_PAUSED_UNTIL) подменяем
+            // дизайнерский HTML-шаблон на minimal-HTML (_simple), чтобы пройти
+            // антиспам. После окончания прогрева автоматически возвращается
+            // полноценный шаблон без правки кода.
+            $templateName = $emailData['email_template'];
+            if (defined('CHAINS_PAUSED_UNTIL') && CHAINS_PAUSED_UNTIL !== ''
+                && strtotime(CHAINS_PAUSED_UNTIL) >= time()) {
+                $simpleCandidate = $templateName . '_simple';
+                if (file_exists(BASE_PATH . '/includes/email-templates/' . $simpleCandidate . '.php')) {
+                    $templateName = $simpleCandidate;
+                }
+            }
+
+            $htmlBody = $this->renderTemplate($templateName, $templateData);
             $textBody = $this->renderTextTemplate($templateData);
 
             $mail->isHTML(true);
@@ -267,7 +285,7 @@ class EmailJourney {
         $text .= "Стоимость участия: " . number_format($data['competition_price'], 0, ',', ' ') . " руб.\n\n";
         $text .= "Завершить регистрацию: {$data['payment_url']}\n\n";
         $text .= "---\n";
-        $text .= "С уважением,\nКоманда проекта \"Каменный город\"\n\n";
+        $text .= "С уважением,\nКоманда ФГОС-Практикум\nfgos.pro\n\n";
         $text .= "Отписаться от рассылки: {$data['unsubscribe_url']}\n";
 
         return $text;
