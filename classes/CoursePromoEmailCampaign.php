@@ -390,7 +390,10 @@ class CoursePromoEmailCampaign {
                 : 'Повышение квалификации';
             $subject = $programLabel . ': ' . mb_substr($emailData['course_title'], 0, 60);
 
-            $mail->isHTML(true);
+            // Plain-text: Яндекс блокирует «красивый» HTML
+            // (см. memory/project_payment_success_plaintext.md)
+            $mail->isHTML(false);
+            $mail->CharSet = 'UTF-8';
             $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
 
             // Рендер шаблона
@@ -409,8 +412,7 @@ class CoursePromoEmailCampaign {
                 'footer_reason' => 'зарегистрированы на нашей платформе'
             ];
 
-            $mail->Body = $this->renderTemplate('course_promo', $templateData);
-            $mail->AltBody = $this->renderTextVersion($templateData);
+            $mail->Body = $this->renderTextVersion($templateData);
 
             require_once BASE_PATH . '/classes/EmailTracker.php';
             EmailTracker::prepareAndSend($mail, [
@@ -459,22 +461,53 @@ class CoursePromoEmailCampaign {
         $programLabel = $data['course_program_type'] === 'pp'
             ? 'Профессиональная переподготовка'
             : 'Повышение квалификации';
+        $document = $data['course_program_type'] === 'pp'
+            ? 'Диплом о профессиональной переподготовке'
+            : 'Удостоверение о повышении квалификации';
         $price = number_format($data['course_price'], 0, ',', ' ');
+        $hours = (int)$data['course_hours'];
 
-        $text = "Здравствуйте, {$data['user_name']}!\n\n";
-        $text .= "Рекомендуем вам курс {$programLabel}:\n";
-        $text .= "{$data['course_title']}\n";
-        $text .= "Объём: {$data['course_hours']} часов\n";
+        $courseUrl = $data['course_url']
+            . (strpos($data['course_url'], '?') !== false ? '&' : '?')
+            . 'utm_source=email&utm_medium=promo&utm_campaign=course_promo';
+
+        $text  = "Здравствуйте, {$data['user_name']}!\n\n";
+        $text .= "Мы подобрали для вас курс, который поможет подтвердить и повысить вашу квалификацию\n";
+        $text .= "в соответствии с актуальными требованиями законодательства.\n\n";
+        $text .= "Курс: {$data['course_title']}\n";
+        $text .= "Программа: {$programLabel}\n";
+        if (!empty($data['course_description'])) {
+            $desc = trim(preg_replace('/\s+/', ' ', strip_tags($data['course_description'])));
+            $desc = mb_substr($desc, 0, 300);
+            $text .= "Описание: {$desc}\n";
+        }
+        $text .= "Объём: {$hours} часов\n";
+        $text .= "Формат: заочная с применением ДОТ\n";
+        $text .= "Документ: {$document}\n";
         $text .= "Стоимость: {$price} руб.\n\n";
-        $text .= "С 1 сентября 2025 года изменились правила повышения квалификации ";
-        $text .= "(Федеральный закон от 21.04.2025 № 86-ФЗ).\n\n";
-        $text .= "Почему «ФГОС-практикум»:\n";
-        $text .= "- ООО «Едурегионлаб» — участник проекта Сколково\n";
-        $text .= "- Разрешение Фонда «Сколково» № 068 на образовательную деятельность\n";
-        $text .= "- Удостоверение установленного образца\n";
-        $text .= "- Данные вносятся в ФИС ФРДО в течение 30 дней\n";
-        $text .= "- Действующая лицензия на образовательную деятельность\n\n";
-        $text .= "Записаться: {$data['course_url']}\n\n";
+        $text .= "Записаться на курс:\n{$courseUrl}\n\n";
+
+        $text .= "Внимание: с 1 сентября 2025 года изменились правила повышения квалификации\n";
+        $text .= "(Федеральный закон от 21.04.2025 № 86-ФЗ — новая ч. 5.2 ст. 47 273-ФЗ).\n\n";
+
+        $text .= "Риски обучения в неуполномоченных организациях:\n";
+        $text .= "- документ не примут при аттестации и проверке Рособрнадзора;\n";
+        $text .= "- работодатель вправе не засчитать повышение квалификации;\n";
+        $text .= "- запись в ФИС ФРДО не подтверждает право организации обучать педагогов;\n";
+        $text .= "- потеря денег и времени — придётся переучиваться заново.\n\n";
+
+        $text .= "Почему «ФГОС-практикум» — надёжный выбор:\n";
+        $text .= "- ООО «Едурегионлаб» — участник проекта «Сколково»;\n";
+        $text .= "- разрешение Фонда «Сколково» № 068 на образовательную деятельность;\n";
+        $text .= "- {$document} установленного образца — примут при любой проверке;\n";
+        $text .= "- все данные вносятся в ФИС ФРДО в течение 30 дней;\n";
+        $text .= "- действующая лицензия на образовательную деятельность.\n\n";
+
+        $text .= "Записаться:\n{$courseUrl}\n\n";
+
+        $text .= "Основание: ч. 5.2 ст. 47 ФЗ от 29.12.2012 № 273-ФЗ (в ред. ФЗ от 21.04.2025 № 86-ФЗ),\n";
+        $text .= "Постановление Правительства РФ № 850.\n\n";
+
         $text .= "---\n";
         $text .= "С уважением,\nКоманда «ФГОС-практикум»\n\n";
         $text .= "Отписаться от рассылки: {$data['unsubscribe_url']}\n";
