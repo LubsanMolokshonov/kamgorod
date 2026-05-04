@@ -514,32 +514,18 @@ class AutowebinarEmailChain {
                 'registration_id'   => $emailData['registration_id'],
                 'unsubscribe_url'   => $unsubscribeUrl,
                 'site_url'          => SITE_URL,
-                'site_name'         => SITE_NAME ?? 'Каменный город',
+                'site_name'         => 'ФГОС-Практикум',
                 'touchpoint_code'   => $emailData['touchpoint_code'],
             ];
 
             $textBody = $this->renderTextTemplate($emailData['touchpoint_code'], $templateData);
             $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
-            // ⚠️ ВРЕМЕННЫЙ РЕЖИМ до 2026-05-11 (warmup info@fgos.pro в Яндекс 360):
-            // HTML-шаблон aw_welcome шлётся немедленно (мимо cron-паузы) и
-            // отбивается Яндексом как СПАМ ("SMTP Error: data not accepted").
-            // Для этого touchpoint шлём plain-text — он проходит фильтр.
-            // Остальные touchpoint'ы цепочки идут через cron, который сейчас
-            // в режиме PAUSED, поэтому их режим не меняем.
-            // После 2026-05-11 — убрать ветку и оставить общий HTML-путь.
-            if (str_starts_with((string)$emailData['touchpoint_code'], 'aw_welcome')) {
-                $mail->isHTML(false);
-                $mail->CharSet = 'UTF-8';
-                $mail->Subject = $subject;
-                $mail->Body    = $textBody;
-            } else {
-                $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
-                $mail->isHTML(true);
-                $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-                $mail->Body    = $htmlBody;
-                $mail->AltBody = $textBody;
-            }
+            // Plain-text (обход антиспама Яндекс 360 после миграции 2026-04-27).
+            $mail->isHTML(false);
+            $mail->CharSet = 'UTF-8';
+            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
+            $mail->Body    = $textBody;
 
             $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
             $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
@@ -612,9 +598,10 @@ class AutowebinarEmailChain {
             default => "Перейти: {$data['autowebinar_url']}\n\n",
         };
 
-        $text .= "---\n";
-        $text .= "С уважением,\nКоманда проекта «Каменный город»\n\n";
-        $text .= "Отписаться от рассылки: {$data['unsubscribe_url']}\n";
+        $text .= "--\n";
+        $text .= "С уважением, команда ФГОС-Практикум\n";
+        $text .= "{$data['site_url']}\n\n";
+        $text .= "Если письмо пришло по ошибке — отписаться: {$data['unsubscribe_url']}\n";
 
         return $text;
     }

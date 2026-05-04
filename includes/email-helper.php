@@ -859,47 +859,21 @@ function sendPaymentFailureEmail($userId, $orderId) {
         $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
         $mail->addAddress($user['email'], $user['full_name']);
 
-        // Content
-        $mail->isHTML(true);
+        // Plain-text (обход антиспама Яндекс 360 после миграции 2026-04-27).
+        $mail->isHTML(false);
+        $mail->CharSet = 'UTF-8';
         $mail->Subject = mb_encode_mimeheader('Проблема с оплатой заказа ' . $order['order_number'], 'UTF-8', 'B');
 
-        $siteUrl = SITE_URL;
         $cartLink = generateMagicUrl($user['id'], '/pages/cart.php');
-        $orderNumber = htmlspecialchars($order['order_number']);
-        $fullName = htmlspecialchars($user['full_name']);
+        $orderNumber = $order['order_number'];
+        $fullName = $user['full_name'];
 
-        $mail->Body = <<<HTML
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #ff6b6b; color: white; padding: 20px; text-align: center; }
-        .content { background: #f9f9f9; padding: 20px; }
-        .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>⚠️ Проблема с оплатой</h1>
-        </div>
-        <div class="content">
-            <p>Здравствуйте, <strong>{$fullName}</strong>!</p>
-            <p>К сожалению, платеж по заказу №{$orderNumber} не был завершен.</p>
-            <p>Вы можете попробовать оплатить заказ снова или связаться с нашей службой поддержки.</p>
-            <center>
-                <a href="{$cartLink}" class="button">Попробовать снова</a>
-            </center>
-        </div>
-    </div>
-</body>
-</html>
-HTML;
-
-        $mail->AltBody = "Здравствуйте, {$fullName}!\n\nК сожалению, платеж по заказу №{$orderNumber} не был завершен.\n\nВы можете попробовать оплатить заказ снова: {$cartLink}";
+        $mail->Body = "Здравствуйте, {$fullName}!\n\n"
+            . "К сожалению, платёж по заказу №{$orderNumber} не был завершён.\n\n"
+            . "Попробовать оплатить ещё раз можно по ссылке (она автоматически авторизует вас на сайте):\n"
+            . $cartLink . "\n\n"
+            . "Если возникнут вопросы — ответьте на это письмо или напишите на info@fgos.pro.\n\n"
+            . "С уважением,\nКоманда Педагогического портала «Каменный город»\nfgos.pro\n";
 
         require_once __DIR__ . '/../classes/EmailTracker.php';
         EmailTracker::prepareAndSend($mail, [

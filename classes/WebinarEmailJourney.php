@@ -284,15 +284,14 @@ class WebinarEmailJourney {
 
             $templateData = $this->prepareTemplateData($emailData, $unsubscribeUrl);
 
-            // Render email
-            $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
+            // Plain-text формат (обход антиспама Яндекс 360 после миграции 2026-04-27).
             $textBody = $this->renderTextTemplate($emailData, $templateData);
 
-            $mail->isHTML(true);
+            $mail->isHTML(false);
+            $mail->CharSet = 'UTF-8';
             $subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
             $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-            $mail->Body = $htmlBody;
-            $mail->AltBody = $textBody;
+            $mail->Body = $textBody;
 
             // Unsubscribe headers
             $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
@@ -376,7 +375,7 @@ class WebinarEmailJourney {
             'certificate_url' => generateMagicUrl($userId, '/pages/webinar-certificate.php?registration_id=' . $emailData['webinar_registration_id']),
             'unsubscribe_url' => $unsubscribeUrl,
             'site_url' => SITE_URL,
-            'site_name' => SITE_NAME ?? 'ФГОС-Практикум',
+            'site_name' => 'ФГОС-Практикум',
             'touchpoint_code' => $emailData['touchpoint_code']
         ];
     }
@@ -430,50 +429,63 @@ class WebinarEmailJourney {
 
         switch ($emailData['touchpoint_code']) {
             case 'webinar_confirmation':
-                $text .= "Вы зарегистрированы на вебинар \"{$data['webinar_title']}\".\n\n";
-                $text .= "Дата и время: {$data['webinar_datetime_full']}\n";
+                $text .= "Вы зарегистрированы на вебинар «{$data['webinar_title']}».\n\n";
+                $text .= "Когда: {$data['webinar_datetime_full']}\n";
+                $text .= "Продолжительность: {$data['webinar_duration']} минут\n";
                 if ($data['speaker_name']) {
-                    $text .= "Спикер: {$data['speaker_name']}\n";
+                    $text .= "Спикер: {$data['speaker_name']}";
+                    if ($data['speaker_position']) { $text .= ", {$data['speaker_position']}"; }
+                    $text .= "\n";
                 }
-                $text .= "\nСсылка на трансляцию придет за 1 час до начала.\n";
+                $text .= "\nДобавить в Google Calendar: {$data['google_calendar_url']}\n";
+                $text .= "Файл .ics: {$data['calendar_url']}\n\n";
+                $text .= "Ссылка на трансляцию придёт за 1 час до начала.\n";
+                $text .= "Личный кабинет: {$data['cabinet_url']}\n";
                 break;
 
             case 'webinar_reminder_24h':
-                $text .= "Напоминаем: завтра состоится вебинар \"{$data['webinar_title']}\".\n\n";
-                $text .= "Время: {$data['webinar_time']} МСК\n";
+                $text .= "Напоминаем: завтра в {$data['webinar_time']} МСК состоится вебинар «{$data['webinar_title']}».\n\n";
+                $text .= "Когда: {$data['webinar_datetime_full']}\n";
+                $text .= "Продолжительность: {$data['webinar_duration']} минут\n";
+                if ($data['speaker_name']) { $text .= "Спикер: {$data['speaker_name']}\n"; }
+                if (!empty($data['broadcast_url'])) {
+                    $text .= "\nСсылка на трансляцию (сохраните):\n{$data['broadcast_url']}\n";
+                } else {
+                    $text .= "\nСсылка на трансляцию придёт за 1 час до начала.\n";
+                }
+                $text .= "\nПодробнее: {$data['webinar_url']}\n";
                 break;
 
             case 'webinar_broadcast_link':
-                $text .= "Через 1 час начнётся вебинар \"{$data['webinar_title']}\"!\n\n";
-                $text .= "Ссылка на трансляцию: {$data['broadcast_url']}\n\n";
-                $text .= "Нажмите на ссылку за 5 минут до начала.\n";
+                $text .= "Через 1 час начнётся вебинар «{$data['webinar_title']}»!\n\n";
+                $text .= "Начало: {$data['webinar_time']} МСК\n";
+                if ($data['speaker_name']) { $text .= "Спикер: {$data['speaker_name']}\n"; }
+                $text .= "\nСсылка на трансляцию:\n{$data['broadcast_url']}\n\n";
+                $text .= "Войдите за 5 минут до начала, чтобы проверить звук и видео.\n";
+                $text .= "Не сможете присутствовать? Запись будет в личном кабинете: {$data['cabinet_url']}\n";
                 break;
 
             case 'webinar_reminder_15min':
-                $text .= "До начала вебинара \"{$data['webinar_title']}\" осталось 15 минут!\n\n";
-                $text .= "Ссылка на трансляцию: {$data['broadcast_url']}\n\n";
+                $text .= "До начала вебинара «{$data['webinar_title']}» осталось 15 минут!\n\n";
+                $text .= "Ссылка на трансляцию:\n{$data['broadcast_url']}\n\n";
                 $text .= "Войдите прямо сейчас, чтобы занять место.\n";
                 break;
 
             case 'webinar_followup':
-                $text .= "Спасибо за участие в вебинаре \"{$data['webinar_title']}\"!\n\n";
-                if ($data['video_url']) {
-                    $text .= "Смотреть запись: {$data['video_url']}\n\n";
-                }
-                $text .= "Скачать презентацию и подарок: https://disk.360.yandex.ru/d/zLDKwR2dmVUQ-g\n\n";
-                $text .= "Заполнить анкету обратной связи: https://clck.ru/3Rktcu\n\n";
-                $text .= "Получите именной сертификат на {$data['certificate_hours']} часа за {$data['certificate_price']} руб.\n";
-                $text .= "Оформить: {$data['certificate_url']}\n\n";
-                $text .= "Приглашаем на следующий вебинар «Как сохранить ресурс и не потерять качество работы при росте требований?»:\n";
-                $text .= "5 марта 2026 в 14:00 МСК\n";
-                $text .= "https://fgos.pro/vebinar/kak-sokhranit-resurs?utm_source=email&utm_campaign=pismoposle1veba\n";
+                $text .= "Спасибо за участие в вебинаре «{$data['webinar_title']}»!\n\n";
+                $text .= "Запись будет отправлена вам на почту в течение суток.\n\n";
+                $text .= "Презентация и подарок от спикера: https://clck.ru/3SaKHd\n";
+                $text .= "Анкета обратной связи (займёт 2 минуты): https://clck.ru/3SaLJ4\n\n";
+                $text .= "Именной сертификат на {$data['certificate_hours']} академических часа — " . number_format($data['certificate_price'], 0, '', ' ') . " руб.\n";
+                $text .= "Оформить сертификат: {$data['certificate_url']}\n\n";
+                $text .= "Личный кабинет: {$data['cabinet_url']}\n";
                 break;
         }
 
-        $text .= "\n---\n";
-        $text .= "С уважением,\nКоманда ФГОС-Практикум\n";
+        $text .= "\n--\n";
+        $text .= "С уважением, команда ФГОС-Практикум\n";
         $text .= "{$data['site_url']}\n\n";
-        $text .= "Отписаться от рассылки: {$data['unsubscribe_url']}\n";
+        $text .= "Если письмо пришло по ошибке — отписаться: {$data['unsubscribe_url']}\n";
 
         return $text;
     }

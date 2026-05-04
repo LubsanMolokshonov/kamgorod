@@ -206,27 +206,14 @@ class EmailJourney {
                 'touchpoint_code' => $emailData['touchpoint_code']
             ];
 
-            // Во время прогрева Яндекс-ящиков (CHAINS_PAUSED_UNTIL) подменяем
-            // дизайнерский HTML-шаблон на minimal-HTML (_simple), чтобы пройти
-            // антиспам. После окончания прогрева автоматически возвращается
-            // полноценный шаблон без правки кода.
-            $templateName = $emailData['email_template'];
-            if (defined('CHAINS_PAUSED_UNTIL') && CHAINS_PAUSED_UNTIL !== ''
-                && strtotime(CHAINS_PAUSED_UNTIL) >= time()) {
-                $simpleCandidate = $templateName . '_simple';
-                if (file_exists(BASE_PATH . '/includes/email-templates/' . $simpleCandidate . '.php')) {
-                    $templateName = $simpleCandidate;
-                }
-            }
-
-            $htmlBody = $this->renderTemplate($templateName, $templateData);
+            // Plain-text (обход антиспама Яндекс 360 после миграции 2026-04-27).
             $textBody = $this->renderTextTemplate($templateData);
 
-            $mail->isHTML(true);
+            $mail->isHTML(false);
+            $mail->CharSet = 'UTF-8';
             $subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
             $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-            $mail->Body = $htmlBody;
-            $mail->AltBody = $textBody;
+            $mail->Body = $textBody;
 
             $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
             $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');

@@ -200,12 +200,13 @@ class SilentReengagementCampaign {
         $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
 
         $subject = 'Скидка ' . (int)($templateData['discount_percent']) . '% до ' . $templateData['discount_expires_label'] . ' — специально для вас';
-        $mail->isHTML(true);
+        $mail->isHTML(false);
+        $mail->CharSet = 'UTF-8';
         $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
 
         $templateData['unsubscribe_url'] = $unsubscribeUrl;
-        $mail->Body = $this->renderTemplate('silent_reengagement', $templateData);
-        $mail->AltBody = $this->renderTextVersion($templateData);
+        // Plain-text (обход антиспама Яндекс 360 после миграции 2026-04-27).
+        $mail->Body = $this->renderTextVersion($templateData);
 
         EmailTracker::prepareAndSend($mail, [
             'email_type'      => 'silent_reengagement',
