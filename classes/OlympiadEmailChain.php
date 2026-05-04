@@ -222,7 +222,7 @@ class OlympiadEmailChain {
                 'diploma_url' => SITE_URL . '/olimpiada-diplom/' . ($emailData['olympiad_result_id'] ?? ''),
                 'unsubscribe_url' => $unsubscribeUrl,
                 'site_url' => SITE_URL,
-                'site_name' => SITE_NAME ?? 'Каменный город',
+                'site_name' => 'ФГОС-Практикум',
                 'touchpoint_code' => $emailData['touchpoint_code'],
                 'footer_reason' => 'прошли олимпиаду на нашем портале'
             ];
@@ -249,14 +249,15 @@ class OlympiadEmailChain {
                 $templateData['discount_hours'] = $discountHours;
             }
 
-            $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
-            $textBody = $this->renderTextTemplate($templateData);
+            // Plain-text режим: шаблоны после миграции 2026-05 возвращают сразу
+            // готовый текст (без HTML-обёртки) — обходим фильтры Яндекса.
+            $textBody = $this->renderTemplate($emailData['email_template'], $templateData);
 
-            $mail->isHTML(true);
+            $mail->isHTML(false);
+            $mail->CharSet = 'UTF-8';
             $subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
             $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-            $mail->Body = $htmlBody;
-            $mail->AltBody = $textBody;
+            $mail->Body = $textBody;
 
             $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
             $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
@@ -300,11 +301,13 @@ class OlympiadEmailChain {
     }
 
     /**
-     * Рендер текстовой версии
+     * Резервный рендер текстовой версии (используется как safety-net при ошибке
+     * рендера шаблона). Основные письма теперь сами возвращают plain-text —
+     * см. includes/email-templates/olympiad_*.php.
      */
     private function renderTextTemplate($data) {
         $text = "Здравствуйте, {$data['user_name']}!\n\n";
-        $text .= "Напоминаем о неоплаченном дипломе олимпиады \"{$data['olympiad_title']}\".\n\n";
+        $text .= "Напоминаем о неоплаченном дипломе олимпиады «{$data['olympiad_title']}».\n\n";
 
         if ($data['score']) {
             $text .= "Ваш результат: {$data['score']} из 10 баллов\n";
@@ -315,8 +318,8 @@ class OlympiadEmailChain {
 
         $text .= "Стоимость диплома: " . number_format($data['olympiad_price'], 0, ',', ' ') . " руб.\n\n";
         $text .= "Получить диплом: {$data['payment_url']}\n\n";
-        $text .= "---\n";
-        $text .= "С уважением,\nКоманда проекта \"Каменный город\"\n\n";
+        $text .= "—\n";
+        $text .= "Команда ФГОС-Практикум\nfgos.pro\n\n";
         $text .= "Отписаться от рассылки: {$data['unsubscribe_url']}\n";
 
         return $text;
@@ -658,16 +661,17 @@ class OlympiadEmailChain {
                 'result_id' => $resultId,
                 'unsubscribe_url' => $unsubscribeUrl,
                 'site_url' => SITE_URL,
-                'site_name' => SITE_NAME ?? 'Каменный город',
+                'site_name' => 'ФГОС-Практикум',
             ];
 
-            $htmlBody = $this->renderTemplate($tplConfig['template'], $templateData);
+            // Plain-text режим (шаблоны после миграции 2026-05).
+            $textBody = $this->renderTemplate($tplConfig['template'], $templateData);
 
             $subject = $this->interpolateSubject($tplConfig['subject'], $templateData);
-            $mail->isHTML(true);
+            $mail->isHTML(false);
+            $mail->CharSet = 'UTF-8';
             $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-            $mail->Body = $htmlBody;
-            $mail->AltBody = strip_tags(str_replace(['<br>', '</p>'], "\n", $htmlBody));
+            $mail->Body = $textBody;
 
             $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
             $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
