@@ -77,7 +77,14 @@ class AutowebinarEmailChain {
 
         if (!$emailData) return false;
 
-        return $this->sendEmail($emailData);
+        $success = $this->sendEmail($emailData);
+        if ($success) {
+            // sendEmail() сам не помечает 'sent', а cron через ~3 мин проставит
+            // 'skipped' (welcome auto-устаревает после регистрации). Поэтому
+            // фиксируем результат сразу.
+            $this->updateEmailStatus($emailData['id'], 'sent');
+        }
+        return $success;
     }
 
     /**

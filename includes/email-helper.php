@@ -16,11 +16,21 @@ use PHPMailer\PHPMailer\Exception;
  * Используется в cron/process-*-emails.php и в send-методах chain-классов:
  * пока новые ящики rodion@/kazakova@ прогреваются, лучше не отправлять
  * массовые цепочки — они тянут вниз репутацию и блокируют транзакционку.
+ *
+ * При указании $touchpointCode — возвращает false для whitelist'а
+ * приветственных/подтверждающих писем после регистрации (без них
+ * пользователь думает, что не зарегистрировался).
  */
-function chainEmailsPaused(): bool {
+function chainEmailsPaused(?string $touchpointCode = null): bool {
     if (!defined('CHAINS_PAUSED_UNTIL') || CHAINS_PAUSED_UNTIL === '') return false;
     $until = strtotime(CHAINS_PAUSED_UNTIL);
-    return $until !== false && time() < $until;
+    if ($until === false || time() >= $until) return false;
+
+    static $alwaysAllowed = ['webinar_confirmation', 'aw_welcome'];
+    if ($touchpointCode !== null && in_array($touchpointCode, $alwaysAllowed, true)) {
+        return false;
+    }
+    return true;
 }
 
 /**

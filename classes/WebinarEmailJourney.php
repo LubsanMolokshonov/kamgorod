@@ -16,6 +16,9 @@ class WebinarEmailJourney {
     private $pdo;
     private const MAX_ATTEMPTS = 3;
     private const BATCH_SIZE = 50;
+    // Уменьшенный батч, когда активна CHAINS_PAUSED_UNTIL — чтобы welcome-письма
+    // дренировались плавно (cron каждую минуту → max 5/мин).
+    private const PAUSE_BATCH_SIZE = 5;
 
     public function __construct($pdo) {
         $this->pdo = $pdo;
@@ -182,9 +185,16 @@ class WebinarEmailJourney {
      */
     public function processPendingEmails() {
         require_once BASE_PATH . '/includes/email-helper.php';
+
+        // Во время CHAINS_PAUSED_UNTIL пускаем только webinar_confirmation
+        // (приветственное после регистрации) и маленьким батчем, чтобы не
+        // выпускать накопившиеся залпом.
+        $codeFilter = '';
+        $batchSize  = self::BATCH_SIZE;
         if (chainEmailsPaused()) {
-            $this->log("PROCESS | PAUSED until " . CHAINS_PAUSED_UNTIL . " — skip");
-            return ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'paused' => true];
+            $codeFilter = " AND t.code = 'webinar_confirmation' ";
+            $batchSize  = self::PAUSE_BATCH_SIZE;
+            $this->log("PROCESS | PAUSED until " . CHAINS_PAUSED_UNTIL . " — only webinar_confirmation, batch={$batchSize}");
         }
 
         $now = date('Y-m-d H:i:s');
@@ -207,9 +217,10 @@ class WebinarEmailJourney {
                AND wel.scheduled_at <= ?
                AND wel.attempts < ?
                AND wr.status = 'registered'
+               {$codeFilter}
              ORDER BY wel.scheduled_at ASC
              LIMIT ?",
-            [$now, self::MAX_ATTEMPTS, self::BATCH_SIZE]
+            [$now, self::MAX_ATTEMPTS, $batchSize]
         );
 
         $results = ['sent' => 0, 'failed' => 0, 'skipped' => 0];
