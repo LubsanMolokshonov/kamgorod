@@ -169,22 +169,20 @@ $basePriceFormatted = number_format($abBasePrice, 0, ',', ' ');
           <span class="rd-pill rd-pill-program"><?php echo htmlspecialchars($programShortLabel); ?></span>
           <span class="rd-pill indigo"><?php echo htmlspecialchars(Course::formatHours($course['hours'])); ?></span>
           <?php
-          // Аудитория: до 3 наиболее информативных пилюль (категория, тип, специализация)
-          $audiencePills = [];
-          if (!empty($audienceCategories[0]['name'])) {
-              $audiencePills[] = 'Для ' . mb_strtolower($audienceCategories[0]['name']);
-          }
-          if (!empty($audienceTypes[0]['name'])) {
-              $audiencePills[] = $audienceTypes[0]['name'];
-          }
+          // Аудитория: только самый узкий уровень (специализация → тип → категория),
+          // чтобы не плодить пилюли в шапке.
+          $audiencePill = null;
           if (!empty($specializations[0]['name'])) {
-              $audiencePills[] = $specializations[0]['name'];
+              $audiencePill = $specializations[0]['name'];
+          } elseif (!empty($audienceTypes[0]['name'])) {
+              $audiencePill = $audienceTypes[0]['name'];
+          } elseif (!empty($audienceCategories[0]['name'])) {
+              $audiencePill = 'Для ' . mb_strtolower($audienceCategories[0]['name']);
           }
-          $audiencePills = array_slice($audiencePills, 0, 3);
-          foreach ($audiencePills as $pill):
+          if ($audiencePill):
           ?>
-            <span class="rd-pill"><span class="dot"></span><?php echo htmlspecialchars($pill); ?></span>
-          <?php endforeach; ?>
+            <span class="rd-pill"><span class="dot"></span><?php echo htmlspecialchars($audiencePill); ?></span>
+          <?php endif; ?>
           <span class="rd-pill">Дистанционно</span>
         </div>
 
