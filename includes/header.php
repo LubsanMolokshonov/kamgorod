@@ -2,14 +2,20 @@
 // Initialize session for user authentication check
 require_once __DIR__ . '/session.php';
 initSession();
+
+// Флаг редизайн-страницы: если true, к <body> добавляется класс rd-page
+// (включает типографику и сбросы редизайна). По умолчанию false — чтобы
+// легаси-страницы сохраняли свой вид и получили только новый хедер сверху.
+$useRedesignBody = $useRedesignBody ?? false;
+$rdActivePage    = $rdActivePage ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle ?? 'Педагогический портал'; ?></title>
-    <meta name="description" content="<?php echo $pageDescription ?? 'Всероссийские конкурсы для педагогов и школьников'; ?>">
+    <title><?php echo htmlspecialchars($pageTitle ?? 'Педагогический портал', ENT_QUOTES, 'UTF-8'); ?></title>
+    <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?? 'Всероссийские конкурсы для педагогов и школьников', ENT_QUOTES, 'UTF-8'); ?>">
 <?php if (!empty($noindex)): ?>
     <meta name="robots" content="noindex, nofollow">
 <?php endif; ?>
@@ -18,8 +24,8 @@ initSession();
 
     <!-- Open Graph -->
 <?php if (empty($ogImage)) $ogImage = SITE_URL . '/assets/images/og-home.jpg'; ?>
-    <meta property="og:title" content="<?php echo htmlspecialchars($pageTitle ?? SITE_NAME); ?>">
-    <meta property="og:description" content="<?php echo htmlspecialchars($pageDescription ?? ''); ?>">
+    <meta property="og:title" content="<?php echo htmlspecialchars($pageTitle ?? SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
+    <meta property="og:description" content="<?php echo htmlspecialchars($pageDescription ?? '', ENT_QUOTES, 'UTF-8'); ?>">
     <meta property="og:url" content="<?php echo $canonicalUrl; ?>">
     <meta property="og:type" content="<?php echo $ogType ?? 'website'; ?>">
     <meta property="og:site_name" content="<?php echo SITE_NAME; ?>">
@@ -30,20 +36,25 @@ initSession();
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="<?php echo htmlspecialchars($pageTitle ?? SITE_NAME); ?>">
-    <meta name="twitter:description" content="<?php echo htmlspecialchars($pageDescription ?? ''); ?>">
+    <meta name="twitter:title" content="<?php echo htmlspecialchars($pageTitle ?? SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
+    <meta name="twitter:description" content="<?php echo htmlspecialchars($pageDescription ?? '', ENT_QUOTES, 'UTF-8'); ?>">
     <meta name="twitter:image" content="<?php echo $ogImage; ?>">
 
     <!-- Preconnect -->
     <link rel="preconnect" href="https://code.jquery.com" crossorigin>
     <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://code.jquery.com">
     <link rel="dns-prefetch" href="https://mc.yandex.ru">
 
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <!-- Стили: легаси (для старых страниц) + редизайн (для нового хедера/футера) -->
     <link rel="stylesheet" href="/assets/css/main.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/main.css'); ?>">
     <link rel="stylesheet" href="/assets/css/search.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/search.css'); ?>">
+    <link rel="stylesheet" href="/assets/css/redesign.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/redesign.css'); ?>">
 
     <!-- Yandex.Metrika counter -->
     <script type="text/javascript">
@@ -81,7 +92,9 @@ initSession();
 
     <?php if (isset($additionalCSS)): ?>
         <?php foreach ($additionalCSS as $css): ?>
+            <?php if (strpos($css, 'redesign.css') === false): // не дублируем ?>
             <link rel="stylesheet" href="<?php echo $css; ?>">
+            <?php endif; ?>
         <?php endforeach; ?>
     <?php endif; ?>
 
@@ -105,149 +118,83 @@ foreach ($allJsonLd as $ld):
 
     <!-- Visit Tracker -->
     <script src="/assets/js/visit-tracker.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/visit-tracker.js'); ?>" defer></script>
+    <!-- Redesign JS (хедер: мобильное меню + поиск) -->
+    <script src="/assets/js/redesign.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/redesign.js'); ?>" defer></script>
 </head>
-<body>
-    <header class="header">
-        <!-- Top bar: утилиты (СМИ, поиск, корзина, авторизация) -->
-        <div class="header-topbar" id="headerTopbar">
-            <div class="container">
-                <div class="topbar-container">
-                    <?php if (!isset($_SESSION['user_email'])): ?>
-                    <div class="topbar-left">
-                        <div class="header-smi-badge">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>СМИ: Эл. №ФС 77-74524 от 24.12.2018</span>
-                        </div>
-                    </div>
-                    <?php else: ?>
-                    <div class="topbar-left"></div>
-                    <?php endif; ?>
+<body<?php echo $useRedesignBody ? ' class="rd-page"' : ''; ?>>
 
-                    <div class="topbar-center">
-                        <div class="header-search" id="headerSearch">
-                            <div class="search-container">
-                                <input type="text"
-                                       class="search-input"
-                                       id="searchInput"
-                                       placeholder="Найти конкурс или олимпиаду..."
-                                       autocomplete="off"
-                                       aria-label="Поиск конкурсов и олимпиад">
-                                <button type="button" class="search-clear" id="searchClear" aria-label="Очистить">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                </button>
-                                <button type="button" class="search-btn" id="searchBtn" aria-label="Искать">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                </button>
-                            </div>
+<?php
+$isLoggedIn = isset($_SESSION['user_email']);
+?>
 
-                            <!-- Dropdown с результатами -->
-                            <div class="search-results" id="searchResults">
-                                <div class="search-results-inner">
-                                    <!-- Результаты будут добавлены динамически -->
-                                </div>
-                                <div class="search-loading" id="searchLoading">
-                                    <div class="search-spinner"></div>
-                                    <span>Поиск...</span>
-                                </div>
-                                <div class="search-empty" id="searchEmpty">
-                                    <span>Ничего не найдено</span>
-                                    <p>Попробуйте изменить запрос</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+<!-- Sticky хедер (редизайн) -->
+<div class="rd-topbar">
+  <div class="rd-wrap rd-nav">
+    <a class="rd-logo" href="/" aria-label="<?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
+      <img src="/assets/images/logo.svg" alt="<?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
+    </a>
 
-                    <div class="topbar-right">
-                        <?php
-                        $cartCount = getCartCount();
-                        $cartTotal = $cartCount > 0 ? getCartTotal() : 0;
-                        ?>
-                        <a href="/korzina" class="cart-button <?php echo $cartCount === 0 ? 'cart-empty' : ''; ?>">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M7 18C5.9 18 5.01 18.9 5.01 20C5.01 21.1 5.9 22 7 22C8.1 22 9 21.1 9 20C9 18.9 8.1 18 7 18ZM1 2V4H3L6.6 11.59L5.25 14.04C5.09 14.32 5 14.65 5 15C5 16.1 5.9 17 7 17H19V15H7.42C7.28 15 7.17 14.89 7.17 14.75L7.2 14.63L8.1 13H15.55C16.3 13 16.96 12.59 17.3 11.97L20.88 5.48C20.96 5.34 21 5.17 21 5C21 4.45 20.55 4 20 4H5.21L4.27 2H1ZM17 18C15.9 18 15.01 18.9 15.01 20C15.01 21.1 15.9 22 17 22C18.1 22 19 21.1 19 20C19 18.9 18.1 18 17 18Z" fill="currentColor"/>
-                            </svg>
-                            <?php if ($cartCount > 0): ?>
-                            <span class="cart-count"><?php echo $cartCount; ?></span>
-                            <span class="cart-total"><?php echo number_format($cartTotal, 0, ',', ' '); ?> ₽</span>
-                            <?php endif; ?>
-                        </a>
+    <nav class="rd-nav-links">
+      <a class="rd-nav-link<?php echo $rdActivePage === 'konkursy' ? ' active' : ''; ?>" href="/konkursy">Конкурсы</a>
+      <a class="rd-nav-link<?php echo $rdActivePage === 'olimpiady' ? ' active' : ''; ?>" href="/olimpiady">Олимпиады</a>
+      <a class="rd-nav-link<?php echo $rdActivePage === 'vebinary' ? ' active' : ''; ?>" href="/vebinary">Вебинары</a>
+      <a class="rd-nav-link<?php echo $rdActivePage === 'kursy' ? ' active' : ''; ?>" href="/kursy">Курсы</a>
+      <a class="rd-nav-link<?php echo $rdActivePage === 'zhurnal' ? ' active' : ''; ?>" href="/zhurnal">Журнал</a>
+    </nav>
 
-                        <?php if (isset($_SESSION['user_email'])): ?>
-                            <a href="/kabinet" class="topbar-auth-link">Кабинет</a>
-                            <a href="/vyhod" class="topbar-auth-link topbar-logout">Выйти</a>
-                        <?php else: ?>
-                            <a href="/vhod" class="topbar-auth-btn">Войти</a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
+    <div class="rd-nav-right">
+      <div class="rd-search-wrap">
+        <label class="rd-search-pill" id="rdSearchPill">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="rdSearchInput" placeholder="Найти курс, конкурс, олимпиаду..." autocomplete="off" aria-label="Поиск">
+          <kbd>⌘K</kbd>
+        </label>
+        <div class="rd-search-dd" id="rdSearchDd">
+          <div class="rd-search-dd-section">Быстрые переходы</div>
+          <a class="rd-sd-item" href="/konkursy"><div class="ico">🏆</div><div><div class="t">Конкурсы для педагогов</div><div class="s">Официальные дипломы · от 169 ₽</div></div></a>
+          <a class="rd-sd-item" href="/olimpiady"><div class="ico">🎓</div><div><div class="t">Всероссийские олимпиады</div><div class="s">Бесплатно · диплом за 30 сек.</div></div></a>
+          <a class="rd-sd-item" href="/kursy"><div class="ico">📚</div><div><div class="t">Курсы повышения квалификации</div><div class="s">КПК и переподготовка · с удостоверением</div></div></a>
+          <a class="rd-sd-item" href="/opublikovat"><div class="ico">📝</div><div><div class="t">Опубликовать статью</div><div class="s">Свидетельство о публикации</div></div></a>
         </div>
+      </div>
 
-        <!-- Main bar: логотип + навигация -->
-        <div class="header-main">
-            <div class="container">
-                <div class="main-bar-container">
-                    <a href="/" class="logo">
-                        <img src="/assets/images/logo.svg" alt="<?php echo SITE_NAME ?? 'Педагогический портал'; ?>" class="logo-image">
-                    </a>
+      <?php if ($isLoggedIn): ?>
+        <a href="/kabinet" class="rd-login-btn">Кабинет</a>
+      <?php else: ?>
+        <a href="/vhod" class="rd-login-btn">Войти</a>
+      <?php endif; ?>
 
-                    <nav class="main-nav" id="mainNav">
-                        <a href="/konkursy">Конкурсы</a>
-                        <a href="/olimpiady">Олимпиады</a>
-                        <a href="/vebinary">Вебинары</a>
-                        <a href="/kursy">Курсы</a>
-                        <div class="nav-dropdown">
-                            <a href="/zhurnal" class="nav-dropdown-trigger">Журнал</a>
-                            <div class="nav-dropdown-menu">
-                                <a href="/zhurnal" class="dropdown-item">О журнале</a>
-                                <a href="/publikacii" class="dropdown-item">Опубликованные материалы</a>
-                                <a href="/opublikovat" class="dropdown-item">Опубликовать статью</a>
-                                <a href="/generator-statej" class="dropdown-item">Генератор статей</a>
-                            </div>
-                        </div>
-                        <a href="/o-portale">О портале</a>
-                        <!-- Мобильная авторизация (дублируется из topbar для мобильного меню) -->
-                        <div class="mobile-nav-auth">
-                            <?php if (isset($_SESSION['user_email'])): ?>
-                                <a href="/kabinet">Личный кабинет</a>
-                                <a href="/vyhod">Выйти</a>
-                            <?php else: ?>
-                                <a href="/vhod" class="nav-cta">Войти</a>
-                            <?php endif; ?>
-                        </div>
-                    </nav>
+      <button type="button" class="rd-menu-btn" id="rdMenuBtn" aria-label="Меню">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
 
-                    <!-- Mobile Search Trigger -->
-                    <button type="button" class="mobile-search-trigger" id="mobileSearchTrigger" aria-label="Поиск">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
+<!-- Мобильное меню -->
+<div class="rd-mobile-menu" id="rdMobileMenu">
+  <div class="rd-mobile-menu-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <a class="rd-logo" href="/" aria-label="<?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
+        <img src="/assets/images/logo.svg" alt="<?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
+      </a>
+      <button type="button" class="rd-menu-btn" id="rdMenuClose" aria-label="Закрыть">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <a class="rd-mm-link" href="/konkursy">Конкурсы</a>
+    <a class="rd-mm-link" href="/olimpiady">Олимпиады</a>
+    <a class="rd-mm-link" href="/vebinary">Вебинары</a>
+    <a class="rd-mm-link" href="/kursy">Курсы</a>
+    <a class="rd-mm-link" href="/zhurnal">Журнал</a>
+    <a class="rd-mm-link" href="/o-portale">О портале</a>
+    <?php if ($isLoggedIn): ?>
+      <a class="rd-mm-link" href="/kabinet">Личный кабинет</a>
+      <a class="rd-mm-link" href="/vyhod">Выйти</a>
+    <?php else: ?>
+      <a href="/vhod" class="rd-btn rd-btn-primary" style="width:100%;margin-top:16px;justify-content:center;display:flex;">Войти</a>
+    <?php endif; ?>
+  </div>
+</div>
 
-                    <!-- Мобильная корзина -->
-                    <a href="/korzina" class="mobile-cart-trigger <?php echo $cartCount === 0 ? 'cart-empty' : ''; ?>" aria-label="Корзина">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M7 18C5.9 18 5.01 18.9 5.01 20C5.01 21.1 5.9 22 7 22C8.1 22 9 21.1 9 20C9 18.9 8.1 18 7 18ZM1 2V4H3L6.6 11.59L5.25 14.04C5.09 14.32 5 14.65 5 15C5 16.1 5.9 17 7 17H19V15H7.42C7.28 15 7.17 14.89 7.17 14.75L7.2 14.63L8.1 13H15.55C16.3 13 16.96 12.59 17.3 11.97L20.88 5.48C20.96 5.34 21 5.17 21 5C21 4.45 20.55 4 20 4H5.21L4.27 2H1ZM17 18C15.9 18 15.01 18.9 15.01 20C15.01 21.1 15.9 22 17 22C18.1 22 19 21.1 19 20C19 18.9 18.1 18 17 18Z" fill="currentColor"/>
-                        </svg>
-                        <?php if ($cartCount > 0): ?>
-                        <span class="mobile-cart-badge"><?php echo $cartCount; ?></span>
-                        <?php endif; ?>
-                    </a>
-
-                    <div class="hamburger" id="hamburger">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <main>
+<main>

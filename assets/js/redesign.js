@@ -41,8 +41,22 @@
   var tabsBar = document.getElementById('rdTabsBar');
   var offersGrid = document.getElementById('rdOffersGrid');
   if (tabsBar && offersGrid && typeof window.rdOffersData !== 'undefined') {
+    var allLinks = {
+      kursy: { url: '/kursy/', label: 'Все курсы' },
+      konk:  { url: '/konkursy/', label: 'Все конкурсы' },
+      veb:   { url: '/vebinary/', label: 'Все вебинары' },
+      ol:    { url: '/olimpiady/', label: 'Все олимпиады' },
+      pub:   { url: '/zhurnal/', label: 'Все публикации' }
+    };
+    var allBtnWrap = document.createElement('div');
+    allBtnWrap.className = 'rd-offers-allbtn';
+    var allBtn = document.createElement('a');
+    allBtn.className = 'rd-btn rd-btn-primary';
+    allBtnWrap.appendChild(allBtn);
+    offersGrid.parentNode.insertBefore(allBtnWrap, offersGrid.nextSibling);
+
     function renderOffers(key) {
-      var items = window.rdOffersData[key] || [];
+      var items = (window.rdOffersData[key] || []).slice(0, 5);
       offersGrid.innerHTML = '';
       items.forEach(function (o, i) {
         var el = document.createElement('a');
@@ -65,6 +79,15 @@
           el.style.transform = 'none';
         }, i * 50);
       });
+
+      var allCfg = allLinks[key];
+      if (allCfg) {
+        allBtn.href = allCfg.url;
+        allBtn.textContent = allCfg.label + ' →';
+        allBtnWrap.style.display = '';
+      } else {
+        allBtnWrap.style.display = 'none';
+      }
     }
 
     function escHtml(str) {

@@ -796,6 +796,8 @@ h1.rd-hero-title .accent {
 .rd-offer-cta { font: 600 14px var(--font-sans); color: var(--indigo-700); display: inline-flex; align-items: center; gap: 6px; }
 .rd-offer:hover .rd-offer-cta { gap: 10px; }
 
+.rd-offers-allbtn { display: flex; justify-content: center; margin-top: 28px; }
+
 /* =====================================================
    TRUST BAND
    ===================================================== */
