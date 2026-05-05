@@ -29,6 +29,23 @@ function recipientRecentlyEmailed(PDO $pdo, string $email, int $minutes): bool {
 }
 
 /**
+ * Превышен ли суточный лимит chain-писем для получателя.
+ * Используется для жёсткого защитного потолка на случай, когда после простоя
+ * Unisender'а в очереди скапливается несколько писем разных каналов на одного
+ * пользователя — чтобы они не приехали залпом. Письмо при срабатывании
+ * остаётся в pending и подхватится следующим прогоном, когда окно сдвинется.
+ */
+function recipientReachedDailyCap(PDO $pdo, string $email, int $cap): bool {
+    if ($cap <= 0 || $email === '') return false;
+    $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM email_events
+         WHERE recipient_email = ? AND sent_at >= NOW() - INTERVAL 24 HOUR"
+    );
+    $stmt->execute([$email]);
+    return ((int)$stmt->fetchColumn()) >= $cap;
+}
+
+/**
  * Поставить письмо в очередь pending_delayed_emails для отложенной отправки.
  * Обрабатывается cron/send-delayed-emails.php (раз в 5 минут).
  *

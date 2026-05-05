@@ -144,6 +144,11 @@ class EmailJourney {
                 continue;
             }
 
+            if (recipientReachedDailyCap($this->pdo, $email['email'], CHAIN_DAILY_CAP_PER_RECIPIENT)) {
+                $results['skipped']++;
+                continue;
+            }
+
             $success = $this->sendJourneyEmail($email);
 
             if ($success) {

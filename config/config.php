@@ -97,6 +97,10 @@ if (!defined('TELEGRAM_ALERT_CHAT_ID')) {
 // Минимальный интервал между chain-письмами одному получателю (минуты). 0 = отключено.
 if (!defined('CHAIN_MIN_INTERVAL_MINUTES')) define('CHAIN_MIN_INTERVAL_MINUTES', (int)($_ENV['CHAIN_MIN_INTERVAL_MINUTES'] ?? 0));
 
+// Максимум chain-писем одному получателю за последние 24 часа. 0 = отключено.
+// Считаются записи в email_events (т.е. фактически принятые Unisender'ом отправки).
+if (!defined('CHAIN_DAILY_CAP_PER_RECIPIENT')) define('CHAIN_DAILY_CAP_PER_RECIPIENT', (int)($_ENV['CHAIN_DAILY_CAP_PER_RECIPIENT'] ?? 0));
+
 // Все исходящие письма идут через Unisender Go (см. UNISENDER_* выше).
 // SMTP_BULK_* пул и CHAINS_PAUSED_UNTIL удалены при миграции 2026-05-05.
 

@@ -267,6 +267,11 @@ class CoursePromoEmailCampaign {
                 continue;
             }
 
+            if (recipientReachedDailyCap($this->pdo, $emailData['email'], CHAIN_DAILY_CAP_PER_RECIPIENT)) {
+                $results['skipped']++;
+                continue;
+            }
+
             $success = $this->sendPromoEmail($emailData);
 
             if ($success) {

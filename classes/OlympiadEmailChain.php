@@ -152,6 +152,11 @@ class OlympiadEmailChain {
                 continue;
             }
 
+            if (recipientReachedDailyCap($this->pdo, $email['email'], CHAIN_DAILY_CAP_PER_RECIPIENT)) {
+                $results['skipped']++;
+                continue;
+            }
+
             // Для финальной скидки (14d): пользователи с loyalty уже получают 25% —
             // не дразним их скидкой 15%, которая не применится.
             if (($email['touchpoint_code'] ?? '') === 'olymp_pay_14d'
@@ -551,6 +556,11 @@ class OlympiadEmailChain {
             }
 
             if (recipientRecentlyEmailed($this->pdo, $email['email'], CHAIN_MIN_INTERVAL_MINUTES)) {
+                $results['skipped']++;
+                continue;
+            }
+
+            if (recipientReachedDailyCap($this->pdo, $email['email'], CHAIN_DAILY_CAP_PER_RECIPIENT)) {
                 $results['skipped']++;
                 continue;
             }
