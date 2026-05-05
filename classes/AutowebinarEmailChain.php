@@ -509,6 +509,11 @@ class AutowebinarEmailChain {
                 'touchpoint_code'   => $emailData['touchpoint_code'],
             ];
 
+            require_once __DIR__ . '/CourseEmailChain.php';
+            $sender = \CourseEmailChain::pickPersonalSender($emailData['email']);
+            $templateData['_sender_name'] = \CourseEmailChain::extractFirstName($sender['from_name']);
+            $templateData['sender_signature'] = $sender['from_name'];
+
             $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
             $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
@@ -517,6 +522,9 @@ class AutowebinarEmailChain {
                 'to_name'         => $emailData['full_name'],
                 'subject'         => $subject,
                 'html'            => $htmlBody,
+                'from_name'       => $sender['from_name'],
+                'reply_to'        => $sender['reply_to'],
+                'reply_to_name'   => $sender['reply_to_name'],
                 'unsubscribe_url' => $unsubscribeUrl,
                 'meta'            => [
                     'email_type'      => 'autowebinar',

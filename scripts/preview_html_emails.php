@@ -205,6 +205,11 @@ function renderTemplate(string $name, array $data): string {
 }
 
 $ok = 0; $err = 0;
+require_once BASE_PATH . '/classes/CourseEmailChain.php';
+$previewSender = \CourseEmailChain::pickPersonalSender($RECIPIENT);
+$base['_sender_name']     = \CourseEmailChain::extractFirstName($previewSender['from_name']);
+$base['sender_signature'] = $previewSender['from_name'];
+
 foreach ($templates as [$name, $label]) {
     try {
         $html = renderTemplate($name, $base);
@@ -213,6 +218,9 @@ foreach ($templates as [$name, $label]) {
             'to_name'  => $RECIPIENT_NAME,
             'subject'  => '[ПРЕВЬЮ] ' . $label,
             'html'     => $html,
+            'from_name'     => $previewSender['from_name'],
+            'reply_to'      => $previewSender['reply_to'],
+            'reply_to_name' => $previewSender['reply_to_name'],
             'unsubscribe_url' => $base['unsubscribe_url'],
             'skip_tracking'   => true,
             'meta'     => ['email_type' => 'other', 'touchpoint_code' => 'preview_' . $name],

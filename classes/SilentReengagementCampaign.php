@@ -14,6 +14,7 @@
 
 require_once __DIR__ . '/EmailCampaignDiscount.php';
 require_once __DIR__ . '/EmailDispatcher.php';
+require_once __DIR__ . '/CourseEmailChain.php';
 
 class SilentReengagementCampaign {
     public const CAMPAIGN_CODE = 'silent_reengagement_10';
@@ -186,14 +187,23 @@ class SilentReengagementCampaign {
         $unsubscribeUrl = SITE_URL . '/pages/unsubscribe.php?token=' . $this->generateUnsubscribeToken($user['email']);
         $templateData['unsubscribe_url'] = $unsubscribeUrl;
 
-        $subject = 'Скидка ' . (int)($templateData['discount_percent']) . '% до ' . $templateData['discount_expires_label'] . ' — специально для вас';
+        // Личный subject — без слов «скидка»/«специально», без восклицательных знаков.
+        $firstName = $this->extractFirstName($user['full_name'] ?? '');
+        $subject = $firstName !== ''
+            ? $firstName . ', давно не виделись на fgos.pro'
+            : 'Давно не виделись на fgos.pro';
         $htmlBody = $this->renderTemplate('silent_reengagement', $templateData);
+
+        $sender = \CourseEmailChain::pickPersonalSender($user['email']);
 
         EmailDispatcher::send([
             'to_email'        => $user['email'],
             'to_name'         => $user['full_name'],
             'subject'         => $subject,
             'html'            => $htmlBody,
+            'from_name'       => $sender['from_name'],
+            'reply_to'        => $sender['reply_to'],
+            'reply_to_name'   => $sender['reply_to_name'],
             'unsubscribe_url' => $unsubscribeUrl,
             'meta'            => [
                 // 'silent_reengagement' нет в ENUM — используем 'other'.
@@ -440,6 +450,12 @@ class SilentReengagementCampaign {
     private function generateUnsubscribeToken(string $email): string {
         $hash = substr(md5($email . SITE_URL), 0, 16);
         return base64_encode($email . ':' . $hash);
+    }
+
+    /** «Иван Иванов» → «Иван». Пусто, если имени нет. */
+    private function extractFirstName(string $fullName): string {
+        $first = trim(explode(' ', trim($fullName), 2)[0] ?? '');
+        return $first;
     }
 
     private function log(string $msg): void {

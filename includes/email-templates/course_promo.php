@@ -49,7 +49,7 @@ ob_start();
 
     <div class="text-center">
         <a href="<?php echo htmlspecialchars($course_url); ?>?utm_source=email&utm_medium=promo&utm_campaign=course_promo" class="cta-button">
-            Записаться на курс
+            Оплатить курс
         </a>
     </div>
 
@@ -117,7 +117,7 @@ ob_start();
     <!-- Повторная CTA -->
     <div class="text-center" style="margin-top: 30px;">
         <a href="<?php echo htmlspecialchars($course_url); ?>?utm_source=email&utm_medium=promo&utm_campaign=course_promo" class="cta-button cta-button-green">
-            Записаться на курс
+            Оплатить курс
         </a>
     </div>
 

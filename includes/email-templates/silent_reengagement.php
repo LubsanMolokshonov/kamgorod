@@ -1,93 +1,53 @@
 <?php
 /**
- * Шаблон реактивации «молчащих» пользователей с предложением скидки 10%.
+ * Реактивация «молчащих» пользователей — личный тон.
+ *
+ * Subject формируется в SilentReengagementCampaign::sendOne() (без слов «скидка», «специально»).
  *
  * Переменные:
- *   $user_name, $site_url, $site_name, $unsubscribe_url
- *   $discount_percent (10), $discount_expires_label (например «30 апреля»)
- *   $magic_login_url       — автовход в ЛК (ссылка в тело письма / CTA)
- *   $primary_cta_url       — основная CTA (зависит от сегмента)
- *   $primary_cta_label     — подпись основной CTA
- *   $segment_code          — A/B/C/D/E/F/G (для UTM)
- *   $headline              — персональный заголовок
- *   $intro_text            — 1 короткий абзац
- *   $recommendations       — array: [ ['title'=>..., 'description'=>..., 'url'=>..., 'badge'=>..., 'price'=>?, 'meta'=>?], ... ]
- *   $footer_reason
+ *   $user_name, $site_url, $unsubscribe_url, $magic_login_url
+ *   $discount_percent, $discount_expires_label
+ *   $primary_cta_url, $primary_cta_label
+ *   $segment_code (для UTM)
+ *   $headline, $intro_text
+ *   $recommendations: [ ['title', 'description', 'url', ...], ... ]
  */
-
-$email_subject = 'Скидка ' . (int)$discount_percent . '% до ' . htmlspecialchars($discount_expires_label) . ' — специально для вас';
+$footer_reason   = $footer_reason ?? 'когда-то регистрировались на fgos.pro';
+$sender_signature = $sender_signature ?? 'Анна, ФГОС-Практикум';
 
 $utm = '?utm_source=email&utm_medium=campaign&utm_campaign=silent_reengagement_10&utm_content=' . urlencode($segment_code ?? 'na');
+$cta_link = ($magic_login_url ?? $site_url) . (strpos(($magic_login_url ?? $site_url), '?') !== false ? '&' : '?')
+            . 'utm_source=email&utm_medium=campaign&utm_campaign=silent_reengagement_10&utm_content=' . urlencode($segment_code ?? 'na');
 
 ob_start();
 ?>
-<div class="email-header">
-    <div class="email-header-content">
-        <div class="logo" style="text-align: center;">
-            <img src="<?php echo htmlspecialchars($site_url); ?>/assets/images/logo-white.png" alt="<?php echo htmlspecialchars($site_name); ?>" style="height: 40px;">
-        </div>
-        <h1><?php echo htmlspecialchars($headline); ?></h1>
-        <p>Скидка <?php echo (int)$discount_percent; ?>% на любую покупку до <?php echo htmlspecialchars($discount_expires_label); ?></p>
-    </div>
-</div>
+<p>Здравствуйте, <?php echo htmlspecialchars($user_name ?: 'коллега'); ?>.</p>
 
-<div class="email-content">
-    <p class="greeting">Здравствуйте, <?php echo htmlspecialchars($user_name ?: 'коллега'); ?>!</p>
+<p>Давно не виделись. Пишу уточнить — fgos.pro вам ещё актуален? У вас остался личный кабинет с заявками и прошлыми материалами.</p>
 
-    <p><?php echo htmlspecialchars($intro_text); ?></p>
+<?php if (!empty($intro_text)): ?>
+<p><?php echo htmlspecialchars($intro_text); ?></p>
+<?php endif; ?>
 
-    <!-- Плашка скидки -->
-    <div class="urgency-banner" style="margin: 25px 0; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #78350f; border-radius: 14px; padding: 20px; text-align: center;">
-        <div style="font-size: 28px; margin-bottom: 6px;">🎁</div>
-        <strong style="font-size: 18px;">Скидка <?php echo (int)$discount_percent; ?>% до <?php echo htmlspecialchars($discount_expires_label); ?></strong>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">
-            Применится автоматически в корзине и при оплате курса — ничего вводить не нужно. Нужно только войти в личный кабинет по кнопке ниже.
-        </p>
-    </div>
+<p>До <?php echo htmlspecialchars($discount_expires_label); ?> при оформлении любой заявки в личном кабинете цена для вас будет ниже на <?php echo (int)$discount_percent; ?>%. Условие применится автоматически в корзине, ничего вводить не нужно.</p>
 
-    <?php if (!empty($recommendations)): ?>
-        <h3 style="margin-top: 30px; color: #1e40af;">Что посмотреть</h3>
-        <?php foreach ($recommendations as $rec): ?>
-            <div class="competition-card">
-                <?php if (!empty($rec['badge'])): ?>
-                    <span class="badge"><?php echo htmlspecialchars($rec['badge']); ?></span>
-                <?php endif; ?>
-                <h3><?php echo htmlspecialchars($rec['title']); ?></h3>
-                <?php if (!empty($rec['description'])): ?>
-                    <p style="color: #475569; font-size: 14px; margin: 10px 0;">
-                        <?php echo htmlspecialchars(mb_substr($rec['description'], 0, 180)); ?>
-                    </p>
-                <?php endif; ?>
-                <?php if (!empty($rec['meta'])): ?>
-                    <div class="competition-details">
-                        <?php foreach ($rec['meta'] as $mlabel => $mval): ?>
-                            <p><strong><?php echo htmlspecialchars($mlabel); ?>:</strong> <?php echo htmlspecialchars($mval); ?></p>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-                <?php if (!empty($rec['price'])): ?>
-                    <div class="price-tag"><?php echo number_format((float)$rec['price'], 0, ',', ' '); ?> &#8381;</div>
-                <?php endif; ?>
-                <div style="margin-top: 14px;">
-                    <a href="<?php echo htmlspecialchars($rec['url'] . $utm); ?>" class="cta-button cta-button-green">
-                        Подробнее
-                    </a>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    <?php endif; ?>
+<p><a href="<?php echo htmlspecialchars($cta_link); ?>">Войти в личный кабинет</a></p>
 
-    <!-- Главная CTA: войти в ЛК, там скидка активна -->
-    <div class="text-center" style="margin-top: 30px;">
-        <a href="<?php echo htmlspecialchars($magic_login_url); ?>" class="cta-button">
-            <?php echo htmlspecialchars($primary_cta_label ?: 'Войти в личный кабинет со скидкой'); ?>
-        </a>
-    </div>
+<?php if (!empty($recommendations)): ?>
+<p>Несколько материалов, которые могут пригодиться:</p>
+<ul>
+<?php foreach ($recommendations as $rec): ?>
+    <li>
+        <a href="<?php echo htmlspecialchars($rec['url'] . $utm); ?>"><?php echo htmlspecialchars($rec['title']); ?></a>
+        <?php if (!empty($rec['description'])): ?>
+            — <?php echo htmlspecialchars(mb_substr($rec['description'], 0, 140)); ?>
+        <?php endif; ?>
+    </li>
+<?php endforeach; ?>
+</ul>
+<?php endif; ?>
 
-    <p style="margin-top: 25px; font-size: 13px; color: #64748b; line-height: 1.5; text-align: center;">
-        Скидка автоматически появится в корзине и при оплате курса после входа в ЛК. Действует до 23:59 <?php echo htmlspecialchars($discount_expires_label); ?> по одной покупке.
-    </p>
-</div>
+<p>Если уже неинтересно — просто отпишитесь по ссылке ниже, я пойму. Если решите вернуться — буду рад.</p>
 <?php
 $content = ob_get_clean();
-include __DIR__ . '/_base_layout.php';
+include __DIR__ . '/_personal_layout.php';

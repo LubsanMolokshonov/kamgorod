@@ -82,7 +82,7 @@ ob_start();
     <div class="text-center">
         <?php $pay_link = $payment_url . (strpos($payment_url, '?') !== false ? '&' : '?') . $utm; ?>
         <a href="<?php echo htmlspecialchars($pay_link); ?>" class="cta-button">
-            Записаться на обучение
+            Оплатить курс
         </a>
     </div>
 
