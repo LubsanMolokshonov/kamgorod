@@ -1,7 +1,7 @@
 <?php
 /**
- * Course Detail Page - Landing Style
- * Detailed landing page for a course with modules, experts, outcomes
+ * Course Detail Page — редизайн
+ * Детальная страница курса КПК/ПП в стиле competition-detail.
  */
 
 session_start();
@@ -27,15 +27,20 @@ if (!$course) {
     $pageTitle = 'Курс не найден | ' . SITE_NAME;
     $pageDescription = 'Запрашиваемый курс не найден';
     $noindex = true;
-    include __DIR__ . '/../includes/header.php';
+    $rdActivePage = 'kursy';
+    include __DIR__ . '/../includes/header-redesign.php';
     ?>
-    <div class="container" style="padding: 80px 0; text-align: center;">
-        <h1>Курс не найден</h1>
-        <p style="color: #6b7280; margin: 12px 0 24px;">Возможно, он был удалён или перемещён.</p>
-        <a href="/kursy" class="btn btn-primary">Все курсы</a>
-    </div>
+    <main>
+      <section class="rd-section">
+        <div class="rd-wrap" style="text-align:center;">
+          <h1 style="font:700 36px var(--font-sans);color:var(--ink-900);margin-bottom:12px;">Курс не найден</h1>
+          <p style="color:var(--ink-500);margin-bottom:24px;">Возможно, он был удалён или перемещён.</p>
+          <a href="/kursy" class="rd-btn rd-btn-primary">Все курсы</a>
+        </div>
+      </section>
+    </main>
     <?php
-    include __DIR__ . '/../includes/footer.php';
+    include __DIR__ . '/../includes/footer-redesign.php';
     exit;
 }
 
@@ -50,20 +55,28 @@ $discountPercent = CoursePriceAB::getDiscountPercent($abVariant, $course['progra
 $experts = $courseObj->getExperts($course['id']);
 $modules = $courseObj->getModules($course);
 $outcomes = $courseObj->getOutcomes($course);
+$audienceCategories = $courseObj->getAudienceCategories($course['id']);
+$audienceTypes = $courseObj->getAudienceTypes($course['id']);
+$specializations = $courseObj->getSpecializations($course['id']);
 
 // Page metadata
 $programLabel = $course['program_type'] === 'pp'
     ? 'курс профессиональной переподготовки'
     : 'курс повышения квалификации';
+$programShortLabel = $course['program_type'] === 'pp'
+    ? 'Профпереподготовка'
+    : 'Повышение квалификации';
 $credentialType = $course['program_type'] === 'pp'
     ? 'Диплом о профессиональной переподготовке'
     : 'Удостоверение о повышении квалификации';
+$credentialShort = $course['program_type'] === 'pp' ? 'Диплом' : 'Удостоверение';
 
 $pageTitle = htmlspecialchars($course['title']) . ' — ' . $programLabel . ' | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr(strip_tags($course['description']), 0, 120))
     . '. ' . Course::formatHours($course['hours']) . '. ' . $credentialType . '.';
 
 $courseUrl = SITE_URL . '/kursy/' . $course['slug'] . '/';
+$canonicalUrl = $courseUrl;
 $ogImage = SITE_URL . '/og-image/course/' . $course['slug'] . '.jpg';
 $ogType = 'article';
 
@@ -100,14 +113,10 @@ $jsonLd = [
     'isAccessibleForFree' => false
 ];
 
-// Добавляем инструкторов из экспертов
 if (!empty($experts)) {
     $instructors = [];
     foreach ($experts as $expert) {
-        $instructor = [
-            '@type' => 'Person',
-            'name' => $expert['full_name']
-        ];
+        $instructor = ['@type' => 'Person', 'name' => $expert['full_name']];
         if (!empty($expert['credentials'])) {
             $instructor['jobTitle'] = $expert['credentials'];
         }
@@ -116,7 +125,6 @@ if (!empty($experts)) {
     $jsonLd['hasCourseInstance']['instructor'] = count($instructors) === 1 ? $instructors[0] : $instructors;
 }
 
-// Добавляем модули как syllabus
 if (!empty($modules)) {
     $jsonLd['syllabusSections'] = array_map(function($m) { return $m['title']; }, $modules);
 }
@@ -126,1127 +134,590 @@ $programTypeUrlMap = defined('COURSE_TYPE_URL_MAP') ? COURSE_TYPE_URL_MAP : [];
 $programTypeSlug = $programTypeUrlMap[$course['program_type']] ?? '';
 $programTypeLabel = Course::getProgramTypeLabel($course['program_type']);
 
-$breadcrumbs = [
-    ['label' => 'Главная', 'url' => '/'],
-    ['label' => 'Курсы', 'url' => '/kursy/'],
+$rdActivePage = 'kursy';
+$additionalCSS = [
+    '/assets/css/competition-detail.css?v=' . filemtime(__DIR__ . '/../assets/css/competition-detail.css'),
+    '/assets/css/course-detail.css?v=' . filemtime(__DIR__ . '/../assets/css/course-detail.css'),
 ];
-if ($programTypeSlug) {
-    $breadcrumbs[] = ['label' => $programTypeLabel, 'url' => '/kursy/' . $programTypeSlug . '/'];
-}
-$breadcrumbs[] = ['label' => $course['title']];
 
-$additionalCSS = ['/assets/css/courses.css?v=' . filemtime(__DIR__ . '/../assets/css/courses.css')];
+include __DIR__ . '/../includes/header-redesign.php';
 
-include __DIR__ . '/../includes/header.php';
+$priceFormatted = number_format($abPrice, 0, ',', ' ');
+$basePriceFormatted = number_format($abBasePrice, 0, ',', ' ');
 ?>
 
-<style>
-/* Course Detail - reuses competition-detail patterns */
-/* ===== HERO (merged) ===== */
-.landing-page { background: var(--bg-light); margin-top: -80px; }
+<main>
 
-.hero-landing {
-    padding: 100px 0 20px; margin-top: -80px; position: relative; overflow: hidden; color: #fff;
-    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
-}
-.hero-landing::before {
-    content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 1440px; height: 100%;
-    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%); border-radius: 0 0 80px 80px; z-index: 0;
-}
-.hero-landing .container {
-    display: flex; flex-direction: column;
-    position: relative; z-index: 1; padding: 100px 20px 20px;
-    max-width: 1440px;
-}
-
-/* Badges */
-.hero-badges { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 10px; }
-.hero-category {
-    display: inline-block; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-    padding: 8px 20px; border-radius: 8px; font-size: 16px; font-weight: 500; color: rgba(255,255,255,0.9);
-}
-
-/* Title */
-.hero-title { font-size: 35px; font-weight: 700; line-height: 1.15; margin-bottom: 10px; color: white; }
-
-/* Middle grid */
-.hero-main-grid {
-    display: grid; grid-template-columns: 65fr 35fr; gap: 40px;
-    align-items: start; margin-bottom: 14px;
-}
-
-/* Attestation card */
-.hero-attestation-card {
-    background: rgba(255,255,255,0.08); backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.12); border-radius: 24px;
-    padding: 20px 24px;
-}
-.hero-attestation-header {
-    display: inline-flex; align-items: center; gap: 10px;
-    background: rgba(255,255,255,0.1); padding: 6px 14px;
-    border-radius: 8px; margin-bottom: 8px;
-}
-.hero-attestation-logo { width: 32px; height: 32px; object-fit: contain; }
-.hero-attestation-badge-text { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9); }
-.hero-attestation-title {
-    font-size: 26px; font-weight: 700; color: white;
-    margin: 0 0 12px; line-height: 1.3;
-}
-.hero-attestation-title span { color: #4ade80; }
-.hero-attestation-desc {
-    font-size: 15px; color: rgba(255,255,255,0.8); line-height: 1.6; margin-bottom: 8px;
-}
-.hero-attestation-desc strong { color: white; }
-
-/* Feature checklist */
-.hero-features-list {
-    list-style: none; padding: 0; margin: 0;
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-}
-.hero-features-list li {
-    display: flex; align-items: flex-start; gap: 8px;
-    font-size: 14px; color: rgba(255,255,255,0.9); line-height: 1.4;
-}
-.hero-features-list li svg { flex-shrink: 0; margin-top: 2px; }
-
-/* Left column wrapper */
-.hero-left-col { display: flex; flex-direction: column; gap: 20px; }
-
-/* Skolkovo doc thumbnail */
-.hero-skolkovo-doc {
-    display: flex; flex-direction: column; align-items: center; gap: 10px;
-    cursor: pointer; transition: transform 0.3s ease;
-}
-.hero-skolkovo-doc:hover { transform: scale(1.03); }
-.hero-skolkovo-doc-img {
-    width: 100%; border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15);
-}
-.hero-skolkovo-doc-caption {
-    font-size: 12px; color: rgba(255,255,255,0.6); text-align: center;
-}
-
-/* Bottom row */
-.hero-bottom-row {
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 20px;
-}
-.hero-cta-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.btn-hero-cta {
-    display: inline-block; background: var(--gradient-primary); color: white; font-size: 16px; font-weight: 600;
-    padding: 18px 36px; border-radius: var(--border-radius-button); text-decoration: none;
-    transition: all 0.3s ease; box-shadow: 0 4px 16px rgba(0,119,255,0.4); border: none; cursor: pointer;
-}
-.btn-hero-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,119,255,0.5); opacity: 1; }
-.btn-hero-consultation {
-    display: inline-block; background: transparent; color: white; font-size: 16px; font-weight: 600;
-    padding: 16px 32px; border-radius: var(--border-radius-button); text-decoration: none;
-    transition: all 0.3s ease; border: 2px solid white; cursor: pointer;
-}
-.btn-hero-consultation:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
-.hero-frdo-badge {
-    display: flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,0.08); padding: 10px 20px;
-    border-radius: 50px; font-size: 14px; color: rgba(255,255,255,0.9);
-}
-
-/* Skolkovo Document Modal */
-.skolkovo-modal-overlay {
-    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
-    z-index: 9999; align-items: center; justify-content: center;
-}
-.skolkovo-modal-overlay.active { display: flex; }
-.skolkovo-modal {
-    background: white; border-radius: 32px; padding: 32px; max-width: 700px; width: 90%;
-    position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-    max-height: 90vh; overflow-y: auto;
-}
-.skolkovo-modal .close-modal {
-    position: absolute; top: 16px; right: 20px; background: none; border: none;
-    font-size: 28px; color: #9ca3af; cursor: pointer; line-height: 1; z-index: 1;
-}
-.skolkovo-modal .close-modal:hover { color: var(--text-dark); }
-.skolkovo-modal-img {
-    width: 100%; height: auto; border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-}
-.skolkovo-modal-caption {
-    text-align: center; font-size: 14px; color: #6b7280; margin-top: 16px;
-}
-
-/* About Section */
-.about-section-modern { padding: 80px 0; }
-.about-content-wrapper { display: grid; grid-template-columns: 1.5fr 1fr; gap: 48px; align-items: start; }
-.section-title { text-align: center; font-size: 42px; font-weight: 700; color: var(--text-dark); margin-bottom: 16px; }
-.section-subtitle { text-align: center; font-size: 18px; color: #64748B; margin-bottom: 48px; }
-.description-text { font-size: 15px; line-height: 1.7; color: #374151; }
-.description-text p { margin-bottom: 16px; }
-
-.info-card {
-    background: white; border-radius: 16px; padding: 20px 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 12px;
-    display: flex; align-items: center; gap: 16px;
-}
-.info-icon {
-    width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-    background: var(--gradient-primary); color: white; flex-shrink: 0;
-}
-.info-icon svg { width: 22px; height: 22px; }
-.info-card-content { flex: 1; }
-.info-card-title { font-size: 13px; color: #6b7280; font-weight: 500; margin-bottom: 2px; }
-.info-card-value { font-size: 17px; font-weight: 600; color: var(--text-dark); }
-
-/* Modules (reuse nominations pattern) */
-.nominations-section { padding: 80px 0; background: #F5F9FF; }
-.nominations-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
-.nomination-card {
-    background: white; padding: 24px 28px; border-radius: 20px;
-    border-left: 5px solid var(--primary-purple); box-shadow: 0 2px 10px rgba(0,119,255,0.06);
-    transition: all 0.3s ease; display: flex; align-items: center; gap: 16px;
-}
-.nomination-card:hover { transform: translateX(8px); box-shadow: 0 4px 20px rgba(0,119,255,0.15); }
-.nomination-number {
-    flex-shrink: 0; width: 40px; height: 40px; background: var(--gradient-primary);
-    color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 18px;
-}
-.nomination-card p { margin: 0; font-size: 16px; font-weight: 500; color: var(--text-dark); }
-
-/* Experts */
-.experts-section { padding: 80px 0; background: white; }
-.experts-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 48px; }
-.expert-card {
-    width: 280px; background: white; border-radius: 24px; padding: 32px; text-align: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06); transition: all 0.3s ease;
-}
-.expert-card:hover { transform: translateY(-5px); box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
-.expert-photo {
-    width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 20px;
-    overflow: hidden; background: #f3f4f6;
-}
-.expert-photo img { width: 100%; height: 100%; object-fit: cover; }
-.expert-name { font-size: 18px; font-weight: 600; color: var(--text-dark); margin-bottom: 8px; }
-.expert-credentials { font-size: 14px; color: #64748B; line-height: 1.5; margin-bottom: 8px; }
-.expert-experience { font-size: 13px; color: #9ca3af; font-weight: 500; }
-
-/* Outcomes */
-.outcomes-section { padding: 80px 0; background: #F5F9FF; }
-.outcomes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; margin-top: 48px; }
-.outcome-block { background: white; border-radius: 24px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-.outcome-block h3 { font-size: 20px; font-weight: 600; color: var(--text-dark); margin-bottom: 20px; }
-.outcome-list { list-style: none; padding: 0; margin: 0; }
-.outcome-list li {
-    padding: 8px 0 8px 28px; position: relative; font-size: 15px; color: #374151; line-height: 1.5;
-    border-bottom: 1px solid #f3f4f6;
-}
-.outcome-list li:last-child { border-bottom: none; }
-.outcome-list li::before {
-    content: ''; position: absolute; left: 0; top: 14px;
-    width: 16px; height: 16px; background: var(--gradient-primary);
-    border-radius: 50%; opacity: 0.8;
-}
-
-/* Price CTA */
-.price-cta-section { padding: 80px 0; background: white; }
-.price-cta-container {
-    max-width: 800px; margin: 0 auto; background: var(--gradient-primary);
-    border-radius: 40px; padding: 60px; text-align: center; color: white;
-    box-shadow: 0 20px 60px rgba(0,119,255,0.3); position: relative; overflow: hidden;
-}
-.price-cta-container::before {
-    content: ''; position: absolute; top: -50%; right: -20%; width: 300px; height: 300px;
-    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%); border-radius: 50%;
-}
-.price-cta-content { position: relative; z-index: 2; }
-.price-cta-container .price-label { font-size: 18px; font-weight: 600; color: white; opacity: 0.9; margin-bottom: 16px; }
-.price-cta-container .price-amount { font-size: 72px; font-weight: 700; color: white; margin-bottom: 20px; line-height: 1; }
-.price-cta-container .price-note { font-size: 16px; color: white; opacity: 0.95; margin-bottom: 32px; }
-.price-features { display: flex; justify-content: center; gap: 32px; margin-top: 32px; flex-wrap: wrap; }
-.price-feature { display: flex; align-items: center; gap: 8px; font-size: 15px; }
-.btn-cta-large {
-    background: white; color: var(--primary-purple); font-size: 18px; padding: 20px 50px;
-    border-radius: 50px; font-weight: 700; display: inline-block; text-decoration: none;
-    transition: all 0.3s ease; box-shadow: 0 8px 24px rgba(0,119,255,0.2); border: none; cursor: pointer;
-}
-.btn-cta-large:hover { transform: translateY(-4px) scale(1.05); box-shadow: 0 12px 32px rgba(0,119,255,0.35); opacity: 1; }
-
-/* Enrollment Modal */
-.enrollment-modal-overlay {
-    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;
-}
-.enrollment-modal-overlay.active { display: flex; }
-.enrollment-modal {
-    background: white; border-radius: 24px; padding: 48px; max-width: 500px; width: 90%;
-    position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-.enrollment-modal h2 { font-size: 24px; margin-bottom: 8px; color: var(--text-dark); }
-.enrollment-modal .modal-subtitle { color: #6b7280; font-size: 14px; margin-bottom: 24px; }
-.enrollment-modal .close-modal {
-    position: absolute; top: 16px; right: 20px; background: none; border: none;
-    font-size: 28px; color: #9ca3af; cursor: pointer; line-height: 1;
-}
-.enrollment-modal .close-modal:hover { color: var(--text-dark); }
-.enrollment-form .form-group { margin-bottom: 16px; }
-.enrollment-form label { display: block; font-size: 14px; font-weight: 500; color: var(--text-dark); margin-bottom: 6px; }
-.enrollment-form input {
-    width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px;
-    font-size: 15px; transition: border-color 0.2s; box-sizing: border-box;
-}
-.enrollment-form input:focus { border-color: var(--primary-purple); outline: none; }
-.enrollment-form .btn-submit {
-    width: 100%; padding: 16px; background: var(--gradient-primary); color: white;
-    font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer;
-    transition: all 0.3s ease; margin-top: 8px;
-}
-.enrollment-form .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,119,255,0.4); }
-.enrollment-form .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-.enrollment-success { display: none; text-align: center; padding: 20px 0; }
-.enrollment-success h3 { color: #10b981; font-size: 20px; margin-bottom: 12px; }
-
-/* Licenses Grid (course-detail custom) */
-.licenses-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-}
-.license-card {
-    background: white;
-    border-radius: 24px;
-    padding: 32px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    text-align: center;
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-}
-.license-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 40px rgba(0,119,255,0.15);
-}
-.license-icon {
-    width: 80px;
-    height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-.license-icon img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-.license-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-}
-.license-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-dark);
-    margin: 0;
-}
-.license-subtitle {
-    font-size: 14px;
-    color: #64748B;
-    line-height: 1.5;
-    margin: 0;
-}
-.license-button {
-    display: inline-block;
-    color: var(--primary-purple, #667eea);
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.3s ease;
-}
-.license-button:hover {
-    color: var(--dark-purple, #433D88);
-    transform: translateX(4px);
-}
-
-/* Responsive */
-
-/* --- Tablet (1024px) --- */
-@media (max-width: 1024px) {
-    .hero-landing .container { padding: 80px 40px 40px; }
-    .hero-title { font-size: 38px; }
-    .hero-main-grid { grid-template-columns: 65fr 35fr; gap: 32px; }
-    .section-title { font-size: 36px; }
-    .about-section-modern, .nominations-section, .experts-section,
-    .outcomes-section, .price-cta-section { padding: 60px 0; }
-    .licenses-grid { gap: 16px; }
-    .license-card { padding: 24px; }
-    .faq-section { padding: 50px 40px; }
-    .faq-section h2 { font-size: 36px; }
-}
-
-/* --- Landscape Tablet (960px) --- */
-@media (max-width: 960px) {
-    .hero-landing .container { padding: 80px 20px 40px; }
-    .hero-title { font-size: 36px; }
-    .hero-main-grid { grid-template-columns: 1fr; gap: 24px; }
-    .hero-skolkovo-doc { max-width: 100%; }
-    .about-content-wrapper { grid-template-columns: 1fr; }
-    .experts-grid { gap: 24px; }
-    .expert-card { width: 240px; }
-    .licenses-grid { grid-template-columns: 1fr; }
-    .license-card { flex-direction: row; text-align: left; padding: 24px; }
-    .license-icon { width: 60px; height: 60px; }
-    .license-content { align-items: flex-start; min-width: 0; }
-}
-
-/* --- Smartphone (640px) --- */
-@media (max-width: 640px) {
-    /* Container */
-    .container { padding: 0 16px; }
-
-    /* Hero */
-    .hero-landing { padding: 80px 0 30px; }
-    .hero-landing::before { border-radius: 0 0 40px 40px; }
-    .hero-landing .container { padding: 80px 16px 24px; }
-    .hero-title { font-size: 26px; margin-bottom: 24px; }
-    .hero-badges { gap: 8px; justify-content: flex-start; }
-    .hero-category { font-size: 11px; padding: 6px 12px; }
-    .hero-main-grid { gap: 20px; }
-    .hero-attestation-card { padding: 20px; border-radius: 16px; }
-    .hero-attestation-title { font-size: 20px; }
-    .hero-attestation-desc { font-size: 14px; }
-    .hero-features-list { grid-template-columns: 1fr; gap: 8px; }
-    .hero-features-list li { font-size: 13px; }
-    .hero-skolkovo-doc { max-width: 180px; }
-    .hero-bottom-row { flex-direction: column; align-items: stretch; }
-    .hero-cta-row { flex-direction: column; }
-    .btn-hero-cta { width: 100%; text-align: center; font-size: 14px; padding: 14px 28px; }
-    .btn-hero-consultation { width: 100%; text-align: center; font-size: 14px; padding: 12px 24px; }
-    .hero-frdo-badge { justify-content: center; font-size: 13px; }
-    .skolkovo-modal { padding: 20px; border-radius: 20px; }
-
-    /* Section titles */
-    .section-title { font-size: 28px; margin-bottom: 12px; }
-    .section-subtitle { font-size: 14px; margin-bottom: 32px; }
-
-    /* About */
-    .about-section-modern { padding: 40px 0; }
-    .about-content-wrapper { gap: 24px; }
-    .description-text { font-size: 14px; }
-    .description-text p { margin-bottom: 12px; }
-    .info-card { padding: 16px 20px; gap: 12px; }
-    .info-icon { width: 36px; height: 36px; border-radius: 10px; }
-    .info-icon svg { width: 18px; height: 18px; }
-    .info-card-title { font-size: 12px; }
-    .info-card-value { font-size: 15px; }
-
-    /* Licenses */
-    .licenses-section { padding: 40px 0; }
-    .licenses-section h2 { font-size: 24px; }
-    .licenses-grid { grid-template-columns: 1fr; gap: 12px; }
-    .license-card { flex-direction: row; text-align: left; padding: 20px 16px; gap: 12px; border-radius: 16px; }
-    .license-icon { width: 48px; height: 48px; }
-    .license-content { align-items: flex-start; min-width: 0; }
-    .license-title { font-size: 15px; }
-    .license-subtitle { font-size: 13px; word-break: break-word; }
-    .license-button { font-size: 13px; }
-
-    /* Modules/Nominations */
-    .nominations-section { padding: 40px 0; }
-    .nominations-grid { gap: 12px; }
-    .nomination-card { padding: 14px 16px; border-radius: 12px; gap: 12px; }
-    .nomination-number { width: 32px; height: 32px; font-size: 14px; border-radius: 8px; }
-    .nomination-card p { font-size: 14px; }
-
-    /* Experts */
-    .experts-section { padding: 40px 0; }
-    .experts-grid { gap: 16px; margin-top: 32px; }
-    .expert-card { width: 100%; padding: 24px 20px; border-radius: 16px; }
-    .expert-photo { width: 80px; height: 80px; margin-bottom: 14px; }
-    .expert-name { font-size: 16px; }
-    .expert-credentials { font-size: 13px; }
-    .expert-experience { font-size: 12px; }
-
-    /* Trust */
-    .trust-section { padding: 40px 0; }
-    .trust-section h2 { font-size: 22px; margin-bottom: 8px; }
-
-    /* Consultation CTA */
-    .consultation-cta-section { padding: 0 0 40px; }
-    .consultation-cta-block { flex-direction: column; text-align: center; gap: 20px; padding: 28px 20px; border-radius: 16px; }
-    .consultation-cta-text h2 { font-size: 20px; }
-    .consultation-cta-text p { font-size: 14px; }
-    .consultation-inline-row { flex-direction: column; }
-    .consultation-phone-input { min-width: 0; width: 100%; }
-
-    /* Outcomes */
-    .outcomes-section { padding: 40px 0; }
-    .outcomes-grid { gap: 16px; margin-top: 32px; }
-    .outcome-block { padding: 24px 20px; border-radius: 16px; }
-    .outcome-block h3 { font-size: 17px; margin-bottom: 14px; }
-    .outcome-list li { font-size: 14px; padding: 6px 0 6px 24px; }
-    .outcome-list li::before { width: 12px; height: 12px; top: 12px; }
-
-    /* Price CTA */
-    .price-cta-section { padding: 40px 0; }
-    .price-cta-container { padding: 36px 20px; border-radius: 24px; }
-    .price-cta-container .price-label { font-size: 15px; }
-    .price-cta-container .price-amount { font-size: 44px; margin-bottom: 12px; }
-    .price-cta-container .price-note { font-size: 14px; margin-bottom: 24px; }
-    .btn-cta-large { font-size: 16px; padding: 16px 36px; }
-    .price-features { gap: 16px; margin-top: 24px; }
-    .price-feature { font-size: 13px; }
-    .guarantees-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 24px; }
-    .guarantee-item { font-size: 13px; }
-
-    /* Steps */
-    .mt-40 { margin-top: 24px; }
-    .mb-40 { margin-bottom: 24px; }
-
-    /* FAQ */
-    .faq-section { padding: 24px 16px; border-radius: 16px; }
-    .faq-section h2 { font-size: 22px; margin-bottom: 16px; }
-    .faq-item { padding: 14px; border-radius: 10px; }
-    .faq-question h3 { font-size: 15px; }
-    .faq-icon { width: 24px; height: 24px; font-size: 18px; }
-    .faq-answer { font-size: 14px; }
-
-    /* Modals */
-    .enrollment-modal { padding: 32px 20px; }
-    .enrollment-modal h2 { font-size: 20px; }
-    .consultation-modal { padding: 32px 20px; }
-    .consultation-modal h2 { font-size: 20px; }
-    .enrollment-form input { padding: 12px 14px; font-size: 14px; }
-    .enrollment-form .btn-submit { padding: 14px; font-size: 15px; }
-
-    /* Trust mobile */
-    .trust-orgs { gap: 8px; }
-    .trust-org { padding: 10px 14px; font-size: 12px; }
-}
-
-/* --- Small phones (480px) --- */
-@media (max-width: 480px) {
-    .container { padding: 0 12px; }
-    .hero-landing .container { padding: 80px 12px 20px; }
-    .hero-title { font-size: 24px; }
-    .section-title { font-size: 24px; }
-    .hero-badges { gap: 6px; }
-    .hero-category { font-size: 10px; padding: 4px 10px; }
-    .hero-attestation-card { padding: 16px; }
-    .hero-attestation-title { font-size: 18px; }
-    .price-cta-container .price-amount { font-size: 38px; }
-    .expert-card { padding: 20px 16px; }
-    .nomination-card p { font-size: 13px; }
-    .faq-section h2 { font-size: 20px; }
-    .faq-question h3 { font-size: 14px; }
-}
-
-/* Consultation CTA Block */
-.consultation-cta-section { padding: 0 0 80px; background: white; }
-.consultation-cta-block {
-    max-width: 900px; margin: 0 auto; background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
-    border-radius: 24px; padding: 40px 48px; display: flex; align-items: center; justify-content: space-between; gap: 32px;
-}
-.consultation-cta-text h2 { color: white; font-size: 24px; margin: 0 0 8px; }
-.consultation-cta-text p { color: rgba(255,255,255,0.8); font-size: 15px; margin: 0; line-height: 1.5; }
-.consultation-inline-row { display: flex; gap: 12px; }
-.consultation-phone-input {
-    padding: 14px 18px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1);
-    color: white; border-radius: 12px; font-size: 15px; min-width: 220px; outline: none; transition: border-color 0.3s;
-}
-.consultation-phone-input::placeholder { color: rgba(255,255,255,0.5); }
-.consultation-phone-input:focus { border-color: rgba(255,255,255,0.7); }
-.consultation-inline-btn {
-    padding: 14px 28px; background: var(--gradient-primary); color: white; border: none;
-    border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.3s ease;
-}
-.consultation-inline-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,119,255,0.4); }
-.consultation-inline-success {
-    display: flex; align-items: center; gap: 10px; color: #4ade80; font-size: 15px; font-weight: 500;
-}
-
-/* Guarantees Grid (inside price-cta) */
-.guarantees-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 16px 32px;
-    margin-top: 36px; text-align: left; max-width: 520px; margin-left: auto; margin-right: auto;
-}
-.guarantee-item {
-    display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: rgba(255,255,255,0.9); line-height: 1.5;
-}
-.guarantee-item svg { flex-shrink: 0; margin-top: 2px; }
-
-/* Trust Section */
-.trust-section { padding: 60px 0; background: #F5F9FF; }
-.trust-section h2 { text-align: center; font-size: 28px; font-weight: 700; color: var(--text-dark); margin-bottom: 12px; }
-.trust-orgs {
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
-    max-width: 1000px; margin: 0 auto;
-}
-.trust-org {
-    background: white; border: 1px solid #e5e7eb; border-radius: 12px;
-    padding: 12px 20px; font-size: 13px; color: #4b5563; line-height: 1.4; text-align: center;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-}
-.trust-org-name { font-weight: 600; color: var(--text-dark); }
-.trust-org-city { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-
-/* Licenses Grid — styles moved to before media queries */
-
-/* Consultation Modal */
-.consultation-modal-overlay {
-    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999;
-    justify-content: center; align-items: center;
-}
-.consultation-modal-overlay.active { display: flex; }
-.consultation-modal {
-    background: white; border-radius: 24px; padding: 48px; max-width: 440px; width: 90%;
-    position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-
-/* Фиксированная мобильная CTA */
-.mobile-fixed-cta {
-    display: none;
-}
-
-@media (max-width: 768px) {
-    .mobile-fixed-cta {
-        display: block;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 1000;
-        padding: 10px 16px;
-        padding-bottom: calc(10px + env(safe-area-inset-bottom));
-        opacity: 0;
-        transform: translateY(100%);
-        transition: opacity 0.3s, transform 0.3s;
-    }
-
-    .mobile-fixed-cta.visible {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    .mobile-fixed-cta-btn {
-        display: block;
-        text-align: center;
-        background: var(--gradient-primary);
-        color: white;
-        font-size: 15px;
-        font-weight: 600;
-        padding: 12px;
-        border-radius: 10px;
-        text-decoration: none;
-        border: none;
-        cursor: pointer;
-        width: 100%;
-    }
-}
-</style>
-
-<div class="landing-page">
-
-<!-- Breadcrumbs -->
-<?php include __DIR__ . '/../includes/breadcrumbs.php'; ?>
-
-<!-- Hero Section -->
-<section class="hero-landing">
-    <div class="container">
-        <div class="hero-main-grid">
-            <div class="hero-left-col">
-                <div class="hero-badges">
-                    <span class="hero-category"><?php echo htmlspecialchars(Course::getProgramTypeLabel($course['program_type'])); ?></span>
-                    <span class="hero-category"><?php echo Course::formatHours($course['hours']); ?></span>
-                    <span class="hero-category">Дистанционно</span>
-                </div>
-
-                <h1 class="hero-title"><?php echo htmlspecialchars($course['title']); ?></h1>
-                <?php
-                $variant = ($course['program_type'] ?? 'kpk') === 'pp' ? 'pp' : 'kpk';
-                include __DIR__ . '/../includes/hero-attestation-card.php';
-                ?>
-
-                <div class="hero-bottom-row">
-                    <div class="hero-cta-row">
-                        <button class="btn-hero-cta" onclick="openEnrollmentModal()">Записаться на курс</button>
-                        <button class="btn-hero-consultation" onclick="openConsultationModal()">Получить консультацию</button>
-                    </div>
-                    <div class="hero-frdo-badge">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                        <span>Вносится в ФИС ФРДО — видно на Госуслугах</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="hero-skolkovo-doc" onclick="openSkolkovoModal()">
-                <img src="/assets/images/razreshenie-skolkovo-068.png"
-                     alt="Разрешение Сколково № 068 на образовательную деятельность"
-                     class="hero-skolkovo-doc-img"
-                     loading="eager">
-                <span class="hero-skolkovo-doc-caption">Разрешение № 068 — нажмите, чтобы увеличить</span>
-            </div>
-        </div>
+<!-- HERO -->
+<section class="cd-hero">
+  <div class="rd-wrap">
+    <div class="cd-crumbs">
+      <a href="/">Главная</a>
+      <span class="sep">/</span>
+      <a href="/kursy">Курсы</a>
+      <?php if ($programTypeSlug): ?>
+        <span class="sep">/</span>
+        <a href="/kursy/<?php echo $programTypeSlug; ?>/"><?php echo htmlspecialchars($programTypeLabel); ?></a>
+      <?php endif; ?>
+      <span class="sep">/</span>
+      <strong><?php echo htmlspecialchars($course['title']); ?></strong>
     </div>
+
+    <div class="cd-hero-grid">
+      <div class="cd-hero-content">
+        <div class="rd-pill-row reveal-stagger">
+          <span class="rd-pill rd-pill-program"><?php echo htmlspecialchars($programShortLabel); ?></span>
+          <span class="rd-pill indigo"><?php echo htmlspecialchars(Course::formatHours($course['hours'])); ?></span>
+          <?php
+          // Аудитория: до 3 наиболее информативных пилюль (категория, тип, специализация)
+          $audiencePills = [];
+          if (!empty($audienceCategories[0]['name'])) {
+              $audiencePills[] = 'Для ' . mb_strtolower($audienceCategories[0]['name']);
+          }
+          if (!empty($audienceTypes[0]['name'])) {
+              $audiencePills[] = $audienceTypes[0]['name'];
+          }
+          if (!empty($specializations[0]['name'])) {
+              $audiencePills[] = $specializations[0]['name'];
+          }
+          $audiencePills = array_slice($audiencePills, 0, 3);
+          foreach ($audiencePills as $pill):
+          ?>
+            <span class="rd-pill"><span class="dot"></span><?php echo htmlspecialchars($pill); ?></span>
+          <?php endforeach; ?>
+          <span class="rd-pill">Дистанционно</span>
+        </div>
+
+        <h1 class="cd-hero-title reveal"><?php echo htmlspecialchars($course['title']); ?></h1>
+
+        <div class="cd-hero-bullets reveal-stagger">
+          <div class="b"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><?php echo htmlspecialchars($credentialType); ?></div>
+          <div class="b"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Запись в ФИС ФРДО — видно на Госуслугах</div>
+          <div class="b"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Старт обучения сразу после оплаты</div>
+          <div class="b"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Дистанционно из любой точки России</div>
+        </div>
+
+        <div class="cd-hero-cta reveal">
+          <button type="button" class="rd-btn rd-btn-primary" onclick="openEnrollmentModal()">
+            Оплатить курс
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+          </button>
+          <button type="button" class="rd-btn rd-btn-ghost" onclick="openConsultationModal()">
+            Получить консультацию
+          </button>
+        </div>
+
+        <div class="cd-frdo-badge">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <span>Вносится в ФИС ФРДО — видно на Госуслугах</span>
+        </div>
+      </div>
+
+      <!-- Hero art: разрешение Сколково -->
+      <div class="cd-skolkovo-art reveal" onclick="openSkolkovoModal()">
+        <div class="cd-skolkovo-frame">
+          <img src="/assets/images/razreshenie-skolkovo-068.png"
+               alt="Разрешение Сколково № 068 на образовательную деятельность"
+               loading="eager">
+        </div>
+        <div class="cd-skolkovo-caption">Разрешение Сколково № 068 — нажмите, чтобы увеличить</div>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- Skolkovo Permission Modal -->
-<div class="skolkovo-modal-overlay" id="skolkovoModal">
-    <div class="skolkovo-modal">
-        <button class="close-modal" onclick="closeSkolkovoModal()">&times;</button>
-        <img src="/assets/images/razreshenie-skolkovo-068.png"
-             alt="Разрешение Сколково № 068"
-             class="skolkovo-modal-img">
-        <p class="skolkovo-modal-caption">Разрешение № 068 от 16.03.2026 на осуществление образовательной деятельности</p>
+<!-- BENEFITS -->
+<section class="rd-section tight">
+  <div class="rd-wrap">
+    <div class="cd-benefits-grid reveal-stagger">
+      <div class="cd-benefit">
+        <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg></div>
+        <h3>В ФИС ФРДО</h3>
+        <p>Запись о <?php echo mb_strtolower($credentialShort); ?> вносится в Федеральный реестр и видна на Госуслугах.</p>
+      </div>
+      <div class="cd-benefit">
+        <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+        <h3>Сколково № 068</h3>
+        <p>Разрешение Фонда «Сколково» по 66 программам — таких организаций в России единицы.</p>
+      </div>
+      <div class="cd-benefit">
+        <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg></div>
+        <h3><?php echo $credentialShort; ?> установленного образца</h3>
+        <p>Документ принимается при аттестации и проверках Рособрнадзора.</p>
+      </div>
+      <div class="cd-benefit">
+        <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+        <h3>Старт сразу после оплаты</h3>
+        <p>Доступ к учебным материалам открывается автоматически — без ожидания.</p>
+      </div>
     </div>
-</div>
-
-<!-- About Course -->
-<section class="about-section-modern">
-    <div class="container">
-        <h2 class="section-title">О курсе</h2>
-        <div class="about-content-wrapper">
-            <div class="about-description">
-                <div class="description-text">
-                    <?php if (!empty($course['description'])): ?>
-                        <?php foreach (explode("\n", $course['description']) as $paragraph): ?>
-                            <?php if (trim($paragraph)): ?>
-                                <p><?php echo htmlspecialchars(trim($paragraph)); ?></p>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-
-                    <?php if (!empty($course['target_audience_text'])): ?>
-                        <h3 style="margin-top: 32px; margin-bottom: 16px; font-size: 20px;">Для кого этот курс</h3>
-                        <?php foreach (explode("\n", $course['target_audience_text']) as $paragraph): ?>
-                            <?php if (trim($paragraph)): ?>
-                                <p><?php echo htmlspecialchars(trim($paragraph)); ?></p>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <div class="about-info-cards">
-                <div class="info-card">
-                    <div class="info-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    </div>
-                    <div class="info-card-content">
-                        <div class="info-card-title">Объём программы</div>
-                        <div class="info-card-value"><?php echo Course::formatHours($course['hours']); ?></div>
-                    </div>
-                </div>
-
-                <div class="info-card">
-                    <div class="info-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-                    </div>
-                    <div class="info-card-content">
-                        <div class="info-card-title">Тип программы</div>
-                        <div class="info-card-value"><?php echo htmlspecialchars(Course::getProgramTypeLabel($course['program_type'])); ?></div>
-                    </div>
-                </div>
-
-                <div class="info-card">
-                    <div class="info-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                    </div>
-                    <div class="info-card-content">
-                        <div class="info-card-title">Форма обучения</div>
-                        <div class="info-card-value">Дистанционная</div>
-                    </div>
-                </div>
-
-                <div class="info-card" style="background: var(--gradient-primary); color: white;">
-                    <div class="info-icon" style="background: rgba(255,255,255,0.2);">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><text x="12" y="17" text-anchor="middle" font-size="16" font-weight="bold" fill="currentColor" stroke="none">₽</text></svg>
-                    </div>
-                    <div class="info-card-content">
-                        <div class="info-card-title" style="color: rgba(255,255,255,0.8);">Стоимость</div>
-                        <div class="info-card-value" style="color: white; font-size: 24px;">
-                            <?php if ($hasDiscount): ?>
-                                <span style="text-decoration: line-through; opacity: 0.6; font-size: 16px;"><?= number_format($abBasePrice, 0, ',', ' ') ?> ₽</span>
-                                <?= number_format($abPrice, 0, ',', ' ') ?> ₽
-                                <span style="background: #ff4444; color: white; font-size: 12px; padding: 2px 8px; border-radius: 12px; margin-left: 6px; vertical-align: middle;">-<?= $discountPercent ?>%</span>
-                            <?php else: ?>
-                                <?= number_format($abPrice, 0, ',', ' ') ?> ₽
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  </div>
 </section>
+
+<!-- О КУРСЕ + ДЛЯ КОГО -->
+<?php if (!empty($course['description']) || !empty($course['target_audience_text'])): ?>
+<section class="rd-section">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <div>
+        <div class="rd-eyebrow">О курсе</div>
+        <h2 class="rd-section-title">Для кого этот курс и чему он учит</h2>
+      </div>
+    </div>
+
+    <div class="cd-about-grid">
+      <div class="reveal">
+        <div class="rd-prose">
+          <?php if (!empty($course['description'])): ?>
+            <?php foreach (explode("\n", $course['description']) as $paragraph): ?>
+              <?php if (trim($paragraph)): ?>
+                <p><?php echo htmlspecialchars(trim($paragraph)); ?></p>
+              <?php endif; ?>
+            <?php endforeach; ?>
+          <?php endif; ?>
+
+          <?php if (!empty($course['target_audience_text'])): ?>
+            <h3 style="font:700 19px var(--font-sans);color:var(--ink-900);margin:28px 0 14px;">Для кого этот курс</h3>
+            <?php foreach (explode("\n", $course['target_audience_text']) as $paragraph): ?>
+              <?php if (trim($paragraph)): ?>
+                <p><?php echo htmlspecialchars(trim($paragraph)); ?></p>
+              <?php endif; ?>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <div class="cd-info-cards reveal-stagger">
+        <div class="cd-info-card cd-i-noms">
+          <div style="display:flex;gap:12px;align-items:center;">
+            <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <h3>Объём программы</h3>
+          </div>
+          <div class="body" style="font:700 22px var(--font-sans);color:var(--ink-900);"><?php echo htmlspecialchars(Course::formatHours($course['hours'])); ?></div>
+        </div>
+
+        <div class="cd-info-card cd-i-awards">
+          <div style="display:flex;gap:12px;align-items:center;">
+            <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <h3>Тип программы</h3>
+          </div>
+          <div class="body"><?php echo htmlspecialchars($programTypeLabel); ?></div>
+        </div>
+
+        <div class="cd-info-card cd-i-year">
+          <div style="display:flex;gap:12px;align-items:center;">
+            <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3"/></svg></div>
+            <h3>Форма обучения</h3>
+          </div>
+          <div class="body">Дистанционная, в удобном темпе</div>
+        </div>
+
+        <div class="cd-info-card cd-i-price">
+          <div style="display:flex;gap:12px;align-items:center;">
+            <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21V3h5a4 4 0 0 1 0 8H6"/><path d="M6 15h8"/></svg></div>
+            <h3>Стоимость</h3>
+          </div>
+          <div class="price-row">
+            <?php echo $priceFormatted; ?> ₽
+            <?php if ($hasDiscount): ?>
+              <span style="display:inline-block;font:600 11px var(--font-sans);background:#ff4d6d;color:#fff;padding:3px 10px;border-radius:999px;margin-left:6px;vertical-align:middle;letter-spacing:.02em;">−<?php echo $discountPercent; ?>%</span>
+            <?php endif; ?>
+          </div>
+          <?php if ($hasDiscount): ?>
+            <div class="price-note" style="text-decoration:line-through;color:var(--ink-500);"><?php echo $basePriceFormatted; ?> ₽ — обычная цена</div>
+          <?php else: ?>
+            <div class="price-note">Без скрытых платежей</div>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
 
 <?php include __DIR__ . '/../includes/social-proof.php'; ?>
 
-<!-- Modules -->
+<!-- ПРОГРАММА КУРСА -->
 <?php if (!empty($modules)): ?>
-<section class="nominations-section">
-    <div class="container">
-        <h2 class="section-title">Программа курса</h2>
-        <p class="section-subtitle"><?php echo count($modules); ?> <?php
-            $mc = count($modules) % 10;
-            $mc100 = count($modules) % 100;
-            echo ($mc100 >= 11 && $mc100 <= 19) ? 'модулей' : ($mc == 1 ? 'модуль' : ($mc >= 2 && $mc <= 4 ? 'модуля' : 'модулей'));
-        ?> в программе обучения</p>
-
-        <div class="nominations-grid">
-            <?php foreach ($modules as $module): ?>
-            <div class="nomination-card">
-                <div class="nomination-number"><?php echo $module['number']; ?></div>
-                <p><?php echo htmlspecialchars($module['title']); ?></p>
-            </div>
-            <?php endforeach; ?>
-        </div>
+<section class="rd-section">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <span class="rd-eyebrow">Программа</span>
+      <h2 class="rd-section-title">Программа курса</h2>
+      <p class="rd-section-sub">
+        <?php
+        echo count($modules) . ' ';
+        $mc = count($modules) % 10;
+        $mc100 = count($modules) % 100;
+        echo ($mc100 >= 11 && $mc100 <= 19) ? 'модулей' : ($mc == 1 ? 'модуль' : ($mc >= 2 && $mc <= 4 ? 'модуля' : 'модулей'));
+        ?> в программе обучения
+      </p>
     </div>
+    <div class="cd-modules-grid reveal-stagger">
+      <?php foreach ($modules as $module): ?>
+      <div class="cd-module">
+        <div class="n"><?php echo (int)$module['number']; ?></div>
+        <p><?php echo htmlspecialchars($module['title']); ?></p>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
 </section>
 <?php endif; ?>
 
-<!-- Experts -->
+<!-- БОЛЬШОЙ ЦЕНОВОЙ БЛОК -->
+<section class="rd-section tight">
+  <div class="rd-wrap">
+    <div class="cd-course-price reveal">
+      <div class="label">Стоимость обучения</div>
+      <div class="amount">
+        <?php if ($hasDiscount): ?>
+          <span class="amount-old"><?php echo $basePriceFormatted; ?> ₽</span>
+        <?php endif; ?>
+        <span><?php echo $priceFormatted; ?> ₽</span>
+        <?php if ($hasDiscount): ?>
+          <span class="amount-badge">−<?php echo $discountPercent; ?>%</span>
+        <?php endif; ?>
+      </div>
+      <div class="note"><?php echo htmlspecialchars(Course::formatHours($course['hours'])); ?> обучения с <?php echo mb_strtolower($credentialType); ?></div>
+
+      <button type="button" class="rd-btn rd-btn-primary" onclick="openEnrollmentModal()">
+        Оплатить курс
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+      </button>
+
+      <div class="cd-course-price-features">
+        <div class="feat">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Дистанционно
+        </div>
+        <div class="feat">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          С <?php echo mb_strtolower($credentialShort); ?>
+        </div>
+        <div class="feat">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          В ФИС ФРДО и на Госуслугах
+        </div>
+      </div>
+
+      <div class="cd-course-price-guarantees">
+        <div class="g">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          <span>Без скрытых платежей — итоговая цена на странице</span>
+        </div>
+        <div class="g">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          <span>Оплата по счёту для юридических лиц</span>
+        </div>
+        <div class="g">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          <span>Начало обучения сразу после оплаты</span>
+        </div>
+        <div class="g">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          <span>Возврат средств при отмене обучения</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ПРЕПОДАВАТЕЛИ -->
 <?php if (!empty($experts)): ?>
-<section class="experts-section">
-    <div class="container">
-        <h2 class="section-title">Преподаватели курса</h2>
-        <p class="section-subtitle">Опытные эксперты-практики</p>
-
-        <div class="experts-grid">
-            <?php foreach ($experts as $expert): ?>
-            <div class="expert-card">
-                <div class="expert-photo">
-                    <img src="<?php echo htmlspecialchars($expert['photo_url'] ?: '/assets/images/experts/placeholder.svg'); ?>"
-                         alt="<?php echo htmlspecialchars($expert['full_name']); ?>"
-                         loading="lazy">
-                </div>
-                <div class="expert-name"><?php echo htmlspecialchars($expert['full_name']); ?></div>
-                <?php if (!empty($expert['credentials'])): ?>
-                    <div class="expert-credentials"><?php echo htmlspecialchars($expert['credentials']); ?></div>
-                <?php endif; ?>
-                <?php if (!empty($expert['experience'])): ?>
-                    <div class="expert-experience">Стаж: <?php echo htmlspecialchars($expert['experience']); ?></div>
-                <?php endif; ?>
-            </div>
-            <?php endforeach; ?>
-        </div>
+<section class="rd-section tight">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <span class="rd-eyebrow">Преподаватели</span>
+      <h2 class="rd-section-title">Преподаватели курса</h2>
+      <p class="rd-section-sub">Опытные эксперты-практики с многолетним стажем.</p>
     </div>
+    <div class="cd-experts-grid reveal-stagger">
+      <?php foreach ($experts as $expert): ?>
+      <div class="cd-expert">
+        <div class="photo">
+          <img src="<?php echo htmlspecialchars($expert['photo_url'] ?: '/assets/images/experts/placeholder.svg'); ?>"
+               alt="<?php echo htmlspecialchars($expert['full_name']); ?>"
+               loading="lazy">
+        </div>
+        <div class="name"><?php echo htmlspecialchars($expert['full_name']); ?></div>
+        <?php if (!empty($expert['credentials'])): ?>
+          <div class="credentials"><?php echo htmlspecialchars($expert['credentials']); ?></div>
+        <?php endif; ?>
+        <?php if (!empty($expert['experience'])): ?>
+          <div class="experience">Стаж: <?php echo htmlspecialchars($expert['experience']); ?></div>
+        <?php endif; ?>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
 </section>
 <?php endif; ?>
 
-<!-- Consultation CTA -->
-<section class="consultation-cta-section">
-    <div class="container">
-        <div class="consultation-cta-block">
-            <div class="consultation-cta-text">
-                <h2>Нужна помощь с выбором?</h2>
-                <p>Оставьте номер телефона — мы бесплатно проконсультируем вас по программе курса</p>
-            </div>
-            <form class="consultation-inline-form" onsubmit="submitConsultationInline(event)">
-                <input type="hidden" name="course_id" value="<?php echo $course['id']; ?>">
-                <input type="hidden" name="course_title" value="<?php echo htmlspecialchars($course['title']); ?>">
-                <div class="consultation-inline-row">
-                    <input type="tel" name="phone" class="consultation-phone-input" placeholder="+7 (___) ___-__-__" required>
-                    <button type="submit" class="consultation-inline-btn">Перезвоните мне</button>
-                </div>
-            </form>
-            <div class="consultation-inline-success" style="display: none;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
-                <span>Заявка отправлена! Мы перезвоним вам в ближайшее время.</span>
-            </div>
-        </div>
+<!-- РЕЗУЛЬТАТЫ ОБУЧЕНИЯ -->
+<?php if (!empty($outcomes) && (!empty($outcomes['knowledge']) || !empty($outcomes['skills']) || !empty($outcomes['abilities']))): ?>
+<section class="rd-section">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <span class="rd-eyebrow">Результаты</span>
+      <h2 class="rd-section-title">Что вы получите после курса</h2>
     </div>
-</section>
+    <div class="cd-outcomes-grid reveal-stagger">
+      <?php if (!empty($outcomes['knowledge'])): ?>
+      <div class="cd-outcome">
+        <h3>Знания</h3>
+        <ul>
+          <?php foreach ($outcomes['knowledge'] as $item): ?>
+            <li><?php echo htmlspecialchars($item); ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+      <?php endif; ?>
 
-<!-- Outcomes -->
-<?php if (!empty($outcomes)): ?>
-<section class="outcomes-section">
-    <div class="container">
-        <h2 class="section-title">Результаты обучения</h2>
-        <p class="section-subtitle">Что вы получите после прохождения курса</p>
+      <?php if (!empty($outcomes['skills'])): ?>
+      <div class="cd-outcome">
+        <h3>Умения</h3>
+        <ul>
+          <?php foreach ($outcomes['skills'] as $item): ?>
+            <li><?php echo htmlspecialchars($item); ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+      <?php endif; ?>
 
-        <div class="outcomes-grid">
-            <?php if (!empty($outcomes['knowledge'])): ?>
-            <div class="outcome-block">
-                <h3>Знания</h3>
-                <ul class="outcome-list">
-                    <?php foreach ($outcomes['knowledge'] as $item): ?>
-                    <li><?php echo htmlspecialchars($item); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($outcomes['skills'])): ?>
-            <div class="outcome-block">
-                <h3>Умения</h3>
-                <ul class="outcome-list">
-                    <?php foreach ($outcomes['skills'] as $item): ?>
-                    <li><?php echo htmlspecialchars($item); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($outcomes['abilities'])): ?>
-            <div class="outcome-block">
-                <h3>Навыки</h3>
-                <ul class="outcome-list">
-                    <?php foreach ($outcomes['abilities'] as $item): ?>
-                    <li><?php echo htmlspecialchars($item); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-            <?php endif; ?>
-        </div>
+      <?php if (!empty($outcomes['abilities'])): ?>
+      <div class="cd-outcome">
+        <h3>Навыки</h3>
+        <ul>
+          <?php foreach ($outcomes['abilities'] as $item): ?>
+            <li><?php echo htmlspecialchars($item); ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+      <?php endif; ?>
     </div>
+  </div>
 </section>
 <?php endif; ?>
 
-<!-- Price CTA -->
-<section class="price-cta-section">
-    <div class="container">
-        <div class="price-cta-container">
-            <div class="price-cta-content">
-                <div class="price-label">Стоимость обучения</div>
-                <div class="price-amount">
-                    <?php if ($hasDiscount): ?>
-                        <span style="text-decoration: line-through; opacity: 0.5; font-size: 0.5em;"><?= number_format($abBasePrice, 0, ',', ' ') ?> ₽</span><br>
-                        <?= number_format($abPrice, 0, ',', ' ') ?> ₽
-                        <span style="background: #ff4444; color: white; font-size: 0.35em; padding: 4px 12px; border-radius: 16px; margin-left: 8px; vertical-align: middle;">-<?= $discountPercent ?>%</span>
-                    <?php else: ?>
-                        <?= number_format($abPrice, 0, ',', ' ') ?> ₽
-                    <?php endif; ?>
-                </div>
-                <div class="price-note"><?php echo Course::formatHours($course['hours']); ?> обучения с удостоверением установленного образца</div>
-
-                <button class="btn-cta-large" onclick="openEnrollmentModal()">Записаться на курс</button>
-
-                <div class="price-features">
-                    <div class="price-feature">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                        Дистанционно
-                    </div>
-                    <div class="price-feature">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                        С удостоверением
-                    </div>
-                    <div class="price-feature">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                        В ФИС ФРДО и на Госуслугах
-                    </div>
-                </div>
-
-                <div class="guarantees-grid">
-                    <div class="guarantee-item">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                        <span>Без скрытых платежей — итоговая цена на странице</span>
-                    </div>
-                    <div class="guarantee-item">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                        <span>Оплата по счёту для юрлиц</span>
-                    </div>
-                    <div class="guarantee-item">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                        <span>Начало обучения сразу после оплаты</span>
-                    </div>
-                    <div class="guarantee-item">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                        <span>Возврат средств при отмене обучения</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!-- CTA-консультация -->
+<section class="rd-section tight">
+  <div class="rd-wrap">
+    <div class="cd-consult reveal">
+      <div class="cd-consult-text">
+        <h3>Нужна помощь с выбором?</h3>
+        <p>Оставьте номер — бесплатно проконсультируем по программе курса.</p>
+      </div>
+      <form class="cd-consult-form" id="consultationInlineForm" onsubmit="submitConsultationInline(event)">
+        <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
+        <input type="hidden" name="course_title" value="<?php echo htmlspecialchars($course['title'], ENT_QUOTES); ?>">
+        <input type="tel" name="phone" placeholder="+7 (___) ___-__-__" required>
+        <button type="submit" class="rd-btn rd-btn-primary">Перезвоните мне</button>
+      </form>
+      <div class="cd-consult-success" id="consultationInlineSuccess">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+        <span>Заявка отправлена! Перезвоним в ближайшее время.</span>
+      </div>
     </div>
+  </div>
 </section>
 
+<!-- ФЕДЕРАЛЬНЫЙ РЕЕСТР -->
 <?php if (!empty($course['federal_registry_info'])): ?>
-<!-- Federal Registry -->
-<section style="padding: 60px 0; background: #F5F9FF;">
-    <div class="container">
-        <div style="max-width: 800px; margin: 0 auto; background: white; border-radius: 24px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
-            <h3 style="font-size: 20px; margin-bottom: 16px; color: var(--text-dark);">Федеральный реестр</h3>
-            <p style="font-size: 15px; color: #374151; line-height: 1.7;"><?php echo htmlspecialchars($course['federal_registry_info']); ?></p>
-        </div>
+<section class="rd-section tight">
+  <div class="rd-wrap">
+    <div class="cd-frdo-card reveal">
+      <h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Федеральный реестр
+      </h3>
+      <p><?php echo htmlspecialchars($course['federal_registry_info']); ?></p>
     </div>
+  </div>
 </section>
 <?php endif; ?>
 
-<!-- Steps -->
-<div class="container mt-40 mb-40">
-    <div class="text-center">
-        <h2>Как записаться на курс?</h2>
-        <p class="mb-40">Всего 4 простых шага</p>
-        <div class="steps-grid">
-            <div class="competition-card">
-                <h3>1. Выберите курс</h3>
-                <p>Ознакомьтесь с программой и убедитесь, что курс подходит вам.</p>
-            </div>
-            <div class="competition-card">
-                <h3>2. Подайте заявку</h3>
-                <p>Заполните форму на этой странице — укажите ФИО, email и телефон.</p>
-            </div>
-            <div class="competition-card">
-                <h3>3. Оплатите обучение</h3>
-                <p>После подтверждения заявки оплатите курс удобным способом.</p>
-            </div>
-            <div class="competition-card">
-                <h3>4. Получите удостоверение</h3>
-                <p>Пройдите обучение и получите удостоверение установленного образца.</p>
-            </div>
-        </div>
+<!-- КАК ЗАПИСАТЬСЯ (4 шага) -->
+<section class="rd-section rd-path">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <span class="rd-eyebrow">Как пройти обучение</span>
+      <h2 class="rd-section-title">Всего 4 шага до <?php echo mb_strtolower($credentialShort); ?>а</h2>
     </div>
-</div>
+    <div class="rd-steps four reveal-stagger">
+      <div class="rd-step">
+        <div class="rd-step-n">1</div>
+        <h4>Выберите курс</h4>
+        <p>Ознакомьтесь с программой и убедитесь, что курс подходит вам.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">2</div>
+        <h4>Подайте заявку</h4>
+        <p>Заполните форму на этой странице — ФИО, email и телефон.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">3</div>
+        <h4>Оплатите обучение</h4>
+        <p>Оплата картой, СБП или по счёту для юридических лиц.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">4</div>
+        <h4>Получите <?php echo mb_strtolower($credentialShort); ?></h4>
+        <p>Пройдите обучение и получите документ установленного образца.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- FAQ -->
-<div class="container">
-    <div class="faq-section">
-        <h2>Вопросы и ответы</h2>
-        <div class="faq-grid">
-            <div class="faq-item">
-                <div class="faq-question"><h3>Какой документ я получу?</h3><div class="faq-icon">+</div></div>
-                <div class="faq-answer">По окончании курса вы получите удостоверение о повышении квалификации установленного образца. Данные вносятся в ФИС ФРДО (Федеральный реестр). Документ примут при аттестации и любой проверке.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-question"><h3>Как проходит обучение?</h3><div class="faq-icon">+</div></div>
-                <div class="faq-answer">Обучение проходит полностью дистанционно. После оплаты вы получаете доступ к учебным материалам и можете проходить их в удобном темпе.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-question"><h3>Принимает ли работодатель такое удостоверение?</h3><div class="faq-icon">+</div></div>
-                <div class="faq-answer">Да. Мы имеем разрешение Фонда «Сколково» № 068 на осуществление образовательной деятельности по 66 программам — таких организаций в России единицы. Удостоверение принимается всеми образовательными организациями, учитывается при аттестации и проверках Рособрнадзора. Все данные вносятся в ФИС ФРДО.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-question"><h3>Увижу ли я удостоверение на Госуслугах?</h3><div class="faq-icon">+</div></div>
-                <div class="faq-answer">Да. Данные о вашем удостоверении вносятся в ФИС ФРДО в течение 30 дней после завершения обучения. После этого вы сможете увидеть запись о повышении квалификации в личном кабинете на Госуслугах.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-question"><h3>Когда можно начать обучение?</h3><div class="faq-icon">+</div></div>
-                <div class="faq-answer">Начать обучение можно сразу после оплаты. Все материалы доступны онлайн 24/7.</div>
-            </div>
-        </div>
+<section class="rd-section tight">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <span class="rd-eyebrow">Вопросы</span>
+      <h2 class="rd-section-title">Вопросы и ответы</h2>
     </div>
+    <div class="rd-faq-list reveal-stagger" style="max-width:880px;margin:0 auto;">
+      <?php
+      $faqItems = [
+        ['Какой документ я получу?', $credentialType . ' установленного образца. Данные вносятся в ФИС ФРДО (Федеральный реестр). Документ принимается при аттестации и любой проверке.'],
+        ['Как проходит обучение?', 'Обучение проходит полностью дистанционно. После оплаты вы получаете доступ к учебным материалам и можете проходить их в удобном темпе.'],
+        ['Принимает ли работодатель такой документ?', 'Да. Мы имеем разрешение Фонда «Сколково» № 068 на осуществление образовательной деятельности по 66 программам — таких организаций в России единицы. Документ принимается всеми образовательными организациями, учитывается при аттестации и проверках Рособрнадзора. Все данные вносятся в ФИС ФРДО.'],
+        ['Увижу ли я документ на Госуслугах?', 'Да. Данные вносятся в ФИС ФРДО в течение 30 дней после завершения обучения. После этого вы сможете увидеть запись в личном кабинете на Госуслугах.'],
+        ['Когда можно начать обучение?', 'Начать обучение можно сразу после оплаты. Все материалы доступны онлайн 24/7.'],
+      ];
+      foreach ($faqItems as $faq):
+      ?>
+      <div class="rd-faq-item">
+        <button type="button" class="rd-faq-q">
+          <span><?php echo htmlspecialchars($faq[0]); ?></span>
+          <span class="pm">+</span>
+        </button>
+        <div class="rd-faq-a"><div><?php echo htmlspecialchars($faq[1]); ?></div></div>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- Мобильный фиксированный CTA -->
+<div class="cd-mobile-cta" id="cdMobileCta">
+  <button type="button" class="rd-btn rd-btn-primary" onclick="openEnrollmentModal()">
+    Оплатить курс
+  </button>
 </div>
 
-</div><!-- /.landing-page -->
-
 <!-- Enrollment Modal -->
-<div class="enrollment-modal-overlay" id="enrollmentModal">
-    <div class="enrollment-modal">
-        <button class="close-modal" onclick="closeEnrollmentModal()">&times;</button>
+<div class="cd-form-modal" id="enrollmentModal">
+  <div class="modal-box">
+    <button class="close-modal" onclick="closeEnrollmentModal()" aria-label="Закрыть">&times;</button>
 
-        <div id="enrollmentForm">
-            <h2>Записаться на курс</h2>
-            <p class="modal-subtitle"><?php echo htmlspecialchars(mb_substr($course['title'], 0, 80)); ?></p>
+    <div id="enrollmentForm">
+      <h2>Оформить оплату курса</h2>
+      <p class="modal-subtitle"><?php echo htmlspecialchars(mb_substr($course['title'], 0, 80)); ?></p>
 
-            <form class="enrollment-form" onsubmit="submitEnrollment(event)">
-                <input type="hidden" name="course_id" value="<?php echo $course['id']; ?>">
-                <input type="hidden" name="course_title" value="<?php echo htmlspecialchars($course['title']); ?>">
+      <form onsubmit="submitEnrollment(event)">
+        <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
+        <input type="hidden" name="course_title" value="<?php echo htmlspecialchars($course['title'], ENT_QUOTES); ?>">
 
-                <div class="form-group">
-                    <label for="enroll_name">ФИО</label>
-                    <input type="text" id="enroll_name" name="full_name" required placeholder="Иванова Мария Петровна">
-                </div>
-
-                <div class="form-group">
-                    <label for="enroll_email">Email</label>
-                    <input type="email" id="enroll_email" name="email" required placeholder="ivanova@mail.ru">
-                </div>
-
-                <div class="form-group">
-                    <label for="enroll_phone">Телефон</label>
-                    <input type="tel" id="enroll_phone" name="phone" placeholder="+7 (___) ___-__-__">
-                </div>
-
-                <div class="form-agreement" style="margin-bottom: 16px;">
-                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
-                        <input type="checkbox" name="agreement" required style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0;">
-                        <span style="font-size: 13px; color: #64748B; line-height: 1.5;">
-                            Я принимаю условия <a href="/polzovatelskoe-soglashenie/" target="_blank" style="color: #667eea;">Пользовательского соглашения</a>,
-                            <a href="/oferta-kursy/" target="_blank" style="color: #667eea;">Договора-оферты</a>
-                            и даю согласие на обработку персональных данных в соответствии с
-                            <a href="/politika-konfidencialnosti/" target="_blank" style="color: #667eea;">Политикой конфиденциальности</a>
-                        </span>
-                    </label>
-                </div>
-
-                <button type="submit" class="btn-submit" id="enrollSubmitBtn">Отправить заявку</button>
-            </form>
+        <div class="form-group">
+          <label for="enroll_name">ФИО</label>
+          <input type="text" id="enroll_name" name="full_name" required placeholder="Иванова Мария Петровна">
+        </div>
+        <div class="form-group">
+          <label for="enroll_email">Email</label>
+          <input type="email" id="enroll_email" name="email" required placeholder="ivanova@mail.ru">
+        </div>
+        <div class="form-group">
+          <label for="enroll_phone">Телефон</label>
+          <input type="tel" id="enroll_phone" name="phone" placeholder="+7 (___) ___-__-__">
         </div>
 
-        <div class="enrollment-success" id="enrollmentSuccess">
-            <h3>Заявка отправлена!</h3>
-            <p style="color: #6b7280;">Мы свяжемся с вами в ближайшее время для подтверждения записи на курс.</p>
-            <button class="btn-submit" onclick="closeEnrollmentModal()" style="margin-top: 16px; background: var(--gradient-primary); color: white; border: none; padding: 14px 32px; border-radius: 12px; cursor: pointer; font-size: 15px;">Закрыть</button>
+        <div class="form-agreement">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+            <input type="checkbox" name="agreement" required style="margin-top:3px;width:18px;height:18px;flex-shrink:0;">
+            <span>
+              Я принимаю условия <a href="/polzovatelskoe-soglashenie/" target="_blank">Пользовательского соглашения</a>,
+              <a href="/oferta-kursy/" target="_blank">Договора-оферты</a>
+              и даю согласие на обработку персональных данных в соответствии с
+              <a href="/politika-konfidencialnosti/" target="_blank">Политикой конфиденциальности</a>.
+            </span>
+          </label>
         </div>
+
+        <button type="submit" class="btn-submit" id="enrollSubmitBtn">Перейти к оплате</button>
+      </form>
     </div>
+
+    <div class="form-success" id="enrollmentSuccess">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#22a55a" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+      <h3>Заявка отправлена!</h3>
+      <p>Мы свяжемся с вами в ближайшее время для подтверждения записи на курс.</p>
+      <button type="button" class="btn-submit" onclick="closeEnrollmentModal()">Закрыть</button>
+    </div>
+  </div>
 </div>
 
 <!-- Consultation Modal -->
-<div class="consultation-modal-overlay" id="consultationModal">
-    <div class="consultation-modal">
-        <button class="close-modal" onclick="closeConsultationModal()">&times;</button>
+<div class="cd-form-modal" id="consultationModal">
+  <div class="modal-box">
+    <button class="close-modal" onclick="closeConsultationModal()" aria-label="Закрыть">&times;</button>
 
-        <div id="consultationForm">
-            <div style="text-align: center; margin-bottom: 24px;">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="1.5">
-                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
-                </svg>
-            </div>
-            <h2 style="text-align: center; margin: 0 0 8px;">Бесплатная консультация</h2>
-            <p class="modal-subtitle" style="text-align: center;">Оставьте номер — мы перезвоним и ответим на все вопросы о курсе</p>
+    <div id="consultationForm">
+      <div style="text-align:center;margin-bottom:18px;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--indigo-600)" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+      </div>
+      <h2 style="text-align:center;">Бесплатная консультация</h2>
+      <p class="modal-subtitle" style="text-align:center;">Оставьте номер — мы перезвоним и ответим на вопросы о курсе.</p>
 
-            <form class="enrollment-form" onsubmit="submitConsultation(event)">
-                <input type="hidden" name="course_id" value="<?php echo $course['id']; ?>">
-                <input type="hidden" name="course_title" value="<?php echo htmlspecialchars($course['title']); ?>">
+      <form onsubmit="submitConsultation(event)">
+        <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
+        <input type="hidden" name="course_title" value="<?php echo htmlspecialchars($course['title'], ENT_QUOTES); ?>">
 
-                <div class="form-group">
-                    <label for="consult_phone">Телефон</label>
-                    <input type="tel" id="consult_phone" name="phone" required placeholder="+7 (___) ___-__-__">
-                </div>
-
-                <div class="form-agreement" style="margin-bottom: 16px;">
-                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
-                        <input type="checkbox" name="agreement" required style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0;">
-                        <span style="font-size: 13px; color: #64748B; line-height: 1.5;">
-                            Я принимаю условия <a href="/polzovatelskoe-soglashenie/" target="_blank" style="color: #667eea;">Пользовательского соглашения</a>,
-                            <a href="/oferta-kursy/" target="_blank" style="color: #667eea;">Договора-оферты</a>
-                            и даю согласие на обработку персональных данных в соответствии с
-                            <a href="/politika-konfidencialnosti/" target="_blank" style="color: #667eea;">Политикой конфиденциальности</a>
-                        </span>
-                    </label>
-                </div>
-
-                <button type="submit" class="btn-submit" id="consultSubmitBtn">Перезвоните мне</button>
-            </form>
+        <div class="form-group">
+          <label for="consult_phone">Телефон</label>
+          <input type="tel" id="consult_phone" name="phone" required placeholder="+7 (___) ___-__-__">
         </div>
 
-        <div class="consultation-success" id="consultationSuccess" style="display: none; text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 16px;">
-                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
-            </div>
-            <h3>Заявка отправлена!</h3>
-            <p style="color: #6b7280;">Мы перезвоним вам в ближайшее время.</p>
-            <button class="btn-submit" onclick="closeConsultationModal()" style="margin-top: 16px; background: var(--gradient-primary); color: white; border: none; padding: 14px 32px; border-radius: 12px; cursor: pointer; font-size: 15px;">Закрыть</button>
+        <div class="form-agreement">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+            <input type="checkbox" name="agreement" required style="margin-top:3px;width:18px;height:18px;flex-shrink:0;">
+            <span>
+              Я принимаю условия <a href="/polzovatelskoe-soglashenie/" target="_blank">Пользовательского соглашения</a>
+              и даю согласие на обработку персональных данных в соответствии с
+              <a href="/politika-konfidencialnosti/" target="_blank">Политикой конфиденциальности</a>.
+            </span>
+          </label>
         </div>
+
+        <button type="submit" class="btn-submit" id="consultSubmitBtn">Перезвоните мне</button>
+      </form>
     </div>
+
+    <div class="form-success" id="consultationSuccess">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#22a55a" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+      <h3>Заявка отправлена!</h3>
+      <p>Мы перезвоним вам в ближайшее время.</p>
+      <button type="button" class="btn-submit" onclick="closeConsultationModal()">Закрыть</button>
+    </div>
+  </div>
 </div>
 
-<!-- Фиксированная мобильная кнопка -->
-<div class="mobile-fixed-cta" id="mobileFixedCta">
-    <button class="mobile-fixed-cta-btn" onclick="openEnrollmentModal()">
-        Записаться на курс
-    </button>
+<!-- Skolkovo Modal -->
+<div class="cd-skolkovo-modal" id="skolkovoModal">
+  <div class="modal-box">
+    <button class="close-modal" onclick="closeSkolkovoModal()" aria-label="Закрыть">&times;</button>
+    <img src="/assets/images/razreshenie-skolkovo-068.png" alt="Разрешение Сколково № 068">
+    <p>Разрешение № 068 от 16.03.2026 на осуществление образовательной деятельности.</p>
+  </div>
 </div>
 
 <!-- JSON-LD -->
 <script type="application/ld+json"><?php echo json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
 
 <script>
+// Modal helpers
 function openEnrollmentModal() {
     document.getElementById('enrollmentModal').classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -1254,16 +725,19 @@ function openEnrollmentModal() {
 function closeEnrollmentModal() {
     document.getElementById('enrollmentModal').classList.remove('active');
     document.body.style.overflow = '';
-    // Reset form
     document.getElementById('enrollmentForm').style.display = '';
-    document.getElementById('enrollmentSuccess').style.display = 'none';
+    document.getElementById('enrollmentSuccess').classList.remove('active');
 }
-// Close on overlay click
-document.getElementById('enrollmentModal').addEventListener('click', function(e) {
-    if (e.target === this) closeEnrollmentModal();
-});
-
-// Skolkovo permission modal
+function openConsultationModal() {
+    document.getElementById('consultationModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+function closeConsultationModal() {
+    document.getElementById('consultationModal').classList.remove('active');
+    document.body.style.overflow = '';
+    document.getElementById('consultationForm').style.display = '';
+    document.getElementById('consultationSuccess').classList.remove('active');
+}
 function openSkolkovoModal() {
     document.getElementById('skolkovoModal').classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -1272,13 +746,28 @@ function closeSkolkovoModal() {
     document.getElementById('skolkovoModal').classList.remove('active');
     document.body.style.overflow = '';
 }
-document.getElementById('skolkovoModal').addEventListener('click', function(e) {
-    if (e.target === this) closeSkolkovoModal();
+
+// Close on overlay click
+['enrollmentModal', 'consultationModal', 'skolkovoModal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('click', function(e) {
+            if (e.target === el) {
+                if (id === 'enrollmentModal') closeEnrollmentModal();
+                else if (id === 'consultationModal') closeConsultationModal();
+                else closeSkolkovoModal();
+            }
+        });
+    }
 });
 
 // Close on Escape
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeEnrollmentModal(); closeConsultationModal(); closeSkolkovoModal(); }
+    if (e.key === 'Escape') {
+        closeEnrollmentModal();
+        closeConsultationModal();
+        closeSkolkovoModal();
+    }
 });
 
 // Phone mask +7 (___) ___-__-__
@@ -1293,7 +782,6 @@ function formatPhone(digits) {
 }
 function applyPhoneMask(input) {
     input.addEventListener('keydown', function(e) {
-        // Backspace: удаляем последнюю цифру
         if (e.key === 'Backspace') {
             e.preventDefault();
             var digits = input.value.replace(/\D/g, '');
@@ -1302,23 +790,19 @@ function applyPhoneMask(input) {
             input.value = formatPhone(digits);
         }
     });
-    input.addEventListener('input', function(e) {
+    input.addEventListener('input', function() {
         var digits = input.value.replace(/\D/g, '');
         if (digits.length > 0 && digits[0] === '8') digits = '7' + digits.substring(1);
         if (digits.length > 0 && digits[0] !== '7') digits = '7' + digits;
         if (digits.length > 11) digits = digits.substring(0, 11);
         input.value = formatPhone(digits);
     });
-    input.addEventListener('focus', function() {
-        if (!input.value) input.value = '+7';
-    });
-    input.addEventListener('blur', function() {
-        if (input.value === '+7') input.value = '';
-    });
+    input.addEventListener('focus', function() { if (!input.value) input.value = '+7'; });
+    input.addEventListener('blur', function() { if (input.value === '+7') input.value = ''; });
 }
 document.querySelectorAll('input[type="tel"]').forEach(applyPhoneMask);
 
-// UTM, Яндекс.Метрика, страница-источник
+// Tracking helpers
 function appendTrackingData(formData) {
     var urlParams = new URLSearchParams(window.location.search);
     ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function(key) {
@@ -1329,21 +813,7 @@ function appendTrackingData(formData) {
     formData.append('source_page', window.location.pathname);
 }
 
-// Consultation modal
-function openConsultationModal() {
-    document.getElementById('consultationModal').classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-function closeConsultationModal() {
-    document.getElementById('consultationModal').classList.remove('active');
-    document.body.style.overflow = '';
-    document.getElementById('consultationForm').style.display = '';
-    document.getElementById('consultationSuccess').style.display = 'none';
-}
-document.getElementById('consultationModal').addEventListener('click', function(e) {
-    if (e.target === this) closeConsultationModal();
-});
-
+// Consultation submit (modal)
 function submitConsultation(e) {
     e.preventDefault();
     var btn = document.getElementById('consultSubmitBtn');
@@ -1353,68 +823,64 @@ function submitConsultation(e) {
     var formData = new FormData(e.target);
     appendTrackingData(formData);
 
-    fetch('/ajax/course-consultation.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-        if (data.success) {
-            if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'zayavkakurs'); }
-            document.getElementById('consultationForm').style.display = 'none';
-            document.getElementById('consultationSuccess').style.display = 'block';
-        } else {
-            alert(data.message || 'Произошла ошибка. Попробуйте ещё раз.');
+    fetch('/ajax/course-consultation.php', { method: 'POST', body: formData })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'zayavkakurs'); }
+                document.getElementById('consultationForm').style.display = 'none';
+                document.getElementById('consultationSuccess').classList.add('active');
+            } else {
+                alert(data.message || 'Произошла ошибка. Попробуйте ещё раз.');
+                btn.disabled = false;
+                btn.textContent = 'Перезвоните мне';
+            }
+        })
+        .catch(function() {
+            alert('Произошла ошибка соединения. Попробуйте ещё раз.');
             btn.disabled = false;
             btn.textContent = 'Перезвоните мне';
-        }
-    })
-    .catch(function() {
-        alert('Произошла ошибка соединения. Попробуйте ещё раз.');
-        btn.disabled = false;
-        btn.textContent = 'Перезвоните мне';
-    });
+        });
 }
 
+// Inline consultation submit (на странице)
 function submitConsultationInline(e) {
     e.preventDefault();
     var form = e.target;
-    var btn = form.querySelector('.consultation-inline-btn');
+    var btn = form.querySelector('button[type="submit"]');
     btn.disabled = true;
     btn.textContent = 'Отправка...';
 
     var formData = new FormData(form);
     appendTrackingData(formData);
 
-    fetch('/ajax/course-consultation.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-        if (data.success) {
-            if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'zayavkakurs'); }
-            form.style.display = 'none';
-            form.parentElement.querySelector('.consultation-inline-success').style.display = 'flex';
-        } else {
-            alert(data.message || 'Произошла ошибка. Попробуйте ещё раз.');
+    fetch('/ajax/course-consultation.php', { method: 'POST', body: formData })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'zayavkakurs'); }
+                form.style.display = 'none';
+                var success = document.getElementById('consultationInlineSuccess');
+                if (success) success.style.display = 'flex';
+            } else {
+                alert(data.message || 'Произошла ошибка. Попробуйте ещё раз.');
+                btn.disabled = false;
+                btn.textContent = 'Перезвоните мне';
+            }
+        })
+        .catch(function() {
+            alert('Произошла ошибка соединения. Попробуйте ещё раз.');
             btn.disabled = false;
             btn.textContent = 'Перезвоните мне';
-        }
-    })
-    .catch(function() {
-        alert('Произошла ошибка соединения. Попробуйте ещё раз.');
-        btn.disabled = false;
-        btn.textContent = 'Перезвоните мне';
-    });
+        });
 }
 
+// Enrollment submit
 function submitEnrollment(e) {
     e.preventDefault();
     var btn = document.getElementById('enrollSubmitBtn');
     var form = e.target;
 
-    // Клиентская валидация
     var name = form.querySelector('[name="full_name"]').value.trim();
     var email = form.querySelector('[name="email"]').value.trim();
     if (!name || !email) {
@@ -1432,55 +898,66 @@ function submitEnrollment(e) {
     var formData = new FormData(form);
     appendTrackingData(formData);
 
-    fetch('/ajax/course-enrollment.php', {
-        method: 'POST',
-        body: formData
-    }).then(function(r) { return r.json(); }).then(function(response) {
-        if (!response.success) {
-            alert(response.message || 'Произошла ошибка. Попробуйте ещё раз.');
-            btn.disabled = false;
-            btn.textContent = 'Записаться на курс';
-            return;
-        }
+    fetch('/ajax/course-enrollment.php', { method: 'POST', body: formData })
+        .then(function(r) { return r.json(); })
+        .then(function(response) {
+            if (!response.success) {
+                alert(response.message || 'Произошла ошибка. Попробуйте ещё раз.');
+                btn.disabled = false;
+                btn.textContent = 'Перейти к оплате';
+                return;
+            }
 
-        var redirectUrl = response.cabinet_url || '/kabinet/?tab=courses&enrolled=success';
+            var redirectUrl = response.cabinet_url || '/kabinet/?tab=courses&enrolled=success';
 
-        // E-commerce: add (заявка на курс)
-        if (response.ecommerce) {
-            window.dataLayer = window.dataLayer || [];
-            window.dataLayer.push({
-                "ecommerce": {
-                    "currencyCode": "RUB",
-                    "add": {
-                        "products": [{
-                            "id": response.ecommerce.id,
-                            "name": response.ecommerce.name,
-                            "price": response.ecommerce.price,
-                            "brand": "Педпортал",
-                            "category": "Курсы",
-                            "quantity": 1
-                        }]
+            if (response.ecommerce) {
+                window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push({
+                    "ecommerce": {
+                        "currencyCode": "RUB",
+                        "add": {
+                            "products": [{
+                                "id": response.ecommerce.id,
+                                "name": response.ecommerce.name,
+                                "price": response.ecommerce.price,
+                                "brand": "Педпортал",
+                                "category": "Курсы",
+                                "quantity": 1
+                            }]
+                        }
                     }
-                }
-            });
-        }
+                });
+            }
 
-        // Яндекс Метрика: цель «Заявка на курс»
-        // Ждём колбэк от Метрики, чтобы цель успела уйти до редиректа
-        var redirected = false;
-        function doRedirect() {
-            if (!redirected) { redirected = true; window.location.href = redirectUrl; }
-        }
-        if (typeof ym === 'function') {
-            ym(106465857, 'reachGoal', 'zayavkakurs', null, doRedirect);
-            setTimeout(doRedirect, 1000);
-        } else {
-            doRedirect();
-        }
-    }).catch(function() {
-        window.location.href = '/kabinet/?tab=courses&enrolled=success';
-    });
+            var redirected = false;
+            function doRedirect() {
+                if (!redirected) { redirected = true; window.location.href = redirectUrl; }
+            }
+            if (typeof ym === 'function') {
+                ym(106465857, 'reachGoal', 'zayavkakurs', null, doRedirect);
+                setTimeout(doRedirect, 1000);
+            } else {
+                doRedirect();
+            }
+        })
+        .catch(function() {
+            window.location.href = '/kabinet/?tab=courses&enrolled=success';
+        });
 }
+
+// Mobile fixed CTA
+(function() {
+    if (window.innerWidth <= 768) {
+        var heroCta = document.querySelector('.cd-hero-cta');
+        var fixedCta = document.getElementById('cdMobileCta');
+        if (heroCta && fixedCta) {
+            var obs = new IntersectionObserver(function(entries) {
+                fixedCta.classList.toggle('visible', !entries[0].isIntersecting);
+            }, { threshold: 0 });
+            obs.observe(heroCta);
+        }
+    }
+})();
 </script>
 
 <!-- E-commerce: Detail -->
@@ -1492,7 +969,7 @@ window.dataLayer.push({
         "detail": {
             "actionField": {"list": ""},
             "products": [{
-                "id": "course-<?= $course['id'] ?>",
+                "id": "course-<?= (int)$course['id'] ?>",
                 "name": "<?= htmlspecialchars($course['title'], ENT_QUOTES) ?>",
                 "price": <?= $abPrice ?>,
                 "brand": "Педпортал",
@@ -1501,26 +978,11 @@ window.dataLayer.push({
         }
     }
 });
+if (typeof ym === 'function') ym(106465857, 'params', {course_discount: '<?= $discountPercent ?>'});
 </script>
 
-<script>ym(106465857, 'params', {course_discount: '<?= $discountPercent ?>'});</script>
-
-<script>
-// Фиксированная мобильная кнопка
-if (window.innerWidth <= 768) {
-    var heroCta = document.querySelector('.hero-cta-row');
-    var fixedCta = document.getElementById('mobileFixedCta');
-    if (heroCta && fixedCta) {
-        var obs = new IntersectionObserver(function(entries) {
-            fixedCta.classList.toggle('visible', !entries[0].isIntersecting);
-        }, { threshold: 0 });
-        obs.observe(heroCta);
-    }
-}
-</script>
-
-<?php include __DIR__ . '/../includes/social-links.php'; ?>
+<?php include __DIR__ . '/../includes/social-links-redesign.php'; ?>
 
 <?php
-include __DIR__ . '/../includes/footer.php';
+include __DIR__ . '/../includes/footer-redesign.php';
 ?>

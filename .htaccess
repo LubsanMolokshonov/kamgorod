@@ -188,6 +188,9 @@ RewriteRule ^publikacii/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ publ
 # Список курсов
 RewriteRule ^kursy/?$ courses.php [L,QSA]
 
+# Редизайн A/B-варианта /kursyb/ промоутнут в основной /kursy/ — 301-редирект для устаревших ссылок
+RewriteRule ^kursyb(/.*)?$ /kursy$1 [R=301,L]
+
 # Тип программы + аудитория (3 уровня): /kursy/povyshenie-kvalifikatsii/pedagogi/dou/vospitatel/
 RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ courses.php?ct=$1&ac=$2&at=$3&as=$4 [L,QSA]
 RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ courses.php?ct=$1&ac=$2&at=$3 [L,QSA]

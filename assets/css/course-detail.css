@@ -1,0 +1,671 @@
+/* =====================================================
+   КУРС — ДЕТАЛЬНАЯ СТРАНИЦА (редизайн)
+   Используется в pages/course-detail.php
+   Подключается ПОСЛЕ assets/css/competition-detail.css
+   и переиспользует его общие классы (.cd-hero, .cd-crumbs,
+   .cd-benefits-grid, .cd-benefit, .cd-about-grid, .cd-info-cards,
+   .cd-info-card, .cd-mobile-cta, .modal*).
+   ===================================================== */
+
+/* ---------- HERO title override: компактнее на десктопе ---------- */
+.cd-hero-title {
+  font-size: clamp(28px, 3vw, 35px);
+}
+
+/* ---------- HERO art: разрешение Сколково ---------- */
+.cd-skolkovo-art {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  cursor: pointer;
+  min-height: 480px;
+}
+.cd-skolkovo-art::before {
+  content: '';
+  position: absolute;
+  inset: 6% 4%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, var(--indigo-200), var(--indigo-400));
+  opacity: .14;
+  filter: blur(10px);
+  z-index: 0;
+}
+.cd-skolkovo-frame {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-xl);
+  padding: 18px;
+  box-shadow: var(--sh-2);
+  transition: transform .3s var(--ease-out), box-shadow .3s;
+  max-width: 380px;
+}
+.cd-skolkovo-art:hover .cd-skolkovo-frame {
+  transform: translateY(-3px) scale(1.015);
+  box-shadow: 0 24px 60px rgba(20, 28, 80, .22);
+}
+.cd-skolkovo-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--r-md);
+}
+.cd-skolkovo-caption {
+  position: relative;
+  z-index: 1;
+  font: 600 13px var(--font-sans);
+  color: var(--ink-700);
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cd-skolkovo-caption::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--indigo-600);
+}
+
+/* ---------- HERO: курс-специфичный pill для типа программы ---------- */
+.rd-pill.rd-pill-program {
+  background: var(--indigo-600);
+  color: #fff;
+  border-color: var(--indigo-600);
+  font-weight: 600;
+}
+
+/* ---------- ФРДО-бейдж под CTA в hero ---------- */
+.cd-frdo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 8px 14px;
+  background: rgba(74, 222, 128, .12);
+  border: 1px solid rgba(74, 222, 128, .35);
+  border-radius: var(--r-pill);
+  font: 600 13px var(--font-sans);
+  color: #0d7a3d;
+}
+.cd-frdo-badge svg { color: #22a55a; flex-shrink: 0; }
+
+/* ---------- БОЛЬШОЙ ЦЕНОВОЙ БЛОК ---------- */
+.cd-course-price {
+  position: relative;
+  background: linear-gradient(135deg, var(--indigo-700), var(--indigo-900));
+  color: #fff;
+  border-radius: var(--r-xl);
+  padding: 56px 64px;
+  overflow: hidden;
+  text-align: center;
+  max-width: 920px;
+  margin: 0 auto;
+}
+.cd-course-price::before {
+  content: '';
+  position: absolute;
+  right: -160px; top: -160px;
+  width: 420px; height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(140, 170, 255, .28), transparent 70%);
+}
+.cd-course-price::after {
+  content: '';
+  position: absolute;
+  left: -100px; bottom: -100px;
+  width: 280px; height: 280px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, .12);
+}
+.cd-course-price > * { position: relative; z-index: 1; }
+
+.cd-course-price .label {
+  font: 600 13px var(--font-sans);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #b6c2ff;
+  margin-bottom: 12px;
+}
+.cd-course-price .amount {
+  font: 800 clamp(48px, 6vw, 76px) var(--font-sans);
+  letter-spacing: -.02em;
+  line-height: 1;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.cd-course-price .amount-old {
+  font-size: .42em;
+  font-weight: 600;
+  text-decoration: line-through;
+  opacity: .55;
+}
+.cd-course-price .amount-badge {
+  font: 700 .28em var(--font-sans);
+  background: #ff4d6d;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  letter-spacing: .02em;
+}
+.cd-course-price .note {
+  font-size: 16px;
+  color: #c2cdff;
+  margin-bottom: 28px;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.cd-course-price .rd-btn-primary {
+  background: #fff;
+  color: var(--indigo-700);
+  font-size: 17px;
+  padding: 18px 36px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .22);
+}
+.cd-course-price .rd-btn-primary:hover {
+  background: var(--indigo-50);
+  color: var(--indigo-800);
+  transform: translateY(-2px);
+}
+
+.cd-course-price-features {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin: 28px 0 32px;
+}
+.cd-course-price-features .feat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 14px var(--font-sans);
+  color: #d6deff;
+}
+.cd-course-price-features .feat svg {
+  color: #6ee7b7;
+  flex-shrink: 0;
+}
+
+.cd-course-price-guarantees {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 32px;
+  max-width: 720px;
+  margin: 32px auto 0;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255, 255, 255, .14);
+  text-align: left;
+}
+.cd-course-price-guarantees .g {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 14px;
+  color: #d6deff;
+  line-height: 1.5;
+}
+.cd-course-price-guarantees .g svg {
+  color: #6ee7b7;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ---------- ПРОГРАММА КУРСА ---------- */
+.cd-modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.cd-module {
+  background: #fff;
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-lg);
+  padding: 22px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  transition: border-color .2s, box-shadow .25s, transform .25s var(--ease-out);
+}
+.cd-module:hover {
+  border-color: var(--indigo-300);
+  box-shadow: var(--sh-2);
+  transform: translateY(-2px);
+}
+.cd-module .n {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--indigo-50);
+  color: var(--indigo-700);
+  display: grid; place-items: center;
+  font: 700 14px var(--font-sans);
+}
+.cd-module p {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-700);
+  margin: 0;
+}
+
+/* ---------- ПРЕПОДАВАТЕЛИ ---------- */
+.cd-experts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+.cd-expert {
+  background: #fff;
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  transition: border-color .2s, box-shadow .25s, transform .25s var(--ease-out);
+}
+.cd-expert:hover {
+  border-color: var(--indigo-200);
+  box-shadow: var(--sh-1);
+  transform: translateY(-2px);
+}
+.cd-expert .photo {
+  width: 96px; height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--indigo-50);
+  border: 3px solid #fff;
+  box-shadow: 0 4px 14px rgba(20, 28, 80, .12);
+  margin-bottom: 4px;
+}
+.cd-expert .photo img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.cd-expert .name {
+  font: 700 16px var(--font-sans);
+  color: var(--ink-900);
+  line-height: 1.3;
+}
+.cd-expert .credentials {
+  font-size: 14px;
+  color: var(--ink-700);
+  line-height: 1.45;
+}
+.cd-expert .experience {
+  font: 500 13px var(--font-sans);
+  color: var(--indigo-700);
+  margin-top: 4px;
+}
+
+/* ---------- РЕЗУЛЬТАТЫ ОБУЧЕНИЯ ---------- */
+.cd-outcomes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.cd-outcome {
+  background: #fff;
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-lg);
+  padding: 28px;
+}
+.cd-outcome h3 {
+  font: 700 18px var(--font-sans);
+  color: var(--ink-900);
+  margin: 0 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cd-outcome h3::before {
+  content: '';
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--indigo-500), var(--indigo-700));
+}
+.cd-outcome:nth-child(2) h3::before {
+  background: linear-gradient(135deg, var(--teal-500), #0a9b7e);
+}
+.cd-outcome:nth-child(3) h3::before {
+  background: linear-gradient(135deg, var(--amber-400), #d29220);
+}
+.cd-outcome ul {
+  list-style: none;
+  padding: 0; margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cd-outcome li {
+  position: relative;
+  padding-left: 28px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink-700);
+}
+.cd-outcome li::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 6px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--indigo-50);
+}
+.cd-outcome li::after {
+  content: '';
+  position: absolute;
+  left: 4px; top: 9px;
+  width: 10px; height: 6px;
+  border-left: 2px solid var(--indigo-700);
+  border-bottom: 2px solid var(--indigo-700);
+  transform: rotate(-45deg);
+}
+
+/* ---------- CTA-консультация ---------- */
+.cd-consult {
+  background: linear-gradient(135deg, var(--indigo-50), #fff);
+  border: 1px solid var(--indigo-200);
+  border-radius: var(--r-xl);
+  padding: 40px 48px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 32px;
+  align-items: center;
+}
+.cd-consult-text h3 {
+  font: 700 22px var(--font-sans);
+  color: var(--ink-900);
+  margin: 0 0 6px;
+}
+.cd-consult-text p {
+  font-size: 15px;
+  color: var(--ink-700);
+  margin: 0;
+  line-height: 1.5;
+}
+.cd-consult-form {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  min-width: 380px;
+}
+.cd-consult-form input[type="tel"] {
+  flex: 1;
+  padding: 14px 18px;
+  border: 1.5px solid var(--ink-200);
+  border-radius: var(--r-pill);
+  font: 500 15px var(--font-text);
+  background: #fff;
+  color: var(--ink-900);
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.cd-consult-form input[type="tel"]:focus {
+  border-color: var(--indigo-600);
+  box-shadow: 0 0 0 3px rgba(30, 58, 168, .12);
+}
+.cd-consult-success {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 24px;
+  background: rgba(74, 222, 128, .12);
+  border: 1px solid rgba(74, 222, 128, .35);
+  border-radius: var(--r-lg);
+  color: #0d7a3d;
+  font-weight: 500;
+}
+
+/* ---------- ФЕДЕРАЛЬНЫЙ РЕЕСТР ---------- */
+.cd-frdo-card {
+  max-width: 760px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-lg);
+  padding: 32px 40px;
+}
+.cd-frdo-card h3 {
+  font: 700 18px var(--font-sans);
+  color: var(--indigo-700);
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cd-frdo-card p {
+  font-size: 15px;
+  color: var(--ink-700);
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* ---------- МОДАЛКИ (форма заявки + консультация + Сколково) ---------- */
+.cd-form-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(14, 19, 48, .55);
+  backdrop-filter: blur(4px);
+}
+.cd-form-modal.active {
+  display: flex;
+}
+.cd-form-modal .modal-box {
+  position: relative;
+  background: #fff;
+  border-radius: var(--r-xl);
+  max-width: 480px;
+  width: 100%;
+  padding: 36px 32px 32px;
+  box-shadow: 0 30px 80px rgba(20, 28, 80, .25);
+  max-height: 92vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.cd-form-modal .modal-box * { box-sizing: border-box; }
+.cd-form-modal form { min-width: 0; }
+.cd-form-modal .close-modal {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: var(--ink-50);
+  border: 0;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-700);
+  display: grid; place-items: center;
+  transition: background .2s, color .2s;
+}
+.cd-form-modal .close-modal:hover {
+  background: var(--indigo-50);
+  color: var(--indigo-700);
+}
+.cd-form-modal h2 {
+  font: 700 22px var(--font-sans);
+  color: var(--ink-900);
+  margin: 0 0 6px;
+}
+.cd-form-modal .modal-subtitle {
+  font-size: 14px;
+  color: var(--ink-500);
+  margin: 0 0 22px;
+}
+.cd-form-modal .form-group {
+  margin-bottom: 14px;
+}
+.cd-form-modal .form-group label {
+  display: block;
+  font: 600 13px var(--font-sans);
+  color: var(--ink-700);
+  margin-bottom: 6px;
+}
+.cd-form-modal .form-group input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 1.5px solid var(--ink-200);
+  border-radius: var(--r-md);
+  font: 500 15px var(--font-text);
+  background: #fff;
+  color: var(--ink-900);
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.cd-form-modal .form-group input:focus {
+  border-color: var(--indigo-600);
+  box-shadow: 0 0 0 3px rgba(30, 58, 168, .12);
+}
+.cd-form-modal .form-agreement {
+  font-size: 13px;
+  color: var(--ink-500);
+  line-height: 1.5;
+  margin-bottom: 16px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.cd-form-modal .form-agreement a {
+  color: var(--indigo-700);
+  text-decoration: none;
+}
+.cd-form-modal .form-agreement a:hover {
+  text-decoration: underline;
+}
+.cd-form-modal .btn-submit {
+  width: 100%;
+  padding: 14px 24px;
+  background: var(--indigo-600);
+  color: #fff;
+  border: 0;
+  border-radius: var(--r-pill);
+  font: 600 15px var(--font-sans);
+  cursor: pointer;
+  transition: background .2s, transform .15s;
+}
+.cd-form-modal .btn-submit:hover:not(:disabled) {
+  background: var(--indigo-700);
+  transform: translateY(-1px);
+}
+.cd-form-modal .btn-submit:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+.cd-form-modal .form-success {
+  display: none;
+  text-align: center;
+  padding: 20px 0;
+}
+.cd-form-modal .form-success.active {
+  display: block;
+}
+.cd-form-modal .form-success svg {
+  margin-bottom: 12px;
+}
+.cd-form-modal .form-success h3 {
+  font: 700 20px var(--font-sans);
+  color: var(--ink-900);
+  margin: 0 0 8px;
+}
+.cd-form-modal .form-success p {
+  color: var(--ink-500);
+  font-size: 14.5px;
+  margin: 0 0 20px;
+}
+
+/* Skolkovo image modal */
+.cd-skolkovo-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(14, 19, 48, .7);
+  backdrop-filter: blur(6px);
+}
+.cd-skolkovo-modal.active { display: flex; }
+.cd-skolkovo-modal .modal-box {
+  position: relative;
+  background: #fff;
+  border-radius: var(--r-xl);
+  padding: 24px;
+  max-width: 920px;
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+.cd-skolkovo-modal .close-modal {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: var(--ink-50);
+  border: 0;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 22px;
+  color: var(--ink-700);
+  display: grid; place-items: center;
+}
+.cd-skolkovo-modal img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--r-md);
+}
+.cd-skolkovo-modal p {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-500);
+}
+
+/* ---------- АДАПТИВ ---------- */
+@media (max-width: 1024px) {
+  .cd-skolkovo-art { min-height: 360px; }
+  .cd-skolkovo-frame { max-width: 320px; padding: 14px; }
+  .cd-outcomes-grid { grid-template-columns: 1fr; }
+  .cd-consult { grid-template-columns: 1fr; gap: 20px; padding: 32px 28px; }
+  .cd-consult-form { min-width: 0; }
+}
+
+@media (max-width: 768px) {
+  .cd-course-price { padding: 40px 24px; border-radius: var(--r-lg); }
+  .cd-course-price-features { gap: 16px 22px; margin: 22px 0 26px; }
+  .cd-course-price-guarantees { grid-template-columns: 1fr; gap: 12px; padding-top: 24px; }
+  .cd-course-price .rd-btn-primary { width: 100%; justify-content: center; padding: 16px 24px; }
+  .cd-experts-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cd-expert { padding: 18px 14px; }
+  .cd-expert .photo { width: 72px; height: 72px; }
+  .cd-modules-grid { grid-template-columns: 1fr; }
+  .cd-skolkovo-art { min-height: 280px; }
+  .cd-skolkovo-frame { max-width: 260px; padding: 10px; }
+  .cd-consult-form { flex-direction: column; }
+  .cd-frdo-card { padding: 24px 20px; }
+  .cd-form-modal .modal-box { padding: 28px 20px 24px; }
+}
+
+@media (max-width: 480px) {
+  .cd-course-price .amount { gap: 8px; }
+  .cd-experts-grid { grid-template-columns: 1fr; }
+}

@@ -1,7 +1,7 @@
 <?php
 /**
- * Course Catalog Page
- * Displays all active courses with audience-based filtering and program type tabs
+ * Course Catalog Page (/kursy/) — основной дизайн.
+ * Использует header-redesign.php / footer-redesign.php и rd-* классы.
  */
 
 session_start();
@@ -18,19 +18,17 @@ require_once __DIR__ . '/classes/CoursePriceAB.php';
 $abVariant = CoursePriceAB::getVariant();
 $discountPercent = CoursePriceAB::getDiscountPercent($abVariant);
 
-// Map ct (URL slug) → program_type (internal key) для SEO URL из .htaccess
+// Map ct (URL slug) → program_type
 if (isset($_GET['ct'])) {
     $ctMap = defined('COURSE_TYPE_URL_REVERSE') ? COURSE_TYPE_URL_REVERSE : [];
     $_GET['program_type'] = $ctMap[$_GET['ct']] ?? 'all';
 }
 
-// Get filters from URL
-$programType = $_GET['program_type'] ?? 'all';
+$programType      = $_GET['program_type'] ?? 'all';
 $selectedCategory = $_GET['ac'] ?? '';
-$selectedType = $_GET['at'] ?? '';
-$selectedSpec = $_GET['as'] ?? '';
+$selectedType     = $_GET['at'] ?? '';
+$selectedSpec     = $_GET['as'] ?? '';
 
-// 301-редирект со старых query-param URL на чистые SEO URL
 redirectToSeoUrl('kursy', [
     'program_type' => $programType !== 'all' ? $programType : '',
     'ac' => $selectedCategory,
@@ -38,25 +36,15 @@ redirectToSeoUrl('kursy', [
     'as' => $selectedSpec,
 ]);
 
-// Page metadata — будет сформировано динамически после разрешения аудитории (см. ниже)
-$additionalCSS = [
-    '/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/assets/css/audience-filter.css'),
-    '/assets/css/courses.css?v=' . filemtime(__DIR__ . '/assets/css/courses.css')
-];
-$additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/assets/js/audience-filter.js')];
-
-// Pagination settings
 $perPage = 21;
 
-// Audience segmentation (3-level)
 $audienceCatObj = new AudienceCategory($db);
 $audienceTypeObj = new AudienceType($db);
 $audienceCategories = $audienceCatObj->getAllWithProducts('course');
 
-// Resolve selected audience hierarchy
-$selectedCategoryData = null;
-$audienceTypes = [];
-$selectedTypeData = null;
+$selectedCategoryData    = null;
+$audienceTypes           = [];
+$selectedTypeData        = null;
 $audienceSpecializations = [];
 
 if ($selectedCategory) {
@@ -72,7 +60,6 @@ if ($selectedType) {
     }
 }
 
-// Resolve selected specialization
 $selectedSpecData = null;
 if (!empty($selectedSpec)) {
     require_once __DIR__ . '/classes/AudienceSpecialization.php';
@@ -80,47 +67,27 @@ if (!empty($selectedSpec)) {
     $selectedSpecData = $specObj->getBySlug($selectedSpec);
 }
 
-// Get courses with filters
 $courseObj = new Course($db);
 $filters = [];
-if ($selectedCategoryData) {
-    $filters['audience_category'] = $selectedCategoryData['id'];
-}
-if (!empty($selectedType)) {
-    $filters['audience_type'] = $selectedType;
-}
-if (!empty($selectedSpec)) {
-    $filters['specialization'] = $selectedSpec;
-}
-if ($programType !== 'all') {
-    $filters['program_type'] = $programType;
-}
+if ($selectedCategoryData)  $filters['audience_category'] = $selectedCategoryData['id'];
+if (!empty($selectedType))  $filters['audience_type']     = $selectedType;
+if (!empty($selectedSpec))  $filters['specialization']    = $selectedSpec;
+if ($programType !== 'all') $filters['program_type']      = $programType;
 
-if (!empty($filters)) {
-    $allCourses = $courseObj->getFilteredCourses($filters);
-} else {
-    $allCourses = $courseObj->getActiveCourses($programType);
-}
+$allCourses = !empty($filters)
+    ? $courseObj->getFilteredCourses($filters)
+    : $courseObj->getActiveCourses($programType);
 
-// Apply pagination
 $totalCourses = count($allCourses);
-$courses = array_slice($allCourses, 0, $perPage);
-$hasMore = $totalCourses > $perPage;
+$courses      = array_slice($allCourses, 0, $perPage);
+$hasMore      = $totalCourses > $perPage;
 
-// Count courses per filter option (for hiding empty filters)
-// Base filters without the dimension we're counting
+// Counts per filter (для скрытия пустых)
 $baseFilters = [];
-if ($selectedCategoryData) {
-    $baseFilters['audience_category'] = $selectedCategoryData['id'];
-}
-if (!empty($selectedType)) {
-    $baseFilters['audience_type'] = $selectedType;
-}
-if (!empty($selectedSpec)) {
-    $baseFilters['specialization'] = $selectedSpec;
-}
+if ($selectedCategoryData) $baseFilters['audience_category'] = $selectedCategoryData['id'];
+if (!empty($selectedType)) $baseFilters['audience_type']     = $selectedType;
+if (!empty($selectedSpec)) $baseFilters['specialization']    = $selectedSpec;
 
-// Counts per program type (without program_type filter applied)
 $programTypeCounts = [];
 foreach (COURSE_PROGRAM_TYPES as $pt => $label) {
     $ptFilters = $baseFilters;
@@ -128,25 +95,19 @@ foreach (COURSE_PROGRAM_TYPES as $pt => $label) {
     $programTypeCounts[$pt] = $courseObj->countByFilters($ptFilters);
 }
 
-// Counts per audience category (without audience filters applied)
 $audienceCategoryCounts = [];
 $catBaseFilters = [];
-if ($programType !== 'all') {
-    $catBaseFilters['program_type'] = $programType;
-}
+if ($programType !== 'all') $catBaseFilters['program_type'] = $programType;
 foreach ($audienceCategories as $cat) {
     $acFilters = $catBaseFilters;
     $acFilters['audience_category'] = $cat['id'];
     $audienceCategoryCounts[$cat['slug']] = $courseObj->countByFilters($acFilters);
 }
 
-// Counts per audience type (if category selected)
 $audienceTypeCounts = [];
 if (!empty($selectedCategory) && !empty($audienceTypes)) {
     $typeBaseFilters = $catBaseFilters;
-    if ($selectedCategoryData) {
-        $typeBaseFilters['audience_category'] = $selectedCategoryData['id'];
-    }
+    if ($selectedCategoryData) $typeBaseFilters['audience_category'] = $selectedCategoryData['id'];
     foreach ($audienceTypes as $type) {
         $atFilters = $typeBaseFilters;
         $atFilters['audience_type'] = $type['slug'];
@@ -154,13 +115,10 @@ if (!empty($selectedCategory) && !empty($audienceTypes)) {
     }
 }
 
-// Counts per specialization (if type selected)
 $audienceSpecCounts = [];
 if (!empty($selectedType) && !empty($audienceSpecializations)) {
     $specBaseFilters = $catBaseFilters;
-    if ($selectedCategoryData) {
-        $specBaseFilters['audience_category'] = $selectedCategoryData['id'];
-    }
+    if ($selectedCategoryData) $specBaseFilters['audience_category'] = $selectedCategoryData['id'];
     $specBaseFilters['audience_type'] = $selectedType;
     foreach ($audienceSpecializations as $spec) {
         $asFilters = $specBaseFilters;
@@ -169,7 +127,6 @@ if (!empty($selectedType) && !empty($audienceSpecializations)) {
     }
 }
 
-// Filter out empty options
 $audienceCategories = array_filter($audienceCategories, function($cat) use ($audienceCategoryCounts) {
     return ($audienceCategoryCounts[$cat['slug']] ?? 0) > 0;
 });
@@ -180,26 +137,17 @@ $audienceSpecializations = array_filter($audienceSpecializations, function($spec
     return ($audienceSpecCounts[$spec['slug']] ?? 0) > 0;
 });
 
-// === Динамические мета-теги на основе фильтров ===
-$courseTypeUrlMap = defined('COURSE_TYPE_URL_MAP') ? COURSE_TYPE_URL_MAP : [];
+// Динамический заголовок
+if ($programType === 'kpk')      $baseTitle = 'Курсы повышения квалификации';
+elseif ($programType === 'pp')   $baseTitle = 'Курсы профессиональной переподготовки';
+else                             $baseTitle = 'Курсы повышения квалификации и переподготовки';
 
-if ($programType === 'kpk') {
-    $baseTitle = 'Курсы повышения квалификации';
-} elseif ($programType === 'pp') {
-    $baseTitle = 'Курсы профессиональной переподготовки';
-} else {
-    $baseTitle = 'Курсы повышения квалификации и переподготовки';
-}
-
-// Аудитория в родительном падеже: наша ЦА — педагоги, поэтому
-// на любой категорийной странице явно указываем, для кого курсы.
 $audienceCategoryGenitiveMap = [
-    'pedagogi' => 'педагогов',
-    'doshkolnikam' => 'педагогов дошкольного образования',
-    'shkolnikam' => 'учителей школ',
+    'pedagogi'      => 'педагогов',
+    'doshkolnikam'  => 'педагогов дошкольного образования',
+    'shkolnikam'    => 'учителей школ',
     'studentam-spo' => 'преподавателей СПО',
 ];
-
 if ($selectedTypeData && !empty($selectedTypeData['target_participants_genitive'])) {
     $audiencePhrase = $selectedTypeData['target_participants_genitive'];
 } elseif ($selectedCategoryData && isset($audienceCategoryGenitiveMap[$selectedCategoryData['slug']])) {
@@ -209,437 +157,535 @@ if ($selectedTypeData && !empty($selectedTypeData['target_participants_genitive'
 }
 
 $h1Text = $baseTitle . ' для ' . $audiencePhrase;
-$titleParts = [$baseTitle . ' для ' . $audiencePhrase];
-$descParts = [$baseTitle . ' для ' . $audiencePhrase];
+if (!empty($selectedSpecData)) $h1Text .= ' — ' . $selectedSpecData['name'];
 
-if (!empty($selectedSpecData)) {
-    $titleParts[] = $selectedSpecData['name'];
-    $descParts[] = '— ' . $selectedSpecData['name'];
-    $h1Text .= ' — ' . $selectedSpecData['name'];
+$pageTitle       = $h1Text . ' 2025-2026 | ' . SITE_NAME;
+$pageDescription = $h1Text . '. Дистанционное обучение с удостоверением установленного образца, внесение в ФИС ФРДО.';
+
+// Canonical для /kursy/
+$courseTypeUrlMap = defined('COURSE_TYPE_URL_MAP') ? COURSE_TYPE_URL_MAP : [];
+$canonicalPath = '/kursy/';
+if ($programType !== 'all' && !empty($courseTypeUrlMap[$programType])) {
+    $canonicalPath .= $courseTypeUrlMap[$programType] . '/';
 }
-
-$pageTitle = implode(' — ', $titleParts) . ' 2025-2026 | ' . SITE_NAME;
-$pageDescription = implode(' ', $descParts) . '. Дистанционное обучение с удостоверением установленного образца.';
-
-// Canonical URL
-$canonicalUrl = SITE_URL . buildSeoUrl('kursy', [
-    'program_type' => $programType !== 'all' ? $programType : '',
-    'ac' => $selectedCategory,
-    'at' => $selectedType,
-    'as' => $selectedSpec,
-]);
-
-// OG Image
+if ($selectedCategory) $canonicalPath .= $selectedCategory . '/';
+if ($selectedType)     $canonicalPath .= $selectedType . '/';
+if ($selectedSpec)     $canonicalPath .= $selectedSpec . '/';
+$canonicalUrl = SITE_URL . $canonicalPath;
 $ogImage = SITE_URL . '/assets/images/og-courses.jpg';
+$rdActivePage = 'kursy';
 
-// === JSON-LD: ItemList + FAQPage ===
-$jsonLdArray = [];
-
-// ItemList
-$itemListElements = [];
-foreach ($courses as $i => $c) {
-    $itemListElements[] = [
-        '@type' => 'ListItem',
-        'position' => $i + 1,
-        'url' => SITE_URL . '/kursy/' . $c['slug'] . '/',
-        'name' => $c['title']
-    ];
-}
-$jsonLdArray[] = [
-    '@context' => 'https://schema.org',
-    '@type' => 'ItemList',
-    'name' => $h1Text,
-    'description' => $pageDescription,
-    'url' => $canonicalUrl,
-    'numberOfItems' => $totalCourses,
-    'itemListElement' => $itemListElements
-];
-
-// FAQPage
-$jsonLdArray[] = [
-    '@context' => 'https://schema.org',
-    '@type' => 'FAQPage',
-    'mainEntity' => [
-        ['@type' => 'Question', 'name' => 'Какой документ я получу?', 'acceptedAnswer' => [
-            '@type' => 'Answer', 'text' => 'По окончании курса вы получите удостоверение о повышении квалификации установленного образца. Данные вносятся в ФИС ФРДО (Федеральный реестр). Документ примут при аттестации и любой проверке.'
-        ]],
-        ['@type' => 'Question', 'name' => 'Как проходит обучение?', 'acceptedAnswer' => [
-            '@type' => 'Answer', 'text' => 'Обучение проходит дистанционно. После оплаты вы получаете доступ к учебным материалам. Обучение можно проходить в удобном темпе.'
-        ]],
-        ['@type' => 'Question', 'name' => 'Есть ли у вас лицензия?', 'acceptedAnswer' => [
-            '@type' => 'Answer', 'text' => 'Да, мы имеем разрешение №068 на осуществление образовательной деятельности на территории инновационного центра «Сколково». Таких организаций в России — единицы. Все удостоверения вносятся в ФИС ФРДО.'
-        ]],
-        ['@type' => 'Question', 'name' => 'Принимает ли работодатель такое удостоверение?', 'acceptedAnswer' => [
-            '@type' => 'Answer', 'text' => 'Да. Мы имеем разрешение Сколково №068 — таких организаций в России менее 100. Удостоверение принимается всеми образовательными организациями, учитывается при аттестации и проверках Рособрнадзора. Все данные вносятся в ФИС ФРДО.'
-        ]],
-        ['@type' => 'Question', 'name' => 'Когда можно начать обучение?', 'acceptedAnswer' => [
-            '@type' => 'Answer', 'text' => 'Начать обучение можно сразу после оплаты. Все материалы доступны 24/7.'
-        ]],
-        ['@type' => 'Question', 'name' => 'Как можно оплатить?', 'acceptedAnswer' => [
-            '@type' => 'Answer', 'text' => 'Оплата возможна банковской картой, по счёту для юридических лиц или через безналичный расчёт для образовательных организаций.'
-        ]]
-    ]
-];
-
-// === Хлебные крошки ===
-$breadcrumbs = [
-    ['label' => 'Главная', 'url' => '/'],
-    ['label' => 'Курсы', 'url' => '/kursy/'],
-];
-if ($programType !== 'all') {
-    $ptSlug = $courseTypeUrlMap[$programType] ?? '';
-    $ptLabel = COURSE_PROGRAM_TYPES[$programType] ?? '';
-    if ($ptSlug && $ptLabel) {
-        $breadcrumbs[] = $selectedCategoryData
-            ? ['label' => $ptLabel, 'url' => '/kursy/' . $ptSlug . '/']
-            : ['label' => $ptLabel];
-    }
-}
-if ($selectedCategoryData) {
-    $crumbUrl = '/kursy/';
-    if ($programType !== 'all') {
-        $crumbUrl .= ($courseTypeUrlMap[$programType] ?? '') . '/';
-    }
-    $crumbUrl .= $selectedCategory . '/';
-    $breadcrumbs[] = $selectedTypeData
-        ? ['label' => $selectedCategoryData['name'], 'url' => $crumbUrl]
-        : ['label' => $selectedCategoryData['name']];
-}
-if ($selectedTypeData) {
-    $breadcrumbs[] = ['label' => $selectedTypeData['name']];
+// Builder ссылок для /kursy/
+function buildKursyUrl($params) {
+    global $courseTypeUrlMap;
+    $url = '/kursy/';
+    $pt  = $params['program_type'] ?? '';
+    $ac  = $params['ac'] ?? '';
+    $at  = $params['at'] ?? '';
+    $as  = $params['as'] ?? '';
+    if ($pt && !empty($courseTypeUrlMap[$pt])) $url .= $courseTypeUrlMap[$pt] . '/';
+    if ($ac) $url .= $ac . '/';
+    if ($at) $url .= $at . '/';
+    if ($as) $url .= $as . '/';
+    return $url;
 }
 
-// Include header
-$ogImage = SITE_URL . '/assets/images/og-courses.jpg';
-include __DIR__ . '/includes/header.php';
+include __DIR__ . '/includes/header-redesign.php';
 ?>
 
-<?php include __DIR__ . '/includes/breadcrumbs.php'; ?>
-
-<!-- Hero Section (course-detail style) -->
-<section class="hero-landing catalog-hero">
-    <div class="container">
-        <div class="hero-main-grid">
-            <div class="hero-left-col">
-                <div class="hero-badges">
-                    <?php if ($programType === 'pp'): ?>
-                        <span class="hero-category">Профессиональная переподготовка</span>
-                        <span class="hero-category">Диплом гособразца</span>
-                        <span class="hero-category">Дистанционно</span>
-                    <?php elseif ($programType === 'kpk'): ?>
-                        <span class="hero-category">Повышение квалификации</span>
-                        <span class="hero-category">Удостоверение</span>
-                        <span class="hero-category">Дистанционно</span>
-                    <?php else: ?>
-                        <span class="hero-category">Повышение квалификации</span>
-                        <span class="hero-category">Переподготовка</span>
-                        <span class="hero-category">Дистанционно</span>
-                    <?php endif; ?>
-                </div>
-
-                <h1 class="hero-title"><?php echo htmlspecialchars($h1Text); ?></h1>
-
-                <?php
-                $variant = $programType === 'kpk' ? 'kpk' : ($programType === 'pp' ? 'pp' : 'all');
-                include __DIR__ . '/includes/hero-attestation-card.php';
-                ?>
-
-                <div class="hero-bottom-row">
-                    <div class="hero-cta-row">
-                        <a href="#courses" class="btn-hero-cta">Выбрать курс</a>
-                        <button class="btn-hero-consultation" onclick="openConsultationModal()">Получить консультацию</button>
-                    </div>
-                    <div class="hero-frdo-badge">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                        <span>Вносится в ФИС ФРДО — видно на Госуслугах</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="hero-skolkovo-doc" onclick="openSkolkovoModal()">
-                <img src="/assets/images/razreshenie-skolkovo-068.png"
-                     alt="Разрешение Сколково № 068 на образовательную деятельность"
-                     class="hero-skolkovo-doc-img"
-                     loading="eager">
-                <span class="hero-skolkovo-doc-caption">Разрешение № 068 — нажмите, чтобы увеличить</span>
-            </div>
-        </div>
+<!-- HERO каталога -->
+<section class="rd-hero-catalog">
+  <div class="rd-wrap">
+    <div class="rd-crumbs">
+      <a href="/">Главная</a>
+      <span class="sep">/</span>
+      <strong>Курсы</strong>
     </div>
+  </div>
+  <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
+    <div>
+      <div class="rd-pill-row reveal-stagger">
+        <span class="rd-pill"><span class="dot"></span><?php echo $totalCourses; ?>+ программ обучения</span>
+        <span class="rd-pill indigo">Удостоверение в ФИС ФРДО</span>
+        <span class="rd-pill">Разрешение Сколково № 068</span>
+      </div>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo htmlspecialchars($h1Text); ?> — <span class="accent">дистанционно</span></h1>
+      <p class="rd-hero-sub reveal">Курсы повышения квалификации и профессиональной переподготовки. Удостоверение установленного образца — данные вносим в Федеральный реестр (ФИС ФРДО). Принимается при аттестации и проверках Рособрнадзора.</p>
+      <div class="rd-hero-bullets reveal-stagger">
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Удостоверение в ФИС ФРДО — видно на Госуслугах</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Дистанционно — учитесь в удобном темпе</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Доступ к материалам сразу после оплаты</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Оплата для физ. и юр. лиц</div>
+      </div>
+      <div class="rd-hero-cta reveal">
+        <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать курс
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+        </a>
+        <button type="button" class="rd-btn rd-btn-ghost" onclick="openConsultationModal()">Получить консультацию</button>
+      </div>
+    </div>
+
+    <div class="rd-hero-art rd-hero-art-cat reveal">
+      <div class="rd-blob"></div>
+      <div class="rd-skolkovo-doc" data-lightbox="/assets/images/razreshenie-skolkovo-068.png" data-lightbox-group="hero-skolkovo" tabindex="0" role="button" aria-label="Увеличить разрешение Сколково № 068">
+        <span class="rd-skolkovo-badge"><img src="/assets/images/skolkovo.webp" alt="" width="20" height="20">Фонд «Сколково» · № 068</span>
+        <img class="rd-skolkovo-img" src="/assets/images/razreshenie-skolkovo-068.png" alt="Разрешение Фонда «Сколково» № 068 на образовательную деятельность" loading="eager" fetchpriority="high">
+        <span class="rd-skolkovo-caption">Нажмите, чтобы увеличить</span>
+      </div>
+      <div class="rd-float-card rd-fc-cat-2">
+        <div class="rd-fc-icon">✓</div>
+        <div class="rd-fc-text"><div class="rd-fc-t">ФИС ФРДО</div><div class="rd-fc-s">видно на Госуслугах</div></div>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- Skolkovo Permission Modal -->
-<div class="skolkovo-modal-overlay" id="skolkovoModal">
-    <div class="skolkovo-modal">
-        <button class="close-modal" onclick="closeSkolkovoModal()">&times;</button>
-        <img src="/assets/images/razreshenie-skolkovo-068.png"
-             alt="Разрешение Сколково № 068"
-             class="skolkovo-modal-img">
-        <p class="skolkovo-modal-caption">Разрешение № 068 от 16.03.2026 на осуществление образовательной деятельности</p>
-    </div>
+<!-- USP-полоска -->
+<div class="rd-usps">
+  <div class="rd-wrap rd-usp-grid reveal-stagger">
+    <div class="rd-usp"><div class="ic">📜</div><div><div class="t">Установленный образец</div><div class="s">данные в ФИС ФРДО</div></div></div>
+    <div class="rd-usp"><div class="ic">💻</div><div><div class="t">Дистанционно</div><div class="s">материалы 24/7</div></div></div>
+    <div class="rd-usp"><div class="ic">⚡</div><div><div class="t">Доступ сразу</div><div class="s">после оплаты</div></div></div>
+    <div class="rd-usp"><div class="ic">🏛️</div><div><div class="t">Для юр. лиц</div><div class="s">оплата по счёту</div></div></div>
+  </div>
 </div>
 
-<?php include __DIR__ . '/includes/social-proof.php'; ?>
+<!-- Признание Сколково / 8 организаций -->
+<section class="rd-section rd-section-skolkovo">
+  <div class="rd-wrap">
+    <div class="rd-trust-band reveal">
+      <div class="rd-trust-grid">
+        <div>
+          <div class="rd-eyebrow">Главное отличие от конкурентов</div>
+          <h2>Обучение, которое признают работодатели и госорганы</h2>
+          <p>В России лишь <strong>8 организаций</strong> имеют разрешение Фонда «Сколково» на образовательную деятельность для педагогов. ФГОС-практикум — одна из них (разрешение №&nbsp;068). С <strong>сентября 2025</strong> при аттестации педагогов и проверках Рособрнадзора принимаются только документы вузов и организаций с таким разрешением — наши программы уже аккредитованы.</p>
+          <div class="rd-skolkovo-cta">
+            <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать курс
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+            </a>
+            <button type="button" class="rd-btn rd-btn-ghost" onclick="openConsultationModal()">Получить консультацию</button>
+          </div>
+        </div>
+        <div class="rd-tc-grid">
+          <div class="rd-tc"><div class="badge">📜</div><h5>Сколково № 068</h5><p>Резидент с правом обучения педагогов</p></div>
+          <div class="rd-tc"><div class="badge">🏛️</div><h5>ФИС ФРДО</h5><p>Запись в федеральном реестре, видно на Госуслугах</p></div>
+          <div class="rd-tc"><div class="badge">✓</div><h5>Принимается при аттестации</h5><p>Рособрнадзор и работодатели</p></div>
+          <div class="rd-tc"><div class="badge">⭐</div><h5>Аккредитованные программы</h5><p>Соответствие требованиям ФГОС</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-<!-- Unified Audience Filter -->
-<div class="container mt-40" id="courses">
-    <!-- Горизонтальные фильтры: только мобильные -->
-    <div class="af-horizontal-only">
-        <?php
-        $audienceFilterBaseUrl = '/kursy';
-        $extraPathPrefix = getSectionPathPrefix('kursy', ['program_type' => $programType]);
-        include __DIR__ . '/includes/audience-filter.php';
-        ?>
+<!-- Каталог -->
+<section class="rd-section" id="catalog">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <div>
+        <div class="rd-eyebrow">Каталог курсов</div>
+        <h2 class="rd-section-title">Выберите программу под свой уровень и предмет</h2>
+        <p class="rd-section-sub">Найдено: <strong><?php echo $totalCourses; ?></strong> программ. Все с удостоверением установленного образца и записью в ФИС ФРДО.</p>
+      </div>
+      <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+        Фильтры
+      </button>
+    </div>
+
+    <div class="rd-catalog">
+      <!-- Sidebar фильтры -->
+      <aside class="rd-filters" id="rdFiltersPanel">
 
         <!-- Тип программы -->
-        <div class="af-categories" style="margin-top: 8px; margin-bottom: 24px;">
-            <a href="<?php echo buildSeoUrl('kursy', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
-               class="af-pill<?php echo $programType === 'all' ? ' active' : ''; ?>">Все курсы</a>
-            <?php foreach (COURSE_PROGRAM_TYPES as $pt => $label): ?>
-                <?php if (($programTypeCounts[$pt] ?? 0) === 0) continue; ?>
-            <a href="<?php echo buildSeoUrl('kursy', ['program_type' => $pt, 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
-               class="af-pill<?php echo $programType === $pt ? ' active' : ''; ?>">
-                <?php echo htmlspecialchars($label); ?>
-            </a>
-            <?php endforeach; ?>
-        </div>
-    </div>
-
-    <div class="competitions-layout" id="catalog">
-        <!-- Sidebar фильтры: только десктоп -->
-        <aside class="sidebar-filters">
-            <?php
-            $sidebarExtraFilters = [
-                'title' => 'Тип программы',
-                'allLabel' => 'Все курсы',
-                'allUrl' => buildSeoUrl('kursy', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
-                'allActive' => ($programType === 'all'),
-                'links' => []
-            ];
-            foreach (COURSE_PROGRAM_TYPES as $pt => $label) {
-                if (($programTypeCounts[$pt] ?? 0) === 0) continue;
-                $sidebarExtraFilters['links'][] = [
-                    'label' => $label,
-                    'url' => buildSeoUrl('kursy', ['program_type' => $pt, 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
-                    'active' => ($programType === $pt),
-                    'count' => $programTypeCounts[$pt]
-                ];
-            }
-            include __DIR__ . '/includes/sidebar-filter.php';
-            ?>
-        </aside>
-
-        <!-- Контент с карточками -->
-        <div class="content-area">
-            <?php
-            $catalogSearchPlaceholder = 'Поиск курсов...';
-            $catalogSearchContext = 'courses';
-            $catalogSearchAriaLabel = 'Поиск по курсам';
-            $catalogSearchEndpoint = '/ajax/search-courses.php';
-            include __DIR__ . '/includes/catalog-search.php';
-            ?>
-
-            <div class="competitions-count mb-20">
-                Найдено курсов: <strong id="totalCount"><?php echo $totalCourses; ?></strong>
+        <h4>Тип программы</h4>
+        <div class="rd-chip-list">
+          <div class="rd-chip-row<?php echo $programType === 'all' ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo buildKursyUrl(['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>" style="text-decoration:none;color:inherit;">Все курсы</a>
+            </label>
+          </div>
+          <?php foreach (COURSE_PROGRAM_TYPES as $pt => $label): ?>
+            <?php if (($programTypeCounts[$pt] ?? 0) === 0) continue; ?>
+            <div class="rd-chip-row<?php echo $programType === $pt ? ' active' : ''; ?>">
+              <label>
+                <a href="<?php echo buildKursyUrl(['program_type' => $pt, 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>" style="text-decoration:none;color:inherit;">
+                  <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
+                </a>
+              </label>
             </div>
+          <?php endforeach; ?>
+        </div>
 
-            <?php if (empty($courses)): ?>
-                <div class="text-center mb-40">
-                    <h2>Курсы не найдены</h2>
-                    <p>В данной категории пока нет курсов. Попробуйте выбрать другую категорию.</p>
-                </div>
-            <?php else: ?>
-                <div class="competitions-grid" id="coursesGrid">
-                    <?php foreach ($courses as $course): ?>
-                        <div class="competition-card course-card" data-course-id="<?php echo $course['id']; ?>">
-                            <div class="course-badges">
-                                <span class="course-badge course-badge--hours"><?php echo Course::formatHours($course['hours']); ?></span>
-                                <span class="course-badge course-badge--type"><?php echo htmlspecialchars(Course::getProgramTypeLabel($course['program_type'])); ?></span>
-                            </div>
+        <!-- Аудитория -->
+        <?php if (!empty($audienceCategories)): ?>
+        <h4>Аудитория</h4>
+        <div class="rd-chip-list">
+          <?php foreach ($audienceCategories as $ac): ?>
+          <div class="rd-chip-row<?php echo $selectedCategory === $ac['slug'] ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '', 'ac' => $ac['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($ac['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+            </label>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
 
-                            <h3><?php echo htmlspecialchars($course['title']); ?></h3>
+        <!-- Уровень -->
+        <?php if (!empty($audienceTypes)): ?>
+        <h4>Уровень</h4>
+        <div class="rd-chip-list">
+          <?php foreach ($audienceTypes as $at): ?>
+          <div class="rd-chip-row<?php echo $selectedType === $at['slug'] ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '', 'ac' => $selectedCategory, 'at' => $at['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($at['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+            </label>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
 
-                            <p><?php echo htmlspecialchars(mb_substr($course['description'], 0, 120) . '...'); ?></p>
+        <!-- Специализации -->
+        <?php if (!empty($audienceSpecializations)): ?>
+        <h4>Специализация</h4>
+        <div class="rd-chip-list">
+          <?php foreach ($audienceSpecializations as $as): ?>
+          <div class="rd-chip-row<?php echo $selectedSpec === $as['slug'] ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $as['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($as['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+            </label>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
 
-                            <div class="course-card-feature">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
-                                Удостоверение в ФИС ФРДО
-                            </div>
+        <a href="/kursy/" class="rd-reset-btn">Сбросить фильтры</a>
+      </aside>
 
-                            <?php
-                                $basePrice = (float)$course['price'];
-                                $coursePT = $course['program_type'] ?? null;
-                                $abPrice = CoursePriceAB::getAdjustedPrice($basePrice, $abVariant, $coursePT);
-                                $itemDiscountPercent = CoursePriceAB::getDiscountPercent($abVariant, $coursePT);
-                            ?>
-                            <div class="competition-price">
-                                <?php if ($itemDiscountPercent > 0): ?>
-                                    <span class="price-old"><?= number_format($basePrice, 0, ',', ' ') ?> ₽</span>
-                                    <span class="price-current"><?= number_format($abPrice, 0, ',', ' ') ?> ₽</span>
-                                <?php else: ?>
-                                    <span class="price-current"><?= number_format($abPrice, 0, ',', ' ') ?> ₽</span>
-                                <?php endif; ?>
-                            </div>
-
-                            <a href="/kursy/<?php echo htmlspecialchars($course['slug']); ?>/" class="btn btn-primary btn-block">
-                                Смотреть программу
-                            </a>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-
-                <!-- Кнопка загрузки -->
-                <?php if ($hasMore): ?>
-                <div class="load-more-container" id="loadMoreContainer">
-                    <button id="loadMoreBtn" class="btn btn-secondary btn-load-more" data-offset="<?php echo $perPage; ?>">
-                        Показать больше курсов
-                    </button>
-                </div>
-                <?php endif; ?>
+      <!-- Каталог + карточки -->
+      <div class="rd-catalog-main">
+        <div class="rd-catalog-toolbar">
+          <div class="rd-ct-count">Найдено <strong><?php echo $totalCourses; ?></strong> программ</div>
+          <div class="rd-applied-tags">
+            <?php if ($programType !== 'all'): ?>
+              <a class="rd-applied-tag" href="<?php echo buildKursyUrl(['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>">
+                <?php echo htmlspecialchars(COURSE_PROGRAM_TYPES[$programType] ?? $programType, ENT_QUOTES, 'UTF-8'); ?> ×
+              </a>
             <?php endif; ?>
-
-            <!-- E-commerce: Impressions -->
-            <script>
-            window.dataLayer = window.dataLayer || [];
-            window.dataLayer.push({
-                "ecommerce": {
-                    "currencyCode": "RUB",
-                    "impressions": [
-                        <?php foreach ($courses as $index => $course): ?>
-                        {
-                            "id": "course-<?= $course['id'] ?>",
-                            "name": "<?= htmlspecialchars($course['title'], ENT_QUOTES) ?>",
-                            "price": <?= $course['price'] ?>,
-                            "brand": "Педпортал",
-                            "category": "Курсы",
-                            "list": "Каталог курсов",
-                            "position": <?= $index + 1 ?>
-                        }<?= ($index < count($courses) - 1) ? ',' : '' ?>
-                        <?php endforeach; ?>
-                    ]
-                }
-            });
-            </script>
-
-            <!-- Consultation CTA -->
-            <div class="consultation-catalog-block">
-                <div class="consultation-catalog-inner">
-                    <div class="consultation-catalog-text">
-                        <h3>Нужна помощь с выбором?</h3>
-                        <p>Оставьте номер телефона — мы бесплатно проконсультируем вас по выбору программы обучения</p>
-                    </div>
-                    <form class="consultation-inline-form" onsubmit="submitConsultationInline(event)">
-                        <div class="consultation-inline-row">
-                            <input type="tel" name="phone" class="consultation-phone-input--light" placeholder="+7 (___) ___-__-__" required>
-                            <button type="submit" class="consultation-inline-btn">Перезвоните мне</button>
-                        </div>
-                    </form>
-                    <div class="consultation-inline-success" style="display: none;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
-                        <span>Заявка отправлена! Мы перезвоним вам в ближайшее время.</span>
-                    </div>
-                </div>
-            </div>
+            <?php if ($selectedCategoryData): ?>
+              <a class="rd-applied-tag" href="<?php echo buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '']); ?>">
+                <?php echo htmlspecialchars($selectedCategoryData['name'], ENT_QUOTES, 'UTF-8'); ?> ×
+              </a>
+            <?php endif; ?>
+            <?php if ($selectedTypeData): ?>
+              <a class="rd-applied-tag" href="<?php echo buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '', 'ac' => $selectedCategory]); ?>">
+                <?php echo htmlspecialchars($selectedTypeData['name'], ENT_QUOTES, 'UTF-8'); ?> ×
+              </a>
+            <?php endif; ?>
+          </div>
         </div>
+
+        <?php if (empty($courses)): ?>
+          <div style="text-align:center;padding:60px 0;color:var(--ink-500);">
+            <p style="font-size:18px;margin-bottom:16px;">Курсы не найдены</p>
+            <p>Попробуйте выбрать другую категорию или <a href="/kursy/" style="color:var(--indigo-600);">сбросить фильтры</a>.</p>
+          </div>
+        <?php else: ?>
+          <div class="rd-grid reveal-stagger" id="coursesGrid">
+            <?php foreach ($courses as $course):
+                $basePrice = (float)$course['price'];
+                $coursePT = $course['program_type'] ?? null;
+                $abPrice = CoursePriceAB::getAdjustedPrice($basePrice, $abVariant, $coursePT);
+                $itemDiscountPercent = CoursePriceAB::getDiscountPercent($abVariant, $coursePT);
+                $ptLabel = Course::getProgramTypeLabel($course['program_type']);
+                $hoursLabel = Course::formatHours($course['hours']);
+            ?>
+              <a class="rd-card" href="/kursy/<?php echo htmlspecialchars($course['slug']); ?>/" data-course-id="<?php echo $course['id']; ?>">
+                <div class="rd-card-pat"></div>
+                <div class="rd-card-tags">
+                  <span class="rd-tag indigo"><?php echo htmlspecialchars($ptLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                  <span class="rd-tag"><?php echo htmlspecialchars($hoursLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                </div>
+                <h4><?php echo htmlspecialchars($course['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
+                <div class="rd-card-meta">
+                  <?php echo htmlspecialchars(mb_substr(strip_tags($course['description'] ?? ''), 0, 120), ENT_QUOTES, 'UTF-8'); ?>…
+                </div>
+                <div class="rd-card-foot">
+                  <div class="rd-price-now">
+                    <?php if ($itemDiscountPercent > 0): ?>
+                      <span style="text-decoration:line-through;color:var(--ink-400);font-weight:500;font-size:13px;margin-right:6px;"><?php echo number_format($basePrice, 0, ',', ' '); ?> ₽</span><?php echo number_format($abPrice, 0, ',', ' '); ?> ₽
+                    <?php else: ?>
+                      <?php echo number_format($abPrice, 0, ',', ' '); ?> ₽
+                    <?php endif; ?>
+                  </div>
+                  <span class="rd-join-btn">К программе</span>
+                </div>
+              </a>
+            <?php endforeach; ?>
+          </div>
+
+          <?php if ($hasMore): ?>
+            <div id="loadMoreContainer" style="margin-top:24px;text-align:center;">
+              <button id="loadMoreBtn" class="rd-load-more" data-offset="<?php echo $perPage; ?>">
+                Показать больше курсов
+              </button>
+            </div>
+          <?php endif; ?>
+        <?php endif; ?>
+      </div>
     </div>
-</div>
+  </div>
+</section>
 
-<!-- Info Section -->
-<div class="container mt-40 mb-40">
-    <div class="text-center">
-        <h2>Как записаться на курс?</h2>
-        <p class="mb-40">Всего 4 простых шага</p>
+<!-- 4 шага -->
+<section class="rd-path rd-section">
+  <div class="rd-wrap">
+    <div class="reveal">
+      <div class="rd-eyebrow">Как это работает</div>
+      <h2 class="rd-section-title">Четыре шага до удостоверения</h2>
+      <p class="rd-section-sub">От выбора программы до удостоверения в ФИС ФРДО — всё дистанционно и в удобном темпе.</p>
+    </div>
+    <div class="rd-steps four reveal-stagger">
+      <div class="rd-step">
+        <div class="rd-step-n">1</div>
+        <h4>Выберите курс</h4>
+        <p>Используйте фильтры по уровню и специализации — подберём за секунды.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">2</div>
+        <h4>Подайте заявку</h4>
+        <p>Заполните форму на странице курса — это займёт 1 минуту.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">3</div>
+        <h4>Оплатите обучение</h4>
+        <p>Картой через ЮКассу или по счёту для юр. лиц. Доступ к материалам — сразу.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">4</div>
+        <h4>Получите удостоверение</h4>
+        <p>Установленного образца, с записью в ФИС ФРДО. Принимается при аттестации.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-        <div class="steps-grid">
-            <div class="competition-card">
-                <h3>1. Выберите курс</h3>
-                <p>Ознакомьтесь с программами и выберите подходящий курс повышения квалификации.</p>
-            </div>
-
-            <div class="competition-card">
-                <h3>2. Подайте заявку</h3>
-                <p>Заполните форму записи на странице курса — это займёт 1 минуту.</p>
-            </div>
-
-            <div class="competition-card">
-                <h3>3. Оплатите обучение</h3>
-                <p>После подтверждения заявки оплатите курс удобным способом.</p>
-            </div>
-
-            <div class="competition-card">
-                <h3>4. Получите удостоверение</h3>
-                <p>Пройдите обучение дистанционно и получите удостоверение установленного образца.</p>
-            </div>
+<!-- Социальные доказательства -->
+<section class="rd-section">
+  <div class="rd-wrap">
+    <div class="rd-social-proof reveal">
+      <h2 class="rd-social-proof__title">Нам доверяют тысячи педагогов по всей России</h2>
+      <div class="rd-sp-grid">
+        <!-- 1. Лицензия -->
+        <div class="rd-sp-card rd-sp-card--license">
+          <span class="rd-sp-badge">Лицензия</span>
+          <h3 class="rd-sp-title">Образовательная лицензия<br>№ Л035-01212-59/00203856</h3>
+          <p class="rd-sp-desc">от 17.12.2021 г.</p>
+          <div class="rd-sp-license-grid">
+            <picture>
+              <source srcset="/assets/images/social-proof/thumb/license-1.webp" type="image/webp">
+              <img src="/assets/images/social-proof/thumb/license-1.jpg" alt="Выписка из реестра лицензий — страница 1" loading="lazy" data-lightbox="/assets/images/social-proof/full/license-1.webp" data-lightbox-group="license">
+            </picture>
+            <picture>
+              <source srcset="/assets/images/social-proof/thumb/license-2.webp" type="image/webp">
+              <img src="/assets/images/social-proof/thumb/license-2.jpg" alt="Выписка из реестра лицензий — страница 2" loading="lazy" data-lightbox="/assets/images/social-proof/full/license-2.webp" data-lightbox-group="license">
+            </picture>
+          </div>
+          <div class="rd-sp-links">
+            <a href="https://islod.obrnadzor.gov.ru/rlic/details/c197b78b-ee10-1b2e-3837-6f0b1295bc1f/" target="_blank" rel="noopener" class="rd-sp-link">Проверить на Рособрнадзор
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3v2h3.59l-9.3 9.29 1.42 1.42L19 6.41V10h2V3h-7zM5 5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-7h-2v7H5V7h7V5H5z"/></svg>
+            </a>
+          </div>
         </div>
-    </div>
-</div>
 
-<!-- FAQ Section -->
-<div class="container">
-    <div class="faq-section">
-        <h2>Вопросы и ответы</h2>
-        <div class="faq-grid">
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Какой документ я получу?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    По окончании курса вы получите удостоверение о повышении квалификации установленного образца. Данные вносятся в ФИС ФРДО (Федеральный реестр). Документ примут при аттестации и любой проверке.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Как проходит обучение?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Обучение проходит дистанционно. После оплаты вы получаете доступ к учебным материалам. Обучение можно проходить в удобном темпе.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Есть ли у вас лицензия?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Да, мы имеем разрешение №068 на осуществление образовательной деятельности на территории инновационного центра «Сколково». Таких организаций в России — единицы. Все удостоверения вносятся в ФИС ФРДО.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Принимает ли работодатель такое удостоверение?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Да. Мы имеем разрешение Сколково №068 — таких организаций в России менее 100. Удостоверение принимается всеми образовательными организациями, учитывается при аттестации и проверках Рособрнадзора. Все данные вносятся в ФИС ФРДО.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Когда можно начать обучение?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Начать обучение можно сразу после оплаты. Все материалы доступны 24/7.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Как можно оплатить?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Оплата возможна банковской картой, по счёту для юридических лиц или через безналичный расчёт для образовательных организаций.
-                </div>
-            </div>
+        <!-- 2. РБК -->
+        <div class="rd-sp-card rd-sp-card--rbc">
+          <span class="rd-sp-badge">Рейтинг РБК</span>
+          <h3 class="rd-sp-title"><span class="rd-sp-highlight">28 место</span> среди крупнейших компаний на рынке онлайн-образования в сегменте ДПО</h3>
+          <p class="rd-sp-desc">ФГОС-практикум входит в состав ГК «Каменный город». Рейтинг составлен аналитическим центром РБК совместно с EdTechs.ru.</p>
+          <picture>
+            <source srcset="/assets/images/social-proof/thumb/rbc.webp" type="image/webp">
+            <img class="rd-sp-img" src="/assets/images/social-proof/thumb/rbc.jpg" alt="28 место в рейтинге РБК — ГК Каменный город" loading="lazy" data-lightbox="/assets/images/social-proof/full/rbc.webp" data-lightbox-group="rbc">
+          </picture>
+          <div class="rd-sp-links">
+            <a href="https://edtechs.ru/prof/" target="_blank" rel="noopener" class="rd-sp-link">Рейтинг на EdTechs.ru
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3v2h3.59l-9.3 9.29 1.42 1.42L19 6.41V10h2V3h-7zM5 5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-7h-2v7H5V7h7V5H5z"/></svg>
+            </a>
+          </div>
         </div>
+      </div>
+
+      <div class="rd-sp-grid-bottom">
+        <!-- 3. hh.ru -->
+        <div class="rd-sp-card rd-sp-card--hhru">
+          <span class="rd-sp-badge">hh.ru 2024</span>
+          <h3 class="rd-sp-title">Финалисты рейтинга работодателей hh.ru</h3>
+          <p class="rd-sp-desc">339 место среди компаний с численностью от 100 до 250 сотрудников</p>
+          <picture>
+            <source srcset="/assets/images/social-proof/thumb/hhru.webp" type="image/webp">
+            <img class="rd-sp-img" src="/assets/images/social-proof/thumb/hhru.jpg" alt="Рейтинг работодателей hh.ru 2024 — Каменный город" loading="lazy" data-lightbox="/assets/images/social-proof/full/hhru.webp" data-lightbox-group="hhru">
+          </picture>
+          <div class="rd-sp-links">
+            <a href="https://rating.hh.ru/history/rating2024/summary?tab=small&name=%D0%BA%D0%B0%D0%BC%D0%B5%D0%BD%D0%BD%D1%8B%D0%B9+%D0%B3%D0%BE%D1%80%D0%BE%D0%B4" target="_blank" rel="noopener" class="rd-sp-link">Рейтинг hh.ru
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3v2h3.59l-9.3 9.29 1.42 1.42L19 6.41V10h2V3h-7zM5 5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-7h-2v7H5V7h7V5H5z"/></svg>
+            </a>
+            <a href="https://perm.rbc.ru/perm/freenews/67a1e04d9a79479f7dce2610" target="_blank" rel="noopener" class="rd-sp-link">Статья РБК
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 3v2h3.59l-9.3 9.29 1.42 1.42L19 6.41V10h2V3h-7zM5 5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-7h-2v7H5V7h7V5H5z"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- 4. Благодарности школ -->
+        <div class="rd-sp-card rd-sp-card--schools">
+          <span class="rd-sp-badge">Доверие</span>
+          <h3 class="rd-sp-title">Нам доверились более 70 школ, лицеев и детских садов</h3>
+          <div class="rd-sp-thanks-grid">
+            <?php for ($i = 1; $i <= 13; $i++): ?>
+              <?php $num = str_pad($i, 2, '0', STR_PAD_LEFT); ?>
+              <picture>
+                <source srcset="/assets/images/social-proof/thumb/thanks-<?= $num ?>.webp" type="image/webp">
+                <img src="/assets/images/social-proof/thumb/thanks-<?= $num ?>.jpg" alt="Благодарственное письмо <?= $i ?>" loading="lazy" data-lightbox="/assets/images/social-proof/full/thanks-<?= $num ?>.webp" data-lightbox-group="thanks">
+              </picture>
+            <?php endfor; ?>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
+</section>
+
+<!-- Лайтбокс изображений -->
+<div class="rd-lightbox" id="rdImageLightbox">
+  <div class="rd-lightbox__overlay"></div>
+  <div class="rd-lightbox__container">
+    <button class="rd-lightbox__close" aria-label="Закрыть">&times;</button>
+    <button class="rd-lightbox__prev" aria-label="Предыдущее">&#8249;</button>
+    <button class="rd-lightbox__next" aria-label="Следующее">&#8250;</button>
+    <img class="rd-lightbox__img" src="" alt="">
+    <div class="rd-lightbox__counter"></div>
+  </div>
 </div>
+<script>
+(function() {
+  var lb = document.getElementById('rdImageLightbox');
+  if (!lb) return;
+  var overlay = lb.querySelector('.rd-lightbox__overlay');
+  var img = lb.querySelector('.rd-lightbox__img');
+  var counter = lb.querySelector('.rd-lightbox__counter');
+  var prevBtn = lb.querySelector('.rd-lightbox__prev');
+  var nextBtn = lb.querySelector('.rd-lightbox__next');
+  var closeBtn = lb.querySelector('.rd-lightbox__close');
+  var gallery = [], currentIndex = 0;
+  function showImage() {
+    img.src = gallery[currentIndex];
+    if (gallery.length > 1) {
+      counter.textContent = (currentIndex + 1) + ' / ' + gallery.length;
+      lb.classList.remove('rd-lightbox--single');
+    } else {
+      counter.textContent = '';
+      lb.classList.add('rd-lightbox--single');
+    }
+  }
+  function openLightbox(src, group) {
+    if (group) {
+      gallery = [];
+      document.querySelectorAll('[data-lightbox-group="' + group + '"]').forEach(function(el) { gallery.push(el.getAttribute('data-lightbox')); });
+      currentIndex = gallery.indexOf(src);
+      if (currentIndex < 0) currentIndex = 0;
+    } else { gallery = [src]; currentIndex = 0; }
+    showImage();
+    lb.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    lb.classList.remove('active');
+    document.body.style.overflow = '';
+    img.src = '';
+  }
+  function prev() { if (gallery.length <= 1) return; currentIndex = (currentIndex - 1 + gallery.length) % gallery.length; showImage(); }
+  function next() { if (gallery.length <= 1) return; currentIndex = (currentIndex + 1) % gallery.length; showImage(); }
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-lightbox]');
+    if (el) { e.preventDefault(); openLightbox(el.getAttribute('data-lightbox'), el.getAttribute('data-lightbox-group')); }
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      var el = document.activeElement;
+      if (el && el.hasAttribute && el.hasAttribute('data-lightbox')) { e.preventDefault(); openLightbox(el.getAttribute('data-lightbox'), el.getAttribute('data-lightbox-group')); }
+    }
+  });
+  closeBtn.addEventListener('click', closeLightbox);
+  overlay.addEventListener('click', closeLightbox);
+  var container = lb.querySelector('.rd-lightbox__container');
+  container.addEventListener('click', function(e) { if (e.target === container) closeLightbox(); });
+  lb.addEventListener('click', function(e) { if (e.target === lb) closeLightbox(); });
+  prevBtn.addEventListener('click', prev);
+  nextBtn.addEventListener('click', next);
+  document.addEventListener('keydown', function(e) {
+    if (!lb.classList.contains('active')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') prev();
+    if (e.key === 'ArrowRight') next();
+  });
+})();
+</script>
+
+<!-- FAQ -->
+<section class="rd-section">
+  <div class="rd-wrap">
+    <div class="rd-faq">
+      <div class="reveal">
+        <div class="rd-eyebrow">FAQ</div>
+        <h2 class="rd-section-title">Вопросы о курсах</h2>
+        <p class="rd-section-sub">Не нашли ответ? Напишите <a href="mailto:info@fgos.pro" style="color:var(--indigo-600)">info@fgos.pro</a> или позвоните <a href="tel:+79223044413" style="color:var(--indigo-600)">+7 (922) 304-44-13</a>. Ежедневно 9:00–21:00.</p>
+      </div>
+      <div class="rd-faq-list reveal-stagger">
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Какой документ я получу? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>По окончании курса — удостоверение о повышении квалификации (или диплом о переподготовке) установленного образца. Данные вносим в ФИС ФРДО — документ примут при аттестации и любой проверке.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Как проходит обучение? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Полностью дистанционно. После оплаты вы получаете доступ к учебным материалам в личном кабинете и проходите курс в удобном темпе.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Есть ли у вас лицензия? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Да, разрешение № 068 на образовательную деятельность на территории инновационного центра «Сколково». Все удостоверения вносятся в ФИС ФРДО.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Принимает ли работодатель такое удостоверение? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Да. Удостоверение принимается всеми образовательными организациями, учитывается при аттестации и проверках Рособрнадзора. Все данные вносятся в ФИС ФРДО — видно на Госуслугах.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Когда можно начать обучение? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Сразу после оплаты. Все материалы доступны 24/7 — учитесь в удобном темпе.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Как можно оплатить? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Банковской картой через ЮКассу, по счёту для юридических лиц или через безналичный расчёт для образовательных организаций.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="rd-section" style="padding-bottom:64px;">
+  <div class="rd-wrap">
+    <div class="rd-final-cta reveal">
+      <div>
+        <div class="rd-eyebrow">Готовы учиться?</div>
+        <h2>Выберите программу и начните обучение сегодня</h2>
+        <p><?php echo $totalCourses; ?>+ программ КПК и переподготовки. Удостоверение установленного образца, запись в ФИС ФРДО, дистанционный формат.</p>
+      </div>
+      <div class="actions">
+        <a href="#catalog" class="rd-btn rd-btn-primary">К каталогу
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+        </a>
+        <button type="button" class="rd-btn rd-btn-ghost" onclick="openConsultationModal()">Получить консультацию</button>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- Consultation Modal -->
 <div class="consultation-modal-overlay" id="consultationModal">
@@ -671,14 +717,38 @@ include __DIR__ . '/includes/header.php';
             </div>
             <h3>Заявка отправлена!</h3>
             <p style="color: #6b7280;">Мы перезвоним вам в ближайшее время.</p>
-            <button class="btn-submit" onclick="closeConsultationModal()" style="margin-top: 16px; background: var(--gradient-primary); color: white; border: none; padding: 14px 32px; border-radius: 12px; cursor: pointer; font-size: 15px;">Закрыть</button>
+            <button class="btn-submit" onclick="closeConsultationModal()" style="margin-top: 16px;">Закрыть</button>
         </div>
     </div>
 </div>
 
-<!-- Consultation Script -->
+<!-- E-commerce: Impressions -->
 <script>
-// Consultation modal
+window.dataLayer = window.dataLayer || [];
+<?php if (!empty($courses)): ?>
+window.dataLayer.push({
+  ecommerce: {
+    currencyCode: 'RUB',
+    impressions: [
+      <?php foreach ($courses as $i => $c): ?>
+      {
+        id: 'course-<?php echo $c['id']; ?>',
+        name: <?php echo json_encode($c['title'], JSON_UNESCAPED_UNICODE); ?>,
+        category: 'Курсы',
+        brand: 'Педпортал',
+        price: <?php echo (float)$c['price']; ?>,
+        position: <?php echo $i + 1; ?>,
+        list: 'Каталог курсов (B)'
+      }<?php echo $i < count($courses) - 1 ? ',' : ''; ?>
+      <?php endforeach; ?>
+    ]
+  }
+});
+<?php endif; ?>
+</script>
+
+<script>
+// Modal helpers
 function openConsultationModal() {
     document.getElementById('consultationModal').classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -693,20 +763,7 @@ document.getElementById('consultationModal').addEventListener('click', function(
     if (e.target === this) closeConsultationModal();
 });
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeConsultationModal(); closeSkolkovoModal(); }
-});
-
-// Skolkovo modal
-function openSkolkovoModal() {
-    document.getElementById('skolkovoModal').classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-function closeSkolkovoModal() {
-    document.getElementById('skolkovoModal').classList.remove('active');
-    document.body.style.overflow = '';
-}
-document.getElementById('skolkovoModal').addEventListener('click', function(e) {
-    if (e.target === this) closeSkolkovoModal();
+    if (e.key === 'Escape') closeConsultationModal();
 });
 
 // Phone mask
@@ -719,7 +776,7 @@ function formatPhone(digits) {
     if (digits.length >= 9) f += '-' + digits.substring(9, 11);
     return f;
 }
-function applyPhoneMask(input) {
+document.querySelectorAll('input[type="tel"]').forEach(function(input) {
     input.addEventListener('keydown', function(e) {
         if (e.key === 'Backspace') {
             e.preventDefault();
@@ -739,10 +796,8 @@ function applyPhoneMask(input) {
     input.addEventListener('focus', function() {
         if (!input.value) input.value = '+7';
     });
-}
-document.querySelectorAll('input[type="tel"]').forEach(applyPhoneMask);
+});
 
-// UTM, Яндекс.Метрика, страница-источник
 function appendTrackingData(formData) {
     var urlParams = new URLSearchParams(window.location.search);
     ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function(key) {
@@ -753,7 +808,6 @@ function appendTrackingData(formData) {
     formData.append('source_page', window.location.pathname);
 }
 
-// Submit modal form
 function submitConsultation(e) {
     e.preventDefault();
     var form = e.target;
@@ -782,176 +836,79 @@ function submitConsultation(e) {
     });
 }
 
-// Submit inline form
-function submitConsultationInline(e) {
-    e.preventDefault();
-    var form = e.target;
-    var btn = form.querySelector('.consultation-inline-btn');
-    btn.disabled = true;
-    btn.textContent = 'Отправка...';
-
-    var formData = new FormData(form);
-    appendTrackingData(formData);
-    fetch('/ajax/course-consultation.php', {
-        method: 'POST',
-        body: formData
-    }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.success) {
-            form.style.display = 'none';
-            form.parentElement.querySelector('.consultation-inline-success').style.display = 'flex';
-        } else {
-            alert(data.message || 'Произошла ошибка');
-            btn.disabled = false;
-            btn.textContent = 'Перезвоните мне';
-        }
-    }).catch(function() {
-        alert('Произошла ошибка. Попробуйте позже.');
-        btn.disabled = false;
-        btn.textContent = 'Перезвоните мне';
-    });
-}
-</script>
-
-<!-- Load More Script -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
+// Load more
+(function() {
     var loadMoreBtn = document.getElementById('loadMoreBtn');
     var coursesGrid = document.getElementById('coursesGrid');
     var loadMoreContainer = document.getElementById('loadMoreContainer');
-    var allCourses = <?php echo json_encode(array_slice($allCourses, $perPage), JSON_UNESCAPED_UNICODE); ?>;
+    if (!loadMoreBtn || !coursesGrid) return;
+
+    var remainingCourses = <?php echo json_encode(array_slice($allCourses, $perPage), JSON_UNESCAPED_UNICODE); ?>;
     var perPage = <?php echo $perPage; ?>;
     var currentOffset = 0;
     var discountByType = {
-        kpk: <?= CoursePriceAB::getDiscountPercent($abVariant, 'kpk') ?>,
-        pp:  <?= CoursePriceAB::getDiscountPercent($abVariant, 'pp') ?>
+        kpk: <?php echo CoursePriceAB::getDiscountPercent($abVariant, 'kpk'); ?>,
+        pp:  <?php echo CoursePriceAB::getDiscountPercent($abVariant, 'pp'); ?>
     };
 
     function formatPrice(num) {
         return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     }
-    function discountFor(course) {
-        return discountByType[course.program_type] || 0;
+    function escapeHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+            return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+        });
     }
     function calcAbPrice(basePrice, course) {
-        var d = discountFor(course);
-        if (d > 0) {
-            return Math.round(basePrice * (1 - d / 100));
-        }
+        var d = discountByType[course.program_type] || 0;
+        if (d > 0) return Math.round(basePrice * (1 - d / 100));
         return basePrice;
     }
 
-    if (loadMoreBtn && allCourses.length > 0) {
-        loadMoreBtn.addEventListener('click', function() {
-            var btn = this;
-            var batch = allCourses.slice(currentOffset, currentOffset + perPage);
-            if (batch.length === 0) return;
+    loadMoreBtn.addEventListener('click', function() {
+        var btn = this;
+        var batch = remainingCourses.slice(currentOffset, currentOffset + perPage);
+        if (batch.length === 0) return;
+        btn.disabled = true;
+        btn.textContent = 'Загрузка...';
 
-            btn.disabled = true;
-            btn.textContent = 'Загрузка...';
+        var html = '';
+        batch.forEach(function(course) {
+            var desc = course.description ? course.description.replace(/<[^>]*>/g, '').substring(0, 120) + '…' : '';
+            var slug = course.slug || '';
+            var hours = (course.hours || 72) + ' ч.';
+            var ptLabel = course.program_type === 'pp' ? 'Профессиональная переподготовка' : 'Повышение квалификации';
+            var d = discountByType[course.program_type] || 0;
+            var priceHtml = d > 0
+                ? '<span style="text-decoration:line-through;color:var(--ink-400);font-weight:500;font-size:13px;margin-right:6px;">' + formatPrice(course.price) + ' ₽</span>' + formatPrice(calcAbPrice(course.price, course)) + ' ₽'
+                : formatPrice(course.price) + ' ₽';
 
-            var html = '';
-            batch.forEach(function(course) {
-                var desc = course.description ? course.description.substring(0, 120) + '...' : '';
-                var slug = course.slug || '';
-                var hours = course.hours || 72;
-                var typeLabel = course.program_type === 'pp' ? 'Профессиональная переподготовка' : 'Повышение квалификации';
-                var courseDiscount = discountFor(course);
-                html += '<div class="competition-card course-card" data-course-id="' + course.id + '">' +
-                    '<div class="course-badges">' +
-                    '<span class="course-badge course-badge--hours">' + hours + ' ч.</span>' +
-                    '<span class="course-badge course-badge--type">' + typeLabel + '</span>' +
-                    '</div>' +
-                    '<h3>' + (course.title || '') + '</h3>' +
-                    '<p>' + desc + '</p>' +
-                    '<div class="course-card-feature">' +
-                    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>' +
-                    ' Удостоверение в ФИС ФРДО</div>' +
-                    '<div class="competition-price">' +
-                    (courseDiscount > 0
-                        ? '<span class="price-old">' + formatPrice(course.price) + ' ₽</span> <span class="price-current">' + formatPrice(calcAbPrice(course.price, course)) + ' ₽</span>'
-                        : '<span class="price-current">' + formatPrice(course.price) + ' ₽</span>') +
-                    '</div>' +
-                    '<a href="/kursy/' + slug + '/" class="btn btn-primary btn-block">Смотреть программу</a>' +
-                    '</div>';
-            });
-
-            coursesGrid.insertAdjacentHTML('beforeend', html);
-            currentOffset += perPage;
-
-            if (currentOffset >= allCourses.length) {
-                loadMoreContainer.style.display = 'none';
-            } else {
-                btn.disabled = false;
-                btn.textContent = 'Показать больше курсов';
-            }
+            html += '<a class="rd-card" href="/kursy/' + encodeURIComponent(slug) + '/" data-course-id="' + course.id + '">' +
+                '<div class="rd-card-pat"></div>' +
+                '<div class="rd-card-tags">' +
+                  '<span class="rd-tag indigo">' + escapeHtml(ptLabel) + '</span>' +
+                  '<span class="rd-tag">' + escapeHtml(hours) + '</span>' +
+                '</div>' +
+                '<h4>' + escapeHtml(course.title) + '</h4>' +
+                '<div class="rd-card-meta">' + escapeHtml(desc) + '</div>' +
+                '<div class="rd-card-foot">' +
+                  '<div class="rd-price-now">' + priceHtml + '</div>' +
+                  '<span class="rd-join-btn">К программе</span>' +
+                '</div>' +
+              '</a>';
         });
-    }
 
-    // E-commerce: Click на курс (event delegation для динамических карточек)
-    var grid = document.getElementById('coursesGrid');
-    if (grid) {
-        grid.addEventListener('click', function(e) {
-            var link = e.target.closest('.course-card a.btn');
-            if (!link) return;
-            var card = link.closest('.course-card');
-            if (!card) return;
-            window.dataLayer = window.dataLayer || [];
-            window.dataLayer.push({
-                "ecommerce": {
-                    "currencyCode": "RUB",
-                    "click": {
-                        "actionField": {"list": "Каталог курсов"},
-                        "products": [{
-                            "id": "course-" + card.dataset.courseId,
-                            "name": card.querySelector('h3') ? card.querySelector('h3').textContent : '',
-                            "price": 0,
-                            "brand": "Педпортал",
-                            "category": "Курсы"
-                        }]
-                    }
-                }
-            });
-        });
-    }
-});
+        coursesGrid.insertAdjacentHTML('beforeend', html);
+        currentOffset += perPage;
 
-// Count-up animation for stats
-(function() {
-    var statsObserved = false;
-    var counters = document.querySelectorAll('.stat-number[data-target]');
-    if (!counters.length) return;
-
-    var observer = new IntersectionObserver(function(entries) {
-        if (statsObserved) return;
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-                statsObserved = true;
-                counters.forEach(function(el) {
-                    var target = parseInt(el.dataset.target);
-                    var prefix = el.dataset.prefix || '';
-                    var suffix = el.dataset.suffix || '';
-                    var duration = 1500;
-                    var start = performance.now();
-                    function animate(now) {
-                        var progress = Math.min((now - start) / duration, 1);
-                        var ease = 1 - Math.pow(1 - progress, 3);
-                        var current = Math.floor(ease * target);
-                        el.textContent = prefix + new Intl.NumberFormat('ru-RU').format(current) + suffix;
-                        if (progress < 1) requestAnimationFrame(animate);
-                    }
-                    requestAnimationFrame(animate);
-                });
-                observer.disconnect();
-            }
-        });
-    }, { threshold: 0.3 });
-
-    observer.observe(document.querySelector('.stats-section'));
+        if (currentOffset >= remainingCourses.length) {
+            loadMoreContainer.style.display = 'none';
+        } else {
+            btn.disabled = false;
+            btn.textContent = 'Показать больше курсов';
+        }
+    });
 })();
 </script>
 
-<?php include __DIR__ . '/includes/social-links.php'; ?>
-
-<?php
-include __DIR__ . '/includes/footer.php';
-?>
+<?php include __DIR__ . '/includes/footer-redesign.php'; ?>
