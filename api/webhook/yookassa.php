@@ -168,6 +168,21 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
         $paidAt = date('Y-m-d H:i:s');
         $orderObj->updatePaymentStatus($orderId, 'succeeded', $paidAt);
 
+        // Defense-in-depth: фронтовая проверка в create-payment.php должна была
+        // отсечь уже оплаченные позиции. Если они всё-таки попали сюда —
+        // фиксируем как инцидент, но не падаем (заказ уже создан в Yookassa).
+        $preCheckItems = $orderObj->getOrderItems($orderId);
+        foreach ($preCheckItems as $pcItem) {
+            if (!empty($pcItem['registration_id'])) {
+                $existing = $registrationObj->getById($pcItem['registration_id']);
+                if ($existing && $existing['status'] === 'paid') {
+                    logWebhook('WARNING', $paymentId,
+                        "Registration {$pcItem['registration_id']} was already 'paid' before this webhook — possible double-order for order {$orderNumber}",
+                        '');
+                }
+            }
+        }
+
         // Mark all registrations as paid
         $orderObj->markRegistrationsAsPaid($orderId);
 

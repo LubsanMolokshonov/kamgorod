@@ -130,6 +130,43 @@ try {
         throw new Exception('Корзина пуста или содержит недействительные позиции');
     }
 
+    // Защита от двойной оплаты: ни одна позиция в корзине не должна быть уже оплачена.
+    // Идемпотентность вебхука Yookassa защищает от повторной обработки одного payment_id,
+    // но не от повторного создания заказа на ту же registration_id.
+    $alreadyPaid = [];
+    foreach ($allItems as $item) {
+        $status = $item['raw_data']['status'] ?? null;
+        if ($status === 'paid' || $status === 'diploma_ready' || $status === 'ready') {
+            $alreadyPaid[] = $item;
+        }
+    }
+    if (!empty($alreadyPaid)) {
+        // Чистим корзину от уже оплаченного
+        foreach ($alreadyPaid as $paidItem) {
+            $type = $paidItem['type'];
+            $id = $paidItem['id'];
+            if ($type === 'registration' && isset($_SESSION['cart'])) {
+                $_SESSION['cart'] = array_values(array_diff($_SESSION['cart'], [$id]));
+            } elseif ($type === 'certificate' && isset($_SESSION['cart_certificates'])) {
+                $_SESSION['cart_certificates'] = array_values(array_diff($_SESSION['cart_certificates'], [$id]));
+            } elseif ($type === 'webinar_certificate' && isset($_SESSION['cart_webinar_certificates'])) {
+                $_SESSION['cart_webinar_certificates'] = array_values(array_diff($_SESSION['cart_webinar_certificates'], [$id]));
+            } elseif ($type === 'olympiad_registration' && isset($_SESSION['cart_olympiad_registrations'])) {
+                $_SESSION['cart_olympiad_registrations'] = array_values(array_diff($_SESSION['cart_olympiad_registrations'], [$id]));
+            }
+        }
+        error_log(sprintf(
+            'create-payment: skipped %d already-paid items for user_id=%s',
+            count($alreadyPaid),
+            $_SESSION['user_id'] ?? 'guest'
+        ));
+        echo json_encode([
+            'success' => false,
+            'message' => 'Часть позиций в корзине уже оплачена. Корзина обновлена, попробуйте ещё раз.'
+        ]);
+        exit;
+    }
+
     // Calculate subtotal
     $subtotal = 0;
     foreach ($allItems as $item) {
