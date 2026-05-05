@@ -18,6 +18,7 @@ class Registration {
     public function create($data) {
         $insertData = [
             'user_id' => $data['user_id'],
+            'participant_name' => $data['participant_name'] ?? '',
             'competition_id' => $data['competition_id'],
             'nomination' => $data['nomination'],
             'work_title' => $data['work_title'] ?? null,
@@ -177,18 +178,6 @@ class Registration {
             "SELECT * FROM competitions WHERE id = ?",
             [$competitionId]
         );
-    }
-
-    /**
-     * Check if user already registered for competition
-     */
-    public function userHasRegistration($userId, $competitionId) {
-        $result = $this->db->queryOne(
-            "SELECT id FROM registrations WHERE user_id = ? AND competition_id = ?",
-            [$userId, $competitionId]
-        );
-
-        return !empty($result);
     }
 
     /**

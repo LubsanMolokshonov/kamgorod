@@ -45,6 +45,7 @@ try {
             r.has_supervisor,
             r.supervisor_name,
             r.supervisor_organization,
+            r.participant_name,
             c.title as competition_name,
             c.category,
             u.full_name,
@@ -70,7 +71,9 @@ try {
     // Determine recipient name based on type
     $recipientName = $recipientType === 'supervisor' && $registration['has_supervisor']
         ? $registration['supervisor_name']
-        : $registration['full_name'];
+        : (!empty($registration['participant_name'])
+            ? $registration['participant_name']
+            : $registration['full_name']);
 
     $recipientOrganization = $recipientType === 'supervisor' && $registration['has_supervisor']
         ? $registration['supervisor_organization']

@@ -34,43 +34,55 @@ try {
     // Sanitize data
     $data = $validator->getData();
 
+    // Determine if supervisor exists based on supervisor_name field
+    $supervisorName = !empty($data['supervisor_name']) ? trim($data['supervisor_name']) : null;
+    $hasSupervisor = !empty($supervisorName) ? 1 : 0;
+
+    // Владелец аккаунта = руководитель (если есть), иначе сам участник.
+    // У одного руководителя может быть несколько учеников-участников — поэтому
+    // имя участника живёт на registrations.participant_name, а не на users.full_name.
+    $accountOwnerName = $supervisorName ?: $data['fio'];
+    $accountOwnerOrg  = !empty($data['supervisor_organization'])
+        ? trim($data['supervisor_organization'])
+        : ($data['organization'] ?? null);
+
     // Create or get user
     $userObj = new User($db);
     $user = $userObj->findByEmail($data['email']);
 
     if (!$user) {
-        // Create new user
+        // Create new user — заполняем именем владельца аккаунта
         $userId = $userObj->create([
             'email' => $data['email'],
-            'full_name' => $data['fio'],
+            'full_name' => $accountOwnerName,
             'phone' => $data['phone'] ?? null,
             'city' => $data['city'] ?? null,
-            'organization' => $data['organization'] ?? null
+            'organization' => $accountOwnerOrg
         ]);
     } else {
-        // Update existing user
+        // Update existing user — НЕ перезаписываем full_name участником, иначе
+        // педагог, регистрирующий нескольких учеников, теряет своё имя в кабинете.
+        // full_name заполняется только если в БД пусто.
         $userId = $user['id'];
-        $userObj->update($userId, [
-            'full_name' => $data['fio'],
-            'phone' => $data['phone'] ?? null,
-            'city' => $data['city'] ?? null,
-            'organization' => $data['organization'] ?? null
-        ]);
+        $updateFields = [];
+        if (empty($user['full_name'])) {
+            $updateFields['full_name'] = $accountOwnerName;
+        }
+        if (empty($user['phone']) && !empty($data['phone'])) {
+            $updateFields['phone'] = $data['phone'];
+        }
+        if (empty($user['city']) && !empty($data['city'])) {
+            $updateFields['city'] = $data['city'];
+        }
+        if (empty($user['organization']) && !empty($accountOwnerOrg)) {
+            $updateFields['organization'] = $accountOwnerOrg;
+        }
+        if (!empty($updateFields)) {
+            $userObj->update($userId, $updateFields);
+        }
     }
 
-    // Check if user already registered for this competition
     $registrationObj = new Registration($db);
-    if ($registrationObj->userHasRegistration($userId, $data['competition_id'])) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Вы уже зарегистрированы на этот конкурс. Проверьте корзину.'
-        ]);
-        exit;
-    }
-
-    // Determine if supervisor exists based on supervisor_name field
-    $supervisorName = !empty($data['supervisor_name']) ? trim($data['supervisor_name']) : null;
-    $hasSupervisor = !empty($supervisorName) ? 1 : 0;
 
     // UTM-атрибуция первого клика
     $utmSource   = mb_substr(trim($_POST['utm_source'] ?? ''), 0, 255) ?: null;
@@ -89,6 +101,7 @@ try {
     // Create registration
     $registrationId = $registrationObj->create([
         'user_id' => $userId,
+        'participant_name' => $data['fio'],
         'competition_id' => $data['competition_id'],
         'nomination' => $data['nomination'],
         'work_title' => $data['work_title'] ?? null,

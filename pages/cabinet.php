@@ -53,6 +53,7 @@ $stmt = $db->prepare("
         r.supervisor_name,
         r.supervisor_email,
         r.supervisor_organization,
+        r.participant_name,
         c.title as competition_name,
         c.price,
         u.full_name,
@@ -511,8 +512,8 @@ include __DIR__ . '/../includes/header.php';
                                     </div>
                                     <div class="card-body">
                                         <div class="info-row">
-                                            <span class="label">ФИО:</span>
-                                            <span class="value"><?php echo htmlspecialchars($reg['full_name']); ?></span>
+                                            <span class="label">ФИО участника:</span>
+                                            <span class="value"><?php echo htmlspecialchars(!empty($reg['participant_name']) ? $reg['participant_name'] : $reg['full_name']); ?></span>
                                         </div>
                                         <div class="info-row">
                                             <span class="label">Номинация:</span>

@@ -363,7 +363,9 @@ class Diploma {
         // Prepare data based on recipient type
         $recipientName = $recipientType === 'supervisor'
             ? $registration['supervisor_name']
-            : $registration['user_full_name'];
+            : (!empty($registration['participant_name'])
+                ? $registration['participant_name']
+                : $registration['user_full_name']);
 
         $recipientOrganization = $recipientType === 'supervisor'
             ? $registration['supervisor_organization']
