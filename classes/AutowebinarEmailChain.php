@@ -14,9 +14,6 @@ require_once __DIR__ . '/Database.php';
 require_once __DIR__ . '/EmailDispatcher.php';
 require_once __DIR__ . '/../includes/magic-link-helper.php';
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
 class AutowebinarEmailChain {
     private $db;
     private $pdo;
@@ -507,14 +504,14 @@ class AutowebinarEmailChain {
                 'touchpoint_code'   => $emailData['touchpoint_code'],
             ];
 
-            $textBody = $this->renderTextTemplate($emailData['touchpoint_code'], $templateData);
+            $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
             $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
             EmailDispatcher::send([
                 'to_email'        => $emailData['email'],
                 'to_name'         => $emailData['full_name'],
                 'subject'         => $subject,
-                'text'            => $textBody,
+                'html'            => $htmlBody,
                 'unsubscribe_url' => $unsubscribeUrl,
                 'meta'            => [
                     'email_type'      => 'autowebinar',
@@ -550,44 +547,6 @@ class AutowebinarEmailChain {
         ob_start();
         include $templatePath;
         return ob_get_clean();
-    }
-
-    /**
-     * Plain-text версия письма
-     */
-    private function renderTextTemplate($touchpointCode, $data) {
-        $text = "Здравствуйте, {$data['user_name']}!\n\n";
-
-        $text .= match(true) {
-            str_starts_with($touchpointCode, 'aw_welcome') =>
-                "Вы зарегистрированы на видеолекцию «{$data['webinar_title']}».\n\n" .
-                "Перейти к просмотру: {$data['autowebinar_url']}\n\n",
-
-            str_starts_with($touchpointCode, 'aw_quiz') =>
-                "Напоминаем: вы зарегистрированы на видеолекцию «{$data['webinar_title']}».\n" .
-                "Пройдите тест, чтобы получить сертификат на {$data['certificate_hours']} ч.\n\n" .
-                "Перейти к тесту: {$data['autowebinar_url']}\n\n",
-
-            str_starts_with($touchpointCode, 'aw_cert') =>
-                "Поздравляем! Вы прошли тест по вебинару «{$data['webinar_title']}».\n" .
-                "Оформите сертификат на {$data['certificate_hours']} академических часа.\n" .
-                "Стоимость: " . number_format($data['certificate_price'], 0, ',', ' ') . " руб.\n\n" .
-                "Оформить сертификат: {$data['certificate_url']}\n\n",
-
-            str_starts_with($touchpointCode, 'aw_pay') =>
-                "Ваш сертификат по вебинару «{$data['webinar_title']}» ожидает оплаты.\n" .
-                "Стоимость: " . number_format($data['certificate_price'], 0, ',', ' ') . " руб.\n\n" .
-                "Завершить оплату: {$data['autowebinar_url']}\n\n",
-
-            default => "Перейти: {$data['autowebinar_url']}\n\n",
-        };
-
-        $text .= "--\n";
-        $text .= "С уважением, команда ФГОС-Практикум\n";
-        $text .= "{$data['site_url']}\n\n";
-        $text .= "Если письмо пришло по ошибке — отписаться: {$data['unsubscribe_url']}\n";
-
-        return $text;
     }
 
     /**

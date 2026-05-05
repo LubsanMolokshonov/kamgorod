@@ -1,34 +1,77 @@
 <?php
 /**
- * Email Template: Webinar Broadcast Link (минимальный HTML)
- * За 1 час до начала — главная ссылка на трансляцию.
+ * Email Template: Webinar Broadcast Link
+ * Отправляется за 1 час до начала - ГЛАВНАЯ ССЫЛКА НА ТРАНСЛЯЦИЮ
  */
 
 $email_subject = "Через 1 час начало! Ссылка на вебинар внутри";
+
 $utm = 'utm_source=email&utm_campaign=webinar-broadcast-1h';
-$cab_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm;
+ob_start();
 ?>
-<p>Здравствуйте, <strong><?= htmlspecialchars($user_first_name) ?></strong>!</p>
+<div class="email-header" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+    <div class="email-header-content">
+        <div class="logo" style="text-align: center;">
+            <img src="<?php echo $site_url; ?>/assets/images/logo-white.png" alt="ФГОС-Практикум" style="height: 40px; vertical-align: middle;">
+            <img src="<?php echo $site_url; ?>/assets/images/logo-kamenny-gorod-white.png" alt="Каменный Город" style="height: 40px; vertical-align: middle; margin-left: 20px;">
+        </div>
+        <h1>Вебинар через 1 час!</h1>
+        <p>Начало в <?php echo $webinar_time; ?> МСК</p>
+    </div>
+</div>
 
-<p>Через <strong>1 час</strong> начнётся вебинар <strong>«<?= htmlspecialchars($webinar_title) ?>»</strong>. Начало в <strong><?= htmlspecialchars($webinar_time) ?> МСК</strong>.</p>
+<div class="email-content">
+    <p class="greeting">Здравствуйте, <?php echo htmlspecialchars($user_name); ?>!</p>
 
-<p><strong>Ссылка на трансляцию:</strong><br>
-<a href="<?= htmlspecialchars($broadcast_url) ?>"><?= htmlspecialchars($broadcast_url) ?></a></p>
+    <p>Через <strong>1 час</strong> начнётся вебинар «<?php echo htmlspecialchars($webinar_title); ?>».</p>
 
-<p><em>Совет:</em> войдите за 5 минут до начала, чтобы проверить звук и изображение.</p>
+    <div class="broadcast-link-box">
+        <h2>🎬 Войти на трансляцию</h2>
+        <p style="margin-bottom: 20px; opacity: 0.9;">Нажмите кнопку за 5 минут до начала</p>
+        <a href="<?php echo htmlspecialchars($broadcast_url); ?>" class="cta-button" style="font-size: 18px; padding: 20px 60px;">
+            ВОЙТИ НА ВЕБИНАР
+        </a>
+        <p class="broadcast-url-text">
+            Если кнопка не работает, скопируйте ссылку:<br>
+            <?php echo htmlspecialchars($broadcast_url); ?>
+        </p>
+    </div>
 
-<p>
-    <strong>Когда:</strong> начало в <?= htmlspecialchars($webinar_time) ?> МСК<br>
-    <strong>Продолжительность:</strong> <?= (int)$webinar_duration ?> минут
-    <?php if ($speaker_name): ?><br><strong>Спикер:</strong> <?= htmlspecialchars($speaker_name) ?><?php endif; ?>
-</p>
+    <div class="webinar-card">
+        <h3><?php echo htmlspecialchars($webinar_title); ?></h3>
+        <div class="webinar-details">
+            <p>
+                <span class="icon">🕐</span>
+                <strong>Начало: <?php echo $webinar_time; ?> МСК</strong>
+            </p>
+            <p>
+                <span class="icon">⏱️</span>
+                Продолжительность: <?php echo $webinar_duration; ?> минут
+            </p>
+            <?php if ($speaker_name): ?>
+            <p>
+                <span class="icon">👤</span>
+                Спикер: <?php echo htmlspecialchars($speaker_name); ?>
+            </p>
+            <?php endif; ?>
+        </div>
+    </div>
 
-<p>Не сможете присутствовать? Запись вебинара будет доступна в <a href="<?= htmlspecialchars($cab_link) ?>">личном кабинете</a> после окончания трансляции.</p>
+    <div class="info-block">
+        <p><strong>💡 Совет:</strong> Войдите на трансляцию за 5 минут до начала, чтобы проверить звук и изображение.</p>
+    </div>
 
-<hr>
-<p><em>С уважением, команда <strong>ФГОС-Практикум</strong><br>
-<a href="<?= htmlspecialchars($site_url) ?>"><?= htmlspecialchars($site_url) ?></a></em></p>
+    <p style="color: #718096; font-size: 14px; margin-top: 30px;">
+        Не можете присутствовать? Не переживайте — запись вебинара будет доступна в вашем личном кабинете после окончания трансляции.
+    </p>
 
-<p style="font-size:12px;color:#888;">
-    Если письмо пришло по ошибке — <a href="<?= htmlspecialchars($unsubscribe_url) ?>">отписаться от рассылки</a>.
-</p>
+    <div class="text-center" style="margin-top: 20px;">
+        <?php $cab_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm; ?>
+        <a href="<?php echo htmlspecialchars($cab_link); ?>" class="cta-button cta-button-secondary">
+            Личный кабинет
+        </a>
+    </div>
+</div>
+<?php
+$content = ob_get_clean();
+include __DIR__ . '/_webinar_base_layout.php';
