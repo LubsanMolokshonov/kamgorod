@@ -5,10 +5,8 @@
  */
 
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/EmailDispatcher.php';
 require_once __DIR__ . '/../includes/magic-link-helper.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 class EmailJourney {
     private $db;
@@ -98,11 +96,8 @@ class EmailJourney {
      * Called by cron job
      */
     public function processPendingEmails() {
+        // Конкурсные письма идут через Unisender Go — Яндекс-warmup не действует.
         require_once BASE_PATH . '/includes/email-helper.php';
-        // Глобальная пауза CHAINS_PAUSED_UNTIL проверяется per-touchpoint
-        // ниже в цикле через chainEmailsPaused($code) — конкурсные touch_*
-        // теперь в whitelist'е (отправляются как minimal-HTML).
-
         $now = date('Y-m-d H:i:s');
 
         $pendingEmails = $this->db->query(
@@ -145,12 +140,6 @@ class EmailJourney {
                 continue;
             }
 
-            if (chainEmailsPaused($email['touchpoint_code'])) {
-                // Не в whitelist'е — оставляем pending, отправим после 2026-05-11.
-                $results['skipped']++;
-                continue;
-            }
-
             if (recipientRecentlyEmailed($this->pdo, $email['email'], CHAIN_MIN_INTERVAL_MINUTES)) {
                 $results['skipped']++;
                 continue;
@@ -178,15 +167,9 @@ class EmailJourney {
      * Send a single journey email
      */
     private function sendJourneyEmail($emailData) {
-        require_once BASE_PATH . '/vendor/autoload.php';
-        require_once BASE_PATH . '/classes/EmailTracker.php';
+        require_once BASE_PATH . '/classes/EmailDispatcher.php';
 
         try {
-            require_once BASE_PATH . '/includes/email-helper.php';
-            $mail = new PHPMailer(true);
-            configureBulkMailer($mail, $emailData['email']);
-            $mail->addAddress($emailData['email'], $emailData['full_name']);
-
             $unsubscribeToken = $this->getOrCreateUnsubscribeToken($emailData['email'], $emailData['user_id']);
             $unsubscribeUrl = SITE_URL . '/pages/unsubscribe.php?token=' . $unsubscribeToken;
 
@@ -206,32 +189,28 @@ class EmailJourney {
                 'touchpoint_code' => $emailData['touchpoint_code']
             ];
 
-            // Plain-text (обход антиспама Яндекс 360 после миграции 2026-04-27).
             $textBody = $this->renderTextTemplate($templateData);
+            $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
-            $mail->isHTML(false);
-            $mail->CharSet = 'UTF-8';
-            $subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
-            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-            $mail->Body = $textBody;
-
-            $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
-            $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
-
-            EmailTracker::prepareAndSend($mail, [
-                'email_type'      => 'journey',
-                'touchpoint_code' => $emailData['touchpoint_code'],
-                'chain_log_id'    => $emailData['id'],
-                'chain_log_table' => 'email_journey_log',
-                'user_id'         => $emailData['user_id'],
-                'recipient_email' => $emailData['email'],
+            EmailDispatcher::send([
+                'to_email'        => $emailData['email'],
+                'to_name'         => $emailData['full_name'],
+                'subject'         => $subject,
+                'text'            => $textBody,
                 'unsubscribe_url' => $unsubscribeUrl,
+                'meta'            => [
+                    'email_type'      => 'journey',
+                    'touchpoint_code' => $emailData['touchpoint_code'],
+                    'chain_log_id'    => $emailData['id'],
+                    'chain_log_table' => 'email_journey_log',
+                    'user_id'         => $emailData['user_id'],
+                ],
             ]);
 
             $this->log("SENT | {$emailData['email']} | {$emailData['touchpoint_code']} | Registration {$emailData['registration_id']}");
             return true;
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->log("ERROR | {$emailData['email']} | {$emailData['touchpoint_code']} | " . $e->getMessage());
             $this->updateEmailStatus($emailData['id'], 'pending', $e->getMessage());
             return false;

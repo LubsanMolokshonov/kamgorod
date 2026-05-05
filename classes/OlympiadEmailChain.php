@@ -7,10 +7,9 @@
 require_once __DIR__ . '/Database.php';
 require_once __DIR__ . '/EmailCampaignDiscount.php';
 require_once __DIR__ . '/LoyaltyDiscount.php';
+require_once __DIR__ . '/UnisenderClient.php';
+require_once __DIR__ . '/EmailTracker.php';
 require_once __DIR__ . '/../includes/magic-link-helper.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 class OlympiadEmailChain {
     private $db;
@@ -102,11 +101,9 @@ class OlympiadEmailChain {
      * Обработка очереди писем (вызывается из cron)
      */
     public function processPendingEmails() {
+        // Олимпиадные письма идут через Unisender Go — Яндекс-прогрев (chainEmailsPaused)
+        // их не касается. Throttling по получателю остаётся ниже.
         require_once BASE_PATH . '/includes/email-helper.php';
-        if (chainEmailsPaused()) {
-            $this->log("PROCESS | PAUSED until " . CHAINS_PAUSED_UNTIL . " — skip");
-            return ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'paused' => true];
-        }
 
         $now = date('Y-m-d H:i:s');
 
@@ -185,17 +182,10 @@ class OlympiadEmailChain {
     }
 
     /**
-     * Отправить одно письмо цепочки
+     * Отправить одно письмо цепочки через Unisender Go.
      */
     private function sendChainEmail($emailData) {
-        require_once BASE_PATH . '/vendor/autoload.php';
-
         try {
-            require_once BASE_PATH . '/includes/email-helper.php';
-            $mail = new PHPMailer(true);
-            configureBulkMailer($mail, $emailData['email']);
-            $mail->addAddress($emailData['email'], $emailData['full_name']);
-
             $unsubscribeToken = $this->getOrCreateUnsubscribeToken($emailData['email'], $emailData['user_id']);
             $unsubscribeUrl = SITE_URL . '/pages/unsubscribe.php?token=' . $unsubscribeToken;
 
@@ -250,33 +240,43 @@ class OlympiadEmailChain {
             }
 
             // Plain-text режим: шаблоны после миграции 2026-05 возвращают сразу
-            // готовый текст (без HTML-обёртки) — обходим фильтры Яндекса.
+            // готовый текст (без HTML-обёртки) — обходим фильтры почтовиков.
             $textBody = $this->renderTemplate($emailData['email_template'], $templateData);
+            $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
-            $mail->isHTML(false);
-            $mail->CharSet = 'UTF-8';
-            $subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
-            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-            $mail->Body = $textBody;
+            $client = new UnisenderClient();
+            $result = $client->sendEmail([
+                'to_email'    => $emailData['email'],
+                'to_name'     => $emailData['full_name'],
+                'subject'     => $subject,
+                'text'        => $textBody,
+                'track_links' => 0,
+                'track_read'  => 0,
+                'headers'     => [
+                    'List-Unsubscribe'      => '<' . $unsubscribeUrl . '>',
+                    'List-Unsubscribe-Post' => 'List-Unsubscribe=One-Click',
+                ],
+            ]);
 
-            $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
-            $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
+            if (!$result['ok']) {
+                throw new \Exception('Unisender: ' . ($result['error'] ?? 'unknown') . ' (HTTP ' . $result['http_code'] . ')');
+            }
 
-            require_once BASE_PATH . '/classes/EmailTracker.php';
-            EmailTracker::prepareAndSend($mail, [
+            EmailTracker::recordExternalSend([
                 'email_type'      => 'olympiad',
                 'touchpoint_code' => $emailData['touchpoint_code'],
                 'chain_log_id'    => $emailData['id'],
                 'chain_log_table' => 'olympiad_email_log',
                 'user_id'         => $emailData['user_id'] ?? null,
                 'recipient_email' => $emailData['email'],
-                'unsubscribe_url' => $unsubscribeUrl,
+                'message_id'      => $result['email_id'],
+                'subject'         => $subject,
             ]);
 
-            $this->log("SENT | {$emailData['email']} | {$emailData['touchpoint_code']} | OlympiadRegistration {$emailData['olympiad_registration_id']}");
+            $this->log("SENT | {$emailData['email']} | {$emailData['touchpoint_code']} | OlympiadRegistration {$emailData['olympiad_registration_id']} | unisender_id={$result['email_id']}");
             return true;
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->log("ERROR | {$emailData['email']} | {$emailData['touchpoint_code']} | " . $e->getMessage());
             $this->updateEmailStatus($emailData['id'], 'pending', $e->getMessage());
             return false;
@@ -523,10 +523,8 @@ class OlympiadEmailChain {
      * Обработка очереди quiz-писем (вызывается из cron вместе с основной очередью)
      */
     public function processQuizEmails() {
+        // Олимпиадные quiz-письма идут через Unisender Go — Яндекс-пауза не действует.
         require_once BASE_PATH . '/includes/email-helper.php';
-        if (chainEmailsPaused()) {
-            return ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'paused' => true];
-        }
         $now = date('Y-m-d H:i:s');
 
         $pendingEmails = $this->db->query(
@@ -629,11 +627,6 @@ class OlympiadEmailChain {
         $tplConfig = $templateMap[$emailType];
 
         try {
-            require_once BASE_PATH . '/includes/email-helper.php';
-            $mail = new PHPMailer(true);
-            configureBulkMailer($mail, $emailData['email']);
-            $mail->addAddress($emailData['email'], $emailData['full_name']);
-
             $unsubscribeToken = $this->getOrCreateUnsubscribeToken($emailData['email'], $emailData['user_id']);
             $unsubscribeUrl = SITE_URL . '/pages/unsubscribe.php?token=' . $unsubscribeToken;
 
@@ -666,31 +659,41 @@ class OlympiadEmailChain {
 
             // Plain-text режим (шаблоны после миграции 2026-05).
             $textBody = $this->renderTemplate($tplConfig['template'], $templateData);
+            $subject  = $this->interpolateSubject($tplConfig['subject'], $templateData);
 
-            $subject = $this->interpolateSubject($tplConfig['subject'], $templateData);
-            $mail->isHTML(false);
-            $mail->CharSet = 'UTF-8';
-            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-            $mail->Body = $textBody;
+            $client = new UnisenderClient();
+            $result = $client->sendEmail([
+                'to_email'    => $emailData['email'],
+                'to_name'     => $emailData['full_name'],
+                'subject'     => $subject,
+                'text'        => $textBody,
+                'track_links' => 0,
+                'track_read'  => 0,
+                'headers'     => [
+                    'List-Unsubscribe'      => '<' . $unsubscribeUrl . '>',
+                    'List-Unsubscribe-Post' => 'List-Unsubscribe=One-Click',
+                ],
+            ]);
 
-            $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
-            $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
+            if (!$result['ok']) {
+                throw new \Exception('Unisender: ' . ($result['error'] ?? 'unknown') . ' (HTTP ' . $result['http_code'] . ')');
+            }
 
-            require_once BASE_PATH . '/classes/EmailTracker.php';
-            EmailTracker::prepareAndSend($mail, [
+            EmailTracker::recordExternalSend([
                 'email_type'      => 'olympiad',
                 'touchpoint_code' => $emailType,
                 'chain_log_id'    => $emailData['id'] ?? null,
                 'chain_log_table' => 'olympiad_quiz_email_log',
                 'user_id'         => $emailData['user_id'] ?? null,
                 'recipient_email' => $emailData['email'],
-                'unsubscribe_url' => $unsubscribeUrl,
+                'message_id'      => $result['email_id'],
+                'subject'         => $subject,
             ]);
 
-            $this->log("QUIZ_SENT | {$emailData['email']} | {$emailType} | Olympiad {$emailData['olympiad_id']}");
+            $this->log("QUIZ_SENT | {$emailData['email']} | {$emailType} | Olympiad {$emailData['olympiad_id']} | unisender_id={$result['email_id']}");
             return true;
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->log("QUIZ_ERROR | {$emailData['email']} | {$emailType} | " . $e->getMessage());
             return false;
         }

@@ -8,10 +8,8 @@
  */
 
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/EmailDispatcher.php';
 require_once __DIR__ . '/../includes/magic-link-helper.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 class CourseEmailChain {
     private $db;
@@ -105,12 +103,8 @@ class CourseEmailChain {
      * Отправить все письма, у которых наступило время
      */
     public function processPendingEmails() {
+        // Курсовые письма идут через Unisender Go — Яндекс-warmup не действует.
         require_once BASE_PATH . '/includes/email-helper.php';
-        if (chainEmailsPaused()) {
-            $this->log("PROCESS | PAUSED until " . CHAINS_PAUSED_UNTIL . " — skip");
-            return ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'paused' => true];
-        }
-
         $now = date('Y-m-d H:i:s');
 
         $pendingEmails = $this->db->query(
@@ -198,14 +192,10 @@ class CourseEmailChain {
     // ──────────────────────────────────────────────
 
     private function sendChainEmail($emailData) {
-        require_once BASE_PATH . '/vendor/autoload.php';
+        require_once BASE_PATH . '/classes/EmailDispatcher.php';
 
         try {
-            require_once BASE_PATH . '/includes/email-helper.php';
-            $mail = new PHPMailer(true);
-            configureBulkMailer($mail, $emailData['email']);
-            self::applyPersonalSender($mail);
-            $mail->addAddress($emailData['email'], $emailData['full_name']);
+            $sender = self::pickPersonalSender($emailData['email']);
 
             // Unsubscribe
             $unsubscribeToken = $this->generateUnsubscribeToken($emailData['email']);
@@ -263,36 +253,32 @@ class CourseEmailChain {
                 'footer_reason'       => 'Вы получили это письмо, потому что подали заявку на курс на портале fgos.pro',
             ];
 
-            // Яндекс жёстко фильтрует «красивый» HTML — отправляем plain-text,
-            // ссылки сохраняем как есть (см. memory/project_payment_success_plaintext.md)
-            $templateData['_sender_name'] = self::extractFirstName($mail->FromName);
+            $templateData['_sender_name'] = self::extractFirstName($sender['from_name']);
             $textBody = $this->renderTextTemplate($templateData, $emailData['email_template']);
+            $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
-            $subject = $this->interpolateSubject($emailData['email_subject'], $templateData);
-
-            $mail->isHTML(false);
-            $mail->CharSet = 'UTF-8';
-            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-            $mail->Body    = $textBody;
-
-            $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
-            $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
-
-            require_once BASE_PATH . '/classes/EmailTracker.php';
-            EmailTracker::prepareAndSend($mail, [
-                'email_type'      => 'course',
-                'touchpoint_code' => $emailData['touchpoint_code'],
-                'chain_log_id'    => $emailData['id'],
-                'chain_log_table' => 'course_email_log',
-                'user_id'         => $emailData['user_id'] ?? null,
-                'recipient_email' => $emailData['email'],
+            EmailDispatcher::send([
+                'to_email'        => $emailData['email'],
+                'to_name'         => $emailData['full_name'],
+                'subject'         => $subject,
+                'text'            => $textBody,
+                'from_name'       => $sender['from_name'],
+                'reply_to'        => $sender['reply_to'],
+                'reply_to_name'   => $sender['reply_to_name'],
                 'unsubscribe_url' => $unsubscribeUrl,
+                'meta'            => [
+                    'email_type'      => 'course',
+                    'touchpoint_code' => $emailData['touchpoint_code'],
+                    'chain_log_id'    => $emailData['id'],
+                    'chain_log_table' => 'course_email_log',
+                    'user_id'         => $emailData['user_id'] ?? null,
+                ],
             ]);
 
             $this->log("SENT | {$emailData['email']} | {$emailData['touchpoint_code']} | Enrollment #{$emailData['enrollment_id']}");
             return true;
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->log("ERROR | {$emailData['email']} | {$emailData['touchpoint_code']} | " . $e->getMessage());
             $this->updateEmailStatus($emailData['id'], 'pending', $e->getMessage());
             return false;
@@ -357,14 +343,10 @@ class CourseEmailChain {
             return false;
         }
 
-        require_once BASE_PATH . '/vendor/autoload.php';
+        require_once BASE_PATH . '/classes/EmailDispatcher.php';
 
         try {
-            require_once BASE_PATH . '/includes/email-helper.php';
-            $mail = new PHPMailer(true);
-            configureBulkMailer($mail, $enrollment['email']);
-            self::applyPersonalSender($mail);
-            $mail->addAddress($enrollment['email'], $enrollment['full_name']);
+            $sender = self::pickPersonalSender($enrollment['email']);
 
             // Цена с учётом скидки
             $abVariant = $enrollment['ab_variant'] ?? 'A';
@@ -407,28 +389,25 @@ class CourseEmailChain {
 
             $templateData['payment_amount'] = $abPrice;
             $templateData['order_number']   = $orderNumber;
-            $templateData['_sender_name']   = self::extractFirstName($mail->FromName);
+            $templateData['_sender_name']   = self::extractFirstName($sender['from_name']);
             $textBody = $this->renderTextTemplate($templateData, 'course_payment_success');
 
             $subject = 'Оплата курса «' . mb_substr($enrollment['course_title'], 0, 60) . '» подтверждена';
 
-            $mail->isHTML(false);
-            $mail->CharSet = 'UTF-8';
-            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-            $mail->Body    = $textBody;
-
-            $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
-            $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
-
-            require_once BASE_PATH . '/classes/EmailTracker.php';
-            EmailTracker::prepareAndSend($mail, [
-                'email_type'      => 'course',
-                'touchpoint_code' => 'course_payment_success',
-                'chain_log_id'    => null,
-                'chain_log_table' => null,
-                'user_id'         => $enrollment['user_id'] ?? null,
-                'recipient_email' => $enrollment['email'],
+            EmailDispatcher::send([
+                'to_email'        => $enrollment['email'],
+                'to_name'         => $enrollment['full_name'],
+                'subject'         => $subject,
+                'text'            => $textBody,
+                'from_name'       => $sender['from_name'],
+                'reply_to'        => $sender['reply_to'],
+                'reply_to_name'   => $sender['reply_to_name'],
                 'unsubscribe_url' => $unsubscribeUrl,
+                'meta'            => [
+                    'email_type'      => 'course',
+                    'touchpoint_code' => 'course_payment_success',
+                    'user_id'         => $enrollment['user_id'] ?? null,
+                ],
             ]);
 
             $this->log("PAY_CONFIRM | {$enrollment['email']} | Enrollment #{$enrollmentId} | Order {$orderNumber}");
@@ -439,7 +418,7 @@ class CourseEmailChain {
 
             return true;
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->log("PAY_CONFIRM_ERROR | {$enrollment['email']} | " . $e->getMessage());
             return false;
         }
@@ -649,29 +628,25 @@ class CourseEmailChain {
     }
 
     /**
-     * Заменяет brand-имя в From на личное (имя сотрудника по выбранному ящику пула)
-     * и добавляет Reply-To на info@fgos.pro. Снижает срабатывание Gmail-эвристики
-     * «Промоакции» — личный отправитель попадает во «Входящие».
+     * Подобрать персональное имя отправителя для Gmail-инбокса.
+     * Для Unisender Go from_email всегда UNISENDER_SENDER_EMAIL (info@fgos.pro),
+     * но from_name ротируется детерминированно по адресу получателя — у одного
+     * получателя всегда один и тот же отправитель (важно для репутации в Gmail),
+     * нагрузка делится 50/50 между двумя персонами. Reply-To — info@fgos.pro.
+     *
+     * @return array{from_name:string, reply_to:string, reply_to_name:string}
      */
-    public static function applyPersonalSender(PHPMailer $mail): void {
-        $username = $mail->Username ?: '';
-        $personalNames = [
-            'rodion@fgos.pro'   => 'Родион, ФГОС-Практикум',
-            'kazakova@fgos.pro' => 'Анна Казакова, ФГОС-Практикум',
+    public static function pickPersonalSender(string $recipientEmail): array {
+        $useFirst = (crc32(strtolower(trim($recipientEmail))) % 2 === 0);
+        $fromName = $useFirst
+            ? 'Родион, ФГОС-Практикум'
+            : 'Анна Казакова, ФГОС-Практикум';
+
+        return [
+            'from_name'     => $fromName,
+            'reply_to'      => 'info@fgos.pro',
+            'reply_to_name' => 'Поддержка ФГОС-Практикум',
         ];
-        $fromName = $personalNames[strtolower($username)] ?? 'Команда ФГОС-Практикум';
-
-        try {
-            $mail->setFrom($mail->From ?: $username, $fromName);
-        } catch (\Throwable $e) {
-            // не критично — оставим то, что задал configureBulkMailer
-        }
-
-        try {
-            $mail->addReplyTo('info@fgos.pro', 'Поддержка ФГОС-Практикум');
-        } catch (\Throwable $e) {
-            // молча
-        }
     }
 
     /** «Родион, ФГОС-Практикум» → «Родион»; «Анна Казакова, ФГОС-Практикум» → «Анна». */

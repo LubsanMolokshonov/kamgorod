@@ -121,7 +121,8 @@ URL-маршруты задаются через RewriteRule в `.htaccess`. SEO
 - DB_HOST, DB_NAME, DB_USER, DB_PASS, DB_CHARSET
 - SITE_URL, SITE_NAME, APP_ENV, BASE_PATH
 - YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY, YOOKASSA_MODE
-- SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD
+- UNISENDER_API_KEY, UNISENDER_API_ENDPOINT, UNISENDER_SENDER_EMAIL, UNISENDER_SENDER_NAME
+- IMAP_HOST, IMAP_USERNAME, IMAP_PASSWORD (Яндекс 360 — приём входящих на info@fgos.pro)
 - MAGIC_LINK_SECRET, BITRIX24_WEBHOOK_URL, YANDEX_GPT_API_KEY
 
 ## Соглашения по коду
@@ -152,11 +153,26 @@ $validator->getData();        // sanitized array
 ```
 
 ### Email
-PHPMailer через хелпер `includes/email-helper.php`. HTML-шаблоны в `includes/email-templates/`. Базовый layout: `_base_layout.php`.
 
-Транзакционные письма (оплаты, дипломы, magic-link, поддержка) идут через `info@fgos.pro` (`configureMailer`). Массовые цепочки идут через пул `rodion@fgos.pro` / `kazakova@fgos.pro` с детерминированной ротацией по `crc32(email) % 2` (`configureBulkMailer`). Все три ящика — Яндекс 360.
+**Все исходящие письма идут через Unisender Go (UniOne) Web API** — один канал для транзакционки и chain-цепочек. Endpoint: `https://go2.unisender.ru/ru/transactional/api/v1/email/send.json`. From: `info@fgos.pro`. Tracking-домен `info.fgos.pro` верифицирован в кабинете Unisender.
 
-⚠️ **Карантин на массовые рассылки до 2026-05-11** (прогрев Яндекс-ящиков после миграции 27.04.2026). НЕ ЗАПУСКАТЬ: `cron/send_broadcast_v2.php`, `send_broadcast_temp.php`, `send_broadcast_bizon.php`, `scripts/send_recording_*.php`, `send_webinar_invitation.php`, `send_alert_*.php`, `send_apology_*.php`. Эти скрипты используют `SMTP_HOST` напрямую (через `info@`) и одним запуском могут отправить тысячи писем — мгновенно убьёт репутацию транзакционного ящика и сломает доставку оплат/дипломов. После 11.05 — запускать только разбив на батчи ≤ 50/день и через `configureBulkMailer`.
+Архитектура:
+- `classes/UnisenderClient.php` — низкоуровневый HTTP-клиент (curl, JSON, `X-API-KEY`). Поддерживает HTML, plain-text, вложения, custom headers, reply_to.
+- `classes/EmailDispatcher.php` — единая точка `EmailDispatcher::send([to_email, subject, html|text, attachments, unsubscribe_url, meta, ...])`. Внутри: пиксель `/api/email-track/open.php` + rewrite ссылок через `/api/email-track/click.php` (track_links/track_read у Unisender выключены, чтобы magic-link не ломались), запись в `email_events`.
+- `classes/EmailTracker.php` — `recordExternalSend()` для записи отправок через внешний API; `prepareHtmlBody()`/`prepareTextBody()` — публичные хелперы трекинга.
+- `includes/email-helper.php` — тонкая прослойка для транзакционок: `sendPaymentSuccessEmail`, `sendLifetimeDiscountGrantedEmail`, `sendPaymentFailureEmail`, `testEmailConfig`. Плюс утилиты `recipientRecentlyEmailed`, `scheduleDelayedEmail`, `logEmail`.
+
+Все 7 chain-классов (`EmailJourney`, `WebinarEmailJourney`, `PublicationEmailChain`, `AutowebinarEmailChain`, `CourseEmailChain`, `CoursePromoEmailCampaign`, `OlympiadEmailChain`, `SilentReengagementCampaign`) ходят через `EmailDispatcher::send`.
+
+Курсовые письма (`CourseEmailChain`, `CoursePromoEmailCampaign`) используют `CourseEmailChain::pickPersonalSender($email)` для детерминированной ротации `from_name` (Родион / Анна Казакова) по `crc32(email) % 2` — снижает попадание в Gmail «Промоакции».
+
+Failure policy: без fallback. На сбое Unisender (HTTP 4xx/5xx, таймаут) — chain-письма остаются `pending` в `*_email_log` и ретраятся следующим прогоном cron; транзакционка бросает исключение caller'у (webhook/AJAX).
+
+Шаблоны в `includes/email-templates/`, в основном plain-text — он лучше проходит спам-фильтры Gmail/Mail.ru.
+
+Входящая почта на `info@fgos.pro` продолжает приниматься Яндексом 360 через MX (см. `IMAP_*` в `.env` для `cron/process-inbound-emails.php`). На неё миграция не влияет.
+
+⚠️ **Старые ad-hoc скрипты** в `scripts/send_recording_*.php`, `send_diplomas_*.php`, `send_apology_*.php`, `cron/send_broadcast_*.php` всё ещё используют PHPMailer + SMTP-константы напрямую и **не запустятся** (константы `SMTP_HOST`/`SMTP_USERNAME`/`SMTP_PASSWORD` удалены из `config/config.php`). При необходимости — переписать на `EmailDispatcher::send`.
 
 ### Миграции
 Нумерованные SQL-файлы в `database/migrations/` (формат: `NNN_description.sql`). Запуск: `php migrate.php`. Трекинг — таблица `migrations`.

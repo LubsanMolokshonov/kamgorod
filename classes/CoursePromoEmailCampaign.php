@@ -6,9 +6,7 @@
  */
 
 require_once __DIR__ . '/Database.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+require_once __DIR__ . '/EmailDispatcher.php';
 
 class CoursePromoEmailCampaign {
     private Database $db;
@@ -237,12 +235,8 @@ class CoursePromoEmailCampaign {
      * Обработать один batch писем
      */
     public function processBatch(): array {
+        // Курсовая промо-рассылка идёт через Unisender Go — Яндекс-warmup не действует.
         require_once BASE_PATH . '/includes/email-helper.php';
-        if (chainEmailsPaused()) {
-            $this->log("BATCH | PAUSED until " . CHAINS_PAUSED_UNTIL . " — skip");
-            return ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'paused' => true];
-        }
-
         $results = ['sent' => 0, 'failed' => 0, 'skipped' => 0];
 
         $pending = $this->db->query(
@@ -369,39 +363,22 @@ class CoursePromoEmailCampaign {
      * Отправить одно промо-письмо
      */
     private function sendPromoEmail(array $emailData): bool {
-        require_once BASE_PATH . '/vendor/autoload.php';
+        require_once BASE_PATH . '/classes/EmailDispatcher.php';
+        require_once BASE_PATH . '/classes/CourseEmailChain.php';
 
         try {
-            require_once BASE_PATH . '/includes/email-helper.php';
-            $mail = new PHPMailer(true);
-            configureBulkMailer($mail, $emailData['email']);
-            require_once BASE_PATH . '/classes/CourseEmailChain.php';
-            CourseEmailChain::applyPersonalSender($mail);
-            $mail->addAddress($emailData['email'], $emailData['full_name']);
+            $sender = CourseEmailChain::pickPersonalSender($emailData['email']);
 
             // Unsubscribe headers (RFC 8058)
             $unsubscribeToken = $this->generateUnsubscribeToken($emailData['email']);
             $unsubscribeUrl = SITE_URL . '/pages/unsubscribe.php?token=' . $unsubscribeToken;
 
-            $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
-            $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
-
-            // Тема письма
-            $programLabel = $emailData['course_program_type'] === 'pp'
-                ? 'Профессиональная переподготовка'
-                : 'Повышение квалификации';
             // Сабж в личной форме — снижает срабатывание Gmail «Промоакции»
             $shortTitle = mb_substr($emailData['course_title'], 0, 60);
             $firstName  = trim(explode(' ', (string)$emailData['full_name'], 2)[0]);
             $subject    = $firstName !== ''
                 ? "{$firstName}, по программе «{$shortTitle}»"
                 : "По программе «{$shortTitle}»";
-
-            // Plain-text: Яндекс блокирует «красивый» HTML
-            // (см. memory/project_payment_success_plaintext.md)
-            $mail->isHTML(false);
-            $mail->CharSet = 'UTF-8';
-            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
 
             // Рендер шаблона
             $templateData = [
@@ -417,26 +394,33 @@ class CoursePromoEmailCampaign {
                 'site_url' => SITE_URL,
                 'site_name' => SITE_NAME ?? 'Каменный город',
                 'footer_reason' => 'зарегистрированы на нашей платформе',
-                '_sender_name'  => CourseEmailChain::extractFirstName($mail->FromName),
+                '_sender_name'  => CourseEmailChain::extractFirstName($sender['from_name']),
             ];
 
-            $mail->Body = $this->renderTextVersion($templateData);
+            $textBody = $this->renderTextVersion($templateData);
 
-            require_once BASE_PATH . '/classes/EmailTracker.php';
-            EmailTracker::prepareAndSend($mail, [
-                'email_type'      => 'course_promo',
-                'touchpoint_code' => $emailData['touchpoint_code'] ?? 'course_promo',
-                'chain_log_id'    => $emailData['id'] ?? null,
-                'chain_log_table' => 'course_promo_email_log',
-                'user_id'         => $emailData['user_id'] ?? null,
-                'recipient_email' => $emailData['email'],
+            EmailDispatcher::send([
+                'to_email'        => $emailData['email'],
+                'to_name'         => $emailData['full_name'],
+                'subject'         => $subject,
+                'text'            => $textBody,
+                'from_name'       => $sender['from_name'],
+                'reply_to'        => $sender['reply_to'],
+                'reply_to_name'   => $sender['reply_to_name'],
                 'unsubscribe_url' => $unsubscribeUrl,
+                'meta'            => [
+                    'email_type'      => 'course_promo',
+                    'touchpoint_code' => $emailData['touchpoint_code'] ?? 'course_promo',
+                    'chain_log_id'    => $emailData['id'] ?? null,
+                    'chain_log_table' => 'course_promo_email_log',
+                    'user_id'         => $emailData['user_id'] ?? null,
+                ],
             ]);
 
             $this->log("SENT | {$emailData['email']} | Course: {$emailData['course_title']}");
             return true;
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->log("ERROR | {$emailData['email']} | " . $e->getMessage());
             if ($emailData['id'] > 0) {
                 $this->updateStatus($emailData['id'], 'pending', $e->getMessage());

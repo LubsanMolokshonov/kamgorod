@@ -73,6 +73,13 @@ if (!defined('BITRIX24_CDO_STAGE_DOCS_SORT'))   define('BITRIX24_CDO_STAGE_DOCS_
 // Секрет для HMAC-подписи скидочных ссылок в email-цепочке курсов
 if (!defined('COURSE_EMAIL_DISCOUNT_SECRET')) define('COURSE_EMAIL_DISCOUNT_SECRET', $_ENV['COURSE_EMAIL_DISCOUNT_SECRET'] ?? '');
 
+// Unisender Go (UniOne) Web API — транзакционный канал для писем олимпиад
+// Документация: https://godocs.unisender.ru/web-api-ref
+if (!defined('UNISENDER_API_KEY'))      define('UNISENDER_API_KEY',      $_ENV['UNISENDER_API_KEY']      ?? '');
+if (!defined('UNISENDER_API_ENDPOINT')) define('UNISENDER_API_ENDPOINT', $_ENV['UNISENDER_API_ENDPOINT'] ?? 'https://go2.unisender.ru/ru/transactional/api/v1/');
+if (!defined('UNISENDER_SENDER_EMAIL')) define('UNISENDER_SENDER_EMAIL', $_ENV['UNISENDER_SENDER_EMAIL'] ?? 'info@fgos.pro');
+if (!defined('UNISENDER_SENDER_NAME'))  define('UNISENDER_SENDER_NAME',  $_ENV['UNISENDER_SENDER_NAME']  ?? 'ФГОС-Практикум');
+
 // Yandex GPT AI Moderation
 if (!defined('YANDEX_GPT_API_KEY')) define('YANDEX_GPT_API_KEY', $_ENV['YANDEX_GPT_API_KEY'] ?? '');
 if (!defined('YANDEX_GPT_FOLDER_ID')) define('YANDEX_GPT_FOLDER_ID', $_ENV['YANDEX_GPT_FOLDER_ID'] ?? '');
@@ -87,35 +94,24 @@ if (!defined('TELEGRAM_ALERT_CHAT_ID')) {
     define('TELEGRAM_ALERT_CHAT_ID', $_ENV['TELEGRAM_ALERT_CHAT_ID'] ?? '1177793865,-5215729575');
 }
 
-// Email Configuration (транзакционные письма — info@fgos.pro)
-if (!defined('SMTP_HOST')) define('SMTP_HOST', $_ENV['SMTP_HOST'] ?? '');
-if (!defined('SMTP_PORT')) define('SMTP_PORT', $_ENV['SMTP_PORT'] ?? 587);
-if (!defined('SMTP_USERNAME')) define('SMTP_USERNAME', $_ENV['SMTP_USERNAME'] ?? '');
-if (!defined('SMTP_PASSWORD')) define('SMTP_PASSWORD', $_ENV['SMTP_PASSWORD'] ?? '');
-if (!defined('SMTP_FROM_EMAIL')) define('SMTP_FROM_EMAIL', $_ENV['SMTP_FROM_EMAIL'] ?? 'noreply@localhost');
-if (!defined('SMTP_FROM_NAME')) define('SMTP_FROM_NAME', defined('SITE_NAME') ? SITE_NAME : 'Педагогический портал');
-
-// Bulk SMTP Pool (массовые рассылки — ротация по двум ящикам Яндекс 360)
-// Если SMTP_BULK_USERNAME_1 пуст — fallback на основной SMTP (обратная совместимость до миграции)
-if (!defined('SMTP_BULK_HOST')) define('SMTP_BULK_HOST', $_ENV['SMTP_BULK_HOST'] ?? SMTP_HOST);
-if (!defined('SMTP_BULK_PORT')) define('SMTP_BULK_PORT', (int)($_ENV['SMTP_BULK_PORT'] ?? SMTP_PORT));
-if (!defined('SMTP_BULK_USERNAME_1')) define('SMTP_BULK_USERNAME_1', $_ENV['SMTP_BULK_USERNAME_1'] ?? '');
-if (!defined('SMTP_BULK_PASSWORD_1')) define('SMTP_BULK_PASSWORD_1', $_ENV['SMTP_BULK_PASSWORD_1'] ?? '');
-if (!defined('SMTP_BULK_USERNAME_2')) define('SMTP_BULK_USERNAME_2', $_ENV['SMTP_BULK_USERNAME_2'] ?? '');
-if (!defined('SMTP_BULK_PASSWORD_2')) define('SMTP_BULK_PASSWORD_2', $_ENV['SMTP_BULK_PASSWORD_2'] ?? '');
-
-// Прогрев Яндекс-ящиков rodion@/kazakova@: пока дата в будущем — chain-кроны выходят без отправки.
-// Чтобы снять паузу досрочно — выставить пустую строку или прошедшую дату.
-// 2026-05-04: пауза снята — все цепочки переведены на plain-text формат, который Яндекс пропускает.
-if (!defined('CHAINS_PAUSED_UNTIL')) define('CHAINS_PAUSED_UNTIL', $_ENV['CHAINS_PAUSED_UNTIL'] ?? '');
 // Минимальный интервал между chain-письмами одному получателю (минуты). 0 = отключено.
 if (!defined('CHAIN_MIN_INTERVAL_MINUTES')) define('CHAIN_MIN_INTERVAL_MINUTES', (int)($_ENV['CHAIN_MIN_INTERVAL_MINUTES'] ?? 0));
 
-// IMAP (приём входящих писем поддержки — для cron/process-inbound-emails.php)
-if (!defined('IMAP_HOST')) define('IMAP_HOST', $_ENV['IMAP_HOST'] ?? SMTP_HOST);
+// Все исходящие письма идут через Unisender Go (см. UNISENDER_* выше).
+// SMTP_BULK_* пул и CHAINS_PAUSED_UNTIL удалены при миграции 2026-05-05.
+
+// Legacy SMTP_FROM_* — оставлены, потому что некоторые места (AlertService и т.п.)
+// используют их как «логический» from-адрес сайта. Указывают на Unisender-отправителя.
+if (!defined('SMTP_FROM_EMAIL')) define('SMTP_FROM_EMAIL', $_ENV['SMTP_FROM_EMAIL'] ?? UNISENDER_SENDER_EMAIL);
+if (!defined('SMTP_FROM_NAME'))  define('SMTP_FROM_NAME',  $_ENV['SMTP_FROM_NAME']  ?? UNISENDER_SENDER_NAME);
+
+// IMAP (приём входящих писем поддержки — для cron/process-inbound-emails.php).
+// Входящая почта продолжает приниматься Яндекс 360 на info@fgos.pro через MX —
+// исходящая мигрировала на Unisender Go, на доставку входящей это не влияет.
+if (!defined('IMAP_HOST')) define('IMAP_HOST', $_ENV['IMAP_HOST'] ?? 'imap.yandex.ru');
 if (!defined('IMAP_PORT')) define('IMAP_PORT', (int)($_ENV['IMAP_PORT'] ?? 993));
-if (!defined('IMAP_USERNAME')) define('IMAP_USERNAME', $_ENV['IMAP_USERNAME'] ?? SMTP_USERNAME);
-if (!defined('IMAP_PASSWORD')) define('IMAP_PASSWORD', $_ENV['IMAP_PASSWORD'] ?? SMTP_PASSWORD);
+if (!defined('IMAP_USERNAME')) define('IMAP_USERNAME', $_ENV['IMAP_USERNAME'] ?? '');
+if (!defined('IMAP_PASSWORD')) define('IMAP_PASSWORD', $_ENV['IMAP_PASSWORD'] ?? '');
 if (!defined('IMAP_ENCRYPTION')) define('IMAP_ENCRYPTION', $_ENV['IMAP_ENCRYPTION'] ?? 'ssl');
 if (!defined('IMAP_MAILBOX')) define('IMAP_MAILBOX', $_ENV['IMAP_MAILBOX'] ?? 'INBOX');
 

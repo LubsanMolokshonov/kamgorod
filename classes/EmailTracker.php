@@ -166,6 +166,76 @@ class EmailTracker {
         }
     }
 
+    /**
+     * Зарегистрировать отправку письма, ушедшего через внешний транзакционный API
+     * (Unisender Go и т.п.), без участия PHPMailer. Используется в OlympiadEmailChain
+     * для домена «олимпиады».
+     *
+     * Записывает в email_events строку с delivery_status='sent', message_id из провайдера
+     * (либо сгенерированный, если провайдер не вернул id) и provider-меткой в touchpoint
+     * для drill-down. Open/click-tracking для plain-text писем не работает (свой пиксель
+     * мы не вставляем — у нас нет клика по нашему redirect-эндпоинту).
+     */
+    public static function recordExternalSend(array $meta): void {
+        $messageId = $meta['message_id'] ?? null;
+        if (!$messageId) {
+            $messageId = bin2hex(random_bytes(16));
+        }
+        try {
+            $pdo = self::pdo();
+            $stmt = $pdo->prepare(
+                "INSERT INTO email_events
+                    (message_id, email_type, touchpoint_code, chain_log_id, chain_log_table,
+                     user_id, recipient_email, subject, sent_at, delivery_status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'sent')"
+            );
+            $stmt->execute([
+                $messageId,
+                $meta['email_type']      ?? 'olympiad',
+                $meta['touchpoint_code'] ?? null,
+                $meta['chain_log_id']    ?? null,
+                $meta['chain_log_table'] ?? null,
+                $meta['user_id']         ?? null,
+                $meta['recipient_email'] ?? '',
+                mb_substr((string)($meta['subject'] ?? ''), 0, 500),
+            ]);
+        } catch (\Throwable $e) {
+            error_log('EmailTracker recordExternalSend failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Сгенерировать новый message_id для письма (32 hex-символа).
+     * Используется EmailDispatcher до отправки, чтобы инжектить пиксель/ссылки
+     * с одним и тем же id, который попадёт в email_events.
+     */
+    public static function generateMessageId(): string {
+        return bin2hex(random_bytes(16));
+    }
+
+    /**
+     * Подготовить HTML-тело: вставить трекинг-пиксель и переписать ссылки
+     * через /api/email-track/click.php. Возвращает модифицированный HTML.
+     * Те же преобразования, что в prepareAndSend, но как чистая функция —
+     * для использования с внешними API (Unisender Go).
+     */
+    public static function prepareHtmlBody(string $html, string $messageId, ?string $unsubscribeUrl = null): string {
+        $pixelUrl = rtrim(SITE_URL, '/') . '/api/email-track/open.php?mid=' . $messageId;
+        $pixelTag = '<img src="' . htmlspecialchars($pixelUrl, ENT_QUOTES, 'UTF-8')
+                  . '" width="1" height="1" alt="" style="display:none;max-width:1px;max-height:1px;opacity:0">';
+        $html = self::injectPixel($html, $pixelTag);
+        $html = self::rewriteLinks($html, $messageId, $unsubscribeUrl);
+        return $html;
+    }
+
+    /**
+     * Подготовить plain-text тело: переписать голые URL через /api/email-track/click.php.
+     * Пиксель в plain-text не вставляем (HTML-тег ловится Яндексом как 554 SPAM).
+     */
+    public static function prepareTextBody(string $text, string $messageId, ?string $unsubscribeUrl = null): string {
+        return self::rewriteTextLinks($text, $messageId, $unsubscribeUrl);
+    }
+
     // --------- internals ---------
 
     private static function register(array $data): void {

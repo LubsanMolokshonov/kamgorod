@@ -11,6 +11,7 @@
  */
 
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/EmailDispatcher.php';
 require_once __DIR__ . '/../includes/magic-link-helper.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -216,12 +217,8 @@ class AutowebinarEmailChain {
             }
         }
 
-        // Шаг 3: Обработать очередь отправки
+        // Шаг 3: Обработать очередь отправки (через Unisender Go)
         require_once BASE_PATH . '/includes/email-helper.php';
-        if (chainEmailsPaused()) {
-            $this->log("PROCESS | PAUSED until " . CHAINS_PAUSED_UNTIL . " — schedule only, skip send");
-            return ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'paused' => true];
-        }
 
         $pendingEmails = $this->db->query(
             "SELECT ael.*, t.email_subject, t.email_template, t.code as touchpoint_code, t.chain_type,
@@ -470,17 +467,9 @@ class AutowebinarEmailChain {
      * Отправить одно письмо
      */
     private function sendEmail($emailData) {
-        require_once BASE_PATH . '/vendor/autoload.php';
+        require_once BASE_PATH . '/classes/EmailDispatcher.php';
 
         try {
-            require_once BASE_PATH . '/includes/email-helper.php';
-            $mail = new PHPMailer(true);
-            $mail->Timeout = 10;
-            $mail->SMTPKeepAlive = false;
-            configureBulkMailer($mail, $emailData['email']);
-            $mail->addAddress($emailData['email'], $emailData['full_name']);
-
-            // Unsubscribe
             $unsubscribeToken = $this->generateUnsubscribeToken($emailData['email']);
             $unsubscribeUrl = SITE_URL . '/pages/unsubscribe.php?token=' . $unsubscribeToken;
 
@@ -521,30 +510,25 @@ class AutowebinarEmailChain {
             $textBody = $this->renderTextTemplate($emailData['touchpoint_code'], $templateData);
             $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
-            // Plain-text (обход антиспама Яндекс 360 после миграции 2026-04-27).
-            $mail->isHTML(false);
-            $mail->CharSet = 'UTF-8';
-            $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
-            $mail->Body    = $textBody;
-
-            $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
-            $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
-
-            require_once BASE_PATH . '/classes/EmailTracker.php';
-            EmailTracker::prepareAndSend($mail, [
-                'email_type'      => 'autowebinar',
-                'touchpoint_code' => $emailData['touchpoint_code'],
-                'chain_log_id'    => $emailData['id'],
-                'chain_log_table' => 'autowebinar_email_log',
-                'user_id'         => $emailData['user_id'] ?? null,
-                'recipient_email' => $emailData['email'],
+            EmailDispatcher::send([
+                'to_email'        => $emailData['email'],
+                'to_name'         => $emailData['full_name'],
+                'subject'         => $subject,
+                'text'            => $textBody,
                 'unsubscribe_url' => $unsubscribeUrl,
+                'meta'            => [
+                    'email_type'      => 'autowebinar',
+                    'touchpoint_code' => $emailData['touchpoint_code'],
+                    'chain_log_id'    => $emailData['id'],
+                    'chain_log_table' => 'autowebinar_email_log',
+                    'user_id'         => $emailData['user_id'] ?? null,
+                ],
             ]);
 
             $this->log("SENT | {$emailData['email']} | {$emailData['touchpoint_code']} | Registration {$emailData['registration_id']}");
             return true;
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->log("ERROR | {$emailData['email']} | {$emailData['touchpoint_code']} | " . $e->getMessage());
             $this->updateEmailStatus($emailData['id'], 'pending', $e->getMessage());
             return false;

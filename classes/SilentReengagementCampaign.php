@@ -12,12 +12,8 @@
  * Паттерн (SMTP, unsubscribe, шаблон) — из CoursePromoEmailCampaign.
  */
 
-require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/EmailCampaignDiscount.php';
-require_once __DIR__ . '/EmailTracker.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+require_once __DIR__ . '/EmailDispatcher.php';
 
 class SilentReengagementCampaign {
     public const CAMPAIGN_CODE = 'silent_reengagement_10';
@@ -110,11 +106,8 @@ class SilentReengagementCampaign {
      * @return array ['sent'=>N, 'skipped'=>N, 'failed'=>N]
      */
     public function send(int $limit, bool $dryRun = false): array {
+        // Идёт через Unisender Go — Яндекс-warmup не действует.
         require_once BASE_PATH . '/includes/email-helper.php';
-        if (chainEmailsPaused() && !$dryRun) {
-            $this->log("SEND | PAUSED until " . CHAINS_PAUSED_UNTIL . " — skip");
-            return ['sent' => 0, 'skipped' => 0, 'failed' => 0, 'paused' => true];
-        }
 
         $rows = $this->db->query(
             "SELECT id, user_id, email, segment FROM silent_reengagement_log
@@ -187,35 +180,30 @@ class SilentReengagementCampaign {
 
     private function sendOne(int $logId, array $user, string $segment): bool {
         require_once BASE_PATH . '/includes/magic-link-helper.php';
+        require_once BASE_PATH . '/classes/EmailDispatcher.php';
 
         $templateData = $this->buildTemplateData($user, $segment);
 
-        require_once BASE_PATH . '/includes/email-helper.php';
-        $mail = new PHPMailer(true);
-        configureBulkMailer($mail, $user['email']);
-        $mail->addAddress($user['email'], $user['full_name']);
-
         $unsubscribeUrl = SITE_URL . '/pages/unsubscribe.php?token=' . $this->generateUnsubscribeToken($user['email']);
-        $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
-        $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
+        $templateData['unsubscribe_url'] = $unsubscribeUrl;
 
         $subject = 'Скидка ' . (int)($templateData['discount_percent']) . '% до ' . $templateData['discount_expires_label'] . ' — специально для вас';
-        $mail->isHTML(false);
-        $mail->CharSet = 'UTF-8';
-        $mail->Subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
+        $textBody = $this->renderTextVersion($templateData);
 
-        $templateData['unsubscribe_url'] = $unsubscribeUrl;
-        // Plain-text (обход антиспама Яндекс 360 после миграции 2026-04-27).
-        $mail->Body = $this->renderTextVersion($templateData);
-
-        EmailTracker::prepareAndSend($mail, [
-            'email_type'      => 'silent_reengagement',
-            'touchpoint_code' => self::CAMPAIGN_CODE,
-            'chain_log_id'    => $logId,
-            'chain_log_table' => 'silent_reengagement_log',
-            'user_id'         => $user['id'],
-            'recipient_email' => $user['email'],
+        EmailDispatcher::send([
+            'to_email'        => $user['email'],
+            'to_name'         => $user['full_name'],
+            'subject'         => $subject,
+            'text'            => $textBody,
             'unsubscribe_url' => $unsubscribeUrl,
+            'meta'            => [
+                // 'silent_reengagement' нет в ENUM — используем 'other'.
+                'email_type'      => 'other',
+                'touchpoint_code' => self::CAMPAIGN_CODE,
+                'chain_log_id'    => $logId,
+                'chain_log_table' => 'silent_reengagement_log',
+                'user_id'         => $user['id'],
+            ],
         ]);
 
         $this->log("SENT | {$user['email']} | segment={$segment}");
