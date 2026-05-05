@@ -796,7 +796,26 @@ h1.rd-hero-title .accent {
 .rd-offer-cta { font: 600 14px var(--font-sans); color: var(--indigo-700); display: inline-flex; align-items: center; gap: 6px; }
 .rd-offer:hover .rd-offer-cta { gap: 10px; }
 
-.rd-offers-allbtn { display: flex; justify-content: center; margin-top: 28px; }
+.rd-offer-all {
+  background: linear-gradient(135deg, var(--indigo-600), var(--indigo-700, #4338ca));
+  border: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+  gap: 14px;
+}
+.rd-offer-all:hover { color: #fff; transform: translateY(-3px); box-shadow: 0 12px 32px rgba(79,70,229,.35); }
+.rd-offer-all-arrow {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 700; color: #fff;
+  transition: transform .3s var(--ease-out), background .2s;
+}
+.rd-offer-all:hover .rd-offer-all-arrow { transform: translateX(6px); background: rgba(255,255,255,.28); }
+.rd-offer-all h4 { font-size: 20px; font-weight: 700; color: #fff; flex-grow: 0; }
+.rd-offer-all-sub { font-size: 14px; color: rgba(255,255,255,.85); }
 
 /* =====================================================
    TRUST BAND

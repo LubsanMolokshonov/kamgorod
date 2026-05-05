@@ -297,7 +297,6 @@ include __DIR__ . '/includes/header-redesign.php';
         <div class="rd-eyebrow">Актуальные предложения</div>
         <h2 class="rd-section-title">Самые популярные мероприятия портала</h2>
       </div>
-      <a class="rd-btn rd-btn-ghost" href="/konkursy">Все предложения →</a>
     </div>
     <div class="rd-tabs-bar reveal" id="rdTabsBar">
       <button class="rd-tab active" data-tab="kursy">ТОП курсы</button>

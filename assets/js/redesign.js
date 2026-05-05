@@ -48,13 +48,6 @@
       ol:    { url: '/olimpiady/', label: 'Все олимпиады' },
       pub:   { url: '/zhurnal/', label: 'Все публикации' }
     };
-    var allBtnWrap = document.createElement('div');
-    allBtnWrap.className = 'rd-offers-allbtn';
-    var allBtn = document.createElement('a');
-    allBtn.className = 'rd-btn rd-btn-primary';
-    allBtnWrap.appendChild(allBtn);
-    offersGrid.parentNode.insertBefore(allBtnWrap, offersGrid.nextSibling);
-
     function renderOffers(key) {
       var items = (window.rdOffersData[key] || []).slice(0, 5);
       offersGrid.innerHTML = '';
@@ -82,11 +75,21 @@
 
       var allCfg = allLinks[key];
       if (allCfg) {
-        allBtn.href = allCfg.url;
-        allBtn.textContent = allCfg.label + ' →';
-        allBtnWrap.style.display = '';
-      } else {
-        allBtnWrap.style.display = 'none';
+        var allEl = document.createElement('a');
+        allEl.className = 'rd-offer rd-offer-all';
+        allEl.href = allCfg.url;
+        allEl.style.opacity = '0';
+        allEl.style.transform = 'translateY(8px)';
+        allEl.innerHTML =
+          '<div class="rd-offer-all-arrow">→</div>' +
+          '<h4>' + escHtml(allCfg.label) + '</h4>' +
+          '<div class="rd-offer-all-sub">Посмотреть весь каталог</div>';
+        offersGrid.appendChild(allEl);
+        setTimeout(function () {
+          allEl.style.transition = 'opacity .35s, transform .35s';
+          allEl.style.opacity = '1';
+          allEl.style.transform = 'none';
+        }, items.length * 50);
       }
     }
 
