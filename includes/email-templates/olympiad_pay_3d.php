@@ -1,52 +1,31 @@
 <?php
 /**
- * Олимпиада: 3 дня после заказа диплома
- * Срочность / FOMO
+ * Олимпиада: 3 дня после заказа диплома. Plain-text.
  */
-$footer_reason = 'прошли олимпиаду на нашем портале';
+require_once __DIR__ . '/_olympiad_helpers.php';
 $utm = 'utm_source=email&utm_campaign=olympiad-pay-3d';
-ob_start();
+$pay_link = olymp_append_utm($payment_url, $utm);
 ?>
-<div class="email-header">
-    <div class="email-header-content">
-        <div class="logo" style="text-align: center;">
-            <img src="<?php echo SITE_URL; ?>/assets/images/logo-white.png" alt="ФГОС-Практикум" style="height: 40px;">
-        </div>
-        <h1>Ваш диплом ожидает оформления</h1>
-        <p>Не упустите свой результат</p>
-    </div>
-</div>
+Здравствуйте, <?= $user_name ?>!
 
-<div class="email-content">
-    <p class="greeting">Здравствуйте, <?php echo htmlspecialchars($user_name); ?>!</p>
+ВЫ ПРОШЛИ ОЛИМПИАДУ <?= olymp_bold_num('3') ?> ДНЯ НАЗАД, но диплом ещё не оформлен.
 
-    <div class="urgency-banner">
-        <strong>Вы прошли олимпиаду 3 дня назад, но диплом ещё не оформлен</strong>
-    </div>
+Вы набрали <?= olymp_bold_num((int)$score) ?> из <?= olymp_bold_num('10') ?> баллов и заняли <?= $placement_text ?> в олимпиаде «<?= $olympiad_title ?>». Это отличный результат!
 
-    <p>Вы набрали <strong><?php echo intval($score); ?> из 10 баллов</strong> и заняли <strong><?php echo htmlspecialchars($placement_text); ?></strong> в олимпиаде <strong>"<?php echo htmlspecialchars($olympiad_title); ?>"</strong>. Это отличный результат!</p>
+Другие участники уже получили свои дипломы и пополнили портфолио. Не откладывайте — оформите диплом прямо сейчас.
+<?php if (!empty($has_supervisor) && !empty($supervisor_name)): ?>
 
-    <p>Другие участники уже получили свои дипломы и пополнили портфолио. Не откладывайте — оформите диплом прямо сейчас.</p>
+Научный руководитель: <?= $supervisor_name ?> (тоже получит диплом)
+<?php endif; ?>
 
-    <div class="competition-card">
-        <span class="badge badge-orange">Ожидает оплаты</span>
-        <h3><?php echo htmlspecialchars($olympiad_title); ?></h3>
-        <div class="competition-details">
-            <p><strong>Результат:</strong> <?php echo intval($score); ?> из 10 баллов, <?php echo htmlspecialchars($placement_text); ?></p>
-            <?php if ($has_supervisor && !empty($supervisor_name)): ?>
-            <p><strong>Научный руководитель:</strong> <?php echo htmlspecialchars($supervisor_name); ?> (тоже получит диплом)</p>
-            <?php endif; ?>
-        </div>
-        <div class="price-tag"><?php echo number_format($olympiad_price, 0, ',', ' '); ?> &#8381;</div>
-    </div>
+Стоимость: <?= olymp_price_fmt((int)$olympiad_price) ?> ₽
 
-    <div class="text-center">
-        <?php $pay_link = $payment_url . (strpos($payment_url, '?') !== false ? '&' : '?') . $utm; ?>
-        <a href="<?php echo htmlspecialchars($pay_link); ?>" class="cta-button">
-            Оформить диплом сейчас
-        </a>
-    </div>
-</div>
-<?php
-$content = ob_get_clean();
-include __DIR__ . '/_base_layout.php';
+Оформить диплом сейчас:
+<?= $pay_link ?>
+
+
+—
+Команда ФГОС-Практикум
+fgos.pro
+
+Отписаться от рассылки: <?= $unsubscribe_url ?>
