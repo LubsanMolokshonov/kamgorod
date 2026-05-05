@@ -1,39 +1,87 @@
 <?php
 /**
- * Email Template: Запись вебинара «Перезагрузка отношений с родителями» (минимальный HTML)
+ * Email Template: Запись вебинара «Перезагрузка отношений с родителями»
+ * Рассылка зарегистрированным участникам: запись + презентация + анкета + сертификат
  */
 
 $email_subject = "Запись вебинара «Перезагрузка отношений с родителями» — смотрите бесплатно";
+
 $utm = 'utm_source=email&utm_campaign=recording_perezagruzka';
-$cert_link = $certificate_url . (strpos($certificate_url, '?') !== false ? '&' : '?') . $utm;
-$cabinet_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm;
-$rec_link = $recording_url . (strpos($recording_url, '?') !== false ? '&' : '?') . $utm;
-$pres_link = $presentation_url . (strpos($presentation_url, '?') !== false ? '&' : '?') . $utm;
-$fb_link = $feedback_url . (strpos($feedback_url, '?') !== false ? '&' : '?') . $utm;
+
+ob_start();
 ?>
-<p>Здравствуйте, <strong><?= htmlspecialchars($user_name) ?></strong>!</p>
+<div class="email-header">
+    <div class="email-header-content">
+        <div class="logo" style="text-align: center;">
+            <img src="<?php echo $site_url; ?>/assets/images/logo-white.png" alt="ФГОС-Практикум" style="height: 40px; vertical-align: middle;">
+        </div>
+        <h1>Запись вебинара готова!</h1>
+        <p>Смотрите в удобное время</p>
+    </div>
+</div>
 
-<p>23 апреля состоялся вебинар <strong>«<?= htmlspecialchars($webinar_title) ?>»</strong>. Запись уже доступна — смотрите в любое удобное время.</p>
+<div class="email-content">
+    <p class="greeting">Здравствуйте, <?php echo htmlspecialchars($user_name); ?>!</p>
 
-<p><strong>Смотреть запись:</strong><br>
-<a href="<?= htmlspecialchars($rec_link) ?>"><?= htmlspecialchars($rec_link) ?></a></p>
+    <p>23 апреля состоялся вебинар «<?php echo htmlspecialchars($webinar_title); ?>». Запись уже доступна — смотрите в любое удобное время!</p>
 
-<p><strong>Полезные материалы:</strong><br>
-— <a href="<?= htmlspecialchars($pres_link) ?>">скачать презентацию с полезными материалами</a><br>
-— <a href="<?= htmlspecialchars($fb_link) ?>">заполнить анкету обратной связи</a>
-</p>
+    <div class="broadcast-link-box">
+        <h2>Смотреть запись вебинара</h2>
+        <p style="opacity: 0.9; margin: 0 0 20px 0;">Бесплатная запись доступна прямо сейчас</p>
+        <a href="<?php echo htmlspecialchars($recording_url); ?>?<?php echo $utm; ?>" class="cta-button" style="background: white; color: #16a34a !important; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);">
+            СМОТРЕТЬ ЗАПИСЬ
+        </a>
+    </div>
 
-<p><strong>Получите именной сертификат участника</strong> на <strong><?= (int)$certificate_hours ?> академических часа</strong> — <?= number_format($certificate_price, 0, '', ' ') ?> руб.<br>
-Оформить: <a href="<?= htmlspecialchars($cert_link) ?>"><?= htmlspecialchars($cert_link) ?></a></p>
+    <div style="background: linear-gradient(135deg, #E8F1FF 0%, #f8fafc 100%); border-radius: 16px; padding: 25px; margin: 25px 0; border-left: 4px solid #0077FF;">
+        <h3 style="margin: 0 0 15px 0; color: #0077FF; font-size: 18px; font-weight: 600;">Полезные материалы</h3>
+        <p style="color: #4A5568; margin: 10px 0;">
+            <span style="margin-right: 8px;">📎</span>
+            <a href="<?php echo htmlspecialchars($presentation_url); ?>?<?php echo $utm; ?>" style="color: #0077FF; text-decoration: none; font-weight: 500;">Скачать презентацию с полезными материалами</a>
+        </p>
+        <p style="color: #4A5568; margin: 10px 0;">
+            <span style="margin-right: 8px;">📝</span>
+            <a href="<?php echo htmlspecialchars($feedback_url); ?>?<?php echo $utm; ?>" style="color: #0077FF; text-decoration: none; font-weight: 500;">Заполнить анкету обратной связи</a>
+        </p>
+    </div>
 
-<p>Следите за новыми вебинарами в <a href="<?= htmlspecialchars($cabinet_link) ?>">личном кабинете</a>.</p>
+    <div class="certificate-card">
+        <span class="badge" style="background: rgba(255,255,255,0.5); color: #92400e;">Именной документ</span>
+        <h3>Получите сертификат участника</h3>
+        <p style="color: #92400e; margin-bottom: 10px;">
+            Официальный именной сертификат<br>
+            на <strong><?php echo $certificate_hours; ?> академических часа</strong>
+        </p>
+        <div class="price"><?php echo number_format($certificate_price, 0, '', ' '); ?> <small>руб.</small></div>
+        <p style="color: #78716c; font-size: 14px; margin-bottom: 20px;">
+            Документ с уникальным номером для портфолио
+        </p>
+        <?php
+        $cert_link = $certificate_url . (strpos($certificate_url, '?') !== false ? '&' : '?') . $utm;
+        ?>
+        <a href="<?php echo htmlspecialchars($cert_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);">
+            Получить сертификат
+        </a>
+    </div>
 
-<hr>
-<p><em>С уважением, команда <strong>ФГОС-Практикум</strong><br>
-<a href="<?= htmlspecialchars($site_url) ?>"><?= htmlspecialchars($site_url) ?></a></em></p>
+    <h3 style="color: #2C3E50; margin-top: 30px;">Что включает сертификат?</h3>
+    <ul style="color: #4A5568; padding-left: 20px;">
+        <li style="margin-bottom: 10px;">Ваше ФИО и название вебинара</li>
+        <li style="margin-bottom: 10px;">Уникальный регистрационный номер</li>
+        <li style="margin-bottom: 10px;"><?php echo $certificate_hours; ?> академических часа для аттестации</li>
+        <li style="margin-bottom: 10px;">QR-код для проверки подлинности</li>
+    </ul>
 
-<?php if (!empty($unsubscribe_url)): ?>
-<p style="font-size:12px;color:#888;">
-    Если письмо пришло по ошибке — <a href="<?= htmlspecialchars($unsubscribe_url) ?>">отписаться от рассылки</a>.
-</p>
-<?php endif; ?>
+    <div class="text-center" style="margin-top: 30px; padding-top: 30px; border-top: 1px solid #e2e8f0;">
+        <p style="color: #718096; margin-bottom: 15px;">Следите за новыми вебинарами в личном кабинете</p>
+        <?php
+        $cabinet_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm;
+        ?>
+        <a href="<?php echo htmlspecialchars($cabinet_link); ?>" class="cta-button cta-button-secondary" style="display: inline-block; background: #ebebf0; color: #0077FF; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600;">
+            Перейти в личный кабинет
+        </a>
+    </div>
+</div>
+<?php
+$content = ob_get_clean();
+include __DIR__ . '/_webinar_base_layout.php';
