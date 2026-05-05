@@ -14,9 +14,6 @@ class WebinarEmailJourney {
     private $pdo;
     private const MAX_ATTEMPTS = 3;
     private const BATCH_SIZE = 50;
-    // Уменьшенный батч, когда активна CHAINS_PAUSED_UNTIL — чтобы welcome-письма
-    // дренировались плавно (cron каждую минуту → max 5/мин).
-    private const PAUSE_BATCH_SIZE = 5;
 
     public function __construct($pdo) {
         $this->pdo = $pdo;
@@ -182,7 +179,6 @@ class WebinarEmailJourney {
      * @return array Results with counts
      */
     public function processPendingEmails() {
-        // Вебинарные письма идут через Unisender Go — Яндекс-warmup не действует.
         require_once BASE_PATH . '/includes/email-helper.php';
         $codeFilter = '';
         $batchSize  = self::BATCH_SIZE;
@@ -265,14 +261,14 @@ class WebinarEmailJourney {
             $unsubscribeUrl = SITE_URL . '/pages/unsubscribe.php?token=' . $unsubscribeToken;
 
             $templateData = $this->prepareTemplateData($emailData, $unsubscribeUrl);
-            $textBody = $this->renderTextTemplate($emailData, $templateData);
+            $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
             $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
             EmailDispatcher::send([
                 'to_email'        => $emailData['email'],
                 'to_name'         => $emailData['full_name'],
                 'subject'         => $subject,
-                'text'            => $textBody,
+                'html'            => $htmlBody,
                 'unsubscribe_url' => $unsubscribeUrl,
                 'meta'            => [
                     'email_type'      => 'webinar',
@@ -395,75 +391,6 @@ class WebinarEmailJourney {
         ob_start();
         include $templatePath;
         return ob_get_clean();
-    }
-
-    /**
-     * Render plain text version
-     */
-    private function renderTextTemplate($emailData, $data) {
-        $text = "Здравствуйте, {$data['user_name']}!\n\n";
-
-        switch ($emailData['touchpoint_code']) {
-            case 'webinar_confirmation':
-                $text .= "Вы зарегистрированы на вебинар «{$data['webinar_title']}».\n\n";
-                $text .= "Когда: {$data['webinar_datetime_full']}\n";
-                $text .= "Продолжительность: {$data['webinar_duration']} минут\n";
-                if ($data['speaker_name']) {
-                    $text .= "Спикер: {$data['speaker_name']}";
-                    if ($data['speaker_position']) { $text .= ", {$data['speaker_position']}"; }
-                    $text .= "\n";
-                }
-                $text .= "\nДобавить в Google Calendar: {$data['google_calendar_url']}\n";
-                $text .= "Файл .ics: {$data['calendar_url']}\n\n";
-                $text .= "Ссылка на трансляцию придёт за 1 час до начала.\n";
-                $text .= "Личный кабинет: {$data['cabinet_url']}\n";
-                break;
-
-            case 'webinar_reminder_24h':
-                $text .= "Напоминаем: завтра в {$data['webinar_time']} МСК состоится вебинар «{$data['webinar_title']}».\n\n";
-                $text .= "Когда: {$data['webinar_datetime_full']}\n";
-                $text .= "Продолжительность: {$data['webinar_duration']} минут\n";
-                if ($data['speaker_name']) { $text .= "Спикер: {$data['speaker_name']}\n"; }
-                if (!empty($data['broadcast_url'])) {
-                    $text .= "\nСсылка на трансляцию (сохраните):\n{$data['broadcast_url']}\n";
-                } else {
-                    $text .= "\nСсылка на трансляцию придёт за 1 час до начала.\n";
-                }
-                $text .= "\nПодробнее: {$data['webinar_url']}\n";
-                break;
-
-            case 'webinar_broadcast_link':
-                $text .= "Через 1 час начнётся вебинар «{$data['webinar_title']}»!\n\n";
-                $text .= "Начало: {$data['webinar_time']} МСК\n";
-                if ($data['speaker_name']) { $text .= "Спикер: {$data['speaker_name']}\n"; }
-                $text .= "\nСсылка на трансляцию:\n{$data['broadcast_url']}\n\n";
-                $text .= "Войдите за 5 минут до начала, чтобы проверить звук и видео.\n";
-                $text .= "Не сможете присутствовать? Запись будет в личном кабинете: {$data['cabinet_url']}\n";
-                break;
-
-            case 'webinar_reminder_15min':
-                $text .= "До начала вебинара «{$data['webinar_title']}» осталось 15 минут!\n\n";
-                $text .= "Ссылка на трансляцию:\n{$data['broadcast_url']}\n\n";
-                $text .= "Войдите прямо сейчас, чтобы занять место.\n";
-                break;
-
-            case 'webinar_followup':
-                $text .= "Спасибо за участие в вебинаре «{$data['webinar_title']}»!\n\n";
-                $text .= "Запись будет отправлена вам на почту в течение суток.\n\n";
-                $text .= "Презентация и подарок от спикера: https://clck.ru/3SaKHd\n";
-                $text .= "Анкета обратной связи (займёт 2 минуты): https://clck.ru/3SaLJ4\n\n";
-                $text .= "Именной сертификат на {$data['certificate_hours']} академических часа — " . number_format($data['certificate_price'], 0, '', ' ') . " руб.\n";
-                $text .= "Оформить сертификат: {$data['certificate_url']}\n\n";
-                $text .= "Личный кабинет: {$data['cabinet_url']}\n";
-                break;
-        }
-
-        $text .= "\n--\n";
-        $text .= "С уважением, команда ФГОС-Практикум\n";
-        $text .= "{$data['site_url']}\n\n";
-        $text .= "Если письмо пришло по ошибке — отписаться: {$data['unsubscribe_url']}\n";
-
-        return $text;
     }
 
     /**

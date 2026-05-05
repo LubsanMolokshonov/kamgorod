@@ -101,8 +101,6 @@ class OlympiadEmailChain {
      * Обработка очереди писем (вызывается из cron)
      */
     public function processPendingEmails() {
-        // Олимпиадные письма идут через Unisender Go — Яндекс-прогрев (chainEmailsPaused)
-        // их не касается. Throttling по получателю остаётся ниже.
         require_once BASE_PATH . '/includes/email-helper.php';
 
         $now = date('Y-m-d H:i:s');
@@ -239,9 +237,7 @@ class OlympiadEmailChain {
                 $templateData['discount_hours'] = $discountHours;
             }
 
-            // Plain-text режим: шаблоны после миграции 2026-05 возвращают сразу
-            // готовый текст (без HTML-обёртки) — обходим фильтры почтовиков.
-            $textBody = $this->renderTemplate($emailData['email_template'], $templateData);
+            $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
             $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
             $client = new UnisenderClient();
@@ -249,7 +245,7 @@ class OlympiadEmailChain {
                 'to_email'    => $emailData['email'],
                 'to_name'     => $emailData['full_name'],
                 'subject'     => $subject,
-                'text'        => $textBody,
+                'html'        => $htmlBody,
                 'track_links' => 0,
                 'track_read'  => 0,
                 'headers'     => [
@@ -298,31 +294,6 @@ class OlympiadEmailChain {
         ob_start();
         include $templatePath;
         return ob_get_clean();
-    }
-
-    /**
-     * Резервный рендер текстовой версии (используется как safety-net при ошибке
-     * рендера шаблона). Основные письма теперь сами возвращают plain-text —
-     * см. includes/email-templates/olympiad_*.php.
-     */
-    private function renderTextTemplate($data) {
-        $text = "Здравствуйте, {$data['user_name']}!\n\n";
-        $text .= "Напоминаем о неоплаченном дипломе олимпиады «{$data['olympiad_title']}».\n\n";
-
-        if ($data['score']) {
-            $text .= "Ваш результат: {$data['score']} из 10 баллов\n";
-        }
-        if ($data['placement_text']) {
-            $text .= "Место: {$data['placement_text']}\n";
-        }
-
-        $text .= "Стоимость диплома: " . number_format($data['olympiad_price'], 0, ',', ' ') . " руб.\n\n";
-        $text .= "Получить диплом: {$data['payment_url']}\n\n";
-        $text .= "—\n";
-        $text .= "Команда ФГОС-Практикум\nfgos.pro\n\n";
-        $text .= "Отписаться от рассылки: {$data['unsubscribe_url']}\n";
-
-        return $text;
     }
 
     /**
@@ -657,8 +628,7 @@ class OlympiadEmailChain {
                 'site_name' => 'ФГОС-Практикум',
             ];
 
-            // Plain-text режим (шаблоны после миграции 2026-05).
-            $textBody = $this->renderTemplate($tplConfig['template'], $templateData);
+            $htmlBody = $this->renderTemplate($tplConfig['template'], $templateData);
             $subject  = $this->interpolateSubject($tplConfig['subject'], $templateData);
 
             $client = new UnisenderClient();
@@ -666,7 +636,7 @@ class OlympiadEmailChain {
                 'to_email'    => $emailData['email'],
                 'to_name'     => $emailData['full_name'],
                 'subject'     => $subject,
-                'text'        => $textBody,
+                'html'        => $htmlBody,
                 'track_links' => 0,
                 'track_read'  => 0,
                 'headers'     => [

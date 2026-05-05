@@ -106,7 +106,6 @@ class SilentReengagementCampaign {
      * @return array ['sent'=>N, 'skipped'=>N, 'failed'=>N]
      */
     public function send(int $limit, bool $dryRun = false): array {
-        // Идёт через Unisender Go — Яндекс-warmup не действует.
         require_once BASE_PATH . '/includes/email-helper.php';
 
         $rows = $this->db->query(
@@ -188,13 +187,13 @@ class SilentReengagementCampaign {
         $templateData['unsubscribe_url'] = $unsubscribeUrl;
 
         $subject = 'Скидка ' . (int)($templateData['discount_percent']) . '% до ' . $templateData['discount_expires_label'] . ' — специально для вас';
-        $textBody = $this->renderTextVersion($templateData);
+        $htmlBody = $this->renderTemplate('silent_reengagement', $templateData);
 
         EmailDispatcher::send([
             'to_email'        => $user['email'],
             'to_name'         => $user['full_name'],
             'subject'         => $subject,
-            'text'            => $textBody,
+            'html'            => $htmlBody,
             'unsubscribe_url' => $unsubscribeUrl,
             'meta'            => [
                 // 'silent_reengagement' нет в ENUM — используем 'other'.
@@ -428,21 +427,6 @@ class SilentReengagementCampaign {
         ob_start();
         include $path;
         return ob_get_clean();
-    }
-
-    private function renderTextVersion(array $d): string {
-        $t = "Здравствуйте, {$d['user_name']}!\n\n";
-        $t .= $d['intro_text'] . "\n\n";
-        $t .= "Скидка {$d['discount_percent']}% до {$d['discount_expires_label']} применится автоматически после входа в ЛК:\n";
-        $t .= $d['magic_login_url'] . "\n\n";
-        if (!empty($d['recommendations'])) {
-            $t .= "Для вас:\n";
-            foreach ($d['recommendations'] as $r) {
-                $t .= '- ' . $r['title'] . ': ' . $r['url'] . "\n";
-            }
-        }
-        $t .= "\n---\nКаменный город / ФГОС-Практикум\nОтписаться: " . ($d['unsubscribe_url'] ?? '') . "\n";
-        return $t;
     }
 
     private function updateStatus(int $id, string $status, ?string $error = null): void {

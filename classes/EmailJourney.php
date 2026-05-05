@@ -96,7 +96,6 @@ class EmailJourney {
      * Called by cron job
      */
     public function processPendingEmails() {
-        // Конкурсные письма идут через Unisender Go — Яндекс-warmup не действует.
         require_once BASE_PATH . '/includes/email-helper.php';
         $now = date('Y-m-d H:i:s');
 
@@ -189,14 +188,14 @@ class EmailJourney {
                 'touchpoint_code' => $emailData['touchpoint_code']
             ];
 
-            $textBody = $this->renderTextTemplate($templateData);
+            $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
             $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
             EmailDispatcher::send([
                 'to_email'        => $emailData['email'],
                 'to_name'         => $emailData['full_name'],
                 'subject'         => $subject,
-                'text'            => $textBody,
+                'html'            => $htmlBody,
                 'unsubscribe_url' => $unsubscribeUrl,
                 'meta'            => [
                     'email_type'      => 'journey',
@@ -232,29 +231,6 @@ class EmailJourney {
         ob_start();
         include $templatePath;
         return ob_get_clean();
-    }
-
-    /**
-     * Render plain text version
-     */
-    private function renderTextTemplate($data) {
-        $text = "Здравствуйте, {$data['user_name']}!\n\n";
-        $text .= "Напоминаем о незавершённой регистрации на конкурс \"{$data['competition_title']}\".\n\n";
-
-        if ($data['nomination']) {
-            $text .= "Номинация: {$data['nomination']}\n";
-        }
-        if ($data['work_title']) {
-            $text .= "Название работы: {$data['work_title']}\n";
-        }
-
-        $text .= "Стоимость участия: " . number_format($data['competition_price'], 0, ',', ' ') . " руб.\n\n";
-        $text .= "Завершить регистрацию: {$data['payment_url']}\n\n";
-        $text .= "---\n";
-        $text .= "С уважением,\nКоманда ФГОС-Практикум\nfgos.pro\n\n";
-        $text .= "Отписаться от рассылки: {$data['unsubscribe_url']}\n";
-
-        return $text;
     }
 
     /**

@@ -235,7 +235,6 @@ class CoursePromoEmailCampaign {
      * Обработать один batch писем
      */
     public function processBatch(): array {
-        // Курсовая промо-рассылка идёт через Unisender Go — Яндекс-warmup не действует.
         require_once BASE_PATH . '/includes/email-helper.php';
         $results = ['sent' => 0, 'failed' => 0, 'skipped' => 0];
 
@@ -397,13 +396,13 @@ class CoursePromoEmailCampaign {
                 '_sender_name'  => CourseEmailChain::extractFirstName($sender['from_name']),
             ];
 
-            $textBody = $this->renderTextVersion($templateData);
+            $htmlBody = $this->renderTemplate('course_promo', $templateData);
 
             EmailDispatcher::send([
                 'to_email'        => $emailData['email'],
                 'to_name'         => $emailData['full_name'],
                 'subject'         => $subject,
-                'text'            => $textBody,
+                'html'            => $htmlBody,
                 'from_name'       => $sender['from_name'],
                 'reply_to'        => $sender['reply_to'],
                 'reply_to_name'   => $sender['reply_to_name'],
@@ -444,48 +443,6 @@ class CoursePromoEmailCampaign {
         ob_start();
         include $templatePath;
         return ob_get_clean();
-    }
-
-    /**
-     * Текстовая версия письма
-     */
-    private function renderTextVersion(array $data): string {
-        $programLabel = $data['course_program_type'] === 'pp'
-            ? 'профессиональная переподготовка'
-            : 'повышение квалификации';
-        $document = $data['course_program_type'] === 'pp'
-            ? 'диплом о профессиональной переподготовке'
-            : 'удостоверение о повышении квалификации';
-        $price = number_format($data['course_price'], 0, ',', ' ');
-        $hours = (int)$data['course_hours'];
-
-        $courseUrl = $data['course_url']
-            . (strpos($data['course_url'], '?') !== false ? '&' : '?')
-            . 'utm_source=email&utm_medium=promo&utm_campaign=course_promo';
-
-        $senderName = $data['_sender_name'] ?? 'Родион';
-
-        $text  = "Здравствуйте, {$data['user_name']}.\n\n";
-        $text .= "Подумал, что вам может быть интересна наша программа {$programLabel}\n";
-        $text .= "«{$data['course_title']}» — {$hours} ч., заочно с применением ДОТ.\n";
-        $text .= "По итогам — {$document}, данные вносятся в ФИС ФРДО.\n";
-        $text .= "Стоимость обучения — {$price} руб.\n\n";
-        if (!empty($data['course_description'])) {
-            $desc = trim(preg_replace('/\s+/', ' ', strip_tags($data['course_description'])));
-            $desc = mb_substr($desc, 0, 280);
-            $text .= "Кратко о программе: {$desc}\n\n";
-        }
-        $text .= "Подробности и форма записи: {$courseUrl}\n\n";
-        $text .= "Обучение проводит ООО «Едурегионлаб», участник проекта «Сколково»\n";
-        $text .= "(разрешение Фонда № 068), лицензия на образовательную деятельность.\n";
-        $text .= "Это важно: с 01.09.2025 действуют новые требования ФЗ от 21.04.2025 № 86-ФЗ\n";
-        $text .= "к организациям, обучающим педагогов.\n\n";
-        $text .= "Если программа не подходит или не нужна сейчас — просто ответьте,\n";
-        $text .= "и я не буду больше беспокоить.\n\n";
-        $text .= "С уважением,\n{$senderName}\nФГОС-Практикум\n\n";
-        $text .= "Отписаться: {$data['unsubscribe_url']}";
-
-        return $text;
     }
 
     /**

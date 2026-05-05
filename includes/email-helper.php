@@ -56,7 +56,7 @@ function scheduleDelayedEmail(string $emailType, int $userId, int $orderId, int 
 
 /**
  * Транзакционка: подтверждение успешной оплаты заказа (magic-link на ЛК).
- * PDF-вложения сейчас не используются — все документы доступны в кабинете.
+ * PDF-вложения не используются — все документы доступны в кабинете.
  */
 function sendPaymentSuccessEmail($userId, $orderId) {
     global $db;
@@ -75,22 +75,13 @@ function sendPaymentSuccessEmail($userId, $orderId) {
         }
 
         $cabinetUrl = generateMagicUrl((int)$userId, '/kabinet/', 14);
-        $name  = trim((string)($user['full_name'] ?? ''));
-        $greet = $name !== '' ? "Здравствуйте, {$name}!" : 'Здравствуйте!';
-
-        $textBody  = $greet . "\n\n";
-        $textBody .= "Спасибо за оплату заказа {$order['order_number']} на сайте Педагогического портала «Каменный город» (fgos.pro).\n\n";
-        $textBody .= "Все ваши документы (дипломы и сертификаты) сформированы и доступны в личном кабинете по ссылке:\n";
-        $textBody .= $cabinetUrl . "\n\n";
-        $textBody .= "Ссылка действует 14 дней и автоматически авторизует вас на сайте.\n\n";
-        $textBody .= "Если возникнут вопросы — ответьте на это письмо или напишите на info@fgos.pro.\n\n";
-        $textBody .= "С уважением,\nКоманда Педагогического портала «Каменный город»\nfgos.pro\n";
+        $htmlBody = buildSuccessEmailBody($order, $user, $cabinetUrl);
 
         EmailDispatcher::send([
             'to_email' => $user['email'],
             'to_name'  => $user['full_name'],
             'subject'  => 'Документы по заказу ' . $order['order_number'] . ' (личный кабинет)',
-            'text'     => $textBody,
+            'html'     => $htmlBody,
             'meta'     => [
                 'email_type'      => 'payment',
                 'touchpoint_code' => 'payment_success',
@@ -148,25 +139,13 @@ function sendLifetimeDiscountGrantedEmail($userId, $orderId) {
         $cartPct          = (int)round(LoyaltyDiscount::RATE_CART * 100);
         $coursePct        = (int)round(LoyaltyDiscount::RATE_COURSE * 100);
 
-        $name  = trim((string)($user['full_name'] ?? ''));
-        $greet = $name !== '' ? "Здравствуйте, {$name}!" : 'Здравствуйте!';
-
-        $textBody  = $greet . "\n\n";
-        $textBody .= "Спасибо за заказ {$order['order_number']} на сайте Педагогического портала «Каменный город» (fgos.pro).\n\n";
-        $textBody .= "Мы активировали для вас пожизненную скидку лояльности:\n";
-        $textBody .= "  • {$cartPct}% на конкурсы, олимпиады, видеолекции и публикации;\n";
-        $textBody .= "  • {$coursePct}% на курсы повышения квалификации и переподготовки.\n\n";
-        $textBody .= "Скидка применяется автоматически при следующих заказах из вашего личного кабинета:\n";
-        $textBody .= $cabinetUrl . "\n\n";
-        $textBody .= "Ссылка действует 14 дней и автоматически авторизует вас на сайте.\n\n";
-        $textBody .= "Если возникнут вопросы — ответьте на это письмо или напишите на info@fgos.pro.\n\n";
-        $textBody .= "С уважением,\nКоманда Педагогического портала «Каменный город»\nfgos.pro\n";
+        $htmlBody = buildLifetimeDiscountEmailBody($order, $user, $cabinetUrl, $unsubscribeUrl, $cartPct, $coursePct);
 
         EmailDispatcher::send([
             'to_email'        => $user['email'],
             'to_name'         => $user['full_name'],
             'subject'         => 'Ваша пожизненная скидка активирована',
-            'text'            => $textBody,
+            'html'            => $htmlBody,
             'unsubscribe_url' => $unsubscribeUrl,
             'meta'            => [
                 // 'loyalty' нет в ENUM email_events.email_type — используем 'payment'
@@ -207,20 +186,14 @@ function sendPaymentFailureEmail($userId, $orderId) {
 
         $cartLink    = generateMagicUrl($user['id'], '/pages/cart.php');
         $orderNumber = $order['order_number'];
-        $fullName    = $user['full_name'];
 
-        $textBody = "Здравствуйте, {$fullName}!\n\n"
-            . "К сожалению, платёж по заказу №{$orderNumber} не был завершён.\n\n"
-            . "Попробовать оплатить ещё раз можно по ссылке (она автоматически авторизует вас на сайте):\n"
-            . $cartLink . "\n\n"
-            . "Если возникнут вопросы — ответьте на это письмо или напишите на info@fgos.pro.\n\n"
-            . "С уважением,\nКоманда Педагогического портала «Каменный город»\nfgos.pro\n";
+        $htmlBody = buildFailureEmailBody($order, $user, $cartLink);
 
         EmailDispatcher::send([
             'to_email' => $user['email'],
             'to_name'  => $user['full_name'],
             'subject'  => 'Проблема с оплатой заказа ' . $orderNumber,
-            'text'     => $textBody,
+            'html'     => $htmlBody,
             'meta'     => [
                 'email_type'      => 'payment',
                 'touchpoint_code' => 'payment_failure',
@@ -262,6 +235,114 @@ function logEmail($level, $email, $orderNumber, $message) {
     }
 
     error_log($logMessage, 3, $logFile);
+}
+
+/**
+ * HTML-обёртка для транзакционных писем оплаты.
+ * Минимальный inline-CSS — большинство почтовиков (Gmail, Mail.ru, Яндекс) корректно рендерят.
+ */
+function renderTransactionalEmailLayout(string $headerTitle, string $headerSubtitle, string $contentHtml): string {
+    $year = date('Y');
+    return <<<HTML
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{$headerTitle}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f7fb;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;">
+    <div style="max-width:600px;margin:0 auto;padding:20px;">
+        <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:30px;text-align:center;border-radius:8px 8px 0 0;">
+            <h1 style="margin:0 0 8px 0;font-size:24px;font-weight:600;">{$headerTitle}</h1>
+            <p style="margin:0;opacity:0.9;font-size:16px;">{$headerSubtitle}</p>
+        </div>
+        <div style="background:#ffffff;padding:30px;border-radius:0 0 8px 8px;border:1px solid #e9ecf3;border-top:none;">
+            {$contentHtml}
+        </div>
+        <div style="text-align:center;color:#777;font-size:13px;margin-top:25px;padding-top:15px;">
+            <p style="margin:0 0 6px 0;">С уважением,<br>Команда Педагогического портала «Каменный город»</p>
+            <p style="margin:0;font-size:12px;color:#999;">© {$year} fgos.pro · автоматическое уведомление</p>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+}
+
+function buildSuccessEmailBody(array $order, array $user, string $cabinetUrl): string {
+    $orderNumber = htmlspecialchars($order['order_number'] ?? '', ENT_QUOTES, 'UTF-8');
+    $fullName    = htmlspecialchars(trim((string)($user['full_name'] ?? '')), ENT_QUOTES, 'UTF-8');
+    $greet       = $fullName !== '' ? "Здравствуйте, <strong>{$fullName}</strong>!" : 'Здравствуйте!';
+    $cabinetUrlEsc = htmlspecialchars($cabinetUrl, ENT_QUOTES, 'UTF-8');
+
+    $btn = "<a href=\"{$cabinetUrlEsc}\" style=\"display:inline-block;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;box-shadow:0 4px 14px rgba(102,126,234,0.35);\">Открыть личный кабинет</a>";
+
+    $content = <<<HTML
+        <p style="margin:0 0 18px 0;font-size:16px;">{$greet}</p>
+        <p style="margin:0 0 18px 0;">Спасибо за оплату заказа <strong>№{$orderNumber}</strong>. Все ваши документы (дипломы, сертификаты, свидетельства) сформированы и доступны в личном кабинете.</p>
+        <div style="text-align:center;margin:28px 0;">{$btn}</div>
+        <p style="margin:0 0 12px 0;color:#5a5f6b;font-size:14px;">Ссылка действует 14 дней и автоматически авторизует вас на сайте — вводить пароль не нужно.</p>
+        <p style="margin:18px 0 0 0;color:#5a5f6b;font-size:14px;">Если возникнут вопросы — ответьте на это письмо или напишите на <a href="mailto:info@fgos.pro" style="color:#667eea;">info@fgos.pro</a>.</p>
+HTML;
+
+    return renderTransactionalEmailLayout(
+        'Благодарим за покупку!',
+        'Заказ №' . $orderNumber . ' успешно оплачен',
+        $content
+    );
+}
+
+function buildLifetimeDiscountEmailBody(array $order, array $user, string $cabinetUrl, string $unsubscribeUrl, int $cartPct, int $coursePct): string {
+    $orderNumber   = htmlspecialchars($order['order_number'] ?? '', ENT_QUOTES, 'UTF-8');
+    $fullName      = htmlspecialchars(trim((string)($user['full_name'] ?? '')), ENT_QUOTES, 'UTF-8');
+    $greet         = $fullName !== '' ? "Здравствуйте, <strong>{$fullName}</strong>!" : 'Здравствуйте!';
+    $cabinetUrlEsc = htmlspecialchars($cabinetUrl, ENT_QUOTES, 'UTF-8');
+    $unsubEsc      = htmlspecialchars($unsubscribeUrl, ENT_QUOTES, 'UTF-8');
+
+    $btn = "<a href=\"{$cabinetUrlEsc}\" style=\"display:inline-block;background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;box-shadow:0 4px 14px rgba(34,197,94,0.3);\">Перейти в кабинет</a>";
+
+    $content = <<<HTML
+        <p style="margin:0 0 18px 0;font-size:16px;">{$greet}</p>
+        <p style="margin:0 0 18px 0;">Спасибо за заказ <strong>№{$orderNumber}</strong>. Мы активировали для вас <strong>пожизненную скидку лояльности</strong> на все следующие покупки:</p>
+        <ul style="margin:0 0 22px 0;padding-left:22px;color:#333;">
+            <li style="margin-bottom:8px;"><strong>{$cartPct}%</strong> — на конкурсы, олимпиады, видеолекции и публикации</li>
+            <li><strong>{$coursePct}%</strong> — на курсы повышения квалификации и переподготовки</li>
+        </ul>
+        <p style="margin:0 0 22px 0;color:#5a5f6b;">Скидка применяется автоматически при оформлении следующих заказов в личном кабинете.</p>
+        <div style="text-align:center;margin:28px 0;">{$btn}</div>
+        <p style="margin:0;color:#5a5f6b;font-size:13px;">Ссылка действует 14 дней и автоматически авторизует вас на сайте.</p>
+        <p style="margin:24px 0 0 0;font-size:12px;color:#9aa0ad;text-align:center;">Если вы не хотите получать такие уведомления — <a href="{$unsubEsc}" style="color:#9aa0ad;text-decoration:underline;">отписаться</a>.</p>
+HTML;
+
+    return renderTransactionalEmailLayout(
+        'Скидка лояльности активирована',
+        'Заказ №' . $orderNumber,
+        $content
+    );
+}
+
+function buildFailureEmailBody(array $order, array $user, string $cartLink): string {
+    $orderNumber = htmlspecialchars($order['order_number'] ?? '', ENT_QUOTES, 'UTF-8');
+    $fullName    = htmlspecialchars(trim((string)($user['full_name'] ?? '')), ENT_QUOTES, 'UTF-8');
+    $greet       = $fullName !== '' ? "Здравствуйте, <strong>{$fullName}</strong>!" : 'Здравствуйте!';
+    $cartLinkEsc = htmlspecialchars($cartLink, ENT_QUOTES, 'UTF-8');
+
+    $btn = "<a href=\"{$cartLinkEsc}\" style=\"display:inline-block;background:linear-gradient(135deg,#ef4444 0%,#dc2626 100%);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;box-shadow:0 4px 14px rgba(239,68,68,0.3);\">Повторить оплату</a>";
+
+    $content = <<<HTML
+        <p style="margin:0 0 18px 0;font-size:16px;">{$greet}</p>
+        <p style="margin:0 0 18px 0;">К сожалению, платёж по заказу <strong>№{$orderNumber}</strong> не был завершён. Это могло произойти из-за обрыва соединения, недостаточного баланса на карте или ограничений банка.</p>
+        <p style="margin:0 0 22px 0;">Попробовать оплатить ещё раз можно по ссылке ниже — она автоматически авторизует вас на сайте, заполненная корзина уже ждёт.</p>
+        <div style="text-align:center;margin:28px 0;">{$btn}</div>
+        <p style="margin:18px 0 0 0;color:#5a5f6b;font-size:14px;">Если оплатить повторно не получается — ответьте на это письмо или напишите на <a href="mailto:info@fgos.pro" style="color:#667eea;">info@fgos.pro</a>, мы поможем разобраться.</p>
+HTML;
+
+    return renderTransactionalEmailLayout(
+        'Оплата не прошла',
+        'Заказ №' . $orderNumber,
+        $content
+    );
 }
 
 /**
