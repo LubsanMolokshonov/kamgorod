@@ -125,19 +125,27 @@ class Bitrix24Integration {
     /**
      * Найти контакт по email
      *
+     * Используем crm.duplicate.findbycomm — поле EMAIL в Bitrix24 multi-value,
+     * crm.contact.list с фильтром по EMAIL ищет ненадёжно и часто возвращает пусто.
+     *
      * @param string $email Email для поиска
-     * @return array|null Данные контакта или null
+     * @return array|null ['ID' => string] первого найденного контакта или null
      */
     public function findContact($email) {
+        if (empty($email)) {
+            return null;
+        }
+
         $params = [
-            'filter' => ['EMAIL' => $email],
-            'select' => ['ID', 'NAME', 'LAST_NAME', 'EMAIL', 'PHONE']
+            'entity_type' => 'CONTACT',
+            'type' => 'EMAIL',
+            'values' => [$email],
         ];
 
-        $result = $this->call('crm.contact.list', $params);
+        $result = $this->call('crm.duplicate.findbycomm', $params);
 
-        if ($result && isset($result['result']) && !empty($result['result'])) {
-            return $result['result'][0];
+        if ($result && !empty($result['result']['CONTACT'][0])) {
+            return ['ID' => (string)$result['result']['CONTACT'][0]];
         }
 
         return null;
