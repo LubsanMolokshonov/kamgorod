@@ -7,8 +7,7 @@
 require_once __DIR__ . '/Database.php';
 require_once __DIR__ . '/EmailCampaignDiscount.php';
 require_once __DIR__ . '/LoyaltyDiscount.php';
-require_once __DIR__ . '/UnisenderClient.php';
-require_once __DIR__ . '/EmailTracker.php';
+require_once __DIR__ . '/EmailDispatcher.php';
 require_once __DIR__ . '/../includes/magic-link-helper.php';
 
 class OlympiadEmailChain {
@@ -242,39 +241,33 @@ class OlympiadEmailChain {
                 $templateData['discount_hours'] = $discountHours;
             }
 
+            require_once __DIR__ . '/CourseEmailChain.php';
+            $sender = \CourseEmailChain::pickPersonalSender($emailData['email']);
+            $templateData['_sender_name'] = \CourseEmailChain::extractFirstName($sender['from_name']);
+            $templateData['sender_signature'] = $sender['from_name'];
+
             $htmlBody = $this->renderTemplate($emailData['email_template'], $templateData);
             $subject  = $this->interpolateSubject($emailData['email_subject'], $templateData);
 
-            $client = new UnisenderClient();
-            $result = $client->sendEmail([
-                'to_email'    => $emailData['email'],
-                'to_name'     => $emailData['full_name'],
-                'subject'     => $subject,
-                'html'        => $htmlBody,
-                'track_links' => 0,
-                'track_read'  => 0,
-                'headers'     => [
-                    'List-Unsubscribe'      => '<' . $unsubscribeUrl . '>',
-                    'List-Unsubscribe-Post' => 'List-Unsubscribe=One-Click',
+            $dispatch = EmailDispatcher::send([
+                'to_email'        => $emailData['email'],
+                'to_name'         => $emailData['full_name'],
+                'subject'         => $subject,
+                'html'            => $htmlBody,
+                'from_name'       => $sender['from_name'],
+                'reply_to'        => $sender['reply_to'],
+                'reply_to_name'   => $sender['reply_to_name'],
+                'unsubscribe_url' => $unsubscribeUrl,
+                'meta'            => [
+                    'email_type'      => 'olympiad',
+                    'touchpoint_code' => $emailData['touchpoint_code'],
+                    'chain_log_id'    => $emailData['id'],
+                    'chain_log_table' => 'olympiad_email_log',
+                    'user_id'         => $emailData['user_id'] ?? null,
                 ],
             ]);
 
-            if (!$result['ok']) {
-                throw new \Exception('Unisender: ' . ($result['error'] ?? 'unknown') . ' (HTTP ' . $result['http_code'] . ')');
-            }
-
-            EmailTracker::recordExternalSend([
-                'email_type'      => 'olympiad',
-                'touchpoint_code' => $emailData['touchpoint_code'],
-                'chain_log_id'    => $emailData['id'],
-                'chain_log_table' => 'olympiad_email_log',
-                'user_id'         => $emailData['user_id'] ?? null,
-                'recipient_email' => $emailData['email'],
-                'message_id'      => $result['email_id'],
-                'subject'         => $subject,
-            ]);
-
-            $this->log("SENT | {$emailData['email']} | {$emailData['touchpoint_code']} | OlympiadRegistration {$emailData['olympiad_registration_id']} | unisender_id={$result['email_id']}");
+            $this->log("SENT | {$emailData['email']} | {$emailData['touchpoint_code']} | OlympiadRegistration {$emailData['olympiad_registration_id']} | mid={$dispatch['message_id']} | unisender_id={$dispatch['unisender_id']}");
             return true;
 
         } catch (\Throwable $e) {
@@ -592,7 +585,7 @@ class OlympiadEmailChain {
         require_once BASE_PATH . '/vendor/autoload.php';
 
         $templateMap = [
-            'reg_welcome' => ['template' => 'olympiad_reg_welcome', 'subject' => 'Добро пожаловать на олимпиаду!'],
+            'reg_welcome' => ['template' => 'olympiad_reg_welcome', 'subject' => 'Регистрация на олимпиаду «{olympiad_title}»'],
             'reg_reminder_1h' => ['template' => 'olympiad_reg_reminder_1h', 'subject' => 'Олимпиада ждёт вас — начните тест!'],
             'quiz_success' => ['template' => 'olympiad_quiz_success', 'subject' => '{user_name}, поздравляем с {placement}! Ваш диплом готов к оформлению'],
             'quiz_success_reminder_24h' => ['template' => 'olympiad_quiz_success_reminder_24h', 'subject' => '{user_name}, ваш диплом за {placement} ждёт оформления'],
@@ -638,39 +631,33 @@ class OlympiadEmailChain {
                 'site_name' => 'ФГОС-Практикум',
             ];
 
+            require_once __DIR__ . '/CourseEmailChain.php';
+            $sender = \CourseEmailChain::pickPersonalSender($emailData['email']);
+            $templateData['_sender_name'] = \CourseEmailChain::extractFirstName($sender['from_name']);
+            $templateData['sender_signature'] = $sender['from_name'];
+
             $htmlBody = $this->renderTemplate($tplConfig['template'], $templateData);
             $subject  = $this->interpolateSubject($tplConfig['subject'], $templateData);
 
-            $client = new UnisenderClient();
-            $result = $client->sendEmail([
-                'to_email'    => $emailData['email'],
-                'to_name'     => $emailData['full_name'],
-                'subject'     => $subject,
-                'html'        => $htmlBody,
-                'track_links' => 0,
-                'track_read'  => 0,
-                'headers'     => [
-                    'List-Unsubscribe'      => '<' . $unsubscribeUrl . '>',
-                    'List-Unsubscribe-Post' => 'List-Unsubscribe=One-Click',
+            $dispatch = EmailDispatcher::send([
+                'to_email'        => $emailData['email'],
+                'to_name'         => $emailData['full_name'],
+                'subject'         => $subject,
+                'html'            => $htmlBody,
+                'from_name'       => $sender['from_name'],
+                'reply_to'        => $sender['reply_to'],
+                'reply_to_name'   => $sender['reply_to_name'],
+                'unsubscribe_url' => $unsubscribeUrl,
+                'meta'            => [
+                    'email_type'      => 'olympiad',
+                    'touchpoint_code' => $emailType,
+                    'chain_log_id'    => $emailData['id'] ?? null,
+                    'chain_log_table' => 'olympiad_quiz_email_log',
+                    'user_id'         => $emailData['user_id'] ?? null,
                 ],
             ]);
 
-            if (!$result['ok']) {
-                throw new \Exception('Unisender: ' . ($result['error'] ?? 'unknown') . ' (HTTP ' . $result['http_code'] . ')');
-            }
-
-            EmailTracker::recordExternalSend([
-                'email_type'      => 'olympiad',
-                'touchpoint_code' => $emailType,
-                'chain_log_id'    => $emailData['id'] ?? null,
-                'chain_log_table' => 'olympiad_quiz_email_log',
-                'user_id'         => $emailData['user_id'] ?? null,
-                'recipient_email' => $emailData['email'],
-                'message_id'      => $result['email_id'],
-                'subject'         => $subject,
-            ]);
-
-            $this->log("QUIZ_SENT | {$emailData['email']} | {$emailType} | Olympiad {$emailData['olympiad_id']} | unisender_id={$result['email_id']}");
+            $this->log("QUIZ_SENT | {$emailData['email']} | {$emailType} | Olympiad {$emailData['olympiad_id']} | mid={$dispatch['message_id']} | unisender_id={$dispatch['unisender_id']}");
             return true;
 
         } catch (\Throwable $e) {
