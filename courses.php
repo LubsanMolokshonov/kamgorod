@@ -52,6 +52,12 @@ if ($selectedCategory) {
     if ($selectedCategoryData) {
         $audienceTypes = $audienceCatObj->getAudienceTypes($selectedCategoryData['id']);
     }
+} else {
+    // Аудитория в курсах скрыта — по умолчанию показываем уровни для «Педагогам»
+    $defaultCategoryData = $audienceCatObj->getBySlug('pedagogi');
+    if ($defaultCategoryData) {
+        $audienceTypes = $audienceCatObj->getAudienceTypes($defaultCategoryData['id']);
+    }
 }
 if ($selectedType) {
     $selectedTypeData = $audienceTypeObj->getBySlug($selectedType);
@@ -105,9 +111,10 @@ foreach ($audienceCategories as $cat) {
 }
 
 $audienceTypeCounts = [];
-if (!empty($selectedCategory) && !empty($audienceTypes)) {
+if (!empty($audienceTypes)) {
     $typeBaseFilters = $catBaseFilters;
     if ($selectedCategoryData) $typeBaseFilters['audience_category'] = $selectedCategoryData['id'];
+    elseif (!empty($defaultCategoryData)) $typeBaseFilters['audience_category'] = $defaultCategoryData['id'];
     foreach ($audienceTypes as $type) {
         $atFilters = $typeBaseFilters;
         $atFilters['audience_type'] = $type['slug'];
@@ -159,6 +166,24 @@ if ($selectedTypeData && !empty($selectedTypeData['target_participants_genitive'
 $h1Text = $baseTitle . ' для ' . $audiencePhrase;
 if (!empty($selectedSpecData)) $h1Text .= ' — ' . $selectedSpecData['name'];
 
+// Адаптация hero под тип программы
+if ($programType === 'kpk') {
+    $heroSubText   = 'Курсы повышения квалификации для педагогов. Удостоверение о повышении квалификации установленного образца — данные вносим в Федеральный реестр (ФИС ФРДО). Принимается при аттестации и проверках Рособрнадзора.';
+    $heroDocPill   = 'Удостоверение в ФИС ФРДО';
+    $heroDocBullet = 'Удостоверение о повышении квалификации — в ФИС ФРДО, видно на Госуслугах';
+    $heroFcTitle   = 'Удостоверение';
+} elseif ($programType === 'pp') {
+    $heroSubText   = 'Курсы профессиональной переподготовки для педагогов. Диплом о профессиональной переподготовке установленного образца — данные вносим в Федеральный реестр (ФИС ФРДО). Даёт право на ведение нового вида профессиональной деятельности.';
+    $heroDocPill   = 'Диплом в ФИС ФРДО';
+    $heroDocBullet = 'Диплом о профессиональной переподготовке — в ФИС ФРДО, видно на Госуслугах';
+    $heroFcTitle   = 'Диплом о ПП';
+} else {
+    $heroSubText   = 'Курсы повышения квалификации и профессиональной переподготовки. Удостоверение или диплом установленного образца — данные вносим в Федеральный реестр (ФИС ФРДО). Принимается при аттестации и проверках Рособрнадзора.';
+    $heroDocPill   = 'Удостоверение / Диплом в ФИС ФРДО';
+    $heroDocBullet = 'Удостоверение или диплом — в ФИС ФРДО, видно на Госуслугах';
+    $heroFcTitle   = 'ФИС ФРДО';
+}
+
 $pageTitle       = $h1Text . ' 2025-2026 | ' . SITE_NAME;
 $pageDescription = $h1Text . '. Дистанционное обучение с удостоверением установленного образца, внесение в ФИС ФРДО.';
 
@@ -190,6 +215,8 @@ function buildKursyUrl($params) {
     return $url;
 }
 
+$additionalCSS = ['/assets/css/courses.css?v=' . filemtime(__DIR__ . '/assets/css/courses.css')];
+$earlyHeadScripts = ['<script>' . file_get_contents(__DIR__ . '/assets/js/catalog-scroll.js') . '</script>'];
 include __DIR__ . '/includes/header-redesign.php';
 ?>
 
@@ -206,13 +233,13 @@ include __DIR__ . '/includes/header-redesign.php';
     <div>
       <div class="rd-pill-row reveal-stagger">
         <span class="rd-pill"><span class="dot"></span><?php echo $totalCourses; ?>+ программ обучения</span>
-        <span class="rd-pill indigo">Удостоверение в ФИС ФРДО</span>
+        <span class="rd-pill indigo"><?php echo htmlspecialchars($heroDocPill); ?></span>
         <span class="rd-pill">Разрешение Сколково № 068</span>
       </div>
       <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo htmlspecialchars($h1Text); ?> — <span class="accent">дистанционно</span></h1>
-      <p class="rd-hero-sub reveal">Курсы повышения квалификации и профессиональной переподготовки. Удостоверение установленного образца — данные вносим в Федеральный реестр (ФИС ФРДО). Принимается при аттестации и проверках Рособрнадзора.</p>
+      <p class="rd-hero-sub reveal"><?php echo htmlspecialchars($heroSubText); ?></p>
       <div class="rd-hero-bullets reveal-stagger">
-        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Удостоверение в ФИС ФРДО — видно на Госуслугах</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><?php echo htmlspecialchars($heroDocBullet); ?></div>
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Дистанционно — учитесь в удобном темпе</div>
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Доступ к материалам сразу после оплаты</div>
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Оплата для физ. и юр. лиц</div>
@@ -234,7 +261,7 @@ include __DIR__ . '/includes/header-redesign.php';
       </div>
       <div class="rd-float-card rd-fc-cat-2">
         <div class="rd-fc-icon">✓</div>
-        <div class="rd-fc-text"><div class="rd-fc-t">ФИС ФРДО</div><div class="rd-fc-s">видно на Госуслугах</div></div>
+        <div class="rd-fc-text"><div class="rd-fc-t"><?php echo htmlspecialchars($heroFcTitle); ?></div><div class="rd-fc-s">в ФИС ФРДО · Госуслуги</div></div>
       </div>
     </div>
   </div>
@@ -316,19 +343,7 @@ include __DIR__ . '/includes/header-redesign.php';
           <?php endforeach; ?>
         </div>
 
-        <!-- Аудитория -->
-        <?php if (!empty($audienceCategories)): ?>
-        <h4>Аудитория</h4>
-        <div class="rd-chip-list">
-          <?php foreach ($audienceCategories as $ac): ?>
-          <div class="rd-chip-row<?php echo $selectedCategory === $ac['slug'] ? ' active' : ''; ?>">
-            <label>
-              <a href="<?php echo buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '', 'ac' => $ac['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($ac['name'], ENT_QUOTES, 'UTF-8'); ?></a>
-            </label>
-          </div>
-          <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
+        <!-- Аудитория скрыта: все курсы для педагогов, фильтр был лишним шагом -->
 
         <!-- Уровень -->
         <?php if (!empty($audienceTypes)): ?>
@@ -363,17 +378,21 @@ include __DIR__ . '/includes/header-redesign.php';
 
       <!-- Каталог + карточки -->
       <div class="rd-catalog-main">
+        <div class="rd-course-search" style="margin-bottom:16px;">
+          <div style="position:relative;">
+            <svg style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--ink-400);pointer-events:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="search" id="courseSearchInput" placeholder="Поиск по программам — например, «дошкольное образование» или «математика»" autocomplete="off" style="width:100%;padding:14px 44px 14px 46px;font-size:15px;border:1.5px solid var(--ink-200,#e5e7eb);border-radius:12px;background:#fff;outline:none;transition:border-color .15s, box-shadow .15s;" onfocus="this.style.borderColor='var(--indigo-500,#6366f1)';this.style.boxShadow='0 0 0 4px rgba(99,102,241,.12)';" onblur="this.style.borderColor='var(--ink-200,#e5e7eb)';this.style.boxShadow='none';">
+            <button type="button" id="courseSearchClear" aria-label="Очистить" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer;padding:8px;color:var(--ink-400);line-height:0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div id="courseSearchStatus" style="display:none;margin-top:10px;font-size:14px;color:var(--ink-500,#6b7280);"></div>
+        </div>
         <div class="rd-catalog-toolbar">
-          <div class="rd-ct-count">Найдено <strong><?php echo $totalCourses; ?></strong> программ</div>
           <div class="rd-applied-tags">
             <?php if ($programType !== 'all'): ?>
               <a class="rd-applied-tag" href="<?php echo buildKursyUrl(['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>">
                 <?php echo htmlspecialchars(COURSE_PROGRAM_TYPES[$programType] ?? $programType, ENT_QUOTES, 'UTF-8'); ?> ×
-              </a>
-            <?php endif; ?>
-            <?php if ($selectedCategoryData): ?>
-              <a class="rd-applied-tag" href="<?php echo buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '']); ?>">
-                <?php echo htmlspecialchars($selectedCategoryData['name'], ENT_QUOTES, 'UTF-8'); ?> ×
               </a>
             <?php endif; ?>
             <?php if ($selectedTypeData): ?>
@@ -836,6 +855,102 @@ function submitConsultation(e) {
     });
 }
 
+// Полный массив всех курсов (для поиска)
+var allCoursesData = <?php echo json_encode($allCourses, JSON_UNESCAPED_UNICODE); ?>;
+var discountByType = {
+    kpk: <?php echo CoursePriceAB::getDiscountPercent($abVariant, 'kpk'); ?>,
+    pp:  <?php echo CoursePriceAB::getDiscountPercent($abVariant, 'pp'); ?>
+};
+
+function _coursesFmtPrice(num) { return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+function _coursesEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+function _coursesAbPrice(basePrice, course) {
+    var d = discountByType[course.program_type] || 0;
+    return d > 0 ? Math.round(basePrice * (1 - d / 100)) : basePrice;
+}
+function renderCourseCard(course) {
+    var desc = course.description ? course.description.replace(/<[^>]*>/g, '').substring(0, 120) + '…' : '';
+    var slug = course.slug || '';
+    var hours = (course.hours || 72) + ' ч.';
+    var ptLabel = course.program_type === 'pp' ? 'Профессиональная переподготовка' : 'Повышение квалификации';
+    var d = discountByType[course.program_type] || 0;
+    var basePrice = parseFloat(course.price) || 0;
+    var priceHtml = d > 0
+        ? '<span style="text-decoration:line-through;color:var(--ink-400);font-weight:500;font-size:13px;margin-right:6px;">' + _coursesFmtPrice(basePrice) + ' ₽</span>' + _coursesFmtPrice(_coursesAbPrice(basePrice, course)) + ' ₽'
+        : _coursesFmtPrice(basePrice) + ' ₽';
+    return '<a class="rd-card" href="/kursy/' + encodeURIComponent(slug) + '/" data-course-id="' + course.id + '">' +
+        '<div class="rd-card-pat"></div>' +
+        '<div class="rd-card-tags">' +
+          '<span class="rd-tag indigo">' + _coursesEsc(ptLabel) + '</span>' +
+          '<span class="rd-tag">' + _coursesEsc(hours) + '</span>' +
+        '</div>' +
+        '<h4>' + _coursesEsc(course.title) + '</h4>' +
+        '<div class="rd-card-meta">' + _coursesEsc(desc) + '</div>' +
+        '<div class="rd-card-foot">' +
+          '<div class="rd-price-now">' + priceHtml + '</div>' +
+          '<span class="rd-join-btn">К программе</span>' +
+        '</div>' +
+      '</a>';
+}
+
+// Поиск по программам
+(function() {
+    var input = document.getElementById('courseSearchInput');
+    var clearBtn = document.getElementById('courseSearchClear');
+    var status = document.getElementById('courseSearchStatus');
+    var grid = document.getElementById('coursesGrid');
+    var loadMoreContainer = document.getElementById('loadMoreContainer');
+    if (!input || !grid) return;
+
+    var originalGridHtml = null;
+    var debounceTimer = null;
+
+    function normalize(s) { return (s || '').toString().toLowerCase().replace(/ё/g, 'е').trim(); }
+
+    function applyFilter(q) {
+        q = normalize(q);
+        if (!q) {
+            if (originalGridHtml !== null) {
+                grid.innerHTML = originalGridHtml;
+                originalGridHtml = null;
+            }
+            if (loadMoreContainer) loadMoreContainer.style.display = '';
+            status.style.display = 'none';
+            clearBtn.style.display = 'none';
+            return;
+        }
+        if (originalGridHtml === null) originalGridHtml = grid.innerHTML;
+        clearBtn.style.display = '';
+        if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+
+        var tokens = q.split(/\s+/).filter(Boolean);
+        var matches = allCoursesData.filter(function(c) {
+            var hay = normalize((c.title || '') + ' ' + (c.description || ''));
+            return tokens.every(function(t) { return hay.indexOf(t) !== -1; });
+        });
+
+        if (matches.length === 0) {
+            grid.innerHTML = '';
+            status.style.display = '';
+            status.innerHTML = 'По запросу «' + _coursesEsc(q) + '» ничего не найдено. Попробуйте другие слова или <a href="#" id="courseSearchResetLink" style="color:var(--indigo-600);">сбросьте поиск</a>.';
+            var rl = document.getElementById('courseSearchResetLink');
+            if (rl) rl.addEventListener('click', function(e) { e.preventDefault(); input.value = ''; applyFilter(''); input.focus(); });
+            return;
+        }
+        grid.innerHTML = matches.map(renderCourseCard).join('');
+        status.style.display = '';
+        status.textContent = 'Найдено: ' + matches.length + ' ' + (matches.length % 10 === 1 && matches.length % 100 !== 11 ? 'программа' : (matches.length % 10 >= 2 && matches.length % 10 <= 4 && (matches.length % 100 < 10 || matches.length % 100 >= 20) ? 'программы' : 'программ'));
+    }
+
+    input.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        var v = input.value;
+        debounceTimer = setTimeout(function() { applyFilter(v); }, 120);
+    });
+    clearBtn.addEventListener('click', function() { input.value = ''; applyFilter(''); input.focus(); });
+    input.addEventListener('keydown', function(e) { if (e.key === 'Escape' && input.value) { input.value = ''; applyFilter(''); } });
+})();
+
 // Load more
 (function() {
     var loadMoreBtn = document.getElementById('loadMoreBtn');
@@ -846,24 +961,6 @@ function submitConsultation(e) {
     var remainingCourses = <?php echo json_encode(array_slice($allCourses, $perPage), JSON_UNESCAPED_UNICODE); ?>;
     var perPage = <?php echo $perPage; ?>;
     var currentOffset = 0;
-    var discountByType = {
-        kpk: <?php echo CoursePriceAB::getDiscountPercent($abVariant, 'kpk'); ?>,
-        pp:  <?php echo CoursePriceAB::getDiscountPercent($abVariant, 'pp'); ?>
-    };
-
-    function formatPrice(num) {
-        return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    }
-    function escapeHtml(s) {
-        return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
-            return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
-        });
-    }
-    function calcAbPrice(basePrice, course) {
-        var d = discountByType[course.program_type] || 0;
-        if (d > 0) return Math.round(basePrice * (1 - d / 100));
-        return basePrice;
-    }
 
     loadMoreBtn.addEventListener('click', function() {
         var btn = this;
@@ -872,32 +969,7 @@ function submitConsultation(e) {
         btn.disabled = true;
         btn.textContent = 'Загрузка...';
 
-        var html = '';
-        batch.forEach(function(course) {
-            var desc = course.description ? course.description.replace(/<[^>]*>/g, '').substring(0, 120) + '…' : '';
-            var slug = course.slug || '';
-            var hours = (course.hours || 72) + ' ч.';
-            var ptLabel = course.program_type === 'pp' ? 'Профессиональная переподготовка' : 'Повышение квалификации';
-            var d = discountByType[course.program_type] || 0;
-            var priceHtml = d > 0
-                ? '<span style="text-decoration:line-through;color:var(--ink-400);font-weight:500;font-size:13px;margin-right:6px;">' + formatPrice(course.price) + ' ₽</span>' + formatPrice(calcAbPrice(course.price, course)) + ' ₽'
-                : formatPrice(course.price) + ' ₽';
-
-            html += '<a class="rd-card" href="/kursy/' + encodeURIComponent(slug) + '/" data-course-id="' + course.id + '">' +
-                '<div class="rd-card-pat"></div>' +
-                '<div class="rd-card-tags">' +
-                  '<span class="rd-tag indigo">' + escapeHtml(ptLabel) + '</span>' +
-                  '<span class="rd-tag">' + escapeHtml(hours) + '</span>' +
-                '</div>' +
-                '<h4>' + escapeHtml(course.title) + '</h4>' +
-                '<div class="rd-card-meta">' + escapeHtml(desc) + '</div>' +
-                '<div class="rd-card-foot">' +
-                  '<div class="rd-price-now">' + priceHtml + '</div>' +
-                  '<span class="rd-join-btn">К программе</span>' +
-                '</div>' +
-              '</a>';
-        });
-
+        var html = batch.map(renderCourseCard).join('');
         coursesGrid.insertAdjacentHTML('beforeend', html);
         currentOffset += perPage;
 

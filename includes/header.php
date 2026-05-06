@@ -138,7 +138,13 @@ $isLoggedIn = isset($_SESSION['user_email']);
       <a class="rd-nav-link<?php echo $rdActivePage === 'konkursy' ? ' active' : ''; ?>" href="/konkursy">Конкурсы</a>
       <a class="rd-nav-link<?php echo $rdActivePage === 'olimpiady' ? ' active' : ''; ?>" href="/olimpiady">Олимпиады</a>
       <a class="rd-nav-link<?php echo $rdActivePage === 'vebinary' ? ' active' : ''; ?>" href="/vebinary">Вебинары</a>
-      <a class="rd-nav-link<?php echo $rdActivePage === 'kursy' ? ' active' : ''; ?>" href="/kursy">Курсы</a>
+      <div class="rd-nav-item rd-has-dd">
+        <a class="rd-nav-link<?php echo $rdActivePage === 'kursy' ? ' active' : ''; ?>" href="/kursy">Курсы</a>
+        <div class="rd-nav-dd">
+          <a class="rd-sd-item" href="/kursy/povyshenie-kvalifikatsii/"><div class="ico">📚</div><div><div class="t">Курсы повышения квалификации</div><div class="s">КПК · удостоверение установленного образца</div></div></a>
+          <a class="rd-sd-item" href="/kursy/perepodgotovka/"><div class="ico">🎓</div><div><div class="t">Курсы переподготовки</div><div class="s">Профпереподготовка · диплом</div></div></a>
+        </div>
+      </div>
       <a class="rd-nav-link<?php echo $rdActivePage === 'zhurnal' ? ' active' : ''; ?>" href="/zhurnal">Журнал</a>
     </nav>
 
@@ -186,6 +192,8 @@ $isLoggedIn = isset($_SESSION['user_email']);
     <a class="rd-mm-link" href="/olimpiady">Олимпиады</a>
     <a class="rd-mm-link" href="/vebinary">Вебинары</a>
     <a class="rd-mm-link" href="/kursy">Курсы</a>
+    <a class="rd-mm-link rd-mm-sub" href="/kursy/povyshenie-kvalifikatsii/">— Повышение квалификации</a>
+    <a class="rd-mm-link rd-mm-sub" href="/kursy/perepodgotovka/">— Переподготовка</a>
     <a class="rd-mm-link" href="/zhurnal">Журнал</a>
     <a class="rd-mm-link" href="/o-portale">О портале</a>
     <?php if ($isLoggedIn): ?>

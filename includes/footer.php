@@ -38,6 +38,15 @@
                 </div>
 
                 <div class="footer-column">
+                    <h4>Курсы</h4>
+                    <p>
+                        <a href="/kursy/povyshenie-kvalifikatsii/">Повышение квалификации</a><br>
+                        <a href="/kursy/perepodgotovka/">Профессиональная переподготовка</a><br>
+                        <a href="/kursy/">Все курсы</a>
+                    </p>
+                </div>
+
+                <div class="footer-column">
                     <h4>Публикации</h4>
                     <p>
                         <a href="/zhurnal/">Журнал публикаций</a><br>

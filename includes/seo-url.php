@@ -49,6 +49,12 @@ function buildSeoUrl($section, $options = []) {
                 $path .= '/' . rawurlencode($options['as']);
             }
         }
+    } elseif ($section === 'kursy' && !empty($options['at'])) {
+        // Курсы поддерживают URL уровня без категории: /kursy/nachalnaya-shkola/
+        $path .= '/' . rawurlencode($options['at']);
+        if (!empty($options['as'])) {
+            $path .= '/' . rawurlencode($options['as']);
+        }
     }
 
     $path .= '/';

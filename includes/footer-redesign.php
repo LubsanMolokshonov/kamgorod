@@ -36,6 +36,8 @@
       <a href="/opublikovat/">Опубликовать материал</a>
       <a href="/sertifikat-publikacii/">Получить сертификат</a>
       <h5 style="margin-top:24px;">Курсы</h5>
+      <a href="/kursy/povyshenie-kvalifikatsii/">Повышение квалификации</a>
+      <a href="/kursy/perepodgotovka/">Профессиональная переподготовка</a>
       <a href="/kursy/">Все курсы</a>
     </div>
 
@@ -91,7 +93,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="/assets/js/main.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/main.js'); ?>" defer></script>
 <script src="/assets/js/search.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/search.js'); ?>" defer></script>
-<script src="/assets/js/redesign.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/redesign.js'); ?>" defer></script>
+<?php /* redesign.js уже подключён в includes/header.php — повторное подключение ломает обработчики (двойной клик на FAQ, табы и т.д.) */ ?>
 
 <?php if (isset($additionalJS)): ?>
   <?php foreach ($additionalJS as $js): ?>

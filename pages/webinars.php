@@ -86,6 +86,7 @@ $pageTitle = "Вебинары для педагогов | Каменный го
 $pageDescription = "Участвуйте в вебинарах от ведущих экспертов в сфере образования. Получайте сертификаты для портфолио и повышения квалификации.";
 $additionalCSS = ["/assets/css/webinars.css?v=" . time(), "/assets/css/audience-filter.css?v=" . time()];
 $additionalJS = ["/assets/js/audience-filter.js?v=" . time()];
+$earlyHeadScripts = ['<script>' . file_get_contents(__DIR__ . '/../assets/js/catalog-scroll.js') . '</script>'];
 $ogImage = SITE_URL . '/assets/images/og-webinars.jpg';
 
 include __DIR__ . "/../includes/header.php";

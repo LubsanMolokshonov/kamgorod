@@ -33,6 +33,7 @@ $canonicalUrl    = SITE_URL . '/konkursy/';
 $ogImage         = SITE_URL . '/assets/images/og-competitions.jpg';
 $rdActivePage    = 'konkursy';
 $additionalCSS   = ['/assets/css/competition-detail.css'];
+$earlyHeadScripts = ['<script>' . file_get_contents(__DIR__ . '/assets/js/catalog-scroll.js') . '</script>'];
 
 $perPage = 21;
 
@@ -77,6 +78,22 @@ $allCompetitions   = !empty($filters)
 $totalCompetitions = count($allCompetitions);
 $competitions      = array_slice($allCompetitions, 0, $perPage);
 $hasMore           = $totalCompetitions > $perPage;
+
+// Готовим лёгкий массив для клиентского поиска (с предвычисленными url/label)
+$currentContextForJs = getCurrentAudienceContext();
+$allCompetitionsJs = [];
+foreach ($allCompetitions as $c) {
+    $compAudienceTypesJs = $competitionObj->getAudienceTypes($c['id']);
+    $allCompetitionsJs[] = [
+        'id'          => $c['id'],
+        'title'       => $c['title'],
+        'description' => $c['description'] ?? '',
+        'category'    => $c['category'] ?? '',
+        'category_label' => Competition::getCategoryLabel($c['category'] ?? ''),
+        'price'       => (float)$c['price'],
+        'url'         => getCompetitionUrl($c['slug'], $compAudienceTypesJs, $currentContextForJs),
+    ];
+}
 
 include __DIR__ . '/includes/header-redesign.php';
 ?>
@@ -243,21 +260,15 @@ include __DIR__ . '/includes/header-redesign.php';
 
       <!-- Каталог + карточки -->
       <div class="rd-catalog-main">
-        <!-- Тулбар -->
-        <div class="rd-catalog-toolbar">
-          <div class="rd-ct-count">Найдено <strong><?php echo $totalCompetitions; ?></strong> конкурсов</div>
-          <div class="rd-applied-tags">
-            <?php if ($category !== 'all'): ?>
-              <a class="rd-applied-tag" href="<?php echo buildSeoUrl('konkursy', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>">
-                <?php echo htmlspecialchars(COMPETITION_CATEGORIES[$category] ?? $category, ENT_QUOTES, 'UTF-8'); ?> ×
-              </a>
-            <?php endif; ?>
-            <?php if ($selectedCategoryData): ?>
-              <a class="rd-applied-tag" href="<?php echo buildSeoUrl('konkursy', ['category' => $category !== 'all' ? $category : '']); ?>">
-                <?php echo htmlspecialchars($selectedCategoryData['name'], ENT_QUOTES, 'UTF-8'); ?> ×
-              </a>
-            <?php endif; ?>
+        <div class="rd-comp-search" style="margin-bottom:16px;">
+          <div style="position:relative;">
+            <svg style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--ink-400);pointer-events:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="search" id="competitionSearchInput" placeholder="Поиск по конкурсам — например, «рисунок» или «методическая разработка»" autocomplete="off" style="width:100%;padding:14px 44px 14px 46px;font-size:15px;border:1.5px solid var(--ink-200,#e5e7eb);border-radius:12px;background:#fff;outline:none;transition:border-color .15s, box-shadow .15s;" onfocus="this.style.borderColor='var(--indigo-500,#6366f1)';this.style.boxShadow='0 0 0 4px rgba(99,102,241,.12)';" onblur="this.style.borderColor='var(--ink-200,#e5e7eb)';this.style.boxShadow='none';">
+            <button type="button" id="competitionSearchClear" aria-label="Очистить" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer;padding:8px;color:var(--ink-400);line-height:0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
           </div>
+          <div id="competitionSearchStatus" style="display:none;margin-top:10px;font-size:14px;color:var(--ink-500,#6b7280);"></div>
         </div>
 
         <!-- Сетка карточек -->
@@ -437,6 +448,110 @@ window.dataLayer.push({
   }
 });
 <?php endif; ?>
+</script>
+
+<script>
+var allCompetitionsData = <?php echo json_encode($allCompetitionsJs, JSON_UNESCAPED_UNICODE); ?>;
+var competitionsPerPage = <?php echo $perPage; ?>;
+
+function _compFmtPrice(num) { return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+function _compEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+function renderCompetitionCard(c) {
+    var desc = c.description ? c.description.replace(/<[^>]*>/g, '').substring(0, 120) + '…' : '';
+    return '<a class="rd-card" href="' + _compEsc(c.url) + '">' +
+        '<div class="rd-card-pat"></div>' +
+        '<div class="rd-card-tags"><span class="rd-tag indigo">' + _compEsc(c.category_label) + '</span></div>' +
+        '<h4>' + _compEsc(c.title) + '</h4>' +
+        '<div class="rd-card-meta">' + _compEsc(desc) + '</div>' +
+        '<div class="rd-card-foot">' +
+          '<div class="rd-price-now">' + _compFmtPrice(Math.round(c.price)) + ' ₽</div>' +
+          '<span class="rd-join-btn">Участвовать</span>' +
+        '</div>' +
+      '</a>';
+}
+
+// Поиск по конкурсам
+(function() {
+    var input = document.getElementById('competitionSearchInput');
+    var clearBtn = document.getElementById('competitionSearchClear');
+    var status = document.getElementById('competitionSearchStatus');
+    var grid = document.getElementById('competitionsGrid');
+    var loadMoreContainer = document.getElementById('loadMoreContainer');
+    if (!input || !grid) return;
+
+    var originalGridHtml = null;
+    var debounceTimer = null;
+
+    function normalize(s) { return (s || '').toString().toLowerCase().replace(/ё/g, 'е').trim(); }
+
+    function applyFilter(q) {
+        q = normalize(q);
+        if (!q) {
+            if (originalGridHtml !== null) { grid.innerHTML = originalGridHtml; originalGridHtml = null; }
+            if (loadMoreContainer) loadMoreContainer.style.display = '';
+            status.style.display = 'none';
+            clearBtn.style.display = 'none';
+            return;
+        }
+        if (originalGridHtml === null) originalGridHtml = grid.innerHTML;
+        clearBtn.style.display = '';
+        if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+
+        var tokens = q.split(/\s+/).filter(Boolean);
+        var matches = allCompetitionsData.filter(function(c) {
+            var hay = normalize((c.title || '') + ' ' + (c.description || '') + ' ' + (c.category_label || ''));
+            return tokens.every(function(t) { return hay.indexOf(t) !== -1; });
+        });
+
+        if (matches.length === 0) {
+            grid.innerHTML = '';
+            status.style.display = '';
+            status.innerHTML = 'По запросу «' + _compEsc(q) + '» ничего не найдено. Попробуйте другие слова или <a href="#" id="compSearchResetLink" style="color:var(--indigo-600);">сбросьте поиск</a>.';
+            var rl = document.getElementById('compSearchResetLink');
+            if (rl) rl.addEventListener('click', function(e) { e.preventDefault(); input.value = ''; applyFilter(''); input.focus(); });
+            return;
+        }
+        grid.innerHTML = matches.map(renderCompetitionCard).join('');
+        status.style.display = '';
+        var n = matches.length;
+        var word = (n % 10 === 1 && n % 100 !== 11) ? 'конкурс' : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'конкурса' : 'конкурсов');
+        status.textContent = 'Найдено: ' + n + ' ' + word;
+    }
+
+    input.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        var v = input.value;
+        debounceTimer = setTimeout(function() { applyFilter(v); }, 120);
+    });
+    clearBtn.addEventListener('click', function() { input.value = ''; applyFilter(''); input.focus(); });
+    input.addEventListener('keydown', function(e) { if (e.key === 'Escape' && input.value) { input.value = ''; applyFilter(''); } });
+})();
+
+// Load more
+(function() {
+    var loadMoreBtn = document.getElementById('loadMoreBtn');
+    var grid = document.getElementById('competitionsGrid');
+    var loadMoreContainer = document.getElementById('loadMoreContainer');
+    if (!loadMoreBtn || !grid) return;
+
+    var remaining = allCompetitionsData.slice(competitionsPerPage);
+    var currentOffset = 0;
+
+    loadMoreBtn.addEventListener('click', function() {
+        var batch = remaining.slice(currentOffset, currentOffset + competitionsPerPage);
+        if (batch.length === 0) return;
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent = 'Загрузка...';
+        grid.insertAdjacentHTML('beforeend', batch.map(renderCompetitionCard).join(''));
+        currentOffset += competitionsPerPage;
+        if (currentOffset >= remaining.length) {
+            loadMoreContainer.style.display = 'none';
+        } else {
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.textContent = 'Показать больше конкурсов';
+        }
+    });
+})();
 </script>
 
 <?php include __DIR__ . '/includes/footer-redesign.php'; ?>
