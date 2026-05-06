@@ -33,15 +33,15 @@ ob_start();
         </a>
     </div>
 
-    <div style="background: linear-gradient(135deg, #E8F1FF 0%, #f8fafc 100%); border-radius: 16px; padding: 25px; margin: 25px 0; border-left: 4px solid #0077FF;">
-        <h3 style="margin: 0 0 15px 0; color: #0077FF; font-size: 18px; font-weight: 600;">Полезные материалы</h3>
+    <div style="background: linear-gradient(135deg, #ecefff 0%, #f8fafc 100%); border-radius: 16px; padding: 25px; margin: 25px 0; border-left: 4px solid #1e3aa8;">
+        <h3 style="margin: 0 0 15px 0; color: #1e3aa8; font-size: 18px; font-weight: 600;">Полезные материалы</h3>
         <p style="color: #4A5568; margin: 10px 0;">
             <span style="margin-right: 8px;">📎</span>
-            <a href="<?php echo htmlspecialchars($presentation_url); ?>?<?php echo $utm; ?>" style="color: #0077FF; text-decoration: none; font-weight: 500;">Скачать презентацию и материалы от эксперта</a>
+            <a href="<?php echo htmlspecialchars($presentation_url); ?>?<?php echo $utm; ?>" style="color: #1e3aa8; text-decoration: none; font-weight: 500;">Скачать презентацию и материалы от эксперта</a>
         </p>
         <p style="color: #4A5568; margin: 10px 0;">
             <span style="margin-right: 8px;">📝</span>
-            <a href="<?php echo htmlspecialchars($feedback_url); ?>?<?php echo $utm; ?>" style="color: #0077FF; text-decoration: none; font-weight: 500;">Заполнить анкету обратной связи</a>
+            <a href="<?php echo htmlspecialchars($feedback_url); ?>?<?php echo $utm; ?>" style="color: #1e3aa8; text-decoration: none; font-weight: 500;">Заполнить анкету обратной связи</a>
         </p>
     </div>
 
@@ -59,7 +59,7 @@ ob_start();
         <?php
         $cert_link = $certificate_url . (strpos($certificate_url, '?') !== false ? '&' : '?') . $utm;
         ?>
-        <a href="<?php echo htmlspecialchars($cert_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);">
+        <a href="<?php echo htmlspecialchars($cert_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);">
             Получить сертификат
         </a>
     </div>
@@ -77,7 +77,7 @@ ob_start();
         <h3 style="margin: 0 0 10px 0; color: #7c3aed; font-size: 18px; font-weight: 600;">Приглашаем на следующий вебинар</h3>
         <p style="color: #4A5568; margin-bottom: 5px; font-weight: 600;">«<?php echo htmlspecialchars($next_webinar_title); ?>»</p>
         <p style="color: #718096; margin-bottom: 20px; font-size: 14px;">19 марта в 14:00 по Москве<br>Продолжите повышение квалификации вместе с нами!</p>
-        <a href="<?php echo htmlspecialchars($next_webinar_url); ?>?<?php echo $utm; ?>" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);">
+        <a href="<?php echo htmlspecialchars($next_webinar_url); ?>?<?php echo $utm; ?>" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);">
             Зарегистрироваться бесплатно
         </a>
     </div>
@@ -87,7 +87,7 @@ ob_start();
         <?php
         $cabinet_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm;
         ?>
-        <a href="<?php echo htmlspecialchars($cabinet_link); ?>" class="cta-button cta-button-secondary" style="display: inline-block; background: #ebebf0; color: #0077FF; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600;">
+        <a href="<?php echo htmlspecialchars($cabinet_link); ?>" class="cta-button cta-button-secondary" style="display: inline-block; background: #ebebf0; color: #1e3aa8; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600;">
             Перейти в личный кабинет
         </a>
     </div>

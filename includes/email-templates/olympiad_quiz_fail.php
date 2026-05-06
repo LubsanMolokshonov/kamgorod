@@ -33,7 +33,7 @@ ob_start();
         </div>
     </div>
 
-    <h3 style="color: #1e40af; margin-top: 25px; font-weight: 600;">Что можно сделать:</h3>
+    <h3 style="color: #182f8a; margin-top: 25px; font-weight: 600;">Что можно сделать:</h3>
 
     <ul class="benefits-list">
         <li>Попробуйте олимпиады по другим темам — вопросы везде разные</li>
@@ -47,7 +47,7 @@ ob_start();
         </a>
 
         <p style="margin-top: 15px;">
-            <a href="<?php echo htmlspecialchars($site_url . '/konkursy/?' . $utm); ?>" style="color: #2563eb; text-decoration: none; font-weight: 500;">
+            <a href="<?php echo htmlspecialchars($site_url . '/konkursy/?' . $utm); ?>" style="color: #1e3aa8; text-decoration: none; font-weight: 500;">
                 Посмотреть конкурсы &rarr;
             </a>
         </p>

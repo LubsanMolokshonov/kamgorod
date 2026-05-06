@@ -13,6 +13,7 @@ $pageDescription = 'Материально-техническое обеспеч
 $additionalCSS = ['/assets/css/svedeniya.css'];
 $currentSvedPage = '/svedeniya/materialno-tehnicheskoe-obespechenie/';
 
+$useRedesignBody = true;
 include __DIR__ . '/../../includes/header.php';
 ?>
 

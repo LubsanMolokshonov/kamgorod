@@ -1,0 +1,769 @@
+/* =========================================================================
+   Личный кабинет — редизайн под общий стиль сайта (rd-*)
+   Использует токены из assets/css/redesign.css
+   ========================================================================= */
+
+/* ---------- Контейнер и сетка ---------- */
+.rd-page main { background: var(--rd-bg, #fbfbfd); }
+
+.cab-shell-wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.cabinet-container.cab-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+/* ---------- Сайдбар ---------- */
+.cab-sidebar {
+  position: sticky;
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #fff;
+  border: 1px solid var(--ink-100, #e7e7ee);
+  border-radius: var(--r-lg, 20px);
+  padding: 24px 20px;
+  box-shadow: var(--sh-1, 0 1px 2px rgba(20,20,40,.05));
+}
+
+.cab-sidebar .cabinet-header { padding: 0; margin: 0; border: 0; background: transparent; }
+.cab-sidebar .cabinet-header h1 {
+  font-family: var(--font-sans, 'Onest', system-ui, sans-serif);
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--ink-900, #0f0f1a);
+  margin: 0 0 6px;
+}
+.cab-sidebar .user-email {
+  font-size: 13px;
+  color: var(--ink-500, #6b6b7d);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  word-break: break-all;
+  margin: 0;
+}
+.cab-sidebar .email-icon { font-size: 14px; }
+
+/* Бейдж лояльности */
+.loyalty-badge {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  background: linear-gradient(135deg, #fff5dd 0%, #ffe9b8 100%);
+  border: 1px solid #f5e2ad;
+  border-radius: var(--r-md, 14px);
+}
+.loyalty-badge-icon { font-size: 24px; line-height: 1; }
+.loyalty-badge-body { display: flex; flex-direction: column; gap: 4px; }
+.loyalty-badge-body strong { font-size: 13px; color: #8a5a0a; font-weight: 700; }
+.loyalty-badge-body span { font-size: 12px; color: #8a6a2a; line-height: 1.4; }
+
+/* Навигация-табы (вертикально в сайдбаре) */
+.cabinet-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: transparent;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+.cabinet-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-md, 14px);
+  font-family: var(--font-sans, 'Onest', system-ui, sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-500, #6b6b7d);
+  text-decoration: none;
+  border: 0;
+  background: transparent;
+  transition: all .15s ease;
+}
+.cabinet-tab:hover { background: var(--indigo-50, #eef0ff); color: var(--ink-900, #0f0f1a); }
+.cabinet-tab.active { background: var(--indigo-600, #4f46e5); color: #fff; box-shadow: var(--sh-2, 0 4px 14px rgba(79,70,229,.2)); }
+.cabinet-tab.active:hover { color: #fff; }
+.cabinet-tab .tab-icon { font-size: 16px; line-height: 1; }
+.cabinet-tab .tab-count {
+  margin-left: auto;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.2);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.cabinet-tab:not(.active) .tab-count { background: var(--ink-50, #f5f5f9); color: var(--ink-700, #2c2c3d); }
+
+/* Кнопка выхода */
+.cab-logout {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--ink-100, #e7e7ee);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-500, #6b6b7d);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 10px 12px;
+}
+.cab-logout:hover { color: var(--rose-500, #f43f5e); }
+
+/* ---------- Главная область ---------- */
+.cab-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cab-main h2,
+.cab-main .registrations-section h2,
+.cab-main .course-paid-section h3 {
+  font-family: var(--font-sans, 'Onest', system-ui, sans-serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink-900, #0f0f1a);
+  margin: 0 0 16px;
+}
+
+/* ---------- Сообщения / алерты ---------- */
+.success-message {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  background: #e6f9f3;
+  border: 1px solid #b6e8d8;
+  border-radius: var(--r-md, 14px);
+  color: #0a8a72;
+}
+.success-message .success-icon { font-size: 22px; }
+.success-message h3 { margin: 0; font-size: 15px; font-weight: 700; color: #0a6a5a; }
+.success-message p { margin: 0; font-size: 13px; color: #0a8a72; }
+
+.pending-olymp-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fff5dd 0%, #ffe9b8 100%);
+  border: 1px solid #f5e2ad;
+  border-radius: var(--r-md, 14px);
+}
+.pending-olymp-banner .pending-olymp-icon { font-size: 30px; }
+.pending-olymp-banner strong { color: #8a5a0a; font-size: 15px; }
+.pending-olymp-banner span { color: #8a6a2a; font-size: 13px; }
+
+/* ---------- Пустое состояние ---------- */
+.empty-cabinet {
+  background: #fff;
+  border: 1px solid var(--ink-100, #e7e7ee);
+  border-radius: var(--r-lg, 20px);
+  padding: 56px 32px;
+  text-align: center;
+  box-shadow: var(--sh-1, 0 1px 2px rgba(20,20,40,.05));
+}
+.empty-cabinet .empty-icon { font-size: 48px; margin-bottom: 16px; }
+.empty-cabinet h2 {
+  font-family: var(--font-sans, 'Onest', system-ui, sans-serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink-900, #0f0f1a);
+  margin: 0 0 8px;
+}
+.empty-cabinet p { color: var(--ink-500, #6b6b7d); font-size: 15px; margin: 0 0 24px; }
+.empty-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+/* ---------- Карточки регистраций (сетка) ---------- */
+.registrations-section { display: flex; flex-direction: column; }
+.registrations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.registration-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--ink-100, #e7e7ee);
+  border-radius: var(--r-lg, 20px);
+  padding: 20px;
+  box-shadow: var(--sh-1, 0 1px 2px rgba(20,20,40,.05));
+  transition: all .15s ease;
+  gap: 14px;
+}
+.registration-card:hover {
+  border-color: var(--indigo-300, #a4a8ff);
+  box-shadow: var(--sh-2, 0 4px 14px rgba(20,20,40,.08));
+  transform: translateY(-2px);
+}
+.registration-card .card-header { display: flex; flex-direction: column; gap: 8px; }
+.registration-card .card-header h3 {
+  font-family: var(--font-sans, 'Onest', system-ui, sans-serif);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink-900, #0f0f1a);
+  margin: 0;
+}
+.card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.event-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  border: 1px solid transparent;
+  text-transform: uppercase;
+}
+.badge-competition { background: var(--indigo-50, #eef0ff); color: var(--indigo-700, #3d36b8); border-color: var(--indigo-100, #d8dcff); }
+.badge-webinar     { background: #e6f4ff; color: #0a5fa6; border-color: #bce0ff; }
+.badge-publication { background: #f1ecff; color: #5a30c0; border-color: #ddd2ff; }
+.badge-olympiad    { background: #fff5dd; color: #8a5a0a; border-color: #f5e2ad; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: .02em;
+}
+.status-badge.live { animation: cab-pulse 1.5s ease-in-out infinite; }
+@keyframes cab-pulse { 0%,100% { opacity: 1; } 50% { opacity: .7; } }
+
+.registration-card .card-body { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.info-row { display: flex; gap: 8px; font-size: 13px; line-height: 1.4; }
+.info-row .label { color: var(--ink-500, #6b6b7d); flex-shrink: 0; }
+.info-row .value { color: var(--ink-900, #0f0f1a); font-weight: 500; }
+
+.registration-card .card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- Кнопки (переопределение легаси .btn под rd-стиль) ---------- */
+.cab-main .btn,
+.cabinet-actions .btn,
+.empty-actions .btn,
+.cab-sidebar .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--r-md, 14px);
+  font-family: var(--font-sans, 'Onest', system-ui, sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all .15s ease;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.cab-main .btn-primary,
+.cabinet-actions .btn-primary,
+.empty-actions .btn-primary {
+  background: var(--indigo-600, #4f46e5);
+  color: #fff;
+  box-shadow: var(--sh-2, 0 4px 14px rgba(79,70,229,.18));
+}
+.cab-main .btn-primary:hover,
+.cabinet-actions .btn-primary:hover,
+.empty-actions .btn-primary:hover {
+  background: var(--indigo-700, #3d36b8);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.cab-main .btn-outline,
+.cabinet-actions .btn-outline,
+.empty-actions .btn-outline {
+  background: #fff;
+  color: var(--indigo-700, #3d36b8);
+  border-color: var(--ink-200, #d1d1de);
+}
+.cab-main .btn-outline:hover,
+.cabinet-actions .btn-outline:hover,
+.empty-actions .btn-outline:hover {
+  border-color: var(--indigo-300, #a4a8ff);
+  background: var(--indigo-50, #eef0ff);
+}
+.cab-main .btn-success,
+.cab-main .btn-download {
+  background: #0a8a72;
+  color: #fff;
+  border-color: #0a8a72;
+}
+.cab-main .btn-success:hover,
+.cab-main .btn-download:hover {
+  background: #086a5a;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.cabinet-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid var(--ink-100, #e7e7ee);
+  border-radius: var(--r-lg, 20px);
+}
+
+/* ---------- Курсы: чекаут ---------- */
+.course-checkout {
+  background: #fff;
+  border: 1px solid var(--ink-100, #e7e7ee);
+  border-radius: var(--r-lg, 20px);
+  padding: 24px;
+  box-shadow: var(--sh-1, 0 1px 2px rgba(20,20,40,.05));
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.course-checkout-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--ink-100, #e7e7ee);
+}
+.course-checkout-header h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--ink-900, #0f0f1a); }
+.item-count-badge {
+  background: var(--indigo-100, #d8dcff);
+  color: var(--indigo-700, #3d36b8);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.course-promo-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #fff5dd 0%, #ffe9b8 100%);
+  border: 1px solid #f5e2ad;
+  border-radius: var(--r-md, 14px);
+}
+.promo-icon { font-size: 28px; line-height: 1; }
+.promo-content { flex: 1; }
+.promo-content h3 { margin: 0 0 2px; font-size: 14px; font-weight: 700; color: #8a5a0a; }
+.promo-content p { margin: 0; font-size: 12px; color: #8a6a2a; }
+.promo-timer { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.promo-timer-label { font-size: 11px; color: #8a6a2a; text-transform: uppercase; letter-spacing: .04em; }
+.course-timer {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 20px;
+  font-weight: 700;
+  color: #8a5a0a;
+}
+
+.course-checkout-items { display: flex; flex-direction: column; gap: 10px; }
+.course-checkout-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--ink-100, #e7e7ee);
+  border-radius: var(--r-md, 14px);
+  background: var(--ink-50, #f5f5f9);
+}
+.checkout-item-name { font-size: 14px; font-weight: 600; color: var(--ink-900, #0f0f1a); margin-bottom: 4px; }
+.checkout-item-meta { font-size: 12px; color: var(--ink-500, #6b6b7d); }
+.checkout-item-price { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.price-original { font-size: 12px; color: var(--ink-500, #6b6b7d); text-decoration: line-through; }
+.price-discounted { font-size: 16px; font-weight: 700; color: #d97706; }
+.price-current { font-size: 16px; font-weight: 700; color: var(--ink-900, #0f0f1a); }
+.checkout-item-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--indigo-700, #3d36b8);
+  font-size: 18px;
+  text-decoration: none;
+  border: 1px solid var(--ink-100, #e7e7ee);
+}
+.checkout-item-link:hover { background: var(--indigo-50, #eef0ff); border-color: var(--indigo-300, #a4a8ff); }
+
+.course-price-summary {
+  padding: 16px 0;
+  border-top: 1px solid var(--ink-100, #e7e7ee);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--ink-700, #2c2c3d);
+}
+.summary-row.discount { color: #d97706; font-weight: 600; }
+.summary-row.total {
+  padding-top: 10px;
+  border-top: 1px solid var(--ink-100, #e7e7ee);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink-900, #0f0f1a);
+}
+
+.course-payment-section { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.btn-course-checkout {
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: var(--r-md, 14px);
+  background: var(--indigo-600, #4f46e5);
+  color: #fff;
+  font-family: var(--font-sans, 'Onest', system-ui, sans-serif);
+  font-size: 16px;
+  font-weight: 700;
+  border: 0;
+  cursor: pointer;
+  transition: all .15s ease;
+  box-shadow: var(--sh-2, 0 4px 14px rgba(79,70,229,.2));
+}
+.btn-course-checkout:hover { background: var(--indigo-700, #3d36b8); transform: translateY(-1px); }
+.btn-course-checkout.has-discount { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
+.btn-course-checkout.has-discount:hover { background: linear-gradient(135deg, #b45309 0%, #92400e 100%); }
+.payment-methods { font-size: 12px; color: var(--ink-500, #6b6b7d); text-align: center; margin: 0; }
+
+/* Оплаченные курсы */
+.course-paid-section {
+  background: #fff;
+  border: 1px solid var(--ink-100, #e7e7ee);
+  border-radius: var(--r-lg, 20px);
+  padding: 24px;
+  box-shadow: var(--sh-1, 0 1px 2px rgba(20,20,40,.05));
+}
+.course-paid-list { display: flex; flex-direction: column; gap: 10px; }
+.course-paid-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--ink-100, #e7e7ee);
+  border-radius: var(--r-md, 14px);
+}
+.paid-item-check {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #e6f9f3;
+  color: #0a8a72;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.paid-item-name { font-size: 14px; font-weight: 600; color: var(--ink-900, #0f0f1a); margin-bottom: 4px; }
+.paid-item-meta { font-size: 12px; color: var(--ink-500, #6b6b7d); display: flex; gap: 8px; align-items: center; }
+.paid-item-status { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.paid-item-status.cancelled { background: #fee2e2; color: #b91c1c; }
+.paid-item-price { font-size: 15px; font-weight: 700; color: var(--ink-900, #0f0f1a); }
+
+.course-info-block {
+  background: var(--indigo-50, #eef0ff);
+  border: 1px solid var(--indigo-100, #d8dcff);
+  border-radius: var(--r-lg, 20px);
+  padding: 24px;
+}
+.course-info-block h3 { margin: 0 0 12px; font-size: 16px; font-weight: 700; color: var(--indigo-700, #3d36b8); }
+.course-info-block ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.course-info-block li { font-size: 14px; color: var(--ink-700, #2c2c3d); line-height: 1.5; }
+
+/* ---------- Diploma modal ---------- */
+.diploma-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 26, .6);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.diploma-modal.active { display: flex; }
+.diploma-modal-content {
+  background: #fff;
+  border-radius: var(--r-lg, 20px);
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.diploma-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--ink-100, #e7e7ee);
+}
+.diploma-modal-header h2 { margin: 0; font-size: 18px; font-weight: 700; }
+.diploma-modal-close {
+  background: none;
+  border: 0;
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--ink-500, #6b6b7d);
+  line-height: 1;
+}
+.diploma-modal-body { flex: 1; padding: 24px; overflow: auto; }
+.diploma-modal-loading { text-align: center; color: var(--ink-500); padding: 40px; }
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--ink-100, #e7e7ee);
+  border-top-color: var(--indigo-600, #4f46e5);
+  border-radius: 50%;
+  animation: cab-spin 1s linear infinite;
+  margin: 0 auto 12px;
+}
+@keyframes cab-spin { to { transform: rotate(360deg); } }
+.diploma-preview-container { position: relative; max-width: 100%; }
+.diploma-preview-container img { width: 100%; display: block; }
+.diploma-overlay { position: absolute; inset: 0; pointer-events: none; }
+
+/* ---------- Страница автовебинара (cabinet-autowebinar.php) ---------- */
+.autowebinar-page {
+  max-width: 880px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.autowebinar-breadcrumb {
+  font-size: 13px;
+  color: var(--ink-500, #6b6b7d);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.autowebinar-breadcrumb a { color: var(--indigo-700, #3d36b8); text-decoration: none; }
+.autowebinar-breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb-sep { opacity: .5; }
+
+.autowebinar-header {
+  background: linear-gradient(160deg, var(--indigo-50, #eef0ff) 0%, #fff 100%);
+  border: 1px solid var(--indigo-100, #d8dcff);
+  border-radius: var(--r-lg, 20px);
+  padding: 32px;
+}
+.autowebinar-header h1 {
+  font-family: var(--font-sans, 'Onest', system-ui, sans-serif);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink-900, #0f0f1a);
+  margin: 0 0 12px;
+  line-height: 1.2;
+}
+.autowebinar-speaker {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--indigo-100, #d8dcff);
+  color: var(--indigo-700, #3d36b8);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.autowebinar-desc { color: var(--ink-700, #2c2c3d); font-size: 15px; line-height: 1.5; margin: 0; }
+
+.autowebinar-section {
+  background: #fff;
+  border: 1px solid var(--ink-100, #e7e7ee);
+  border-radius: var(--r-lg, 20px);
+  padding: 28px;
+  box-shadow: var(--sh-1, 0 1px 2px rgba(20,20,40,.05));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.autowebinar-section.section-locked { opacity: .55; pointer-events: none; }
+.section-step { display: flex; align-items: center; gap: 14px; }
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--ink-100, #e7e7ee);
+  color: var(--ink-500, #6b6b7d);
+  font-weight: 700;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.step-number.step-done { background: #0a8a72; color: #fff; }
+.section-step h2 {
+  margin: 0;
+  font-family: var(--font-sans, 'Onest', system-ui, sans-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink-900, #0f0f1a);
+}
+.autowebinar-section p { margin: 0; color: var(--ink-700, #2c2c3d); font-size: 14px; line-height: 1.5; }
+
+.btn-watch-recording,
+.btn-download-materials,
+.btn-certificate-download,
+.btn-certificate-order,
+.btn-back-cabinet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 22px;
+  border-radius: var(--r-md, 14px);
+  font-family: var(--font-sans, 'Onest', system-ui, sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all .15s ease;
+  border: 1.5px solid transparent;
+  align-self: flex-start;
+  cursor: pointer;
+}
+.btn-watch-recording,
+.btn-certificate-order {
+  background: var(--indigo-600, #4f46e5);
+  color: #fff;
+  box-shadow: var(--sh-2, 0 4px 14px rgba(79,70,229,.2));
+}
+.btn-watch-recording:hover,
+.btn-certificate-order:hover {
+  background: var(--indigo-700, #3d36b8);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.btn-download-materials,
+.btn-back-cabinet {
+  background: #fff;
+  color: var(--indigo-700, #3d36b8);
+  border-color: var(--ink-200, #d1d1de);
+}
+.btn-download-materials:hover,
+.btn-back-cabinet:hover {
+  border-color: var(--indigo-300, #a4a8ff);
+  background: var(--indigo-50, #eef0ff);
+}
+.btn-certificate-download {
+  background: #0a8a72;
+  color: #fff;
+}
+.btn-certificate-download:hover { background: #086a5a; color: #fff; transform: translateY(-1px); }
+
+.quiz-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+  border-radius: var(--r-md, 14px);
+  gap: 8px;
+}
+.quiz-result h3 { margin: 0; font-size: 18px; font-weight: 700; }
+.quiz-result p { margin: 0; }
+.quiz-passed { background: #e6f9f3; border: 1px solid #b6e8d8; color: #0a6a5a; }
+.quiz-passed h3 { color: #0a6a5a; }
+.quiz-failed { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; }
+.quiz-failed h3 { color: #991b1b; }
+.quiz-intro { color: var(--ink-500, #6b6b7d); font-size: 14px; }
+
+.certificate-locked-message {
+  padding: 16px;
+  background: var(--ink-50, #f5f5f9);
+  border-radius: var(--r-md, 14px);
+  color: var(--ink-500, #6b6b7d);
+  font-size: 14px;
+}
+.certificate-ready { display: flex; flex-direction: column; gap: 12px; }
+
+.autowebinar-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  padding: 20px;
+}
+
+@media (max-width: 640px) {
+  .autowebinar-header { padding: 20px; }
+  .autowebinar-header h1 { font-size: 22px; }
+  .autowebinar-section { padding: 20px; }
+  .section-step h2 { font-size: 17px; }
+}
+
+/* ---------- Адаптив ---------- */
+@media (max-width: 960px) {
+  .cab-shell-wrap { padding: 16px 12px 48px; }
+  .cabinet-container.cab-shell {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .cab-sidebar {
+    position: static;
+    padding: 16px;
+  }
+  .cabinet-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 4px;
+    background: var(--ink-50, #f5f5f9);
+    border-radius: var(--r-md, 14px);
+    scrollbar-width: none;
+  }
+  .cabinet-tabs::-webkit-scrollbar { display: none; }
+  .cabinet-tab { white-space: nowrap; padding: 8px 14px; }
+  .cab-logout { border-top: 0; padding-top: 0; margin-top: 8px; justify-content: center; }
+}
+
+@media (max-width: 640px) {
+  .registrations-grid { grid-template-columns: 1fr; }
+  .course-checkout, .course-paid-section, .course-info-block { padding: 16px; }
+  .course-checkout-item {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+  .checkout-item-link { display: none; }
+  .course-promo-banner { flex-wrap: wrap; }
+  .pending-olymp-banner { flex-direction: column; align-items: flex-start; }
+  .pending-olymp-banner .btn { width: 100%; }
+  .empty-cabinet { padding: 36px 20px; }
+}

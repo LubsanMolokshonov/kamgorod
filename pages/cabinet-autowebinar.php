@@ -79,8 +79,9 @@ $videoUrl = $webinar['video_url'] ?: 'https://clck.ru/3RmQ2D';
 // Page meta
 $pageTitle = 'Видеолекция: ' . $webinar['title'] . ' | ' . SITE_NAME;
 $pageDescription = 'Просмотрите запись вебинара, пройдите тест и получите сертификат';
-$additionalCSS = ['/assets/css/cabinet.css'];
+$additionalCSS = ['/assets/css/cabinet-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/cabinet-redesign.css')];
 $noindex = true;
+$useRedesignBody = true;
 
 include __DIR__ . '/../includes/header.php';
 ?>

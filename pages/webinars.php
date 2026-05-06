@@ -1,8 +1,7 @@
 <?php
 /**
- * Webinars Catalog Page
- * Каталог вебинаров
- * v2: Unified 3-level audience segmentation
+ * Webinars Catalog Page (/vebinary/) — редизайн.
+ * Использует header-redesign.php / footer-redesign.php и rd-* классы.
  */
 
 require_once __DIR__ . "/../config/database.php";
@@ -20,13 +19,11 @@ if (isset($_GET['sc'])) {
     $_GET['status'] = $scMap[$_GET['sc']] ?? '';
 }
 
-// Get unified audience filters
 $selectedCategory = $_GET['ac'] ?? '';
-$selectedType = $_GET['at'] ?? '';
-$selectedSpec = $_GET['as'] ?? '';
-$status = $_GET["status"] ?? "";
+$selectedType     = $_GET['at'] ?? '';
+$selectedSpec     = $_GET['as'] ?? '';
+$status           = $_GET["status"] ?? "";
 
-// 301-редирект со старых query-param URL на чистые SEO URL
 redirectToSeoUrl('vebinary', [
     'status' => $status,
     'ac' => $selectedCategory,
@@ -34,12 +31,10 @@ redirectToSeoUrl('vebinary', [
     'as' => $selectedSpec,
 ]);
 
-// Audience segmentation (3-level)
 $audienceCatObj = new AudienceCategory($db);
 $audienceTypeObj = new AudienceType($db);
 $audienceCategories = $audienceCatObj->getAllWithProducts('webinar');
 
-// Resolve selected audience hierarchy
 $selectedCategoryData = null;
 $audienceTypes = [];
 $selectedTypeData = null;
@@ -58,22 +53,15 @@ if ($selectedType) {
     }
 }
 
-// Build filters
 $filters = [];
-if ($status) {
-    $filters["status"] = $status;
-}
-if ($selectedCategoryData) {
-    $filters['category_id'] = $selectedCategoryData['id'];
-}
-if ($selectedTypeData) {
-    $filters['audience_type_id'] = $selectedTypeData['id'];
-}
+if ($status) $filters["status"] = $status;
+if ($selectedCategoryData) $filters['category_id'] = $selectedCategoryData['id'];
+if ($selectedTypeData)     $filters['audience_type_id'] = $selectedTypeData['id'];
 if (!empty($selectedSpec)) {
     require_once __DIR__ . "/../classes/AudienceSpecialization.php";
     $specObj = new AudienceSpecialization($db);
     $selectedSpecData = $specObj->getBySlug($selectedSpec);
-    if ($selectedSpecData) {
+    if (!empty($selectedSpecData)) {
         $filters['specialization_id'] = $selectedSpecData['id'];
     }
 }
@@ -82,239 +70,327 @@ $webinars = $webinarObj->getAll($filters, 50);
 $totalWebinars = count($webinars);
 $counts = $webinarObj->countByStatus();
 
-$pageTitle = "Вебинары для педагогов | Каменный город";
-$pageDescription = "Участвуйте в вебинарах от ведущих экспертов в сфере образования. Получайте сертификаты для портфолио и повышения квалификации.";
-$additionalCSS = ["/assets/css/webinars.css?v=" . time(), "/assets/css/audience-filter.css?v=" . time()];
-$additionalJS = ["/assets/js/audience-filter.js?v=" . time()];
+$pageTitle       = "Вебинары для педагогов с сертификатом | " . SITE_NAME;
+$pageDescription = "Вебинары и видеолекции от ведущих экспертов в сфере образования. Бесплатное участие, именной сертификат на 2 ак. часа для аттестации и портфолио.";
+$canonicalUrl    = SITE_URL . '/vebinary/';
+$ogImage         = SITE_URL . '/assets/images/og-webinars.jpg';
+$rdActivePage    = 'vebinary';
+
+$additionalCSS = [
+    "/assets/css/competition-detail.css?v=" . filemtime(__DIR__ . "/../assets/css/competition-detail.css"),
+    "/assets/css/webinars-redesign.css?v=" . filemtime(__DIR__ . "/../assets/css/webinars-redesign.css"),
+    "/assets/css/audience-filter.css?v=" . filemtime(__DIR__ . "/../assets/css/audience-filter.css"),
+];
+$additionalJS = ["/assets/js/audience-filter.js?v=" . filemtime(__DIR__ . "/../assets/js/audience-filter.js")];
 $earlyHeadScripts = ['<script>' . file_get_contents(__DIR__ . '/../assets/js/catalog-scroll.js') . '</script>'];
-$ogImage = SITE_URL . '/assets/images/og-webinars.jpg';
 
-include __DIR__ . "/../includes/header.php";
+include __DIR__ . "/../includes/header-redesign.php";
 ?>
-<section class="hero-landing">
-    <div class="container">
-        <div class="hero-content">
-            <h1 class="hero-title">Вебинары для педагогов с сертификатом</h1>
 
-            <p class="hero-subtitle">Смотрите видеолекции от ведущих экспертов в сфере образования и получайте официальный сертификат (2 ак. часа) для аттестации и портфолио</p>
-
-            <div class="hero-features hero-features--stats">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                        </svg>
-                    </div>
-                    <div class="feature-text"><h3><?php echo ($counts["upcoming"] + $counts["autowebinars"]); ?> вебинаров<br>доступно</h3></div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>
-                        </svg>
-                    </div>
-                    <div class="feature-text"><h3>Сертификат<br>2 ак. часа</h3></div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                        </svg>
-                    </div>
-                    <div class="feature-text"><h3>Смотрите<br>в любое время</h3></div>
-                </div>
-            </div>
-
-            <a href="#webinars-catalog" class="btn btn-hero">Выбрать вебинар</a>
-        </div>
-
-        <div class="hero-right">
-            <div class="hero-images" id="heroImages">
-                <div class="hero-image-circle hero-img-1" data-parallax-speed="0.3">
-                    <picture>
-                        <source media="(max-width: 768px)" srcset="/assets/images/teachers/optimized/mobile/1.webp" type="image/webp">
-                        <source media="(max-width: 768px)" srcset="/assets/images/teachers/optimized/mobile/1.jpg" type="image/jpeg">
-                        <source srcset="/assets/images/teachers/optimized/desktop/1.webp" type="image/webp">
-                        <source srcset="/assets/images/teachers/optimized/desktop/1.jpg" type="image/jpeg">
-                        <img src="/assets/images/teachers/optimized/desktop/1.jpg" alt="Педагог" loading="lazy" width="220" height="220">
-                    </picture>
-                </div>
-                <div class="hero-image-circle hero-img-2" data-parallax-speed="0.5">
-                    <picture>
-                        <source media="(max-width: 768px)" srcset="/assets/images/teachers/optimized/mobile/2.webp" type="image/webp">
-                        <source media="(max-width: 768px)" srcset="/assets/images/teachers/optimized/mobile/2.jpg" type="image/jpeg">
-                        <source srcset="/assets/images/teachers/optimized/desktop/2.webp" type="image/webp">
-                        <source srcset="/assets/images/teachers/optimized/desktop/2.jpg" type="image/jpeg">
-                        <img src="/assets/images/teachers/optimized/desktop/2.jpg" alt="Педагог" loading="lazy" width="300" height="300">
-                    </picture>
-                </div>
-                <div class="hero-image-circle hero-img-4" data-parallax-speed="0.4">
-                    <picture>
-                        <source media="(max-width: 768px)" srcset="/assets/images/teachers/optimized/mobile/4.webp" type="image/webp">
-                        <source media="(max-width: 768px)" srcset="/assets/images/teachers/optimized/mobile/4.jpg" type="image/jpeg">
-                        <source srcset="/assets/images/teachers/optimized/desktop/4.webp" type="image/webp">
-                        <source srcset="/assets/images/teachers/optimized/desktop/4.jpg" type="image/jpeg">
-                        <img src="/assets/images/teachers/optimized/desktop/4.jpg" alt="Педагог" loading="lazy" width="230" height="230">
-                    </picture>
-                </div>
-            </div>
-
-            <div class="hero-features hero-features--badges">
-                <div class="feature-card feature-card--badge">
-                    <div class="feature-logo">
-                        <img src="/assets/images/skolkovo.webp" alt="Сколково" width="70" height="70">
-                    </div>
-                    <div class="feature-text">
-                        <span class="feature-label">Резидент</span>
-                        <span class="feature-label">Сколково</span>
-                    </div>
-                </div>
-
-                <div class="feature-card feature-card--badge">
-                    <div class="feature-logo">
-                        <img src="/assets/images/eagle_s.svg" alt="СМИ" width="70" height="70">
-                    </div>
-                    <div class="feature-text">
-                        <span class="feature-label">Свидетельство о регистрации СМИ:</span>
-                        <span class="feature-label">Эл. №ФС 77-74524</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!-- HERO каталога -->
+<section class="rd-hero-catalog">
+  <div class="rd-wrap">
+    <div class="rd-crumbs">
+      <a href="/">Главная</a>
+      <span class="sep">/</span>
+      <strong>Вебинары</strong>
     </div>
+  </div>
+  <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
+    <div>
+      <div class="rd-pill-row reveal-stagger">
+        <span class="rd-pill"><span class="dot"></span><?php echo ($counts["upcoming"] + $counts["autowebinars"]); ?> вебинаров доступно</span>
+        <span class="rd-pill indigo">Бесплатное участие</span>
+        <span class="rd-pill">Сертификат 2 ак. часа</span>
+      </div>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal">Вебинары для педагогов с&nbsp;<span class="accent">именным сертификатом</span></h1>
+      <p class="rd-hero-sub reveal">Смотрите видеолекции и прямые эфиры от ведущих экспертов в сфере образования. Бесплатное участие, сертификат на 2 ак. часа — для аттестации и портфолио.</p>
+      <div class="rd-hero-bullets reveal-stagger">
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Бесплатное участие в прямом эфире</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Видеолекции — смотрите в любое время</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Именной сертификат участника на 2 ак. часа</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Запись эфира и материалы — после участия</div>
+      </div>
+      <div class="rd-hero-cta reveal">
+        <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать вебинар
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+        </a>
+        <span style="font-size:13px;color:var(--ink-500);">Бесплатно · Сертификат от 200 ₽</span>
+      </div>
+    </div>
+
+    <div class="rd-hero-art rd-hero-art-cat reveal">
+      <div class="rd-blob"></div>
+      <div class="hero-diploma" style="position:absolute;inset:0;padding:0;">
+        <div class="diploma-stack">
+          <div class="diploma-item diploma-1"><img src="/assets/images/diplomas/previews/diploma-1.svg" alt="Сертификат вариант 1"></div>
+          <div class="diploma-item diploma-2"><img src="/assets/images/diplomas/previews/diploma-2.svg" alt="Сертификат вариант 2"></div>
+          <div class="diploma-item diploma-3"><img src="/assets/images/diplomas/previews/diploma-3.svg" alt="Сертификат вариант 3"></div>
+          <div class="diploma-item diploma-4"><img src="/assets/images/diplomas/previews/diploma-4.svg" alt="Сертификат вариант 4"></div>
+          <div class="diploma-item diploma-5"><img src="/assets/images/diplomas/previews/diploma-5.svg" alt="Сертификат вариант 5"></div>
+          <div class="diploma-item diploma-6"><img src="/assets/images/diplomas/previews/diploma-6.svg" alt="Сертификат вариант 6"></div>
+        </div>
+      </div>
+      <div class="rd-float-card rd-fc-cat-1">
+        <div class="rd-fc-icon">🎥</div>
+        <div class="rd-fc-text"><div class="rd-fc-t">Прямой эфир</div><div class="rd-fc-s">+ запись и материалы</div></div>
+      </div>
+      <div class="rd-float-card rd-fc-cat-2">
+        <div class="rd-fc-icon">📜</div>
+        <div class="rd-fc-text"><div class="rd-fc-t">Сертификат 2 ак. ч.</div><div class="rd-fc-s">именной, для портфолио</div></div>
+      </div>
+    </div>
+  </div>
 </section>
 
-<section class="webinars-grid-section" id="webinars-catalog">
-    <div class="container">
-        <!-- Горизонтальные фильтры: только мобильные -->
-        <div class="af-horizontal-only">
-            <?php
-            $audienceFilterBaseUrl = '/vebinary';
-            $extraPathPrefix = getSectionPathPrefix('vebinary', ['status' => $status]);
-            include __DIR__ . '/../includes/audience-filter.php';
+<!-- USP-полоска -->
+<div class="rd-usps">
+  <div class="rd-wrap rd-usp-grid reveal-stagger">
+    <div class="rd-usp"><div class="ic">🆓</div><div><div class="t">Бесплатно</div><div class="s">участие в эфирах и видеолекциях</div></div></div>
+    <div class="rd-usp"><div class="ic">📜</div><div><div class="t">Сертификат 2 ак. часа</div><div class="s">именной, для аттестации</div></div></div>
+    <div class="rd-usp"><div class="ic">🎬</div><div><div class="t">Запись и материалы</div><div class="s">чек-листы, презентации</div></div></div>
+    <div class="rd-usp"><div class="ic">⏰</div><div><div class="t">В удобное время</div><div class="s">видеолекции 24/7</div></div></div>
+  </div>
+</div>
+
+<!-- Каталог -->
+<section class="rd-section" id="catalog">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <div>
+        <div class="rd-eyebrow">Каталог вебинаров</div>
+        <h2 class="rd-section-title">Выберите вебинар или видеолекцию</h2>
+        <p class="rd-section-sub">Найдено: <strong><?php echo $totalWebinars; ?></strong>. Все с возможностью получить именной сертификат.</p>
+      </div>
+      <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+        Фильтры
+      </button>
+    </div>
+
+    <!-- Горизонтальные фильтры (мобильные) -->
+    <div class="af-horizontal-only">
+      <?php
+      $audienceFilterBaseUrl = '/vebinary';
+      $extraPathPrefix = getSectionPathPrefix('vebinary', ['status' => $status]);
+      include __DIR__ . '/../includes/audience-filter.php';
+      ?>
+      <div class="af-categories" style="margin-top:8px;">
+        <a href="<?php echo buildSeoUrl('vebinary', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+           class="af-pill<?php echo empty($status) ? ' active' : ''; ?>">Все вебинары</a>
+        <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+           class="af-pill<?php echo $status === 'upcoming' ? ' active' : ''; ?>">Предстоящие (<?php echo $counts["upcoming"]; ?>)</a>
+        <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'videolecture', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+           class="af-pill<?php echo $status === 'videolecture' ? ' active' : ''; ?>">Видеолекции (<?php echo $counts["autowebinars"]; ?>)</a>
+      </div>
+    </div>
+
+    <div class="rd-catalog">
+      <!-- Sidebar фильтры (десктоп) -->
+      <aside class="rd-filters" id="rdFiltersPanel">
+        <?php
+        $sidebarExtraFilters = [
+            'title' => 'Тип',
+            'allLabel' => 'Все вебинары',
+            'allUrl' => buildSeoUrl('vebinary', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
+            'allActive' => empty($status),
+            'links' => [
+                [
+                    'label' => 'Предстоящие',
+                    'url' => buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
+                    'active' => ($status === 'upcoming'),
+                    'count' => $counts["upcoming"]
+                ],
+                [
+                    'label' => 'Видеолекции',
+                    'url' => buildSeoUrl('vebinary', ['status' => 'videolecture', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
+                    'active' => ($status === 'videolecture'),
+                    'count' => $counts["autowebinars"]
+                ]
+            ]
+        ];
+        include __DIR__ . '/../includes/sidebar-filter.php';
+        ?>
+        <a href="/vebinary/" class="rd-reset-btn">Сбросить фильтры</a>
+      </aside>
+
+      <!-- Контент с карточками -->
+      <div class="rd-catalog-main">
+        <?php if (empty($webinars)): ?>
+          <div style="text-align:center;padding:60px 0;color:var(--ink-500);">
+            <p style="font-size:18px;margin-bottom:16px;">Вебинары не найдены</p>
+            <p>Попробуйте выбрать другой фильтр или <a href="/vebinary/" style="color:var(--indigo-600);">сбросить фильтры</a>.</p>
+          </div>
+        <?php else: ?>
+          <div class="rd-grid reveal-stagger" id="webinarsGrid">
+            <?php foreach ($webinars as $webinar):
+                $dateInfo = Webinar::formatDateTime($webinar["scheduled_at"]);
+                $isUpcoming = in_array($webinar["status"], ["scheduled", "live"]);
+                $isAuto     = $webinar["status"] === "videolecture";
+                $isFree     = !empty($webinar["is_free"]);
             ?>
-
-            <!-- Тип вебинара -->
-            <div class="af-categories" style="margin-top: 8px; margin-bottom: 24px;">
-                <a href="<?php echo buildSeoUrl('vebinary', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
-                   class="af-pill<?php echo empty($status) ? ' active' : ''; ?>">Все вебинары</a>
-                <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
-                   class="af-pill<?php echo $status === 'upcoming' ? ' active' : ''; ?>">Предстоящие (<?php echo $counts["upcoming"]; ?>)</a>
-                <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'videolecture', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
-                   class="af-pill<?php echo $status === 'videolecture' ? ' active' : ''; ?>">Видеолекции (<?php echo $counts["autowebinars"]; ?>)</a>
-            </div>
-        </div>
-
-        <div class="webinars-layout" id="catalog">
-            <!-- Sidebar фильтры: только десктоп -->
-            <aside class="sidebar-filters">
-                <?php
-                $sidebarExtraFilters = [
-                    'title' => 'Тип',
-                    'allLabel' => 'Все вебинары',
-                    'allUrl' => buildSeoUrl('vebinary', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
-                    'allActive' => empty($status),
-                    'links' => [
-                        [
-                            'label' => 'Предстоящие',
-                            'url' => buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
-                            'active' => ($status === 'upcoming'),
-                            'count' => $counts["upcoming"]
-                        ],
-                        [
-                            'label' => 'Видеолекции',
-                            'url' => buildSeoUrl('vebinary', ['status' => 'videolecture', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
-                            'active' => ($status === 'videolecture'),
-                            'count' => $counts["autowebinars"]
-                        ]
-                    ]
-                ];
-                include __DIR__ . '/../includes/sidebar-filter.php';
-                ?>
-            </aside>
-
-            <!-- Контент с карточками -->
-            <div class="content-area">
-                <div class="webinars-count">
-                    Найдено вебинаров: <strong><?php echo $totalWebinars; ?></strong>
+              <a class="rd-card rd-card-webinar" href="/vebinar/<?php echo htmlspecialchars($webinar["slug"]); ?>/">
+                <div class="rd-card-pat"></div>
+                <div class="rd-card-tags">
+                  <?php if ($isUpcoming): ?>
+                    <span class="rd-tag indigo upcoming">Скоро</span>
+                  <?php elseif ($webinar["status"] === "completed"): ?>
+                    <span class="rd-tag recording">Запись</span>
+                  <?php elseif ($isAuto): ?>
+                    <span class="rd-tag auto">Видеолекция</span>
+                  <?php endif; ?>
+                  <?php if ($isFree): ?>
+                    <span class="rd-tag free">Бесплатно</span>
+                  <?php endif; ?>
                 </div>
-
-                <?php if (empty($webinars)): ?>
-                    <div class="empty-state">
-                        <h3>Вебинаров пока нет</h3>
-                        <p>Скоро здесь появятся новые вебинары. Попробуйте выбрать другой фильтр.</p>
-                    </div>
-                <?php else: ?>
-                    <div class="webinars-grid">
-                        <?php foreach ($webinars as $webinar):
-                            $dateInfo = Webinar::formatDateTime($webinar["scheduled_at"]);
-                            $isUpcoming = in_array($webinar["status"], ["scheduled", "live"]);
-                        ?>
-                            <article class="webinar-card">
-                                <div class="webinar-card-header">
-                                    <?php if ($isUpcoming): ?>
-                                        <span class="badge badge-upcoming">Скоро</span>
-                                    <?php elseif ($webinar["status"] === "completed"): ?>
-                                        <span class="badge badge-recording">Запись</span>
-                                    <?php elseif ($webinar["status"] === "videolecture"): ?>
-                                        <span class="badge badge-auto">Видеолекция</span>
-                                    <?php endif; ?>
-                                    <?php if ($webinar["is_free"]): ?>
-                                        <span class="badge badge-free">Бесплатно</span>
-                                    <?php endif; ?>
-                                </div>
-
-                                <div class="webinar-card-date">
-                                    <?php if ($webinar["status"] === "videolecture"): ?>
-                                        Каждый день
-                                    <?php else: ?>
-                                        <?php echo $dateInfo["date"]; ?>, <?php echo $dateInfo["time"]; ?> (МСК)
-                                    <?php endif; ?>
-                                </div>
-
-                                <h3 class="webinar-card-title">
-                                    <a href="/vebinar/<?php echo htmlspecialchars($webinar["slug"]); ?>">
-                                        <?php echo htmlspecialchars($webinar["title"]); ?>
-                                    </a>
-                                </h3>
-
-                                <?php if (!empty($webinar["short_description"])): ?>
-                                    <p class="webinar-card-description">
-                                        <?php echo htmlspecialchars(mb_substr($webinar["short_description"], 0, 120)); ?>...
-                                    </p>
-                                <?php endif; ?>
-
-                                <?php if (!empty($webinar["speaker_name"])): ?>
-                                    <div class="webinar-card-speaker">
-                                        <?php if (!empty($webinar["speaker_photo"])): ?>
-                                            <img src="<?php echo htmlspecialchars($webinar["speaker_photo"]); ?>"
-                                                 alt="" class="speaker-avatar">
-                                        <?php endif; ?>
-                                        <span class="speaker-name"><?php echo htmlspecialchars($webinar["speaker_name"]); ?></span>
-                                    </div>
-                                <?php endif; ?>
-
-                                <div class="webinar-card-footer">
-                                    <div class="webinar-meta">
-                                        <span class="meta-item"><?php echo $webinar["duration_minutes"]; ?> мин</span>
-                                        <span class="meta-item"><?php echo $webinar["registrations_count"]; ?> участников</span>
-                                    </div>
-                                    <a href="/vebinar/<?php echo htmlspecialchars($webinar["slug"]); ?>"
-                                       class="btn btn-primary btn-sm">
-                                        <?php echo $isUpcoming ? "Зарегистрироваться" : "Подробнее"; ?>
-                                    </a>
-                                </div>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
+                <div class="rd-card-date">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  <?php if ($isAuto): ?>
+                    Доступно в любое время
+                  <?php else: ?>
+                    <?php echo htmlspecialchars($dateInfo["date"]); ?>, <?php echo htmlspecialchars($dateInfo["time"]); ?> МСК
+                  <?php endif; ?>
+                </div>
+                <h4><?php echo htmlspecialchars($webinar["title"]); ?></h4>
+                <?php if (!empty($webinar["short_description"])): ?>
+                  <div class="rd-card-meta"><?php echo htmlspecialchars(mb_substr($webinar["short_description"], 0, 130)); ?>…</div>
                 <?php endif; ?>
-            </div>
-        </div>
+                <?php if (!empty($webinar["speaker_name"])): ?>
+                  <div class="rd-card-speaker">
+                    <?php if (!empty($webinar["speaker_photo"])): ?>
+                      <img src="<?php echo htmlspecialchars($webinar["speaker_photo"]); ?>" alt="">
+                    <?php endif; ?>
+                    <span class="name"><?php echo htmlspecialchars($webinar["speaker_name"]); ?></span>
+                  </div>
+                <?php endif; ?>
+                <div class="rd-card-foot">
+                  <div class="rd-meta-row">
+                    <span><?php echo (int)$webinar["duration_minutes"]; ?> мин</span>
+                    <span><?php echo (int)$webinar["registrations_count"]; ?> участников</span>
+                  </div>
+                  <span class="rd-join-btn"><?php echo $isUpcoming ? "Зарегистрироваться" : ($isAuto ? "Смотреть" : "Подробнее"); ?></span>
+                </div>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </div>
     </div>
+  </div>
 </section>
 
-<script src="/assets/js/webinars.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/webinars.js'); ?>" defer></script>
+<!-- 4 шага -->
+<section class="rd-path rd-section">
+  <div class="rd-wrap">
+    <div class="reveal">
+      <div class="rd-eyebrow">Как это работает</div>
+      <h2 class="rd-section-title">Четыре шага до сертификата</h2>
+      <p class="rd-section-sub">От выбора вебинара до именного сертификата — за один день.</p>
+    </div>
+    <div class="rd-steps four reveal-stagger">
+      <div class="rd-step">
+        <div class="rd-step-n">1</div>
+        <h4>Выберите вебинар</h4>
+        <p>Прямой эфир или видеолекция — фильтры по теме и аудитории.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">2</div>
+        <h4>Зарегистрируйтесь</h4>
+        <p>Бесплатно. Ссылка на участие придёт на email сразу после регистрации.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">3</div>
+        <h4>Смотрите и пройдите тест</h4>
+        <p>Прямой эфир или запись в удобное время. После — короткий тест из 5 вопросов.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">4</div>
+        <h4>Получите сертификат</h4>
+        <p>Именной сертификат участника на 2 ак. часа — в личном кабинете.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Trust band -->
+<section class="rd-section">
+  <div class="rd-wrap">
+    <div class="rd-trust-band reveal">
+      <div class="rd-trust-grid">
+        <div>
+          <div class="rd-eyebrow">Документы и аккредитации</div>
+          <h2>Сертификаты выдаём от зарегистрированного СМИ</h2>
+          <p>Мы — официальное СМИ и резидент Сколково с лицензией на образовательную деятельность. Сертификаты участников вебинаров принимаются в портфолио и при аттестации.</p>
+        </div>
+        <div class="rd-tc-grid">
+          <div class="rd-tc"><div class="badge">📜</div><h5>Лицензия</h5><p>№ Л035-01212-59 от 17.12.2021</p></div>
+          <div class="rd-tc"><div class="badge">📰</div><h5>СМИ</h5><p>Эл. №ФС 77-74524 от 24.12.2018</p></div>
+          <div class="rd-tc"><div class="badge">⚡</div><h5>Сколково</h5><p>Резидент №1127165 от 18.02.2025</p></div>
+          <div class="rd-tc"><div class="badge">✓</div><h5>2 ак. часа</h5><p>в каждом сертификате участника</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="rd-section">
+  <div class="rd-wrap">
+    <div class="rd-faq">
+      <div class="reveal">
+        <div class="rd-eyebrow">FAQ</div>
+        <h2 class="rd-section-title">Вопросы о вебинарах</h2>
+        <p class="rd-section-sub">Не нашли ответ? Напишите <a href="mailto:info@fgos.pro" style="color:var(--indigo-600)">info@fgos.pro</a> или позвоните <a href="tel:+79223044413" style="color:var(--indigo-600)">+7 (922) 304-44-13</a>. Ежедневно 9:00–21:00.</p>
+      </div>
+      <div class="rd-faq-list reveal-stagger">
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Участие в вебинаре платное? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Нет, участие в эфирах и видеолекциях бесплатное. Платный — только именной сертификат участника (от 200 ₽).</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Как получить ссылку на трансляцию? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>После регистрации ссылка на эфир придёт на email. За сутки и за час до начала отправим напоминание.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Будет ли запись? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Да. После эфира мы пришлём ссылку на запись и презентацию спикера. Видеолекции изначально доступны 24/7.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Чем отличается вебинар от видеолекции? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Вебинар — это прямой эфир в назначенное время с возможностью задать вопрос спикеру. Видеолекция — готовая запись, которую можно смотреть в любое время.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Как получить сертификат? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>После просмотра пройдите короткий тест из 5 вопросов. Затем оформите именной сертификат на 2 ак. часа — он сразу появится в личном кабинете.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Принимается ли сертификат при аттестации? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Сертификаты выдаются от имени зарегистрированного СМИ (Эл. №ФС 77-74524) и принимаются в портфолио. Для аттестации лучше сочетать с курсами повышения квалификации в ФИС ФРДО.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="rd-section" style="padding-bottom:64px;">
+  <div class="rd-wrap">
+    <div class="rd-final-cta reveal">
+      <div>
+        <div class="rd-eyebrow">Готовы участвовать?</div>
+        <h2>Выберите вебинар и получите сертификат</h2>
+        <p><?php echo ($counts["upcoming"] + $counts["autowebinars"]); ?>+ вебинаров и видеолекций для педагогов. Бесплатное участие, именной сертификат на 2 ак. часа.</p>
+      </div>
+      <div class="actions">
+        <a href="#catalog" class="rd-btn rd-btn-primary">К каталогу
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+        </a>
+        <a href="/pages/contacts.php" class="rd-btn rd-btn-ghost">Связаться с нами</a>
+      </div>
+    </div>
+  </div>
+</section>
 
 <?php include __DIR__ . "/../includes/social-links.php"; ?>
 
-<?php include __DIR__ . "/../includes/footer.php"; ?>
+<?php include __DIR__ . "/../includes/footer-redesign.php"; ?>

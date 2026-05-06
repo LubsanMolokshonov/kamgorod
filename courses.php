@@ -388,6 +388,7 @@ include __DIR__ . '/includes/header-redesign.php';
           </div>
           <div id="courseSearchStatus" style="display:none;margin-top:10px;font-size:14px;color:var(--ink-500,#6b7280);"></div>
         </div>
+        <?php if ($programType !== 'all' || $selectedTypeData): ?>
         <div class="rd-catalog-toolbar">
           <div class="rd-applied-tags">
             <?php if ($programType !== 'all'): ?>
@@ -402,6 +403,7 @@ include __DIR__ . '/includes/header-redesign.php';
             <?php endif; ?>
           </div>
         </div>
+        <?php endif; ?>
 
         <?php if (empty($courses)): ?>
           <div style="text-align:center;padding:60px 0;color:var(--ink-500);">

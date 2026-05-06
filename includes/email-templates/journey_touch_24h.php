@@ -21,7 +21,7 @@ ob_start();
 
     <p>Мы заметили, что вы зарегистрировались на конкурс <strong>"<?php echo htmlspecialchars($competition_title); ?>"</strong>, но ещё не завершили оплату.</p>
 
-    <h3 style="color: #1e40af; margin-top: 25px; font-weight: 600;">Что вы получите после оплаты:</h3>
+    <h3 style="color: #182f8a; margin-top: 25px; font-weight: 600;">Что вы получите после оплаты:</h3>
 
     <ul class="benefits-list">
         <li>Официальный диплом в PDF-формате высокого качества</li>

@@ -27,7 +27,7 @@ ob_start();
 
     <p>Оформите свидетельство — это важный документ для вашего профессионального портфолио.</p>
 
-    <h3 style="color: #1e40af; margin-top: 25px; font-weight: 600;">Зачем нужно свидетельство:</h3>
+    <h3 style="color: #182f8a; margin-top: 25px; font-weight: 600;">Зачем нужно свидетельство:</h3>
 
     <ul style="color: #4A5568; padding-left: 20px; line-height: 1.8;">
         <li style="margin-bottom: 8px;"><strong>Аттестация</strong> — подтверждение публикационной активности</li>
@@ -45,7 +45,7 @@ ob_start();
         <?php
         $cert_link = $certificate_url . (strpos($certificate_url, '?') !== false ? '&' : '?') . $utm;
         ?>
-        <a href="<?php echo htmlspecialchars($cert_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);">
+        <a href="<?php echo htmlspecialchars($cert_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);">
             Оформить свидетельство
         </a>
     </div>

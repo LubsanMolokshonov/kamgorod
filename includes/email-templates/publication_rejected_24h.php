@@ -34,7 +34,7 @@ ob_start();
 
     <p>Не расстраивайтесь! Отправьте новый материал, соответствующий педагогической тематике. Вот примеры того, что мы публикуем:</p>
 
-    <h3 style="color: #1e40af; margin-top: 25px; font-weight: 600;">Подходящие материалы:</h3>
+    <h3 style="color: #182f8a; margin-top: 25px; font-weight: 600;">Подходящие материалы:</h3>
 
     <ul style="color: #4A5568; padding-left: 20px; line-height: 1.8;">
         <li style="margin-bottom: 8px;">Методические разработки и конспекты уроков</li>
@@ -50,7 +50,7 @@ ob_start();
         <?php
         $sub_link = $submit_url . (strpos($submit_url, '?') !== false ? '&' : '?') . $utm;
         ?>
-        <a href="<?php echo htmlspecialchars($sub_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #0077FF 0%, #0066DD 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(0, 119, 255, 0.4);">
+        <a href="<?php echo htmlspecialchars($sub_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #1e3aa8 0%, #182f8a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(30,58,168,0.32);">
             Отправить новую публикацию
         </a>
     </div>

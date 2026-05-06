@@ -13,6 +13,7 @@ $pageDescription = 'Структура и органы управления ОО
 $additionalCSS = ['/assets/css/svedeniya.css'];
 $currentSvedPage = '/svedeniya/struktura-i-organy-upravleniya/';
 
+$useRedesignBody = true;
 include __DIR__ . '/../../includes/header.php';
 ?>
 

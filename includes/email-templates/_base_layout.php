@@ -15,55 +15,48 @@
     <![endif]-->
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-family: 'Onest', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #0e1330;
             margin: 0;
             padding: 0;
-            background-color: #f0f4f8;
+            background-color: #fbfbfd;
             -webkit-font-smoothing: antialiased;
         }
         .email-wrapper {
-            background-color: #f0f4f8;
-            padding: 30px 15px;
+            background-color: #fbfbfd;
+            padding: 32px 16px;
         }
         .email-container {
             max-width: 600px;
             margin: 0 auto;
             background: #ffffff;
-            border-radius: 20px;
+            border-radius: 28px;
             overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 24px 60px -20px rgba(46,77,217,0.25), 0 8px 24px rgba(20,28,80,0.08);
+            border: 1px solid #eceef6;
         }
         .email-header {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
-            color: white;
-            padding: 40px 35px;
+            background: linear-gradient(135deg, #1e3aa8 0%, #182f8a 50%, #12246d 100%);
+            color: #ffffff;
+            padding: 44px 36px;
             text-align: center;
             position: relative;
         }
         .email-header::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="80" cy="20" r="40" fill="rgba(255,255,255,0.05)"/><circle cx="20" cy="80" r="30" fill="rgba(255,255,255,0.03)"/></svg>');
-            background-size: cover;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at 80% 20%, rgba(255,255,255,0.10) 0%, transparent 55%),
+                        radial-gradient(circle at 20% 80%, rgba(46,182,224,0.18) 0%, transparent 60%);
             pointer-events: none;
         }
         .email-header-content {
             position: relative;
             z-index: 1;
         }
-        .logo {
-            margin-bottom: 20px;
-        }
-        .logo img {
-            height: 50px;
-            width: auto;
-        }
+        .logo { margin-bottom: 18px; }
+        .logo img { height: 44px; width: auto; }
         .logo-text {
             font-size: 22px;
             font-weight: 700;
@@ -71,307 +64,291 @@
         }
         .email-header h1 {
             margin: 0;
+            font-family: 'Onest', 'Inter', -apple-system, sans-serif;
             font-size: 28px;
             font-weight: 700;
-            line-height: 1.3;
-            letter-spacing: -0.5px;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
         }
         .email-header p {
-            margin: 15px 0 0 0;
-            opacity: 0.9;
+            margin: 14px 0 0 0;
+            opacity: 0.92;
             font-size: 16px;
             font-weight: 400;
         }
         .email-content {
-            padding: 40px 35px;
+            padding: 40px 36px;
+            color: #2a3056;
+            font-size: 16px;
         }
+        .email-content a { color: #1e3aa8; }
         .greeting {
             font-size: 18px;
             margin-bottom: 20px;
-            color: #1e293b;
-            font-weight: 500;
+            color: #0e1330;
+            font-weight: 600;
+            font-family: 'Onest', 'Inter', sans-serif;
         }
         .competition-card {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border-radius: 16px;
-            padding: 25px;
-            margin: 25px 0;
-            border: 1px solid #e2e8f0;
+            background: #f6f7fb;
+            border-radius: 20px;
+            padding: 26px;
+            margin: 24px 0;
+            border: 1px solid #eceef6;
         }
         .competition-card h3 {
-            margin: 0 0 15px 0;
-            color: #1e40af;
-            font-size: 18px;
-            font-weight: 600;
+            margin: 0 0 14px 0;
+            color: #182f8a;
+            font-family: 'Onest', 'Inter', sans-serif;
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
         }
         .competition-details {
-            color: #64748b;
-            font-size: 14px;
+            color: #5a608a;
+            font-size: 14.5px;
         }
         .competition-details p {
             margin: 8px 0;
-            display: flex;
-            align-items: center;
         }
         .competition-details strong {
-            color: #475569;
+            color: #2a3056;
             min-width: 140px;
+            display: inline-block;
         }
         .price-tag {
             font-size: 32px;
             font-weight: 700;
-            color: #2563eb;
+            color: #182f8a;
             margin: 20px 0 0 0;
+            font-family: 'Onest', 'Inter', sans-serif;
+            letter-spacing: -0.02em;
         }
         .price-tag small {
             font-size: 16px;
-            font-weight: 400;
-            color: #64748b;
+            font-weight: 500;
+            color: #5a608a;
         }
         .cta-button {
             display: inline-block;
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            background: linear-gradient(135deg, #1e3aa8 0%, #182f8a 100%);
             color: #ffffff !important;
             text-decoration: none;
-            padding: 18px 50px;
-            border-radius: 12px;
+            padding: 17px 44px;
+            border-radius: 14px;
             font-size: 16px;
             font-weight: 600;
-            margin: 25px 0;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
-            transition: all 0.2s ease;
-        }
-        .cta-button:hover {
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
-            transform: translateY(-1px);
+            font-family: 'Onest', 'Inter', sans-serif;
+            margin: 24px 0;
+            box-shadow: 0 8px 22px rgba(30,58,168,0.32);
+            letter-spacing: -0.005em;
         }
         .cta-button-outline {
-            background: transparent;
-            border: 2px solid #2563eb;
-            color: #2563eb !important;
+            background: #ffffff;
+            border: 2px solid #1e3aa8;
+            color: #1e3aa8 !important;
             box-shadow: none;
-        }
-        .cta-button-outline:hover {
-            background: #2563eb;
-            color: #ffffff !important;
+            padding: 15px 42px;
         }
         .cta-button-green {
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+            background: linear-gradient(135deg, #18b89a 0%, #0e9a82 100%);
+            box-shadow: 0 8px 22px rgba(24,184,154,0.32);
         }
         .benefits-list {
             list-style: none;
             padding: 0;
-            margin: 25px 0;
+            margin: 24px 0;
         }
         .benefits-list li {
-            padding: 12px 0;
-            padding-left: 40px;
+            padding: 12px 0 12px 40px;
             position: relative;
-            color: #334155;
-            font-size: 15px;
-            border-bottom: 1px solid #f1f5f9;
+            color: #2a3056;
+            font-size: 15.5px;
+            border-bottom: 1px solid #eceef6;
         }
-        .benefits-list li:last-child {
-            border-bottom: none;
-        }
+        .benefits-list li:last-child { border-bottom: none; }
         .benefits-list li:before {
             content: "";
             position: absolute;
             left: 0;
-            top: 12px;
+            top: 13px;
             width: 24px;
             height: 24px;
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            background: linear-gradient(135deg, #18b89a 0%, #0e9a82 100%);
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         .benefits-list li:after {
             content: "\2713";
             position: absolute;
-            left: 6px;
+            left: 7px;
             top: 13px;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13px;
         }
         .urgency-banner {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: none;
-            border-radius: 12px;
-            padding: 20px 25px;
-            margin: 25px 0;
+            background: #fff7e0;
+            border: 1px solid #f5e3a8;
+            border-radius: 14px;
+            padding: 18px 22px;
+            margin: 24px 0;
             text-align: center;
-            color: #92400e;
+            color: #7a4f00;
             font-weight: 500;
         }
         .urgency-banner.critical {
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-            color: #991b1b;
+            background: #fff0f3;
+            border-color: #fbc8d1;
+            color: #a01030;
         }
         .promo-banner {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            border-radius: 16px;
+            background: linear-gradient(135deg, #1e3aa8 0%, #2eb6e0 100%);
+            border-radius: 24px;
             padding: 30px;
-            margin: 25px 0;
+            margin: 24px 0;
             text-align: center;
-            color: white;
+            color: #ffffff;
             position: relative;
             overflow: hidden;
         }
         .promo-banner::before {
             content: '';
             position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 100%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+            top: -50%; right: -50%;
+            width: 100%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 60%);
             pointer-events: none;
         }
         .promo-banner h2 {
             margin: 0 0 10px 0;
+            font-family: 'Onest', 'Inter', sans-serif;
             font-size: 22px;
             font-weight: 700;
+            letter-spacing: -0.01em;
             position: relative;
         }
         .promo-banner p {
             margin: 0;
             font-size: 16px;
-            opacity: 0.9;
+            opacity: 0.95;
             position: relative;
         }
         .promo-banner .promo-code {
             display: inline-block;
-            background: rgba(255,255,255,0.2);
-            padding: 8px 20px;
-            border-radius: 8px;
+            background: rgba(255,255,255,0.22);
+            padding: 9px 22px;
+            border-radius: 999px;
             font-weight: 700;
             font-size: 18px;
-            margin-top: 15px;
+            margin-top: 16px;
             letter-spacing: 1px;
         }
         .info-card {
-            background: #f8fafc;
-            border-radius: 12px;
+            background: #f6f7fb;
+            border: 1px solid #eceef6;
+            border-radius: 16px;
             padding: 20px;
             margin: 20px 0;
-            display: flex;
-            align-items: flex-start;
         }
         .info-card-icon {
             width: 48px;
             height: 48px;
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            flex-shrink: 0;
-            font-size: 24px;
+            background: linear-gradient(135deg, #1e3aa8 0%, #182f8a 100%);
+            border-radius: 14px;
+            display: inline-block;
+            text-align: center;
+            line-height: 48px;
+            margin-right: 14px;
+            font-size: 22px;
+            color: #ffffff;
+            vertical-align: middle;
         }
+        .info-card-content { display: inline-block; vertical-align: middle; max-width: 80%; }
         .info-card-content h4 {
-            margin: 0 0 5px 0;
-            color: #1e293b;
+            margin: 0 0 4px 0;
+            color: #0e1330;
+            font-family: 'Onest', 'Inter', sans-serif;
             font-size: 16px;
+            font-weight: 600;
         }
         .info-card-content p {
             margin: 0;
-            color: #64748b;
+            color: #5a608a;
             font-size: 14px;
         }
         .email-footer {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            padding: 30px 35px;
+            background: #f6f7fb;
+            padding: 30px 36px;
             text-align: center;
             font-size: 14px;
-            color: #64748b;
+            color: #5a608a;
+            border-top: 1px solid #eceef6;
         }
-        .email-footer p {
-            margin: 10px 0;
-        }
+        .email-footer p { margin: 8px 0; }
         .email-footer a {
-            color: #2563eb;
+            color: #1e3aa8;
             text-decoration: none;
             font-weight: 500;
         }
-        .email-footer a:hover {
-            text-decoration: underline;
-        }
+        .email-footer a:hover { text-decoration: underline; }
         .footer-brand {
-            font-weight: 600;
-            color: #1e293b;
+            font-weight: 700;
+            color: #0e1330;
             font-size: 16px;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
+            font-family: 'Onest', 'Inter', sans-serif;
+            letter-spacing: -0.01em;
         }
         .unsubscribe-link {
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid #eceef6;
             font-size: 12px;
-            color: #94a3b8;
+            color: #8389ad;
+            line-height: 1.55;
         }
         .unsubscribe-link a {
-            color: #94a3b8;
+            color: #8389ad;
             font-weight: 400;
+            text-decoration: underline;
         }
-        .text-center {
-            text-align: center;
-        }
-        .text-muted {
-            color: #64748b;
-        }
-        .text-small {
-            font-size: 14px;
-        }
+        .text-center { text-align: center; }
+        .text-muted { color: #5a608a; }
+        .text-small { font-size: 14px; }
         .badge {
             display: inline-block;
-            background: #dbeafe;
-            color: #1d4ed8;
-            padding: 4px 12px;
-            border-radius: 20px;
+            background: #ecefff;
+            color: #182f8a;
+            padding: 5px 14px;
+            border-radius: 999px;
             font-size: 12px;
             font-weight: 600;
             margin-bottom: 10px;
+            letter-spacing: 0.02em;
         }
         .badge-green {
-            background: #dcfce7;
-            color: #16a34a;
+            background: #d6f5ec;
+            color: #0e9a82;
         }
         .badge-orange {
-            background: #ffedd5;
-            color: #ea580c;
+            background: #ffe9d1;
+            color: #b85a16;
         }
         @media only screen and (max-width: 600px) {
-            .email-wrapper {
-                padding: 15px 10px;
-            }
-            .email-header {
-                padding: 30px 25px;
-            }
-            .email-header h1 {
-                font-size: 22px;
-            }
-            .email-content {
-                padding: 30px 25px;
-            }
-            .email-footer {
-                padding: 25px 20px;
-            }
+            .email-wrapper { padding: 16px 10px; }
+            .email-container { border-radius: 20px; }
+            .email-header { padding: 32px 24px; }
+            .email-header h1 { font-size: 22px; }
+            .email-content { padding: 28px 24px; }
+            .email-footer { padding: 24px 20px; }
             .cta-button {
                 display: block;
                 text-align: center;
-                padding: 16px 25px;
+                padding: 16px 22px;
             }
-            .competition-card {
-                padding: 20px;
-            }
-            .price-tag {
-                font-size: 26px;
-            }
+            .competition-card { padding: 20px; border-radius: 16px; }
+            .price-tag { font-size: 26px; }
+            .promo-banner { padding: 24px 20px; border-radius: 20px; }
         }
     </style>
 </head>

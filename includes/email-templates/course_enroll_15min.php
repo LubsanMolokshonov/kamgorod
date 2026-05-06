@@ -33,7 +33,7 @@ ob_start();
         <div class="price-tag"><?php echo number_format($course_price, 0, ',', ' '); ?> &#8381;</div>
     </div>
 
-    <h3 style="color: #1e40af; margin-top: 25px; font-weight: 600;">Что даёт <?php echo $course_program_type === 'pp' ? 'диплом' : 'удостоверение'; ?>:</h3>
+    <h3 style="color: #182f8a; margin-top: 25px; font-weight: 600;">Что даёт <?php echo $course_program_type === 'pp' ? 'диплом' : 'удостоверение'; ?>:</h3>
 
     <ul class="benefits-list">
         <li>Соответствие требованиям аттестации и проверок Рособрнадзора</li>

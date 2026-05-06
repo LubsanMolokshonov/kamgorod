@@ -26,7 +26,7 @@ ob_start();
 
     <p>Отличные новости! Вы успешно прошли олимпиаду и заняли <strong><?php echo htmlspecialchars($placement_text); ?></strong> с результатом <strong><?php echo intval($score); ?> из 10 баллов</strong>.</p>
 
-    <p style="margin-top: 20px; font-weight: 600; color: #1e40af;">Вот как будет выглядеть ваш диплом:</p>
+    <p style="margin-top: 20px; font-weight: 600; color: #182f8a;">Вот как будет выглядеть ваш диплом:</p>
 
     <!-- Превью диплома: HTML-карточка, имитирующая официальный документ -->
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
@@ -53,7 +53,7 @@ ob_start();
         </tr>
     </table>
 
-    <h3 style="color: #1e40af; margin-top: 24px; font-weight: 600;">Ваш диплом будет содержать:</h3>
+    <h3 style="color: #182f8a; margin-top: 24px; font-weight: 600;">Ваш диплом будет содержать:</h3>
 
     <ul class="benefits-list">
         <li>ФИО участника и занятое место</li>

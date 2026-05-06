@@ -13,6 +13,7 @@ $pageDescription = 'Информация о вакантных местах дл
 $additionalCSS = ['/assets/css/svedeniya.css'];
 $currentSvedPage = '/svedeniya/vakantnye-mesta/';
 
+$useRedesignBody = true;
 include __DIR__ . '/../../includes/header.php';
 ?>
 

@@ -55,6 +55,7 @@ $rdActivePage    = $rdActivePage ?? '';
     <link rel="stylesheet" href="/assets/css/main.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/main.css'); ?>">
     <link rel="stylesheet" href="/assets/css/search.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/search.css'); ?>">
     <link rel="stylesheet" href="/assets/css/redesign.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/redesign.css'); ?>">
+    <link rel="stylesheet" href="/assets/css/redesign-info.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/redesign-info.css'); ?>">
 
     <!-- Yandex.Metrika counter -->
     <script type="text/javascript">
@@ -91,8 +92,15 @@ $rdActivePage    = $rdActivePage ?? '';
     <?php endif; ?>
 
     <?php if (isset($additionalCSS)): ?>
+        <?php
+        // Не дублируем то, что уже подключили выше (точное совпадение basename).
+        $rdAlreadyLoaded = ['redesign.css', 'redesign-info.css', 'main.css', 'search.css'];
+        ?>
         <?php foreach ($additionalCSS as $css): ?>
-            <?php if (strpos($css, 'redesign.css') === false): // не дублируем ?>
+            <?php
+            $cssBase = basename(parse_url($css, PHP_URL_PATH) ?: $css);
+            if (!in_array($cssBase, $rdAlreadyLoaded, true)):
+            ?>
             <link rel="stylesheet" href="<?php echo $css; ?>">
             <?php endif; ?>
         <?php endforeach; ?>
@@ -145,7 +153,14 @@ $isLoggedIn = isset($_SESSION['user_email']);
           <a class="rd-sd-item" href="/kursy/perepodgotovka/"><div class="ico">🎓</div><div><div class="t">Курсы переподготовки</div><div class="s">Профпереподготовка · диплом</div></div></a>
         </div>
       </div>
-      <a class="rd-nav-link<?php echo $rdActivePage === 'zhurnal' ? ' active' : ''; ?>" href="/zhurnal">Журнал</a>
+      <div class="rd-nav-item rd-has-dd">
+        <a class="rd-nav-link<?php echo $rdActivePage === 'zhurnal' ? ' active' : ''; ?>" href="/zhurnal">Журнал</a>
+        <div class="rd-nav-dd">
+          <a class="rd-sd-item" href="/zhurnal"><div class="ico">📰</div><div><div class="t">Журнал публикаций</div><div class="s">О журнале и условиях публикации</div></div></a>
+          <a class="rd-sd-item" href="/publikacii/"><div class="ico">📚</div><div><div class="t">Опубликованные материалы</div><div class="s">Каталог работ других авторов</div></div></a>
+          <a class="rd-sd-item" href="/opublikovat"><div class="ico">📝</div><div><div class="t">Опубликовать материал</div><div class="s">Свидетельство о публикации</div></div></a>
+        </div>
+      </div>
     </nav>
 
     <div class="rd-nav-right">
@@ -195,6 +210,8 @@ $isLoggedIn = isset($_SESSION['user_email']);
     <a class="rd-mm-link rd-mm-sub" href="/kursy/povyshenie-kvalifikatsii/">— Повышение квалификации</a>
     <a class="rd-mm-link rd-mm-sub" href="/kursy/perepodgotovka/">— Переподготовка</a>
     <a class="rd-mm-link" href="/zhurnal">Журнал</a>
+    <a class="rd-mm-link rd-mm-sub" href="/publikacii/">— Опубликованные материалы</a>
+    <a class="rd-mm-link rd-mm-sub" href="/opublikovat">— Опубликовать материал</a>
     <a class="rd-mm-link" href="/o-portale">О портале</a>
     <?php if ($isLoggedIn): ?>
       <a class="rd-mm-link" href="/kabinet">Личный кабинет</a>

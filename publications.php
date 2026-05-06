@@ -1,7 +1,6 @@
 <?php
 /**
- * Каталог опубликованных материалов
- * Отображает публикации из журнала в формате карточного каталога
+ * Каталог опубликованных материалов (редизайн)
  */
 
 session_start();
@@ -16,8 +15,8 @@ require_once __DIR__ . '/includes/seo-url.php';
 
 // Фильтры аудитории из URL
 $selectedCategory = $_GET['ac'] ?? '';
-$selectedType = $_GET['at'] ?? '';
-$selectedSpec = $_GET['as'] ?? '';
+$selectedType     = $_GET['at'] ?? '';
+$selectedSpec     = $_GET['as'] ?? '';
 
 // 301-редирект со старых query-param URL на чистые SEO URL
 redirectToSeoUrl('publikacii', [
@@ -27,12 +26,16 @@ redirectToSeoUrl('publikacii', [
 ]);
 
 // SEO-мета
-$pageTitle = 'Опубликованные материалы педагогов — научный журнал | ' . SITE_NAME;
+$pageTitle       = 'Опубликованные материалы педагогов — научный журнал | ' . SITE_NAME;
 $pageDescription = 'Каталог опубликованных материалов педагогов: методические разработки, конспекты уроков, программы. Публикация в научном журнале с выдачей сертификата.';
-$canonicalUrl = SITE_URL . '/publikacii/';
+$canonicalUrl    = SITE_URL . '/publikacii/';
+$ogImage         = SITE_URL . '/assets/images/og-journal.jpg';
+$rdActivePage    = 'publikacii';
+
 $additionalCSS = [
+    '/assets/css/competition-detail.css?v=' . filemtime(__DIR__ . '/assets/css/competition-detail.css'),
+    '/assets/css/journal-redesign.css?v=' . filemtime(__DIR__ . '/assets/css/journal-redesign.css'),
     '/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/assets/css/audience-filter.css'),
-    '/assets/css/publications.css?v=' . filemtime(__DIR__ . '/assets/css/publications.css'),
 ];
 $additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/assets/js/audience-filter.js')];
 
@@ -44,11 +47,16 @@ $audienceCatObj = new AudienceCategory($db);
 $audienceTypeObj = new AudienceType($db);
 $audienceCategories = $audienceCatObj->getAllWithProducts('publication');
 
-// Разрешение выбранной иерархии аудитории
-$selectedCategoryData = null;
-$audienceTypes = [];
-$selectedTypeData = null;
+$selectedCategoryData    = null;
+$audienceTypes           = [];
+$selectedTypeData        = null;
 $audienceSpecializations = [];
+
+// Категория аудитории не показывается в UI — автоматически берём первую доступную (обычно «Педагогам»),
+// чтобы подгрузить список уровней.
+if (!$selectedCategory && !empty($audienceCategories)) {
+    $selectedCategory = $audienceCategories[0]['slug'];
+}
 
 if ($selectedCategory) {
     $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory);
@@ -74,150 +82,175 @@ if (!empty($selectedType)) {
         $filters['audience_type_id'] = $selectedTypeDataForFilter['id'];
     }
 }
-if (!empty($selectedSpec)) {
-    // Найти ID специализации по слагу
-    if (!empty($audienceSpecializations)) {
-        foreach ($audienceSpecializations as $spec) {
-            if ($spec['slug'] === $selectedSpec) {
-                $filters['specialization_id'] = $spec['id'];
-                break;
-            }
+if (!empty($selectedSpec) && !empty($audienceSpecializations)) {
+    foreach ($audienceSpecializations as $spec) {
+        if ($spec['slug'] === $selectedSpec) {
+            $filters['specialization_id'] = $spec['id'];
+            break;
         }
     }
 }
 
 // Получение публикаций
-$publicationObj = new Publication($db);
-$totalPublications = $publicationObj->countPublished($filters);
-$allPublications = $publicationObj->getPublished($perPage + 100, 0, $filters); // для клиентской пагинации
+$publicationObj    = new Publication($db);
+$allPublications   = $publicationObj->getPublished($perPage + 100, 0, $filters);
 $totalPublications = count($allPublications);
-$publications = array_slice($allPublications, 0, $perPage);
-$hasMore = $totalPublications > $perPage;
+$publications      = array_slice($allPublications, 0, $perPage);
+$hasMore           = $totalPublications > $perPage;
 
-// OG-изображение
-$ogImage = SITE_URL . '/assets/images/og-journal.jpg';
-
-include __DIR__ . '/includes/header.php';
+include __DIR__ . '/includes/header-redesign.php';
 ?>
 
-<!-- Hero Section -->
-<section class="hero-landing">
-    <div class="container">
-        <div class="hero-content" style="max-width: 700px;">
-            <h1 class="hero-title">Опубликованные материалы педагогов</h1>
-            <p class="hero-subtitle">Методические разработки, конспекты уроков и программы, опубликованные в нашем научном журнале</p>
-            <a href="/opublikovat/" class="btn btn-hero">Опубликовать свой материал</a>
-        </div>
-
-        <div class="hero-right">
-            <div class="hero-features hero-features--badges">
-                <div class="feature-card feature-card--badge">
-                    <div class="feature-logo">
-                        <img src="/assets/images/skolkovo.webp" alt="Сколково" width="70" height="70">
-                    </div>
-                    <div class="feature-text">
-                        <span class="feature-label">Резидент</span>
-                        <span class="feature-label">Сколково</span>
-                    </div>
-                </div>
-
-                <div class="feature-card feature-card--badge">
-                    <div class="feature-logo">
-                        <img src="/assets/images/eagle_s.svg" alt="СМИ" width="70" height="70">
-                    </div>
-                    <div class="feature-text">
-                        <span class="feature-label">Свидетельство о регистрации СМИ:</span>
-                        <span class="feature-label">Эл. №ФС 77-74524</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!-- HERO каталога -->
+<section class="rd-hero-catalog">
+  <div class="rd-wrap">
+    <div class="rd-crumbs">
+      <a href="/">Главная</a>
+      <span class="sep">/</span>
+      <strong>Публикации</strong>
     </div>
+  </div>
+  <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
+    <div>
+      <div class="rd-pill-row reveal-stagger">
+        <span class="rd-pill"><span class="dot"></span><?php echo $totalPublications; ?>+ материалов</span>
+        <span class="rd-pill indigo">Свидетельство СМИ</span>
+        <span class="rd-pill">Резидент Сколково</span>
+      </div>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal">Опубликованные материалы педагогов&nbsp;<span class="accent">в&nbsp;научном журнале</span></h1>
+      <p class="rd-hero-sub reveal">Методические разработки, конспекты уроков, программы и проекты, опубликованные в нашем зарегистрированном электронном СМИ. Бесплатная публикация с выдачей сертификата.</p>
+      <div class="rd-hero-bullets reveal-stagger">
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Бесплатная публикация</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Сертификат СМИ Эл. №ФС 77-74524</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Бессрочное хранение в архиве журнала</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Индексация поисковыми системами</div>
+      </div>
+      <div class="rd-hero-cta reveal">
+        <a href="/opublikovat/" class="rd-btn rd-btn-primary">Опубликовать свой материал
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+        </a>
+        <span style="font-size:13px;color:var(--ink-500);">бесплатно · сертификат СМИ</span>
+      </div>
+    </div>
+
+    <div class="rd-hero-art rd-hero-art-cat reveal">
+      <div class="rd-blob"></div>
+      <div class="rd-float-card rd-fc-cat-1">
+        <div class="rd-fc-icon">📰</div>
+        <div class="rd-fc-text"><div class="rd-fc-t">Зарегистрированное СМИ</div><div class="rd-fc-s">Эл. №ФС 77-74524</div></div>
+      </div>
+      <div class="rd-float-card rd-fc-cat-2">
+        <div class="rd-fc-icon">✓</div>
+        <div class="rd-fc-text"><div class="rd-fc-t">Сертификат автору</div><div class="rd-fc-s">сразу после публикации</div></div>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- Каталог публикаций -->
-<div class="container mt-40" id="publications">
-    <!-- Горизонтальные фильтры: мобильные -->
-    <div class="af-horizontal-only">
-        <?php
-        $audienceFilterBaseUrl = '/publikacii';
-        $extraPathPrefix = '';
-        include __DIR__ . '/includes/audience-filter.php';
-        ?>
+<!-- USP-полоска -->
+<div class="rd-usps">
+  <div class="rd-wrap rd-usp-grid reveal-stagger">
+    <div class="rd-usp"><div class="ic">🆓</div><div><div class="t">Бесплатная публикация</div><div class="s">без скрытых платежей</div></div></div>
+    <div class="rd-usp"><div class="ic">📰</div><div><div class="t">Сертификат СМИ</div><div class="s">от зарегистрированного издания</div></div></div>
+    <div class="rd-usp"><div class="ic">📜</div><div><div class="t">Соответствует ФГОС</div><div class="s">для аттестации педагога</div></div></div>
+    <div class="rd-usp"><div class="ic">♾️</div><div><div class="t">Бессрочное хранение</div><div class="s">в архиве журнала</div></div></div>
+  </div>
+</div>
+
+<!-- Каталог -->
+<section class="rd-section" id="catalog">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <div>
+        <div class="rd-eyebrow">Каталог публикаций</div>
+        <h2 class="rd-section-title">Материалы, опубликованные в журнале</h2>
+        <p class="rd-section-sub">Найдено: <strong id="totalCount"><?php echo $totalPublications; ?></strong> публикаций. Все с открытым доступом.</p>
+      </div>
+      <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+        Фильтры
+      </button>
     </div>
 
-    <div class="competitions-layout" id="catalog">
-        <!-- Sidebar фильтры: десктоп -->
-        <aside class="sidebar-filters">
-            <?php
-            $sidebarExtraFilters = null;
-            include __DIR__ . '/includes/sidebar-filter.php';
+    <div class="rd-catalog">
+      <!-- Sidebar фильтры -->
+      <aside class="rd-filters" id="rdFiltersPanel">
+
+        <?php if (!empty($audienceTypes)): ?>
+        <h4>Уровень</h4>
+        <div class="rd-chip-list">
+          <div class="rd-chip-row<?php echo empty($selectedType) ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo buildSeoUrl('publikacii', ['ac' => $selectedCategory]); ?>#catalog" style="text-decoration:none;color:inherit;">Все уровни</a>
+            </label>
+          </div>
+          <?php foreach ($audienceTypes as $at): ?>
+          <div class="rd-chip-row<?php echo $selectedType === $at['slug'] ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo buildSeoUrl('publikacii', ['ac' => $selectedCategory, 'at' => $at['slug']]); ?>#catalog" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($at['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+            </label>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <a href="/publikacii/#catalog" class="rd-reset-btn">Сбросить фильтры</a>
+      </aside>
+
+      <!-- Каталог + карточки -->
+      <div class="rd-catalog-main">
+        <?php if (empty($publications)): ?>
+          <div style="text-align:center;padding:60px 0;color:var(--ink-500);">
+            <p style="font-size:18px;margin-bottom:16px;">Публикации не найдены</p>
+            <p>Попробуйте выбрать другую категорию или <a href="/publikacii/" style="color:var(--indigo-600);">сбросить фильтры</a>.</p>
+          </div>
+        <?php else: ?>
+          <div class="rd-grid reveal-stagger" id="publicationsGrid">
+            <?php foreach ($publications as $pub):
+                $pubDate = date('d.m.Y', strtotime($pub['published_at'] ?? $pub['created_at']));
             ?>
-        </aside>
-
-        <!-- Контент с карточками -->
-        <div class="content-area">
-            <div class="publications-count mb-20">
-                Найдено публикаций: <strong id="totalCount"><?php echo $totalPublications; ?></strong>
-            </div>
-
-            <?php if (empty($publications)): ?>
-                <div class="text-center mb-40">
-                    <h2>Публикации не найдены</h2>
-                    <p>В данной категории пока нет опубликованных материалов. Попробуйте выбрать другую категорию.</p>
-                </div>
-            <?php else: ?>
-                <div class="publications-grid" id="publicationsGrid">
-                    <?php foreach ($publications as $pub): ?>
-                        <div class="publication-card" data-publication-id="<?php echo $pub['id']; ?>">
-                            <?php if (!empty($pub['type_name'])): ?>
-                            <span class="publication-type">
-                                <?php echo htmlspecialchars($pub['type_name']); ?>
-                            </span>
-                            <?php endif; ?>
-
-                            <h3><?php echo htmlspecialchars($pub['title']); ?></h3>
-
-                            <?php if (!empty($pub['author_name'])): ?>
-                            <p class="publication-author"><?php echo htmlspecialchars($pub['author_name']); ?></p>
-                            <?php endif; ?>
-
-                            <?php if (!empty($pub['annotation'])): ?>
-                            <p class="publication-annotation"><?php echo htmlspecialchars(mb_substr($pub['annotation'], 0, 120)); ?><?php echo mb_strlen($pub['annotation']) > 120 ? '...' : ''; ?></p>
-                            <?php endif; ?>
-
-                            <div class="publication-meta">
-                                <span class="publication-date">
-                                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                    <?php echo date('d.m.Y', strtotime($pub['published_at'] ?? $pub['created_at'])); ?>
-                                </span>
-                                <?php if (!empty($pub['views_count']) && $pub['views_count'] > 0): ?>
-                                <span class="publication-views">
-                                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                    <?php echo $pub['views_count']; ?>
-                                </span>
-                                <?php endif; ?>
-                            </div>
-
-                            <a href="/publikaciya/<?php echo htmlspecialchars($pub['slug']); ?>/" class="btn btn-primary btn-block">
-                                Читать
-                            </a>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-
-                <!-- Кнопка загрузки -->
-                <?php if ($hasMore): ?>
-                <div class="load-more-container" id="loadMoreContainer">
-                    <button id="loadMoreBtn" class="btn btn-secondary btn-load-more" data-offset="<?php echo $perPage; ?>">
-                        Показать больше публикаций
-                    </button>
+              <a class="rd-card" href="/publikaciya/<?php echo htmlspecialchars($pub['slug'], ENT_QUOTES, 'UTF-8'); ?>/">
+                <div class="rd-card-pat"></div>
+                <?php if (!empty($pub['type_name'])): ?>
+                <div class="rd-card-tags">
+                  <span class="rd-tag indigo"><?php echo htmlspecialchars($pub['type_name'], ENT_QUOTES, 'UTF-8'); ?></span>
                 </div>
                 <?php endif; ?>
-            <?php endif; ?>
-        </div>
+                <h4><?php echo htmlspecialchars($pub['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
+                <div class="rd-card-meta">
+                  <?php if (!empty($pub['author_name'])): ?>
+                    <?php echo htmlspecialchars($pub['author_name'], ENT_QUOTES, 'UTF-8'); ?> · <?php echo $pubDate; ?>
+                  <?php else: ?>
+                    <?php echo $pubDate; ?>
+                  <?php endif; ?>
+                  <?php if (!empty($pub['annotation'])): ?>
+                    <br><?php echo htmlspecialchars(mb_substr($pub['annotation'], 0, 120), ENT_QUOTES, 'UTF-8'); ?><?php echo mb_strlen($pub['annotation']) > 120 ? '…' : ''; ?>
+                  <?php endif; ?>
+                </div>
+                <div class="rd-card-foot">
+                  <?php if (!empty($pub['views_count']) && $pub['views_count'] > 0): ?>
+                    <span style="font-size:13px;color:var(--ink-500);">👁 <?php echo (int)$pub['views_count']; ?></span>
+                  <?php else: ?>
+                    <span></span>
+                  <?php endif; ?>
+                  <span class="rd-join-btn">Читать</span>
+                </div>
+              </a>
+            <?php endforeach; ?>
+          </div>
+
+          <?php if ($hasMore): ?>
+            <div id="loadMoreContainer" style="margin-top:24px;text-align:center;">
+              <button id="loadMoreBtn" class="rd-load-more" data-offset="<?php echo $perPage; ?>">
+                Показать больше публикаций
+              </button>
+            </div>
+          <?php endif; ?>
+        <?php endif; ?>
+      </div>
     </div>
-</div>
+  </div>
+</section>
 
 <!-- Клиентская пагинация -->
 <script>
@@ -246,27 +279,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     date = ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + d.getFullYear();
                 }
                 var annotation = pub.annotation || '';
-                if (annotation.length > 120) annotation = annotation.substring(0, 120) + '...';
+                if (annotation.length > 120) annotation = annotation.substring(0, 120) + '…';
 
-                html += '<div class="publication-card" data-publication-id="' + pub.id + '">';
+                html += '<a class="rd-card" href="/publikaciya/' + escapeHtml(pub.slug || '') + '/">';
+                html += '<div class="rd-card-pat"></div>';
                 if (pub.type_name) {
-                    html += '<span class="publication-type">' + escapeHtml(pub.type_name) + '</span>';
+                    html += '<div class="rd-card-tags"><span class="rd-tag indigo">' + escapeHtml(pub.type_name) + '</span></div>';
                 }
-                html += '<h3>' + escapeHtml(pub.title || '') + '</h3>';
+                html += '<h4>' + escapeHtml(pub.title || '') + '</h4>';
+                html += '<div class="rd-card-meta">';
                 if (pub.author_name) {
-                    html += '<p class="publication-author">' + escapeHtml(pub.author_name) + '</p>';
+                    html += escapeHtml(pub.author_name) + ' · ' + date;
+                } else {
+                    html += date;
                 }
                 if (annotation) {
-                    html += '<p class="publication-annotation">' + escapeHtml(annotation) + '</p>';
+                    html += '<br>' + escapeHtml(annotation);
                 }
-                html += '<div class="publication-meta">';
-                html += '<span class="publication-date"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' + date + '</span>';
+                html += '</div>';
+                html += '<div class="rd-card-foot">';
                 if (pub.views_count > 0) {
-                    html += '<span class="publication-views"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' + pub.views_count + '</span>';
+                    html += '<span style="font-size:13px;color:var(--ink-500);">👁 ' + pub.views_count + '</span>';
+                } else {
+                    html += '<span></span>';
                 }
+                html += '<span class="rd-join-btn">Читать</span>';
                 html += '</div>';
-                html += '<a href="/publikaciya/' + (pub.slug || '') + '/" class="btn btn-primary btn-block">Читать</a>';
-                html += '</div>';
+                html += '</a>';
             });
 
             grid.insertAdjacentHTML('beforeend', html);
@@ -278,6 +317,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 btn.disabled = false;
                 btn.textContent = 'Показать больше публикаций';
             }
+        });
+    }
+
+    // Toggle фильтров на мобильных
+    var filterToggle = document.getElementById('rdFilterToggle');
+    var filtersPanel = document.getElementById('rdFiltersPanel');
+    if (filterToggle && filtersPanel) {
+        filterToggle.addEventListener('click', function() {
+            filtersPanel.classList.toggle('open');
         });
     }
 

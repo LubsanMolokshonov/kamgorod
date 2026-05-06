@@ -45,7 +45,7 @@ ob_start();
         </div>
     </div>
 
-    <h3 style="color: #1e40af; margin-top: 30px; font-weight: 600;">Что будет дальше:</h3>
+    <h3 style="color: #182f8a; margin-top: 30px; font-weight: 600;">Что будет дальше:</h3>
 
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
         <tr>

@@ -37,16 +37,16 @@ ob_start();
         <span class="badge" style="display:inline-block; background: #dcfce7; color: #16a34a; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 10px;">Бонус для участников</span>
         <h3 style="margin: 0 0 15px 0; color: #16a34a; font-size: 18px; font-weight: 600;">🎁 Презентация и подарок</h3>
         <p style="color: #4A5568; margin-bottom: 20px;">Скачайте презентацию вебинара и специальный подарок от спикера.</p>
-        <a href="https://clck.ru/3SaKHd" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);">
+        <a href="https://clck.ru/3SaKHd" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);">
             Скачать материалы
         </a>
     </div>
 
     <!-- Блок: Анкета обратной связи -->
     <div style="background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border-radius: 16px; padding: 25px; margin: 25px 0; text-align: center; border: 2px dashed #93c5fd;">
-        <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 18px; font-weight: 600;">📝 Поделитесь впечатлениями</h3>
+        <h3 style="margin: 0 0 10px 0; color: #182f8a; font-size: 18px; font-weight: 600;">📝 Поделитесь впечатлениями</h3>
         <p style="color: #4A5568; margin-bottom: 20px;">Ваше мнение очень важно для нас! Заполните короткую анкету — это займёт не больше 2 минут.</p>
-        <a href="https://clck.ru/3SaLJ4" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);">
+        <a href="https://clck.ru/3SaLJ4" style="display: inline-block; background: linear-gradient(135deg, #1e3aa8 0%, #182f8a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(30,58,168,0.32);">
             Заполнить анкету
         </a>
     </div>
@@ -65,7 +65,7 @@ ob_start();
         <?php
         $cert_link = $certificate_url . (strpos($certificate_url, '?') !== false ? '&' : '?') . $utm;
         ?>
-        <a href="<?php echo htmlspecialchars($cert_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);">
+        <a href="<?php echo htmlspecialchars($cert_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);">
             Получить сертификат
         </a>
     </div>
@@ -100,7 +100,7 @@ ob_start();
         <?php
         $cabinet_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm;
         ?>
-        <a href="<?php echo htmlspecialchars($cabinet_link); ?>" class="cta-button cta-button-secondary" style="display: inline-block; background: #ebebf0; color: #0077FF; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600;">
+        <a href="<?php echo htmlspecialchars($cabinet_link); ?>" class="cta-button cta-button-secondary" style="display: inline-block; background: #ebebf0; color: #1e3aa8; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600;">
             Перейти в личный кабинет
         </a>
     </div>

@@ -50,6 +50,7 @@
                     <h4>Публикации</h4>
                     <p>
                         <a href="/zhurnal/">Журнал публикаций</a><br>
+                        <a href="/publikacii/">Опубликованные материалы</a><br>
                         <a href="/opublikovat/">Опубликовать материал</a><br>
                         <a href="/sertifikat-publikacii/">Получить сертификат</a>
                     </p>

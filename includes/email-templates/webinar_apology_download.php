@@ -11,7 +11,7 @@ $utm = 'utm_source=email&utm_campaign=apology_download_certificate';
 
 ob_start();
 ?>
-<div class="email-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);">
+<div class="email-header" style="background: linear-gradient(135deg, #182f8a 0%, #1e3aa8 50%, #2eb6e0 100%);">
     <div class="email-header-content">
         <div class="logo" style="text-align: center;">
             <img src="<?php echo $site_url; ?>/assets/images/logo-white.png" alt="ФГОС-Практикум" style="height: 40px; vertical-align: middle;">
@@ -55,12 +55,12 @@ ob_start();
         <?php
         $cabinet_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm;
         ?>
-        <a href="<?php echo htmlspecialchars($cabinet_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #0077FF 0%, #0066DD 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(0, 119, 255, 0.4);">
+        <a href="<?php echo htmlspecialchars($cabinet_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #1e3aa8 0%, #182f8a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(30,58,168,0.32);">
             Перейти в личный кабинет
         </a>
     </div>
 
-    <p style="color: #4A5568;">Если у вас возникнут вопросы, напишите нам на <a href="mailto:info@fgos.pro" style="color: #0077FF;">info@fgos.pro</a> — мы обязательно поможем.</p>
+    <p style="color: #4A5568;">Если у вас возникнут вопросы, напишите нам на <a href="mailto:info@fgos.pro" style="color: #1e3aa8;">info@fgos.pro</a> — мы обязательно поможем.</p>
 
     <p style="color: #4A5568;">С уважением,<br>Команда ФГОС-Практикум</p>
 </div>

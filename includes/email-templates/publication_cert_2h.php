@@ -32,7 +32,7 @@ ob_start();
         $pub_link = $publication_url . (strpos($publication_url, '?') !== false ? '&' : '?') . $utm;
         ?>
         <p style="margin-top: 15px;">
-            <a href="<?php echo htmlspecialchars($pub_link); ?>" style="color: #0077FF; text-decoration: none; font-weight: 500;">Посмотреть публикацию &rarr;</a>
+            <a href="<?php echo htmlspecialchars($pub_link); ?>" style="color: #1e3aa8; text-decoration: none; font-weight: 500;">Посмотреть публикацию &rarr;</a>
         </p>
     </div>
 
@@ -49,7 +49,7 @@ ob_start();
         <?php
         $cert_link = $certificate_url . (strpos($certificate_url, '?') !== false ? '&' : '?') . $utm;
         ?>
-        <a href="<?php echo htmlspecialchars($cert_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);">
+        <a href="<?php echo htmlspecialchars($cert_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);">
             Оформить свидетельство
         </a>
     </div>

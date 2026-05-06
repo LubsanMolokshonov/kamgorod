@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showError(field, message) {
-        const errorEl = field.closest('.form-group')?.querySelector('.error-message');
+        const errorEl = (field.closest('.rd-form-group') || field.closest('.form-group'))?.querySelector('.error-message');
         if (errorEl) {
             errorEl.textContent = message;
             errorEl.style.display = 'block';
@@ -388,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function clearError(field) {
-        const errorEl = field.closest('.form-group')?.querySelector('.error-message');
+        const errorEl = (field.closest('.rd-form-group') || field.closest('.form-group'))?.querySelector('.error-message');
         if (errorEl) {
             errorEl.textContent = '';
             errorEl.style.display = 'none';

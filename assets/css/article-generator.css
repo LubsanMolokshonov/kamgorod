@@ -1,760 +1,368 @@
-/* ========================================
-   Генератор статей — стили
-   Оформлен в едином стиле с вебинарами
-   ======================================== */
+/* ==========================================================================
+   Article Generator (визард генерации статей)
+   Дополнение к redesign.css + journal-redesign.css.
+   /generator-statej/
+   ========================================================================== */
 
-/* ==================== Секция «Как это работает» ==================== */
-
-.gen-steps-section {
-    padding: 60px 0;
-    background: var(--bg-light);
+/* ---------- Иконка в карточке преимуществ ---------- */
+.gen-bn-ic {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--indigo-50);
+  color: var(--indigo-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
 }
 
-.gen-section-title {
-    text-align: center;
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 48px;
-    color: var(--text-dark);
-}
-
-.gen-steps-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
-}
-
-.gen-step-card {
-    background: #fff;
-    border-radius: var(--border-radius-card);
-    padding: 32px 24px;
-    box-shadow: var(--shadow-card);
-    text-align: center;
-    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
-}
-
-.gen-step-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 8px 8px 20px rgba(0,119,255,0.15);
-}
-
-.gen-step-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    background: var(--light-purple);
-    color: var(--primary-purple);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px;
-}
-
-.gen-step-num {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--primary-purple);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
-}
-
-.gen-step-card h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0 0 8px;
-    color: var(--text-dark);
-    line-height: 1.4;
-}
-
-.gen-step-card p {
-    font-size: 14px;
-    color: var(--text-medium);
-    margin: 0;
-    line-height: 1.5;
-}
-
-/* ==================== Секция «Преимущества» ==================== */
-
-.gen-benefits-section {
-    padding: 60px 0;
-}
-
-.gen-benefits-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
-}
-
-.gen-benefit-card {
-    background: #fff;
-    border-radius: var(--border-radius-card);
-    padding: 32px 24px;
-    box-shadow: var(--shadow-card);
-    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
-}
-
-.gen-benefit-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 8px 8px 20px rgba(0,119,255,0.15);
-}
-
-.gen-benefit-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
-    background: var(--light-purple);
-    color: var(--primary-purple);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 16px;
-}
-
-.gen-benefit-card h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0 0 8px;
-    color: var(--text-dark);
-    line-height: 1.4;
-}
-
-.gen-benefit-card p {
-    font-size: 14px;
-    color: var(--text-medium);
-    margin: 0;
-    line-height: 1.5;
-}
-
-/* ==================== Визард ==================== */
-
-.generator-wizard-section {
-    padding: 40px 0 80px;
-    background: var(--bg-light);
-}
-
-/* Прогресс-бар */
+/* ---------- Прогресс-бар визарда ---------- */
 .wizard-progress {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    margin-bottom: 40px;
-    max-width: 700px;
-    margin-left: auto;
-    margin-right: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid var(--ink-200);
+  border-radius: 16px;
+  padding: 18px 22px;
+  margin-bottom: 22px;
+  box-shadow: 0 1px 2px rgba(14,19,48,.04);
+  gap: 8px;
 }
-
 .progress-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
-
 .progress-dot {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #e5e7eb;
-    color: var(--text-medium);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ink-100);
+  color: var(--ink-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 13px var(--font-sans);
+  transition: all .25s var(--ease-out);
 }
-
 .progress-step.active .progress-dot {
-    background: var(--gradient-primary);
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(0, 119, 255, 0.3);
+  background: var(--indigo-600);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(99,102,241,.18);
 }
-
 .progress-step.completed .progress-dot {
-    background: #22c55e;
-    color: #fff;
+  background: var(--indigo-100);
+  color: var(--indigo-700);
 }
-
 .progress-step span {
-    font-size: 12px;
-    color: var(--text-medium);
-    white-space: nowrap;
+  font: 600 12px var(--font-sans);
+  color: var(--ink-500);
+  white-space: nowrap;
 }
-
-.progress-step.active span {
-    color: var(--primary-purple);
-    font-weight: 600;
-}
-
+.progress-step.active span { color: var(--ink-900); }
 .progress-line {
-    flex: 1;
-    height: 2px;
-    background: #e5e7eb;
-    margin: 0 8px;
-    margin-bottom: 22px;
+  flex: 1;
+  height: 2px;
+  background: var(--ink-100);
+  border-radius: 2px;
+  margin: 0 4px;
+  align-self: center;
+  margin-top: -16px;
+  min-width: 12px;
 }
 
-/* Карточки шагов */
-.wizard-step {
-    display: none;
+@media (max-width: 720px) {
+  .wizard-progress { padding: 14px 12px; gap: 4px; }
+  .progress-dot { width: 28px; height: 28px; font-size: 12px; }
+  .progress-step span { display: none; }
+  .progress-line { margin-top: 0; }
 }
 
-.wizard-step.active {
-    display: block;
-    animation: fadeInUp 0.3s ease;
+/* ---------- Wizard step ---------- */
+.wizard-step { display: none; }
+.wizard-step.active { display: block; animation: wizFade .25s var(--ease-out); }
+@keyframes wizFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+.wizard-card-wide { max-width: 100%; }
+.wizard-card-centered { text-align: center; }
 
-.wizard-card {
-    background: #fff;
-    border-radius: var(--border-radius-card);
-    padding: 48px;
-    box-shadow: var(--shadow-card);
-    max-width: 700px;
-    margin: 0 auto;
-}
-
-.wizard-card-wide {
-    max-width: 900px;
-}
-
-.wizard-card-centered {
-    text-align: center;
-}
-
-.wizard-card h2 {
-    font-size: 24px;
-    font-weight: 700;
-    margin: 0 0 8px;
-    color: var(--text-dark);
-}
-
-.wizard-card-desc {
-    color: var(--text-medium);
-    margin-bottom: 32px;
-}
-
-/* Формы */
-.generator-form .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 0;
-}
-
-.generator-form .form-group {
-    margin-bottom: 20px;
-}
-
-.generator-form label {
-    display: block;
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: var(--text-dark);
-}
-
-.generator-form .required {
-    color: #ef4444;
-}
-
-.generator-form .form-control {
-    width: 100%;
-    padding: 12px 16px;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    font-size: 15px;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    box-sizing: border-box;
-    background: #fff;
-    color: var(--text-dark);
-}
-
-.generator-form .form-control:focus {
-    outline: none;
-    border-color: var(--primary-purple);
-    box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.1);
-}
-
-.generator-form textarea.form-control {
-    resize: vertical;
-    min-height: 100px;
-}
-
-.generator-form select.form-control {
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 16px center;
-    padding-right: 40px;
-    cursor: pointer;
-}
-
-.form-hint {
-    font-size: 13px;
-    color: var(--text-medium);
-    margin-top: 4px;
-}
-
-/* Кнопки визарда */
 .wizard-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    margin-top: 32px;
-    padding-top: 24px;
-    border-top: 1px solid #f3f4f6;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--ink-100);
+}
+.wizard-card-centered .wizard-actions { justify-content: center; border-top: 0; padding-top: 8px; }
+
+@media (max-width: 640px) {
+  .wizard-actions { flex-direction: column-reverse; }
+  .wizard-actions .rd-btn { width: 100%; justify-content: center; }
 }
 
-.generator-page .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 28px;
-    border-radius: var(--border-radius-button);
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed);
-    border: none;
-    text-decoration: none;
-}
-
-.generator-page .btn-primary {
-    background: var(--gradient-primary);
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(0, 119, 255, 0.3);
-}
-
-.generator-page .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 119, 255, 0.4);
-}
-
-.generator-page .btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.generator-page .btn-outline {
-    background: transparent;
-    color: var(--primary-purple);
-    border: 1.5px solid var(--light-purple);
-}
-
-.generator-page .btn-outline:hover {
-    border-color: var(--primary-purple);
-    background: var(--light-purple);
-}
-
-.generator-page .btn-lg {
-    padding: 16px 40px;
-    font-size: 17px;
-}
-
-.generator-page .btn-sm {
-    padding: 8px 18px;
-    font-size: 13px;
-}
-
-/* ==================== Шаг 3: Лоадер генерации ==================== */
-
-.generation-loader {
-    padding: 40px 0;
-}
-
+/* ---------- Loader (генерация / публикация) ---------- */
+.generation-loader,
+.publish-loader { padding: 24px 12px; }
 .loader-spinner {
-    width: 56px;
-    height: 56px;
-    border: 4px solid #e5e7eb;
-    border-top-color: var(--primary-purple);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 24px;
+  width: 56px;
+  height: 56px;
+  border: 4px solid var(--indigo-100);
+  border-top-color: var(--indigo-600);
+  border-radius: 50%;
+  margin: 0 auto 22px;
+  animation: rdSpin .8s linear infinite;
 }
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
+.generation-loader h2,
+.publish-loader h2 {
+  font: 700 24px var(--font-sans);
+  color: var(--ink-900);
+  margin-bottom: 8px;
 }
-
+.generation-loader p {
+  color: var(--ink-500);
+  font-size: 14.5px;
+  margin-bottom: 22px;
+}
 .generation-progress-bar {
-    width: 100%;
-    max-width: 400px;
-    height: 6px;
-    background: #e5e7eb;
-    border-radius: 3px;
-    margin: 24px auto 0;
-    overflow: hidden;
+  max-width: 360px;
+  margin: 0 auto;
+  height: 8px;
+  background: var(--ink-100);
+  border-radius: 8px;
+  overflow: hidden;
 }
-
 .generation-progress-fill {
-    height: 100%;
-    background: var(--gradient-primary);
-    border-radius: 3px;
-    transition: width 0.8s ease;
-    width: 0%;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--indigo-500), var(--indigo-700));
+  border-radius: 8px;
+  transition: width .4s var(--ease-out);
 }
 
-/* ==================== Шаг 4: Просмотр и редактирование ==================== */
-
-.article-review-header {
-    margin-bottom: 28px;
-}
-
+/* ---------- Article review (шаг 4) ---------- */
 .article-title-display {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text-dark);
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid var(--light-purple);
+  font: 800 26px/1.25 var(--font-sans);
+  color: var(--ink-900);
+  letter-spacing: -.01em;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #f4f6ff 0%, #ecefff 100%);
+  border: 1px solid var(--indigo-100);
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+
+.article-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .article-section-card {
-    background: var(--bg-light);
-    border: 1px solid #e5e7eb;
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 16px;
-    position: relative;
-    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+  background: #fff;
+  border: 1px solid var(--ink-200);
+  border-radius: 14px;
+  padding: 18px 20px;
+  transition: all .2s var(--ease-out);
 }
-
-.article-section-card:hover {
-    border-color: var(--primary-purple);
-    box-shadow: 0 2px 8px rgba(0, 119, 255, 0.08);
-}
-
-.article-section-card.section-loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
+.article-section-card:hover { border-color: var(--indigo-300); box-shadow: 0 1px 2px rgba(14,19,48,.04); }
+.article-section-card.section-loading { opacity: .55; pointer-events: none; }
 
 .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
 }
-
 .section-header h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-dark);
-    margin: 0;
+  font: 700 17px var(--font-sans);
+  color: var(--ink-900);
+  margin: 0;
 }
 
 .btn-edit-section {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 14px;
-    border: 1.5px solid var(--light-purple);
-    border-radius: var(--border-radius-button);
-    background: #fff;
-    color: var(--primary-purple);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--transition-speed);
+  background: transparent;
+  border: 1px solid var(--ink-200);
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: var(--ink-500);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 12.5px var(--font-sans);
+  transition: all .15s var(--ease-out);
 }
-
 .btn-edit-section:hover {
-    border-color: var(--primary-purple);
-    background: var(--light-purple);
+  border-color: var(--indigo-300);
+  color: var(--indigo-700);
+  background: var(--indigo-50);
 }
 
 .section-content {
-    font-size: 15px;
-    line-height: 1.7;
-    color: var(--text-dark);
+  font: 400 15px/1.65 var(--font-text);
+  color: var(--ink-800, #2e3458);
 }
-
-.section-content p {
-    margin: 0 0 12px;
-}
-
-.section-content p:last-child {
-    margin-bottom: 0;
-}
-
-.section-content ul, .section-content ol {
-    margin: 8px 0;
-    padding-left: 24px;
-}
+.section-content p { margin-bottom: 12px; }
+.section-content p:last-child { margin-bottom: 0; }
+.section-content ul,
+.section-content ol { margin: 8px 0 12px 22px; }
 
 .section-edit-form {
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid #e5e7eb;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ink-200);
 }
-
 .section-edit-form .edit-instructions {
-    margin-bottom: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  font: 400 14px var(--font-text);
+  color: var(--ink-900);
+  border: 1.5px solid var(--ink-200);
+  border-radius: 10px;
+  outline: none;
+  resize: vertical;
+  transition: border-color .15s, box-shadow .15s;
 }
-
+.section-edit-form .edit-instructions:focus {
+  border-color: var(--indigo-500);
+  box-shadow: 0 0 0 4px rgba(99,102,241,.12);
+}
 .edit-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
 }
 
-/* ==================== Шаг 5: Подтверждение ==================== */
+/* Кнопки внутри секции (JS вставляет с классами btn / btn-sm / btn-primary / btn-outline) */
+.article-section-card .btn,
+.article-section-card .btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font: 600 13px var(--font-sans);
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  text-decoration: none;
+  transition: all .15s var(--ease-out);
+}
+.article-section-card .btn-primary {
+  background: var(--indigo-600);
+  color: #fff;
+}
+.article-section-card .btn-primary:hover { background: var(--indigo-700); }
+.article-section-card .btn-outline {
+  background: #fff;
+  color: var(--ink-700);
+  border-color: var(--ink-200);
+}
+.article-section-card .btn-outline:hover {
+  border-color: var(--indigo-300);
+  color: var(--indigo-700);
+  background: var(--indigo-50);
+}
 
+/* ---------- Шаг 5: confirm details ---------- */
 .confirm-details {
-    background: var(--bg-light);
-    border-radius: 16px;
-    padding: 24px 28px;
-    margin: 24px auto;
-    max-width: 500px;
-    text-align: left;
+  background: var(--ink-50, #f6f7fb);
+  border: 1px solid var(--ink-100);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-top: 16px;
+  text-align: left;
 }
-
 .confirm-item {
-    display: flex;
-    gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ink-100);
+  font-size: 14px;
 }
-
-.confirm-item:last-child {
-    border-bottom: none;
-}
-
+.confirm-item:last-child { border-bottom: 0; }
 .confirm-label {
-    font-weight: 600;
-    color: var(--text-medium);
-    min-width: 120px;
-    font-size: 14px;
+  flex-shrink: 0;
+  width: 130px;
+  color: var(--ink-500);
+  font-weight: 500;
 }
-
 .confirm-value {
-    color: var(--text-dark);
-    font-size: 14px;
+  color: var(--ink-900);
+  font-weight: 600;
+  word-break: break-word;
 }
 
-.generator-page .checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    color: var(--text-medium);
-    margin: 24px 0;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.generator-page .checkbox-label input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--primary-purple);
-}
-
-.generator-page .checkbox-label a {
-    color: var(--primary-purple);
-}
-
-/* ==================== Шаг 6: Успех ==================== */
-
-.success-content {
-    padding: 20px 0;
-}
-
+/* ---------- Шаг 6: success ---------- */
+.success-content { padding: 16px 0 8px; }
 .success-icon {
-    color: #22c55e;
-    margin-bottom: 20px;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  box-shadow: 0 8px 24px rgba(16,185,129,.28);
 }
-
 .success-content h2 {
-    color: var(--text-dark);
+  font: 800 28px var(--font-sans);
+  color: var(--ink-900);
+  margin-bottom: 8px;
+  letter-spacing: -.01em;
 }
-
 .success-content > p {
-    color: var(--text-medium);
-    margin-bottom: 32px;
+  color: var(--ink-500);
+  font-size: 15px;
+  margin-bottom: 22px;
 }
-
 .success-actions {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin-bottom: 24px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
 }
-
-.success-note {
-    background: var(--bg-light);
-    border-radius: 12px;
-    padding: 16px 20px;
-    max-width: 500px;
-    margin: 0 auto;
-}
-
-.success-note p {
-    margin: 0;
-    font-size: 14px;
-    color: var(--text-medium);
-}
-
-/* ==================== Адаптив ==================== */
-
-@media (max-width: 1024px) {
-    .gen-steps-grid,
-    .gen-benefits-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
-    }
-}
-
-@media (max-width: 768px) {
-    .gen-steps-section,
-    .gen-benefits-section {
-        padding: 40px 0;
-    }
-
-    .gen-section-title {
-        font-size: 24px;
-        margin-bottom: 32px;
-    }
-
-    .gen-steps-grid,
-    .gen-benefits-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 16px;
-    }
-
-    .gen-step-card,
-    .gen-benefit-card {
-        padding: 24px 16px;
-    }
-
-    .wizard-card {
-        padding: 28px 20px;
-        border-radius: 24px;
-    }
-
-    .generator-form .form-row {
-        grid-template-columns: 1fr;
-    }
-
-    .wizard-progress {
-        gap: 0;
-    }
-
-    .progress-step span {
-        font-size: 10px;
-    }
-
-    .progress-dot {
-        width: 32px;
-        height: 32px;
-        font-size: 12px;
-    }
-
-    .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .wizard-actions {
-        flex-direction: column;
-    }
-
-    .wizard-actions .btn {
-        width: 100%;
-    }
-
-    .success-actions {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .confirm-item {
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .confirm-label {
-        min-width: auto;
-    }
-}
-
 @media (max-width: 640px) {
-    .gen-steps-section,
-    .gen-benefits-section {
-        padding: 32px 0;
-    }
-
-    .gen-section-title {
-        font-size: 20px;
-        margin-bottom: 24px;
-    }
-
-    .gen-steps-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-
-    .gen-benefits-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-
-    .gen-step-card,
-    .gen-benefit-card {
-        padding: 20px 14px;
-        border-radius: 20px;
-    }
-
-    .gen-step-card h3,
-    .gen-benefit-card h3 {
-        font-size: 15px;
-    }
-
-    .gen-step-card p,
-    .gen-benefit-card p {
-        font-size: 13px;
-    }
-
-    .gen-step-icon,
-    .gen-benefit-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-    }
-
-    .gen-step-icon svg,
-    .gen-benefit-icon svg {
-        width: 24px;
-        height: 24px;
-    }
-
-    .wizard-card {
-        padding: 24px 16px;
-        border-radius: 20px;
-    }
-
-    .wizard-card h2 {
-        font-size: 20px;
-    }
-
-    .article-section-card {
-        padding: 16px;
-        border-radius: 14px;
-    }
-
-    .generator-page .btn-lg {
-        padding: 14px 28px;
-        font-size: 15px;
-    }
+  .success-actions { flex-direction: column; }
+  .success-actions .rd-btn { width: 100%; justify-content: center; }
 }
+.success-note {
+  background: var(--ink-50, #f6f7fb);
+  border: 1px solid var(--ink-100);
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+.success-note p {
+  font-size: 13.5px;
+  color: var(--ink-500);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ---------- Адаптив сетки преимуществ ---------- */
+@media (max-width: 1024px) {
+  .generator-benefits .rd-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 640px) {
+  .generator-benefits .rd-grid { grid-template-columns: 1fr !important; }
+  .article-title-display { font-size: 22px; padding: 16px; }
+}
+
+/* Spinner для loader-spinner — алиас на rdSpin (на случай если уже определён в другом файле) */
+@keyframes rdSpin { to { transform: rotate(360deg); } }

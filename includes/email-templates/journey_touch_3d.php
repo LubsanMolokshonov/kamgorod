@@ -25,7 +25,7 @@ ob_start();
 
     <p>Мы хотим напомнить, что ваша заявка на участие в конкурсе <strong>"<?php echo htmlspecialchars($competition_title); ?>"</strong> всё ещё ожидает оплаты.</p>
 
-    <h3 style="color: #1e40af; margin-top: 25px; font-weight: 600;">Почему стоит поторопиться:</h3>
+    <h3 style="color: #182f8a; margin-top: 25px; font-weight: 600;">Почему стоит поторопиться:</h3>
 
     <ul class="benefits-list">
         <li>Получите диплом мгновенно после оплаты</li>

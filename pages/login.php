@@ -68,15 +68,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Page metadata
 $pageTitle = 'Вход / Регистрация | ' . SITE_NAME;
 $pageDescription = 'Войдите в личный кабинет или зарегистрируйтесь';
-$additionalCSS = ['/assets/css/login.css?v=' . filemtime(__DIR__ . '/../assets/css/login.css')];
+$additionalCSS = ['/assets/css/auth-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/auth-redesign.css')];
 $noindex = true;
+$useRedesignBody = true;
 
 // Include header
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="container">
-    <div class="login-container">
+<div class="auth-shell">
+    <div class="login-container has-info">
         <div class="login-card">
             <h1>Вход / Регистрация</h1>
             <p class="login-description">

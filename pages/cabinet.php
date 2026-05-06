@@ -147,56 +147,64 @@ usort($allEvents, fn($a, $b) => strtotime($b['_sort_date']) - strtotime($a['_sor
 // Page metadata
 $pageTitle = 'Личный кабинет | ' . SITE_NAME;
 $pageDescription = 'Ваши регистрации и дипломы';
-$additionalCSS = ['/assets/css/cabinet.css?v=' . filemtime(__DIR__ . '/../assets/css/cabinet.css'), '/assets/css/journal.css?v=' . filemtime(__DIR__ . '/../assets/css/journal.css')];
+$additionalCSS = ['/assets/css/cabinet-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/cabinet-redesign.css')];
 $additionalJS = [];
 if ($activeTab === 'courses') {
     $additionalJS[] = '/assets/js/course-payment.js?v=' . filemtime(__DIR__ . '/../assets/js/course-payment.js');
 }
 $noindex = true;
+$useRedesignBody = true;
 
 // Include header
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="container">
-    <div class="cabinet-container">
-        <!-- Header -->
-        <div class="cabinet-header">
-            <h1>Личный кабинет</h1>
-            <p class="user-email">
-                <span class="email-icon">📧</span>
-                <?php echo htmlspecialchars($_SESSION['user_email']); ?>
-            </p>
-        </div>
-
-        <?php if (LoyaltyDiscount::isEligible($db, (int)($_SESSION['user_id'] ?? 0))): ?>
-            <?php $loyaltyRates = LoyaltyDiscount::getEffectiveRates($db, (int)$_SESSION['user_id']); ?>
-            <div class="loyalty-badge">
-                <div class="loyalty-badge-icon">🏆</div>
-                <div class="loyalty-badge-body">
-                    <strong>Действует персональная скидка <?php echo (int)round($loyaltyRates['cart'] * 100); ?>%</strong>
-                    <span>На конкурсы, олимпиады, вебинары и публикации. Плюс <?php echo (int)round($loyaltyRates['course'] * 100); ?>% на курсы повышения квалификации. Скидка применяется автоматически.</span>
-                </div>
+<div class="cab-shell-wrap">
+    <div class="cabinet-container cab-shell">
+        <aside class="cab-sidebar">
+            <div class="cabinet-header">
+                <h1>Личный кабинет</h1>
+                <p class="user-email">
+                    <span class="email-icon">📧</span>
+                    <?php echo htmlspecialchars($_SESSION['user_email']); ?>
+                </p>
             </div>
-        <?php endif; ?>
 
-        <!-- Tabs -->
-        <div class="cabinet-tabs">
-            <a href="?tab=courses" class="cabinet-tab <?php echo $activeTab === 'courses' ? 'active' : ''; ?>">
-                <span class="tab-icon">📚</span>
-                Курсы
-                <?php if (!empty($userCourseEnrollments)): ?>
-                    <span class="tab-count"><?php echo count($userCourseEnrollments); ?></span>
-                <?php endif; ?>
+            <?php if (LoyaltyDiscount::isEligible($db, (int)($_SESSION['user_id'] ?? 0))): ?>
+                <?php $loyaltyRates = LoyaltyDiscount::getEffectiveRates($db, (int)$_SESSION['user_id']); ?>
+                <div class="loyalty-badge">
+                    <div class="loyalty-badge-icon">🏆</div>
+                    <div class="loyalty-badge-body">
+                        <strong>Скидка <?php echo (int)round($loyaltyRates['cart'] * 100); ?>%</strong>
+                        <span>На конкурсы, олимпиады, вебинары и публикации. <?php echo (int)round($loyaltyRates['course'] * 100); ?>% на курсы. Применяется автоматически.</span>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <nav class="cabinet-tabs">
+                <a href="?tab=courses" class="cabinet-tab <?php echo $activeTab === 'courses' ? 'active' : ''; ?>">
+                    <span class="tab-icon">📚</span>
+                    Курсы
+                    <?php if (!empty($userCourseEnrollments)): ?>
+                        <span class="tab-count"><?php echo count($userCourseEnrollments); ?></span>
+                    <?php endif; ?>
+                </a>
+                <a href="?tab=events" class="cabinet-tab <?php echo $activeTab === 'events' ? 'active' : ''; ?>">
+                    <span class="tab-icon">🏆</span>
+                    Мероприятия
+                    <?php if (!empty($allEvents)): ?>
+                        <span class="tab-count"><?php echo count($allEvents); ?></span>
+                    <?php endif; ?>
+                </a>
+            </nav>
+
+            <a href="/vyhod" class="cab-logout">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Выйти
             </a>
-            <a href="?tab=events" class="cabinet-tab <?php echo $activeTab === 'events' ? 'active' : ''; ?>">
-                <span class="tab-icon">🏆</span>
-                Мероприятия
-                <?php if (!empty($allEvents)): ?>
-                    <span class="tab-count"><?php echo count($allEvents); ?></span>
-                <?php endif; ?>
-            </a>
-        </div>
+        </aside>
+
+        <main class="cab-main">
 
         <?php if ($activeTab === 'courses'): ?>
             <!-- Courses Tab -->
@@ -823,6 +831,7 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             <?php endif; ?>
         <?php endif; ?>
+        </main>
     </div>
 </div>
 

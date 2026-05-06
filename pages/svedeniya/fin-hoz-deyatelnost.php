@@ -13,6 +13,7 @@ $pageDescription = 'Финансово-хозяйственная деятель
 $additionalCSS = ['/assets/css/svedeniya.css'];
 $currentSvedPage = '/svedeniya/fin-hoz-deyatelnost/';
 
+$useRedesignBody = true;
 include __DIR__ . '/../../includes/header.php';
 ?>
 

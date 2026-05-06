@@ -1,8 +1,7 @@
 <?php
 /**
- * Olympiad Catalog Page
- * Displays all active olympiads with audience-based filtering
- * v2: Unified 3-level audience segmentation
+ * Olympiad Catalog Page — редизайн (стиль конкурсов)
+ * 3-уровневая фильтрация: ac (категория) / at (тип) / as (специализация)
  */
 
 session_start();
@@ -14,27 +13,23 @@ require_once __DIR__ . '/classes/AudienceType.php';
 require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/seo-url.php';
 
-// Get unified audience filters from URL
 $selectedCategory = $_GET['ac'] ?? '';
-$selectedType = $_GET['at'] ?? '';
-$selectedSpec = $_GET['as'] ?? '';
+$selectedType     = $_GET['at'] ?? '';
+$selectedSpec     = $_GET['as'] ?? '';
 
-// 301-редирект со старых query-param URL на чистые SEO URL
 redirectToSeoUrl('olimpiady', [
     'ac' => $selectedCategory,
     'at' => $selectedType,
     'as' => $selectedSpec,
 ]);
 
-// Audience segmentation (3-level)
-$audienceCatObj = new AudienceCategory($db);
+$audienceCatObj  = new AudienceCategory($db);
 $audienceTypeObj = new AudienceType($db);
 $audienceCategories = $audienceCatObj->getAllWithProducts('olympiad');
 
-// Resolve selected audience hierarchy
-$selectedCategoryData = null;
-$audienceTypes = [];
-$selectedTypeData = null;
+$selectedCategoryData    = null;
+$audienceTypes           = [];
+$selectedTypeData        = null;
 $audienceSpecializations = [];
 
 if ($selectedCategory) {
@@ -50,17 +45,11 @@ if ($selectedType) {
     }
 }
 
-// Get olympiads with v2 filters
 $olympiadObj = new Olympiad($db);
 $filters = [];
-if ($selectedCategoryData) {
-    $filters['category_id'] = $selectedCategoryData['id'];
-}
-if ($selectedTypeData) {
-    $filters['audience_type_id'] = $selectedTypeData['id'];
-}
+if ($selectedCategoryData) $filters['category_id'] = $selectedCategoryData['id'];
+if ($selectedTypeData)     $filters['audience_type_id'] = $selectedTypeData['id'];
 if (!empty($selectedSpec)) {
-    // Need specialization ID for the filter
     require_once __DIR__ . '/classes/AudienceSpecialization.php';
     $specObj = new AudienceSpecialization($db);
     $selectedSpecData = $specObj->getBySlug($selectedSpec);
@@ -69,1136 +58,454 @@ if (!empty($selectedSpec)) {
     }
 }
 
-if (!empty($filters)) {
-    $allOlympiads = $olympiadObj->getFilteredOlympiads($filters);
-} else {
-    $allOlympiads = $olympiadObj->getActiveOlympiads();
+$allOlympiads = !empty($filters)
+    ? $olympiadObj->getFilteredOlympiads($filters)
+    : $olympiadObj->getActiveOlympiads();
+
+$perPage           = 21;
+$totalOlympiads    = count($allOlympiads);
+$olympiads         = array_slice($allOlympiads, 0, $perPage);
+$hasMore           = $totalOlympiads > $perPage;
+
+// Лёгкий массив для клиентского поиска
+$allOlympiadsJs = [];
+foreach ($allOlympiads as $o) {
+    $audienceLabel = Olympiad::getAudienceLabel($o['target_audience'] ?? '');
+    $allOlympiadsJs[] = [
+        'id'             => $o['id'],
+        'title'          => $o['title'],
+        'description'    => $o['description'] ?? '',
+        'audience_label' => $audienceLabel,
+        'subject'        => $o['subject'] ?? '',
+        'price'          => (float)($o['diploma_price'] ?? 169),
+        'url'            => '/olimpiady/' . urlencode($o['slug']) . '/',
+    ];
 }
 
-// Пагинация: 30 олимпиад на страницу
-$perPage = 30;
-$totalFiltered = count($allOlympiads);
-$totalPages = max(1, ceil($totalFiltered / $perPage));
-$currentPage = max(1, min((int)($_GET['page'] ?? 1), $totalPages));
-$offset = ($currentPage - 1) * $perPage;
-$olympiads = array_slice($allOlympiads, $offset, $perPage);
+$pageTitle       = 'Олимпиады для педагогов и учеников 2025-2026 | ' . SITE_NAME;
+$pageDescription = 'Всероссийские бесплатные олимпиады для педагогов и школьников. Пройдите тест и получите официальный диплом за 30 секунд.';
+$canonicalUrl    = SITE_URL . '/olimpiady/';
+$ogImage         = SITE_URL . '/assets/images/og-olympiads.jpg';
+$rdActivePage    = 'olimpiady';
+$additionalCSS   = [
+    '/assets/css/competition-detail.css?v=' . filemtime(__DIR__ . '/assets/css/competition-detail.css'),
+    '/assets/css/olympiad-detail.css?v=' . filemtime(__DIR__ . '/assets/css/olympiad-detail.css'),
+];
+$earlyHeadScripts = ['<script>' . file_get_contents(__DIR__ . '/assets/js/catalog-scroll.js') . '</script>'];
 
-$totalOlympiads = $olympiadObj->count();
-$totalParticipants = $olympiadObj->getTotalParticipants();
-
-// Page metadata
-$pageTitle = 'Олимпиады для педагогов и учеников 2025-2026 | ' . SITE_NAME;
-$pageDescription = 'Всероссийские бесплатные олимпиады для педагогов и школьников. Проверьте свои знания и получите диплом за 30 секунд!';
-$additionalCSS = ['/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/assets/css/audience-filter.css')];
-$additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/assets/js/audience-filter.js')];
-
-// Include header
-$ogImage = SITE_URL . '/assets/images/og-olympiads.jpg';
-include __DIR__ . '/includes/header.php';
+include __DIR__ . '/includes/header-redesign.php';
 ?>
 
-<style>
-/* ===========================
-   Olympiad Catalog Page Styles
-   =========================== */
-
-/* Hero Section */
-.olympiad-hero {
-    padding: 100px 0 0;
-    margin-top: -80px;
-    position: relative;
-    overflow: hidden;
-    color: #fff;
-    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
-}
-
-.olympiad-hero::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 1440px;
-    height: 100%;
-    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
-    border-radius: 0 0 80px 80px;
-    z-index: 0;
-}
-
-.olympiad-hero .container {
-    position: relative;
-    z-index: 1;
-    padding: 100px 20px 60px;
-    text-align: center;
-}
-
-.olympiad-hero-title {
-    font-size: 48px;
-    font-weight: 700;
-    line-height: 1.2;
-    margin-bottom: 20px;
-    color: white;
-}
-
-.olympiad-hero-subtitle {
-    font-size: 18px;
-    color: rgba(255, 255, 255, 0.85);
-    margin-bottom: 40px;
-    font-weight: 400;
-}
-
-.olympiad-hero-stats {
-    display: flex;
-    justify-content: center;
-    gap: 48px;
-    margin-bottom: 40px;
-    flex-wrap: wrap;
-}
-
-.hero-stat {
-    text-align: center;
-}
-
-.hero-stat-value {
-    display: block;
-    font-size: 36px;
-    font-weight: 700;
-    color: white;
-    line-height: 1.2;
-}
-
-.hero-stat-label {
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: 500;
-}
-
-.btn-hero-scroll {
-    display: inline-block;
-    background: var(--primary-purple, #0077FF);
-    color: white;
-    font-size: 16px;
-    font-weight: 600;
-    padding: 18px 36px;
-    border-radius: 50px;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 16px rgba(0, 119, 255, 0.4);
-    border: none;
-    cursor: pointer;
-}
-
-.btn-hero-scroll:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 119, 255, 0.5);
-    opacity: 1;
-}
-
-/* Filter Section */
-.olympiad-filters-section {
-    padding: 40px 0 0;
-    padding-bottom: 0;
-    margin-bottom: 0;
-    background: var(--bg-light, #F5F7FA);
-}
-
-.olympiad-filters-section .audience-filter {
-    margin-bottom: 0;
-}
-
-.audience-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    justify-content: center;
-    margin-bottom: 24px;
-}
-
-.audience-tab {
-    display: inline-block;
-    padding: 12px 24px;
-    border-radius: 50px;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    color: var(--text-dark, #2C3E50);
-    background: white;
-    border: 2px solid #E2E8F0;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.audience-tab:hover {
-    border-color: var(--primary-purple, #0077FF);
-    color: var(--primary-purple, #0077FF);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 119, 255, 0.15);
-}
-
-.audience-tab.active {
-    background: var(--primary-purple, #0077FF);
-    color: white;
-    border-color: var(--primary-purple, #0077FF);
-    box-shadow: 0 4px 16px rgba(0, 119, 255, 0.3);
-}
-
-.sub-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-    margin-bottom: 24px;
-}
-
-.sub-filter-btn {
-    display: inline-block;
-    padding: 8px 20px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-    text-decoration: none;
-    color: #64748B;
-    background: white;
-    border: 1.5px solid #E2E8F0;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.sub-filter-btn:hover {
-    border-color: var(--primary-purple, #0077FF);
-    color: var(--primary-purple, #0077FF);
-}
-
-.sub-filter-btn.active {
-    background: #E8F1FF;
-    color: var(--primary-purple, #0077FF);
-    border-color: var(--primary-purple, #0077FF);
-}
-
-/* Olympiad Cards Grid */
-.olympiad-catalog {
-    padding: 0 0 60px;
-    background: var(--bg-light, #F5F7FA);
-}
-
-.olympiad-count {
-    font-size: 15px;
-    color: #64748B;
-    margin-bottom: 24px;
-}
-
-.olympiad-count strong {
-    color: var(--text-dark, #2C3E50);
-}
-
-.olympiad-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-}
-
-.olympiad-card {
-    background: white;
-    border-radius: var(--border-radius-card, 32px);
-    padding: 32px;
-    box-shadow: var(--shadow-card, 6px 6px 10px rgba(0,119,255,0.1));
-    transition: transform 0.2s ease-in-out;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.olympiad-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 8px 8px 20px rgba(67,61,136,0.15);
-}
-
-.olympiad-category {
-    display: inline-block;
-    background: var(--light-purple, #E8F1FF);
-    color: var(--primary-purple, #0077FF);
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 16px;
-    text-transform: uppercase;
-}
-
-.olympiad-card h3 {
-    color: var(--text-dark, #2C3E50);
-    margin-bottom: 12px;
-    font-size: 22px;
-    font-weight: 600;
-    line-height: 1.4;
-}
-
-.olympiad-card p {
-    color: var(--text-medium, #4A5568);
-    font-size: 15px;
-    margin-bottom: 20px;
-    flex-grow: 1;
-    line-height: 1.6;
-}
-
-.olympiad-card .btn {
-    margin-top: auto;
-}
-
-/* Trust Section */
-.olympiad-trust-section {
-    padding: 80px 0;
-    background: white;
-}
-
-.trust-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
-    margin-top: 48px;
-}
-
-.trust-card {
-    background: white;
-    border-radius: 24px;
-    padding: 32px 24px;
-    box-shadow: 0 4px 20px rgba(0, 119, 255, 0.08);
-    text-align: center;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-}
-
-.trust-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 40px rgba(0, 119, 255, 0.15);
-    border-color: rgba(0, 119, 255, 0.15);
-}
-
-.trust-icon {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 20px;
-    background: linear-gradient(135deg, #0077FF 0%, #0066DD 100%);
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.trust-icon svg {
-    width: 32px;
-    height: 32px;
-    fill: white;
-}
-
-.trust-card h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-dark, #2C3E50);
-    margin: 0 0 10px;
-}
-
-.trust-card p {
-    font-size: 14px;
-    color: #64748B;
-    line-height: 1.6;
-    margin: 0;
-}
-
-/* Steps Section */
-.olympiad-steps-section {
-    padding: 80px 0;
-    background: var(--bg-light, #F5F7FA);
-}
-
-.steps-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
-    margin-top: 48px;
-    position: relative;
-}
-
-.steps-row::before {
-    content: '';
-    position: absolute;
-    top: 40px;
-    left: 10%;
-    right: 10%;
-    height: 3px;
-    background: linear-gradient(90deg, #0077FF, #00BFFF);
-    border-radius: 2px;
-    z-index: 0;
-}
-
-.step-card {
-    background: white;
-    border-radius: 24px;
-    padding: 32px 20px;
-    text-align: center;
-    box-shadow: 0 4px 20px rgba(0, 119, 255, 0.08);
-    position: relative;
-    z-index: 1;
-    transition: all 0.3s ease;
-}
-
-.step-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 40px rgba(0, 119, 255, 0.15);
-}
-
-.step-card-number {
-    width: 56px;
-    height: 56px;
-    background: linear-gradient(135deg, #0077FF 0%, #0066DD 100%);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    font-weight: 700;
-    margin: 0 auto 20px;
-    box-shadow: 0 4px 16px rgba(0, 119, 255, 0.3);
-}
-
-.step-card h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-dark, #2C3E50);
-    margin: 0 0 8px;
-}
-
-.step-card p {
-    font-size: 14px;
-    color: #64748B;
-    line-height: 1.5;
-    margin: 0;
-}
-
-/* Section Titles (reused pattern) */
-.section-title-center {
-    text-align: center;
-    font-size: 42px;
-    font-weight: 700;
-    color: var(--text-dark, #2C3E50);
-    margin-bottom: 16px;
-}
-
-.section-subtitle-center {
-    text-align: center;
-    font-size: 18px;
-    color: #64748B;
-    margin-bottom: 0;
-    max-width: 700px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-/* Bottom CTA Section */
-.olympiad-bottom-cta {
-    padding: 80px 0;
-    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
-    text-align: center;
-}
-
-.olympiad-bottom-cta h2 {
-    font-size: 36px;
-    font-weight: 700;
-    color: white;
-    margin-bottom: 16px;
-}
-
-.olympiad-bottom-cta p {
-    font-size: 18px;
-    color: rgba(255, 255, 255, 0.85);
-    margin-bottom: 32px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.cta-features-row {
-    display: flex;
-    justify-content: center;
-    gap: 24px;
-    margin-top: 24px;
-    flex-wrap: wrap;
-}
-
-.cta-features-row span {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 14px;
-}
-
-/* Pagination */
-.olympiad-pagination {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 32px;
-    flex-wrap: wrap;
-}
-
-.pagination-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 40px;
-    height: 40px;
-    padding: 0 12px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    color: var(--text-dark, #2C3E50);
-    background: white;
-    border: 2px solid #E2E8F0;
-    transition: all 0.2s ease;
-}
-
-.pagination-link:hover {
-    border-color: var(--primary-purple, #0077FF);
-    color: var(--primary-purple, #0077FF);
-}
-
-.pagination-current {
-    background: var(--primary-purple, #0077FF);
-    color: white;
-    border-color: var(--primary-purple, #0077FF);
-}
-
-.pagination-current:hover {
-    color: white;
-}
-
-.pagination-dots {
-    font-size: 16px;
-    color: #64748B;
-    padding: 0 4px;
-}
-
-.pagination-prev,
-.pagination-next {
-    font-size: 13px;
-}
-
-/* Empty state */
-.olympiad-empty {
-    text-align: center;
-    padding: 60px 20px;
-    background: white;
-    border-radius: 24px;
-    box-shadow: 0 4px 20px rgba(0, 119, 255, 0.08);
-}
-
-.olympiad-empty h3 {
-    font-size: 22px;
-    color: var(--text-dark, #2C3E50);
-    margin-bottom: 12px;
-}
-
-.olympiad-empty p {
-    font-size: 15px;
-    color: #64748B;
-}
-
-/* =====================
-   Responsive Styles
-   ===================== */
-@media (max-width: 1024px) {
-    .olympiad-hero .container {
-        padding: 80px 40px 50px;
-    }
-
-    .olympiad-hero-title {
-        font-size: 38px;
-    }
-
-    .olympiad-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
-    }
-
-    .trust-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
-    }
-
-    .steps-row {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
-    }
-
-    .steps-row::before {
-        display: none;
-    }
-
-    .section-title-center {
-        font-size: 36px;
-    }
-}
-
-@media (max-width: 768px) {
-    .olympiad-hero-stats {
-        gap: 32px;
-    }
-
-    .hero-stat-value {
-        font-size: 28px;
-    }
-
-    .audience-tabs {
-        gap: 8px;
-    }
-
-    .audience-tab {
-        padding: 10px 18px;
-        font-size: 13px;
-    }
-}
-
-@media (max-width: 640px) {
-    .olympiad-hero {
-        padding: 60px 0 0;
-    }
-
-    .olympiad-hero::before {
-        border-radius: 0 0 40px 40px;
-    }
-
-    .olympiad-hero .container {
-        padding: 60px 16px 40px;
-    }
-
-    .olympiad-hero-title {
-        font-size: 26px;
-        line-height: 1.25;
-    }
-
-    .olympiad-hero-subtitle {
-        font-size: 15px;
-        margin-bottom: 28px;
-    }
-
-    .olympiad-hero-stats {
-        gap: 20px;
-    }
-
-    .hero-stat-value {
-        font-size: 24px;
-    }
-
-    .hero-stat-label {
-        font-size: 12px;
-    }
-
-    .btn-hero-scroll {
-        font-size: 14px;
-        padding: 14px 28px;
-    }
-
-    .audience-tabs {
-        gap: 6px;
-        justify-content: flex-start;
-        overflow-x: auto;
-        flex-wrap: nowrap;
-        padding-bottom: 8px;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .audience-tab {
-        padding: 8px 14px;
-        font-size: 12px;
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
-
-    .sub-filters {
-        gap: 6px;
-        justify-content: flex-start;
-        overflow-x: auto;
-        flex-wrap: nowrap;
-        padding-bottom: 8px;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .sub-filter-btn {
-        padding: 6px 14px;
-        font-size: 12px;
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
-
-    .olympiad-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-    }
-
-    .olympiad-card {
-        padding: 16px 14px;
-        border-radius: 18px;
-    }
-
-    .olympiad-category {
-        padding: 4px 10px;
-        font-size: 10px;
-        margin-bottom: 8px;
-    }
-
-    .olympiad-card h3 {
-        font-size: 14px;
-        margin-bottom: 8px;
-        line-height: 1.3;
-    }
-
-    .olympiad-card p {
-        font-size: 12px;
-        margin-bottom: 12px;
-        line-height: 1.4;
-    }
-
-    .olympiad-card .btn {
-        font-size: 12px;
-        padding: 10px 14px;
-    }
-
-    .olympiad-pagination {
-        gap: 4px;
-        margin-top: 24px;
-    }
-
-    .pagination-link {
-        min-width: 34px;
-        height: 34px;
-        padding: 0 8px;
-        font-size: 13px;
-        border-radius: 10px;
-    }
-
-    .section-title-center {
-        font-size: 24px;
-    }
-
-    .section-subtitle-center {
-        font-size: 15px;
-    }
-
-    .trust-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-
-    .trust-card {
-        padding: 20px 14px;
-        border-radius: 18px;
-    }
-
-    .trust-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        margin-bottom: 14px;
-    }
-
-    .trust-icon svg {
-        width: 24px;
-        height: 24px;
-    }
-
-    .trust-card h3 {
-        font-size: 15px;
-    }
-
-    .trust-card p {
-        font-size: 13px;
-    }
-
-    .steps-row {
-        grid-template-columns: 1fr;
-        gap: 16px;
-    }
-
-    .steps-row::before {
-        display: none;
-    }
-
-    .step-card {
-        padding: 24px 18px;
-        border-radius: 18px;
-        display: flex;
-        flex-direction: row;
-        text-align: left;
-        gap: 16px;
-        align-items: center;
-    }
-
-    .step-card-number {
-        width: 44px;
-        height: 44px;
-        font-size: 20px;
-        margin: 0;
-        flex-shrink: 0;
-    }
-
-    .step-card h3 {
-        font-size: 15px;
-        margin-bottom: 4px;
-    }
-
-    .step-card p {
-        font-size: 13px;
-    }
-
-    .olympiad-bottom-cta {
-        padding: 50px 0;
-    }
-
-    .olympiad-bottom-cta h2 {
-        font-size: 24px;
-    }
-
-    .olympiad-bottom-cta p {
-        font-size: 15px;
-        margin-bottom: 24px;
-    }
-
-    .cta-features-row {
-        gap: 16px;
-    }
-
-    .cta-features-row span {
-        font-size: 13px;
-    }
-
-    .olympiad-filters-section {
-        padding: 24px 0 0;
-    }
-
-    .olympiad-trust-section,
-    .olympiad-steps-section {
-        padding: 40px 0;
-    }
-
-    .olympiad-catalog {
-        padding: 0 0 40px;
-    }
-
-    .container {
-        padding-left: 16px;
-        padding-right: 16px;
-    }
-}
-</style>
-
-<!-- Hero Section -->
-<section class="olympiad-hero">
-    <div class="container">
-        <h1 class="olympiad-hero-title">Всероссийские олимпиады для педагогов и учеников</h1>
-        <p class="olympiad-hero-subtitle">Бесплатное участие &bull; Диплом за 30 секунд &bull; Более 50 олимпиад</p>
-
-        <div class="olympiad-hero-stats">
-            <div class="hero-stat">
-                <span class="hero-stat-value"><?php echo $totalOlympiads > 0 ? $totalOlympiads . '+' : '50+'; ?></span>
-                <span class="hero-stat-label">олимпиад</span>
-            </div>
-            <div class="hero-stat">
-                <span class="hero-stat-value"><?php echo $totalParticipants > 1000 ? number_format($totalParticipants, 0, ',', ' ') . '+' : '10 000+'; ?></span>
-                <span class="hero-stat-label">участников</span>
-            </div>
-            <div class="hero-stat">
-                <span class="hero-stat-value">0 &#8381;</span>
-                <span class="hero-stat-label">Бесплатно</span>
-            </div>
-        </div>
-
-        <a href="#olympiad-catalog" class="btn-hero-scroll">Выбрать олимпиаду</a>
+<!-- HERO каталога -->
+<section class="rd-hero-catalog">
+  <div class="rd-wrap">
+    <div class="rd-crumbs">
+      <a href="/">Главная</a>
+      <span class="sep">/</span>
+      <strong>Олимпиады</strong>
     </div>
+  </div>
+  <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
+    <div>
+      <div class="rd-pill-row reveal-stagger">
+        <span class="rd-pill free"><span class="dot"></span>Бесплатное участие</span>
+        <span class="rd-pill"><?php echo $totalOlympiads; ?>+ активных олимпиад</span>
+        <span class="rd-pill indigo">Соответствует ФГОС</span>
+      </div>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal">Олимпиады для педагогов и&nbsp;учеников с&nbsp;<span class="accent">дипломом за&nbsp;30&nbsp;секунд</span></h1>
+      <p class="rd-hero-sub reveal">Проверьте знания, получите результат сразу и оформите официальный диплом для портфолио и аттестации. Тест бесплатный — оплата только за оформление диплома.</p>
+      <div class="rd-hero-bullets reveal-stagger">
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Тест бесплатно · 10 вопросов</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Результат сразу после теста</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Подходит для аттестации</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Хранение в личном кабинете</div>
+      </div>
+      <div class="rd-hero-cta reveal">
+        <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать олимпиаду
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+        </a>
+        <span style="font-size:13px;color:var(--ink-500);">диплом от 169 ₽ · оплата ЮКассой</span>
+      </div>
+    </div>
+
+    <div class="rd-hero-art rd-hero-art-cat reveal">
+      <div class="rd-blob"></div>
+      <!-- ВЕЕР ДИПЛОМОВ -->
+      <div class="hero-diploma" style="position:absolute;inset:0;padding:0;">
+        <div class="diploma-stack">
+          <div class="diploma-item diploma-1"><img src="/assets/images/diplomas/previews/diploma-1.svg" alt="Диплом вариант 1"></div>
+          <div class="diploma-item diploma-2"><img src="/assets/images/diplomas/previews/diploma-2.svg" alt="Диплом вариант 2"></div>
+          <div class="diploma-item diploma-3"><img src="/assets/images/diplomas/previews/diploma-3.svg" alt="Диплом вариант 3"></div>
+          <div class="diploma-item diploma-4"><img src="/assets/images/diplomas/previews/diploma-4.svg" alt="Диплом вариант 4"></div>
+          <div class="diploma-item diploma-5"><img src="/assets/images/diplomas/previews/diploma-5.svg" alt="Диплом вариант 5"></div>
+          <div class="diploma-item diploma-6"><img src="/assets/images/diplomas/previews/diploma-6.svg" alt="Диплом вариант 6"></div>
+        </div>
+      </div>
+      <div class="rd-float-card rd-fc-cat-1">
+        <div class="rd-fc-icon">⚡</div>
+        <div class="rd-fc-text"><div class="rd-fc-t">Тест за 5 минут</div><div class="rd-fc-s">10 вопросов</div></div>
+      </div>
+      <div class="rd-float-card rd-fc-cat-2">
+        <div class="rd-fc-icon">🎓</div>
+        <div class="rd-fc-text"><div class="rd-fc-t">Бесплатное участие</div><div class="rd-fc-s">диплом — по желанию</div></div>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- Filter Section -->
-<section class="olympiad-filters-section" id="olympiad-catalog">
-    <div class="container">
-        <!-- Горизонтальные фильтры: только мобильные -->
-        <div class="af-horizontal-only">
-            <?php
-            $audienceFilterBaseUrl = '/olimpiady';
-            $extraPathPrefix = '';
-            include __DIR__ . '/includes/audience-filter.php';
+<!-- USP-полоска -->
+<div class="rd-usps">
+  <div class="rd-wrap rd-usp-grid reveal-stagger">
+    <div class="rd-usp"><div class="ic">🎓</div><div><div class="t">Бесплатное участие</div><div class="s">тест без оплаты</div></div></div>
+    <div class="rd-usp"><div class="ic">⚡</div><div><div class="t">Результат сразу</div><div class="s">за 30 секунд после теста</div></div></div>
+    <div class="rd-usp"><div class="ic">📜</div><div><div class="t">Соответствует ФГОС</div><div class="s">для аттестации</div></div></div>
+    <div class="rd-usp"><div class="ic">🔒</div><div><div class="t">Безопасная оплата</div><div class="s">ЮКасса · PCI DSS</div></div></div>
+  </div>
+</div>
+
+<!-- Каталог -->
+<section class="rd-section" id="catalog">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <div>
+        <div class="rd-eyebrow">Каталог олимпиад</div>
+        <h2 class="rd-section-title">Выберите олимпиаду под свою аудиторию</h2>
+        <p class="rd-section-sub">Найдено: <strong><?php echo $totalOlympiads; ?></strong> олимпиад. Все с дипломом победителя, призёра или участника.</p>
+      </div>
+      <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+        Фильтры
+      </button>
+    </div>
+
+    <div class="rd-catalog">
+      <!-- Sidebar фильтры -->
+      <aside class="rd-filters" id="rdFiltersPanel">
+
+        <?php if (!empty($audienceCategories)): ?>
+        <h4>Аудитория</h4>
+        <div class="rd-chip-list">
+          <div class="rd-chip-row<?php echo empty($selectedCategory) ? ' active' : ''; ?>">
+            <label>
+              <a href="/olimpiady/" style="text-decoration:none;color:inherit;">Все олимпиады</a>
+            </label>
+          </div>
+          <?php foreach ($audienceCategories as $ac): ?>
+          <div class="rd-chip-row<?php echo $selectedCategory === $ac['slug'] ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $ac['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($ac['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+            </label>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <?php if (!empty($audienceTypes)): ?>
+        <h4>Уровень</h4>
+        <div class="rd-chip-list">
+          <?php foreach ($audienceTypes as $at): ?>
+          <div class="rd-chip-row<?php echo $selectedType === $at['slug'] ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'at' => $at['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($at['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+            </label>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <?php if (!empty($audienceSpecializations)): ?>
+        <h4>Специализация</h4>
+        <div class="rd-chip-list">
+          <?php foreach ($audienceSpecializations as $as): ?>
+          <div class="rd-chip-row<?php echo $selectedSpec === $as['slug'] ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $as['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($as['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+            </label>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <a href="/olimpiady/" class="rd-reset-btn">Сбросить фильтры</a>
+      </aside>
+
+      <!-- Каталог + карточки -->
+      <div class="rd-catalog-main">
+        <div class="rd-comp-search" style="margin-bottom:16px;">
+          <div style="position:relative;">
+            <svg style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--ink-400);pointer-events:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="search" id="olympiadSearchInput" placeholder="Поиск по олимпиадам — например, «математика» или «логопедия»" autocomplete="off" style="width:100%;padding:14px 44px 14px 46px;font-size:15px;border:1.5px solid var(--ink-200,#e5e7eb);border-radius:12px;background:#fff;outline:none;transition:border-color .15s, box-shadow .15s;" onfocus="this.style.borderColor='var(--indigo-500,#6366f1)';this.style.boxShadow='0 0 0 4px rgba(99,102,241,.12)';" onblur="this.style.borderColor='var(--ink-200,#e5e7eb)';this.style.boxShadow='none';">
+            <button type="button" id="olympiadSearchClear" aria-label="Очистить" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer;padding:8px;color:var(--ink-400);line-height:0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div id="olympiadSearchStatus" style="display:none;margin-top:10px;font-size:14px;color:var(--ink-500,#6b7280);"></div>
+        </div>
+
+        <?php if (empty($olympiads)): ?>
+          <div style="text-align:center;padding:60px 0;color:var(--ink-500);">
+            <p style="font-size:18px;margin-bottom:16px;">Олимпиады не найдены</p>
+            <p>Попробуйте выбрать другую аудиторию или <a href="/olimpiady/" style="color:var(--indigo-600);">сбросить фильтры</a>.</p>
+          </div>
+        <?php else: ?>
+          <div class="rd-grid reveal-stagger" id="olympiadsGrid">
+            <?php foreach ($olympiads as $olympiad):
+                $audLabel = Olympiad::getAudienceLabel($olympiad['target_audience'] ?? '');
+                $oUrl     = '/olimpiady/' . urlencode($olympiad['slug']) . '/';
+                $oPrice   = (int)($olympiad['diploma_price'] ?? 169);
             ?>
-        </div>
+              <a class="rd-card" href="<?php echo $oUrl; ?>">
+                <div class="rd-card-pat"></div>
+                <div class="rd-card-tags">
+                  <?php if (!empty($audLabel)): ?>
+                    <span class="rd-tag indigo"><?php echo htmlspecialchars($audLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                  <?php endif; ?>
+                  <?php if (!empty($olympiad['subject'])): ?>
+                    <span class="rd-tag"><?php echo htmlspecialchars($olympiad['subject'], ENT_QUOTES, 'UTF-8'); ?></span>
+                  <?php endif; ?>
+                </div>
+                <h4><?php echo htmlspecialchars($olympiad['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
+                <div class="rd-card-meta">
+                  <?php echo htmlspecialchars(mb_substr(strip_tags($olympiad['description'] ?? ''), 0, 120), ENT_QUOTES, 'UTF-8'); ?>…
+                </div>
+                <div class="rd-card-foot">
+                  <div class="rd-price-now">диплом <?php echo number_format($oPrice, 0, ',', ' '); ?> ₽</div>
+                  <span class="rd-join-btn">Пройти →</span>
+                </div>
+              </a>
+            <?php endforeach; ?>
+          </div>
+
+          <?php if ($hasMore): ?>
+            <div id="loadMoreContainer" style="margin-top:24px;text-align:center;">
+              <button id="loadMoreBtn" class="rd-load-more" data-offset="<?php echo $perPage; ?>">
+                Показать больше олимпиад
+              </button>
+            </div>
+          <?php endif; ?>
+        <?php endif; ?>
+      </div>
     </div>
+  </div>
 </section>
 
-<!-- Olympiad Cards Catalog -->
-<section class="olympiad-catalog">
-    <div class="container">
-        <div class="competitions-layout" id="catalog">
-            <!-- Sidebar фильтры: только десктоп -->
-            <aside class="sidebar-filters">
-                <?php
-                $sidebarExtraFilters = null;
-                include __DIR__ . '/includes/sidebar-filter.php';
-                ?>
-            </aside>
-
-            <div class="content-area">
-                <?php
-                $catalogSearchPlaceholder = 'Поиск олимпиад и конкурсов...';
-                $catalogSearchContext = 'olympiads';
-                $catalogSearchAriaLabel = 'Поиск по олимпиадам';
-                include __DIR__ . '/includes/catalog-search.php';
-                ?>
-
-                <div class="olympiad-count">
-                    Найдено олимпиад: <strong><?php echo $totalFiltered; ?></strong>
-                </div>
-
-                <?php if (empty($olympiads)): ?>
-                    <div class="olympiad-empty">
-                        <h3>Олимпиады не найдены</h3>
-                        <p>В данной категории пока нет активных олимпиад. Попробуйте выбрать другую категорию.</p>
-                    </div>
-                <?php else: ?>
-                    <div class="olympiad-grid">
-                        <?php foreach ($olympiads as $olympiad):
-                            $olympiadAudienceTypes = $olympiadObj->getAudienceTypes($olympiad['id']);
-                            // Первый тег аудитории
-                            $firstTag = '';
-                            if (!empty($olympiadAudienceTypes)) {
-                                $firstTag = $olympiadAudienceTypes[0]['name'];
-                            } elseif (!empty($olympiad['target_audience'])) {
-                                $firstTag = Olympiad::getAudienceLabel($olympiad['target_audience']);
-                            }
-                        ?>
-                        <div class="olympiad-card">
-                            <?php if ($firstTag): ?>
-                            <span class="olympiad-category">
-                                <?php echo htmlspecialchars($firstTag); ?>
-                            </span>
-                            <?php endif; ?>
-
-                            <h3><?php echo htmlspecialchars($olympiad['title']); ?></h3>
-
-                            <p>
-                                <?php echo htmlspecialchars(mb_substr($olympiad['description'], 0, 150) . (mb_strlen($olympiad['description']) > 150 ? '...' : '')); ?>
-                            </p>
-
-                            <a href="/olimpiady/<?php echo htmlspecialchars($olympiad['slug']); ?>" class="btn btn-primary btn-block">
-                                Пройти бесплатно
-                            </a>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <?php if ($totalPages > 1): ?>
-                    <nav class="olympiad-pagination" aria-label="Пагинация олимпиад">
-                        <?php
-                        // Формируем базовый URL с учётом текущих фильтров
-                        $paginationParams = [];
-                        if ($selectedCategory) $paginationParams['ac'] = $selectedCategory;
-                        if ($selectedType) $paginationParams['at'] = $selectedType;
-                        if ($selectedSpec) $paginationParams['as'] = $selectedSpec;
-
-                        $buildPageUrl = function($page) use ($paginationParams) {
-                            $params = $paginationParams;
-                            if ($page > 1) $params['page'] = $page;
-                            $qs = http_build_query($params);
-                            return '/olimpiady/' . ($qs ? '?' . $qs : '');
-                        };
-                        ?>
-
-                        <?php if ($currentPage > 1): ?>
-                        <a href="<?= $buildPageUrl($currentPage - 1) ?>" class="pagination-link pagination-prev" aria-label="Предыдущая страница">&laquo; Назад</a>
-                        <?php endif; ?>
-
-                        <?php
-                        // Показываем номера страниц с многоточием
-                        $range = 2;
-                        for ($i = 1; $i <= $totalPages; $i++):
-                            if ($i == 1 || $i == $totalPages || ($i >= $currentPage - $range && $i <= $currentPage + $range)):
-                        ?>
-                        <?php if ($i == $currentPage): ?>
-                        <span class="pagination-link pagination-current"><?= $i ?></span>
-                        <?php else: ?>
-                        <a href="<?= $buildPageUrl($i) ?>" class="pagination-link"><?= $i ?></a>
-                        <?php endif; ?>
-                        <?php
-                            elseif ($i == $currentPage - $range - 1 || $i == $currentPage + $range + 1):
-                        ?>
-                        <span class="pagination-dots">&hellip;</span>
-                        <?php
-                            endif;
-                        endfor;
-                        ?>
-
-                        <?php if ($currentPage < $totalPages): ?>
-                        <a href="<?= $buildPageUrl($currentPage + 1) ?>" class="pagination-link pagination-next" aria-label="Следующая страница">Вперёд &raquo;</a>
-                        <?php endif; ?>
-                    </nav>
-                    <?php endif; ?>
-
-                <?php endif; ?>
-            </div>
-        </div>
+<!-- 4 шага -->
+<section class="rd-path rd-section">
+  <div class="rd-wrap">
+    <div class="reveal">
+      <div class="rd-eyebrow">Как это работает</div>
+      <h2 class="rd-section-title">Четыре шага до диплома</h2>
+      <p class="rd-section-sub">От выбора олимпиады до диплома в личном кабинете — 5–10 минут.</p>
     </div>
+    <div class="rd-steps four reveal-stagger">
+      <div class="rd-step">
+        <div class="rd-step-n">1</div>
+        <h4>Выберите олимпиаду</h4>
+        <p>Используйте фильтры по аудитории и предмету.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">2</div>
+        <h4>Пройдите тест</h4>
+        <p>10 вопросов в формате теста. Время не ограничено. Бесплатно.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">3</div>
+        <h4>Узнайте результат</h4>
+        <p>Сразу после теста — место и количество правильных ответов.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">4</div>
+        <h4>Оформите диплом</h4>
+        <p>По желанию: именной диплом за 169&nbsp;₽ — сразу в кабинет.</p>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- Trust Section -->
-<section class="olympiad-trust-section">
-    <div class="container">
-        <h2 class="section-title-center">Почему выбирают наши олимпиады</h2>
-        <p class="section-subtitle-center">Тысячи педагогов и учеников доверяют нашему порталу</p>
-
-        <div class="trust-grid">
-            <div class="trust-card">
-                <div class="trust-icon">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="white"/>
-                    </svg>
-                </div>
-                <h3>Бесплатное участие</h3>
-                <p>Все олимпиады полностью бесплатны. Оплата только за оформление диплома по желанию.</p>
-            </div>
-
-            <div class="trust-card">
-                <div class="trust-icon" style="background: linear-gradient(135deg, #C62828 0%, #EF5350 100%);">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z" fill="white"/>
-                    </svg>
-                </div>
-                <h3>Лицензированная организация</h3>
-                <p>Лицензия на образовательную деятельность и свидетельство о регистрации СМИ.</p>
-            </div>
-
-            <div class="trust-card">
-                <div class="trust-icon" style="background: linear-gradient(135deg, #F4C430 0%, #D4A420 100%);">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="white"/>
-                    </svg>
-                </div>
-                <h3>Быстрый результат</h3>
-                <p>Узнайте результат сразу после прохождения. Диплом готов за 30 секунд.</p>
-            </div>
-
-            <div class="trust-card">
-                <div class="trust-icon" style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="white"/>
-                    </svg>
-                </div>
-                <h3>Более 10 000 участников</h3>
-                <p>Присоединяйтесь к тысячам педагогов и учеников по всей России.</p>
-            </div>
+<!-- Trust band -->
+<section class="rd-section">
+  <div class="rd-wrap">
+    <div class="rd-trust-band reveal">
+      <div class="rd-trust-grid">
+        <div>
+          <div class="rd-eyebrow">Документы и аккредитации</div>
+          <h2>Дипломы соответствуют ФГОС и принимаются при аттестации</h2>
+          <p>Мы — официальное СМИ и резидент Сколково с лицензией на образовательную деятельность. Каждый диплом можно проверить по реестру.</p>
         </div>
+        <div class="rd-tc-grid">
+          <div class="rd-tc"><div class="badge">📜</div><h5>Лицензия</h5><p>№ Л035-01212-59 от 17.12.2021</p></div>
+          <div class="rd-tc"><div class="badge">📰</div><h5>СМИ</h5><p>Эл. №ФС 77-74524 от 24.12.2018</p></div>
+          <div class="rd-tc"><div class="badge">⚡</div><h5>Сколково</h5><p>Резидент №1127165 от 18.02.2025</p></div>
+          <div class="rd-tc"><div class="badge">✓</div><h5>ФГОС</h5><p>Дипломы соответствуют стандарту</p></div>
+        </div>
+      </div>
     </div>
+  </div>
 </section>
 
-<!-- How It Works Section -->
-<section class="olympiad-steps-section">
-    <div class="container">
-        <h2 class="section-title-center">Как это работает</h2>
-        <p class="section-subtitle-center">Всего 4 шага до получения результата</p>
-
-        <div class="steps-row">
-            <div class="step-card">
-                <div class="step-card-number">1</div>
-                <div>
-                    <h3>Зарегистрируйтесь</h3>
-                    <p>Укажите email и ФИО для участия в олимпиаде</p>
-                </div>
-            </div>
-
-            <div class="step-card">
-                <div class="step-card-number">2</div>
-                <div>
-                    <h3>Пройдите тест</h3>
-                    <p>Ответьте на 10 вопросов по выбранной теме</p>
-                </div>
-            </div>
-
-            <div class="step-card">
-                <div class="step-card-number">3</div>
-                <div>
-                    <h3>Узнайте результат</h3>
-                    <p>Получите результат и место среди участников</p>
-                </div>
-            </div>
-
-            <div class="step-card">
-                <div class="step-card-number">4</div>
-                <div>
-                    <h3>Получите диплом</h3>
-                    <p>Оформите именной диплом за <?php echo $olympiads[0]['diploma_price'] ?? 169; ?> руб.</p>
-                </div>
-            </div>
+<!-- FAQ -->
+<section class="rd-section">
+  <div class="rd-wrap">
+    <div class="rd-faq">
+      <div class="reveal">
+        <div class="rd-eyebrow">FAQ</div>
+        <h2 class="rd-section-title">Вопросы об олимпиадах</h2>
+        <p class="rd-section-sub">Не нашли ответ? Напишите <a href="mailto:info@fgos.pro" style="color:var(--indigo-600)">info@fgos.pro</a> или позвоните <a href="tel:+79223044413" style="color:var(--indigo-600)">+7 (922) 304-44-13</a>.</p>
+      </div>
+      <div class="rd-faq-list reveal-stagger">
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Участие действительно бесплатное? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Да. Прохождение теста олимпиады — полностью бесплатное. Оплата требуется только если вы захотите получить именной диплом (от 169 ₽).</div></div>
         </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Сколько вопросов в олимпиаде? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>10 вопросов с вариантами ответов. Время прохождения не ограничено, но рекомендуем сосредоточенно.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Как определяется место? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>9–10 правильных ответов — 1 место, 8 — 2 место, 7 — 3 место. Менее 7 — статус участника.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Можно пройти повторно? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Да. Каждая попытка — новый набор вопросов. При оформлении диплома будет использован лучший результат.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Подходит ли диплом для аттестации? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Да. Дипломы выдаются от имени зарегистрированного СМИ (Эл. №ФС 77-74524) и соответствуют ФГОС.</div></div>
+        </div>
+        <div class="rd-faq-item">
+          <button class="rd-faq-q">Как быстро придёт диплом? <span class="pm">+</span></button>
+          <div class="rd-faq-a"><div>Сразу после оплаты — в личный кабинет, в течение 30 секунд.</div></div>
+        </div>
+      </div>
     </div>
+  </div>
 </section>
 
-<!-- Bottom CTA -->
-<section class="olympiad-bottom-cta">
-    <div class="container">
-        <h2>Готовы проверить свои знания?</h2>
-        <p>Выберите олимпиаду и пройдите тест прямо сейчас. Участие полностью бесплатное!</p>
-        <a href="#olympiad-catalog" class="btn-hero-scroll">Выбрать олимпиаду</a>
-        <div class="cta-features-row">
-            <span>&#10003; Бесплатное участие</span>
-            <span>&#10003; 10 вопросов</span>
-            <span>&#10003; Результат сразу</span>
-            <span>&#10003; Диплом за 30 секунд</span>
-        </div>
+<!-- Final CTA -->
+<section class="rd-section" style="padding-bottom:64px;">
+  <div class="rd-wrap">
+    <div class="rd-final-cta reveal">
+      <div>
+        <div class="rd-eyebrow">Готовы попробовать?</div>
+        <h2>Выберите олимпиаду и пройдите тест прямо сейчас</h2>
+        <p><?php echo $totalOlympiads; ?>+ активных олимпиад. Тест бесплатный — диплом по желанию.</p>
+      </div>
+      <div class="actions">
+        <a href="#catalog" class="rd-btn rd-btn-primary">К каталогу
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+        </a>
+        <a href="/pages/contacts.php" class="rd-btn rd-btn-ghost">Связаться с нами</a>
+      </div>
     </div>
+  </div>
 </section>
 
 <script>
-// Smooth scroll for anchor links
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
-        anchor.addEventListener('click', function(e) {
-            e.preventDefault();
-            var target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                var headerOffset = 20;
-                var elementPosition = target.getBoundingClientRect().top;
-                var offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
-            }
+var allOlympiadsData = <?php echo json_encode($allOlympiadsJs, JSON_UNESCAPED_UNICODE); ?>;
+var olympiadsPerPage = <?php echo $perPage; ?>;
+
+function _olFmtPrice(num) { return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+function _olEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+function renderOlympiadCard(o) {
+    var desc = o.description ? o.description.replace(/<[^>]*>/g, '').substring(0, 120) + '…' : '';
+    var tags = '';
+    if (o.audience_label) tags += '<span class="rd-tag indigo">' + _olEsc(o.audience_label) + '</span>';
+    if (o.subject) tags += '<span class="rd-tag">' + _olEsc(o.subject) + '</span>';
+    return '<a class="rd-card" href="' + _olEsc(o.url) + '">' +
+        '<div class="rd-card-pat"></div>' +
+        '<div class="rd-card-tags">' + tags + '</div>' +
+        '<h4>' + _olEsc(o.title) + '</h4>' +
+        '<div class="rd-card-meta">' + _olEsc(desc) + '</div>' +
+        '<div class="rd-card-foot">' +
+          '<div class="rd-price-now">диплом ' + _olFmtPrice(Math.round(o.price)) + ' ₽</div>' +
+          '<span class="rd-join-btn">Пройти →</span>' +
+        '</div>' +
+      '</a>';
+}
+
+// Поиск по олимпиадам
+(function() {
+    var input = document.getElementById('olympiadSearchInput');
+    var clearBtn = document.getElementById('olympiadSearchClear');
+    var status = document.getElementById('olympiadSearchStatus');
+    var grid = document.getElementById('olympiadsGrid');
+    var loadMoreContainer = document.getElementById('loadMoreContainer');
+    if (!input || !grid) return;
+
+    var originalGridHtml = null;
+    var debounceTimer = null;
+
+    function normalize(s) { return (s || '').toString().toLowerCase().replace(/ё/g, 'е').trim(); }
+
+    function applyFilter(q) {
+        q = normalize(q);
+        if (!q) {
+            if (originalGridHtml !== null) { grid.innerHTML = originalGridHtml; originalGridHtml = null; }
+            if (loadMoreContainer) loadMoreContainer.style.display = '';
+            status.style.display = 'none';
+            clearBtn.style.display = 'none';
+            return;
+        }
+        if (originalGridHtml === null) originalGridHtml = grid.innerHTML;
+        clearBtn.style.display = '';
+        if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+
+        var tokens = q.split(/\s+/).filter(Boolean);
+        var matches = allOlympiadsData.filter(function(o) {
+            var hay = normalize((o.title || '') + ' ' + (o.description || '') + ' ' + (o.audience_label || '') + ' ' + (o.subject || ''));
+            return tokens.every(function(t) { return hay.indexOf(t) !== -1; });
         });
+
+        if (matches.length === 0) {
+            grid.innerHTML = '';
+            status.style.display = '';
+            status.innerHTML = 'По запросу «' + _olEsc(q) + '» ничего не найдено. Попробуйте другие слова или <a href="#" id="olSearchResetLink" style="color:var(--indigo-600);">сбросьте поиск</a>.';
+            var rl = document.getElementById('olSearchResetLink');
+            if (rl) rl.addEventListener('click', function(e) { e.preventDefault(); input.value = ''; applyFilter(''); input.focus(); });
+            return;
+        }
+        grid.innerHTML = matches.map(renderOlympiadCard).join('');
+        status.style.display = '';
+        var n = matches.length;
+        var word = (n % 10 === 1 && n % 100 !== 11) ? 'олимпиада' : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'олимпиады' : 'олимпиад');
+        status.textContent = 'Найдено: ' + n + ' ' + word;
+    }
+
+    input.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        var v = input.value;
+        debounceTimer = setTimeout(function() { applyFilter(v); }, 120);
     });
+    clearBtn.addEventListener('click', function() { input.value = ''; applyFilter(''); input.focus(); });
+    input.addEventListener('keydown', function(e) { if (e.key === 'Escape' && input.value) { input.value = ''; applyFilter(''); } });
+})();
 
-    // Scroll animation for cards
-    var observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
+// Load more
+(function() {
+    var loadMoreBtn = document.getElementById('loadMoreBtn');
+    var grid = document.getElementById('olympiadsGrid');
+    var loadMoreContainer = document.getElementById('loadMoreContainer');
+    if (!loadMoreBtn || !grid) return;
 
-    var observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-            }
-        });
-    }, observerOptions);
+    var remaining = allOlympiadsData.slice(olympiadsPerPage);
+    var currentOffset = 0;
 
-    document.querySelectorAll('.olympiad-card, .trust-card, .step-card').forEach(function(el) {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(20px)';
-        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        observer.observe(el);
+    loadMoreBtn.addEventListener('click', function() {
+        var batch = remaining.slice(currentOffset, currentOffset + olympiadsPerPage);
+        if (batch.length === 0) return;
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent = 'Загрузка...';
+        grid.insertAdjacentHTML('beforeend', batch.map(renderOlympiadCard).join(''));
+        currentOffset += olympiadsPerPage;
+        if (currentOffset >= remaining.length) {
+            loadMoreContainer.style.display = 'none';
+        } else {
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.textContent = 'Показать больше олимпиад';
+        }
     });
-});
+})();
 </script>
 
-<?php include __DIR__ . '/includes/social-links.php'; ?>
-
-<?php
-// Include footer
-include __DIR__ . '/includes/footer.php';
-?>
+<?php include __DIR__ . '/includes/footer-redesign.php'; ?>

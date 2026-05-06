@@ -22,7 +22,7 @@ ob_start();
 
     <p>Вы прошли олимпиаду <strong>"<?php echo htmlspecialchars($olympiad_title); ?>"</strong> и заняли <strong><?php echo htmlspecialchars($placement_text); ?></strong>, но ещё не оформили диплом.</p>
 
-    <h3 style="color: #1e40af; margin-top: 25px; font-weight: 600;">Что вы получите после оплаты:</h3>
+    <h3 style="color: #182f8a; margin-top: 25px; font-weight: 600;">Что вы получите после оплаты:</h3>
 
     <ul class="benefits-list">
         <li>Официальный диплом олимпиады в PDF-формате высокого качества</li>

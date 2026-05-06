@@ -25,7 +25,7 @@ ob_start();
 
     <p>Напоминаем, что вы оформили свидетельство о публикации <strong>«<?php echo htmlspecialchars($publication_title); ?>»</strong>, но оплата пока не завершена.</p>
 
-    <h3 style="color: #1e40af; margin-top: 25px; font-weight: 600;">Что вы получите после оплаты:</h3>
+    <h3 style="color: #182f8a; margin-top: 25px; font-weight: 600;">Что вы получите после оплаты:</h3>
 
     <ul style="color: #4A5568; padding-left: 20px; line-height: 1.8;">
         <li style="margin-bottom: 8px;">Именное свидетельство в формате PDF</li>
@@ -40,7 +40,7 @@ ob_start();
         <?php
         $cab_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm;
         ?>
-        <a href="<?php echo htmlspecialchars($cab_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #0065B1 0%, #004d8a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(0, 101, 177, 0.4);">
+        <a href="<?php echo htmlspecialchars($cab_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #0065B1 0%, #004d8a 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(0, 101, 177, 0.4);">
             Завершить оплату
         </a>
     </div>

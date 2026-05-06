@@ -13,6 +13,7 @@ $pageDescription = 'Документы образовательной орган
 $additionalCSS = ['/assets/css/svedeniya.css'];
 $currentSvedPage = '/svedeniya/dokumenty/';
 
+$useRedesignBody = true;
 include __DIR__ . '/../../includes/header.php';
 ?>
 

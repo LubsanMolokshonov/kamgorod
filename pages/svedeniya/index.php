@@ -12,6 +12,7 @@ $pageTitle = 'Сведения об организации | ' . SITE_NAME;
 $pageDescription = 'Сведения об образовательной организации ООО «Едурегионлаб». Лицензия, реквизиты, документы, образовательные программы.';
 $additionalCSS = ['/assets/css/svedeniya.css'];
 
+$useRedesignBody = true;
 include __DIR__ . '/../../includes/header.php';
 ?>
 

@@ -26,8 +26,8 @@ ob_start();
 
     <p>Вы прошли тест по видеолекции <strong>«<?php echo htmlspecialchars($webinar_title); ?>»</strong>, но ещё не оформили сертификат.</p>
 
-    <div style="background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border-radius: 16px; padding: 25px; margin: 20px 0; border-left: 4px solid #3b82f6;">
-        <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px; font-weight: 600;">Зачем нужен сертификат?</h3>
+    <div style="background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border-radius: 16px; padding: 25px; margin: 20px 0; border-left: 4px solid #1e3aa8;">
+        <h3 style="margin: 0 0 15px 0; color: #182f8a; font-size: 18px; font-weight: 600;">Зачем нужен сертификат?</h3>
         <ul style="color: #4A5568; padding-left: 20px; margin: 0;">
             <li style="margin-bottom: 10px;">Подтверждает <strong><?php echo $certificate_hours; ?> часа</strong> повышения квалификации</li>
             <li style="margin-bottom: 10px;">Пополняет портфолио для аттестации</li>
@@ -42,7 +42,7 @@ ob_start();
         <?php
         $cert_link = $certificate_url . (strpos($certificate_url, '?') !== false ? '&' : '?') . $utm;
         ?>
-        <a href="<?php echo htmlspecialchars($cert_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);">
+        <a href="<?php echo htmlspecialchars($cert_link); ?>" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 14px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);">
             Оформить сертификат
         </a>
     </div>

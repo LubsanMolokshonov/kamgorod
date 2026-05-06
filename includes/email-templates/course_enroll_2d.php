@@ -46,7 +46,7 @@ ob_start();
         </a>
     </div>
 
-    <h3 style="color: #1e40af; margin-top: 30px; font-weight: 600;">Почему педагоги выбирают нас:</h3>
+    <h3 style="color: #182f8a; margin-top: 30px; font-weight: 600;">Почему педагоги выбирают нас:</h3>
 
     <ul class="benefits-list">
         <li>Более 28 000 педагогов уже прошли обучение на нашей платформе</li>
