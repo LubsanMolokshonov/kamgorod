@@ -433,7 +433,7 @@ class Bitrix24Integration {
      * @param string|null $stageId ID стадии (null = BITRIX24_COURSE_STAGE_NEW)
      * @return string|null ID сделки или null
      */
-    public function createCourseDeal($enrollment, $course, $stageId = null, $adjustedPrice = null) {
+    public function createCourseDeal($enrollment, $course, $stageId = null, $adjustedPrice = null, array $paymentInfo = []) {
         $contactId = $this->findOrCreateContact($enrollment);
 
         $categoryId = defined('BITRIX24_COURSE_PIPELINE_ID') ? BITRIX24_COURSE_PIPELINE_ID : 108;
@@ -441,13 +441,21 @@ class Bitrix24Integration {
             $stageId = defined('BITRIX24_COURSE_STAGE_NEW') ? BITRIX24_COURSE_STAGE_NEW : 'C' . $categoryId . ':NEW';
         }
 
+        $isInstallment = ($paymentInfo['payment_method'] ?? null) === 'installment';
+        $title = mb_substr($course['title'], 0, 90) . ' — ' . $enrollment['full_name'];
+        if ($isInstallment) {
+            $title = 'РАССРОЧКА: ' . $title;
+        }
+
         $data = [
-            'TITLE' => mb_substr($course['title'], 0, 100) . ' — ' . $enrollment['full_name'],
+            'TITLE' => mb_substr($title, 0, 100),
             'CATEGORY_ID' => $categoryId,
             'STAGE_ID' => $stageId,
             'SOURCE_ID' => 'WEB',
-            'SOURCE_DESCRIPTION' => 'Запись на курс через Каменный город',
-            'COMMENTS' => $this->buildCourseComments($enrollment, $course, $adjustedPrice),
+            'SOURCE_DESCRIPTION' => $isInstallment
+                ? 'Заявка на рассрочку через Каменный город'
+                : 'Запись на курс через Каменный город',
+            'COMMENTS' => $this->buildCourseComments($enrollment, $course, $adjustedPrice, $paymentInfo),
             'OPENED' => 'Y',
             'PROBABILITY' => 50,
             'OPPORTUNITY' => $adjustedPrice ?? $course['price'] ?? 0,
@@ -539,8 +547,16 @@ class Bitrix24Integration {
      * @param array $course Данные курса
      * @return string Комментарий
      */
-    private function buildCourseComments($enrollment, $course, $adjustedPrice = null) {
+    private function buildCourseComments($enrollment, $course, $adjustedPrice = null, array $paymentInfo = []) {
         $comments = [];
+        if (($paymentInfo['payment_method'] ?? null) === 'installment') {
+            $monthly = (int)($paymentInfo['installment_monthly'] ?? 0);
+            $months  = (int)($paymentInfo['installment_months']  ?? 12);
+            $comments[] = '🟢 СПОСОБ ОПЛАТЫ: Рассрочка 0% на ' . $months . ' мес.';
+            $comments[] = 'Ежемесячный платёж: ≈ ' . number_format($monthly, 0, ',', ' ') . ' ₽';
+            $comments[] = 'Действие: связаться с клиентом и оформить рассрочку через банк-партнёр.';
+            $comments[] = '---';
+        }
         $comments[] = "Курс: " . $course['title'];
 
         if (!empty($course['program_type'])) {

@@ -20,6 +20,7 @@ require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/installment-helper.php';
 
 // Auto-login via cookie if session doesn't exist
 if (!isset($_SESSION['user_email']) && isset($_COOKIE['session_token'])) {
@@ -150,7 +151,7 @@ $pageDescription = 'Ваши регистрации и дипломы';
 $additionalCSS = ['/assets/css/cabinet-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/cabinet-redesign.css')];
 $additionalJS = [];
 if ($activeTab === 'courses') {
-    $additionalJS[] = '/assets/js/course-payment.js?v=' . filemtime(__DIR__ . '/../assets/js/course-payment.js');
+    $additionalJS[] = '/assets/js/course-cabinet.js?v=' . filemtime(__DIR__ . '/../assets/js/course-cabinet.js');
 }
 $noindex = true;
 $useRedesignBody = true;
@@ -320,6 +321,10 @@ include __DIR__ . '/../includes/header.php';
                     <div class="course-checkout-items">
                         <?php foreach ($unpaidData as $item):
                             $e = $item['enrollment'];
+                            $payAmountRow = $item['isDiscountActive'] ? $item['discountedPrice'] : (int)round($item['priceRaw']);
+                            $installmentRow = calculateInstallment((float)$payAmountRow);
+                            $isInstallmentRequested = ($e['payment_method'] ?? null) === 'installment'
+                                                   && ($e['enrollment_status'] ?? '') === 'installment_requested';
                         ?>
                         <div class="course-checkout-item"
                              data-enrollment-id="<?php echo $e['enrollment_id']; ?>"
@@ -347,6 +352,31 @@ include __DIR__ . '/../includes/header.php';
                                 <?php endif; ?>
                             </div>
                             <a href="/kursy/<?php echo htmlspecialchars($e['slug']); ?>/" class="checkout-item-link" title="Подробнее о курсе">→</a>
+
+                            <div class="checkout-item-actions">
+                                <?php if ($isInstallmentRequested): ?>
+                                    <div class="installment-requested-badge">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                                        </svg>
+                                        Заявка на рассрочку отправлена. Менеджер свяжется в рабочее время.
+                                    </div>
+                                <?php else: ?>
+                                    <button type="button"
+                                            class="btn-pay-online"
+                                            data-enrollment-id="<?php echo $e['enrollment_id']; ?>">
+                                        Оплатить онлайн — <?php echo formatRub($payAmountRow); ?>
+                                    </button>
+                                    <?php if ($installmentRow['available']): ?>
+                                        <button type="button"
+                                                class="btn-request-installment"
+                                                data-enrollment-id="<?php echo $e['enrollment_id']; ?>">
+                                            <span>Оформить рассрочку</span>
+                                            <span class="installment-monthly-hint">~<?php echo formatRub($installmentRow['monthly']); ?>/мес × <?php echo $installmentRow['months']; ?></span>
+                                        </button>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -368,16 +398,7 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                     </div>
 
-                    <div class="course-payment-section">
-                        <?php
-                        $payAmount = $hasAnyDiscount ? $totalDiscountedPrice : $totalPrice;
-                        $payFormatted = number_format($payAmount, 0, ',', ' ');
-                        ?>
-                        <button class="btn-course-checkout <?php echo $hasAnyDiscount ? 'has-discount' : ''; ?>">
-                            Оплатить — <?php echo $payFormatted; ?> ₽
-                        </button>
-                        <p class="payment-methods">Оплата через ЮКасса · Банковские карты, электронные кошельки, СБП</p>
-                    </div>
+                    <p class="payment-methods">Оплата через ЮКасса · Банковские карты, электронные кошельки, СБП. Рассрочку оформляет менеджер вручную после заявки.</p>
                 </div>
                 <?php endif; ?>
 

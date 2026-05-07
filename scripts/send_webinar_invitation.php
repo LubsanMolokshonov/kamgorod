@@ -1,259 +1,280 @@
 <?php
 /**
- * Массовая рассылка: приглашение на вебинар
- * Отправляется пользователям из таблицы users, которые НЕ зарегистрированы на указанный вебинар.
+ * Массовая рассылка-приглашение на вебинар через Unisender Go (EmailDispatcher).
  *
- * UTM: utm_source=email&utm_medium=invite&utm_campaign=webinar-chitatelskie-marafony
+ * Режимы:
+ *   --slug=...              slug вебинара (обяз.)
+ *   --populate              заполнить webinar_invitation_log строками pending для всех users
+ *   --send                  отправить пачку (читает pending из webinar_invitation_log)
+ *   --batch=N               сколько отправить за один прогон (default 100)
+ *   --daily-cap=N           стоп при N отправленных за календарный день (default 2300)
+ *   --test=email@host       одна отправка указанному адресу (без БД)
+ *   --dry-run               не отправлять, только показать кандидатов
+ *   --pause                 создать /tmp/webinar_invitation.pause (cron остановится)
+ *   --resume                удалить файл паузы
+ *   --status                краткая статистика по логу
  *
- * Запуск:
- *   php scripts/send_webinar_invitation.php --test email@test.com   # тест одному
- *   php scripts/send_webinar_invitation.php --dry-run               # проверка без отправки
- *   php scripts/send_webinar_invitation.php                         # рассылка всем
+ * Cron (прод):
+ *   *\/5 9-13 * * 1,2 cd /var/www/html && php scripts/send_webinar_invitation.php \
+ *     --slug=osobyj-rebenok-10-shagov --send --batch=100 --daily-cap=2300 \
+ *     >> /var/log/webinar-invitation.log 2>&1
  */
 
-// Только CLI
-if (php_sapi_name() !== 'cli') {
-    die('This script can only be run from command line');
-}
+if (php_sapi_name() !== 'cli') { die('CLI only'); }
 
 define('BASE_PATH', dirname(__DIR__));
-
 require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/database.php';
-require_once BASE_PATH . '/vendor/autoload.php';
+require_once BASE_PATH . '/classes/EmailDispatcher.php';
+require_once BASE_PATH . '/classes/CourseEmailChain.php';
 require_once BASE_PATH . '/includes/magic-link-helper.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 set_time_limit(0);
 
-// === Параметры CLI ===
-$dryRun = in_array('--dry-run', $argv ?? []);
-$testEmail = null;
-$testIdx = array_search('--test', $argv ?? []);
-if ($testIdx !== false && isset($argv[$testIdx + 1])) {
-    $testEmail = $argv[$testIdx + 1];
+// === CLI args ===
+$args = [];
+foreach (array_slice($argv, 1) as $a) {
+    if (preg_match('/^--([a-z\-]+)(?:=(.*))?$/', $a, $m)) {
+        $args[$m[1]] = $m[2] ?? true;
+    }
 }
 
-// === Параметры вебинара ===
-$webinarSlug = 'vzaimodeystvie-s-semyami-vospitannikov-cherez-chitatelskie-marafony';
+$slug      = $args['slug']      ?? null;
+$batch     = (int)($args['batch']     ?? 100);
+$dailyCap  = (int)($args['daily-cap'] ?? 2300);
+$dryRun    = !empty($args['dry-run']);
+$testEmail = $args['test']      ?? null;
 
-// === Получаем данные вебинара ===
-$webinarStmt = $db->prepare("
-    SELECT w.*, s.full_name as speaker_name, s.position as speaker_position, s.photo as speaker_photo
+$LOCK  = '/tmp/webinar_invitation.lock';
+$PAUSE = '/tmp/webinar_invitation.pause';
+
+// --- pause/resume
+if (!empty($args['pause']))  { touch($PAUSE); echo "Paused.\n"; exit(0); }
+if (!empty($args['resume'])) { @unlink($PAUSE); echo "Resumed.\n"; exit(0); }
+
+if (!$slug) { fwrite(STDERR, "ERROR: --slug required\n"); exit(1); }
+
+// --- webinar
+$w = $db->prepare("
+    SELECT w.*, s.full_name AS speaker_name, s.position AS speaker_position
     FROM webinars w
     LEFT JOIN speakers s ON w.speaker_id = s.id
     WHERE w.slug = ?
 ");
-$webinarStmt->execute([$webinarSlug]);
-$webinar = $webinarStmt->fetch(PDO::FETCH_ASSOC);
-if (!$webinar) {
-    die("Вебинар со slug '{$webinarSlug}' не найден\n");
+$w->execute([$slug]);
+$webinar = $w->fetch();
+if (!$webinar) { fwrite(STDERR, "Webinar not found: {$slug}\n"); exit(1); }
+$webinarId = (int)$webinar['id'];
+
+// --- formatted date
+$dt = new DateTime($webinar['scheduled_at'], new DateTimeZone('Europe/Moscow'));
+$months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+$days   = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+$webinar_date          = $dt->format('j') . ' ' . $months[(int)$dt->format('n')-1];
+$webinar_datetime_full = $webinar_date . ', ' . $days[(int)$dt->format('w')] . ', ' . $dt->format('H:i') . ' МСК';
+
+// === --status ===
+if (!empty($args['status'])) {
+    $rows = $db->prepare("SELECT status, COUNT(*) c FROM webinar_invitation_log WHERE webinar_id=? GROUP BY status");
+    $rows->execute([$webinarId]);
+    echo "Webinar #{$webinarId} ({$webinar['title']})\n";
+    foreach ($rows as $r) printf("  %-8s %d\n", $r['status'], $r['c']);
+    exit(0);
 }
-$webinarId = $webinar['id'];
 
-echo "=== Массовая рассылка: приглашение на вебинар ===\n";
-echo "Вебинар: {$webinar['title']} (ID: {$webinarId})\n";
-echo "Дата: {$webinar['scheduled_at']}\n";
-echo "Режим: " . ($testEmail ? "ТЕСТ ({$testEmail})" : ($dryRun ? "DRY RUN" : "РАССЫЛКА")) . "\n";
-echo "UTM: utm_source=email&utm_medium=invite&utm_campaign=webinar-chitatelskie-marafony\n";
-echo "---\n\n";
-
-// === Загружаем отписки (O(1) lookup) ===
-$unsubStmt = $db->prepare("SELECT email FROM email_unsubscribes");
-$unsubStmt->execute();
-$unsubscribed = array_flip(
-    array_map('strtolower', array_column($unsubStmt->fetchAll(PDO::FETCH_ASSOC), 'email'))
-);
-echo "Отписавшихся: " . count($unsubscribed) . "\n";
-
-// === Загружаем пользователей, которые НЕ зарегистрированы на вебинар ===
+// === --test (одна отправка, без БД) ===
 if ($testEmail) {
-    $userStmt = $db->prepare("SELECT id, email, full_name FROM users WHERE email = ? LIMIT 1");
-    $userStmt->execute([$testEmail]);
-} else {
-    $userStmt = $db->prepare("
-        SELECT u.id, u.email, u.full_name
+    $u = $db->prepare("SELECT id, full_name FROM users WHERE email=? LIMIT 1");
+    $u->execute([$testEmail]);
+    $row = $u->fetch();
+    sendOne($testEmail, $row['full_name'] ?? 'Тест', (int)($row['id'] ?? 0), $webinar, $webinar_date, $webinar_datetime_full, $dryRun);
+    exit(0);
+}
+
+// === --populate ===
+if (!empty($args['populate'])) {
+    echo "Populating webinar_invitation_log for webinar #{$webinarId}...\n";
+    // ВАЖНО: фильтруем отписавшихся и уже зарегистрированных на этот вебинар
+    $sql = "
+        INSERT IGNORE INTO webinar_invitation_log (webinar_id, user_id, email, status)
+        SELECT ?, u.id, u.email, 'pending'
         FROM users u
-        WHERE u.email NOT IN (
-            SELECT wr.email
-            FROM webinar_registrations wr
-            WHERE wr.webinar_id = ?
-            AND wr.status = 'registered'
-        )
-        ORDER BY u.id
-    ");
-    $userStmt->execute([$webinarId]);
-}
-$users = $userStmt->fetchAll(PDO::FETCH_ASSOC);
-$totalUsers = count($users);
-
-if ($totalUsers === 0) {
-    die("Пользователи для рассылки не найдены\n");
+        WHERE u.email IS NOT NULL AND u.email <> ''
+          AND u.email NOT IN (SELECT email FROM email_unsubscribes)
+          AND u.email NOT IN (
+              SELECT wr.email FROM webinar_registrations wr
+              WHERE wr.webinar_id = ? AND wr.status = 'registered'
+          )
+    ";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$webinarId, $webinarId]);
+    echo "Inserted {$stmt->rowCount()} pending rows.\n";
+    exit(0);
 }
 
-echo "Пользователей для приглашения: {$totalUsers}\n\n";
+// === --send ===
+if (empty($args['send'])) {
+    fwrite(STDERR, "Specify one of: --populate | --send | --test=... | --dry-run | --status | --pause/--resume\n");
+    exit(1);
+}
 
-// === Подготовка данных вебинара для шаблона ===
-$webinarDate = new DateTime($webinar['scheduled_at'], new DateTimeZone('Europe/Moscow'));
-$months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-           'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-$days = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+// pause-флаг
+if (file_exists($PAUSE)) { echo "Paused (flag at {$PAUSE}).\n"; exit(0); }
 
-$formattedDate = $webinarDate->format('j') . ' ' . $months[(int)$webinarDate->format('n') - 1] . ' ' . $webinarDate->format('Y');
-$formattedTime = $webinarDate->format('H:i');
-$dayOfWeek = $days[(int)$webinarDate->format('w')];
+// lock
+$lockFp = fopen($LOCK, 'c');
+if (!$lockFp || !flock($lockFp, LOCK_EX | LOCK_NB)) {
+    echo "Another run is in progress (lock).\n"; exit(0);
+}
+register_shutdown_function(function() use ($lockFp, $LOCK) {
+    if ($lockFp) { @flock($lockFp, LOCK_UN); @fclose($lockFp); }
+    @unlink($LOCK);
+});
 
-// === Отправка писем ===
-echo "=== Отправка приглашений ===\n\n";
+// daily cap check
+$todayCount = $db->prepare("
+    SELECT COUNT(*) FROM webinar_invitation_log
+    WHERE webinar_id=? AND status='sent' AND sent_at >= CURDATE()
+");
+$todayCount->execute([$webinarId]);
+$sentToday = (int)$todayCount->fetchColumn();
+if ($sentToday >= $dailyCap) {
+    echo "Daily cap reached ({$sentToday}/{$dailyCap}).\n"; exit(0);
+}
+$remainingToday = $dailyCap - $sentToday;
+$thisRun = min($batch, $remainingToday);
 
-$sent = 0;
-$skipped = 0;
-$failed = 0;
+// pull pending rows
+$pick = $db->prepare("
+    SELECT l.id, l.user_id, l.email, u.full_name
+    FROM webinar_invitation_log l
+    JOIN users u ON u.id = l.user_id
+    WHERE l.webinar_id = ? AND l.status = 'pending'
+    ORDER BY l.id
+    LIMIT {$thisRun}
+");
+$pick->execute([$webinarId]);
+$rows = $pick->fetchAll();
 
-foreach ($users as $index => $user) {
-    $userId = $user['id'];
-    $email = $user['email'];
-    $fullName = $user['full_name'];
+if (!$rows) { echo "No pending rows.\n"; exit(0); }
 
-    // Пропускаем невалидные email
+echo "[" . date('Y-m-d H:i:s') . "] Webinar #{$webinarId}: sending up to " . count($rows) . " (today: {$sentToday}/{$dailyCap})\n";
+
+$sent = $failed = $skipped = 0;
+foreach ($rows as $r) {
+    $email = $r['email'];
+    $name  = $r['full_name'] ?: '';
+
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        echo "[SKIP] {$fullName} <{$email}> — невалидный email\n";
+        markStatus($db, $r['id'], 'skipped', 'invalid_email');
         $skipped++;
         continue;
-    }
-
-    // Проверяем отписку (кроме тестового режима)
-    if (!$testEmail && isset($unsubscribed[strtolower($email)])) {
-        echo "[SKIP] {$fullName} <{$email}> — отписан\n";
-        $skipped++;
-        continue;
-    }
-
-    // Прогресс каждые 50 писем
-    if (($index + 1) % 50 === 0 || $index === 0) {
-        $pct = round(($index + 1) / $totalUsers * 100, 1);
-        echo "--- Прогресс: " . ($index + 1) . " / {$totalUsers} ({$pct}%) ---\n";
     }
 
     if ($dryRun) {
-        echo "[DRY] {$fullName} <{$email}>\n";
+        echo "[DRY] {$email} — {$name}\n";
         $sent++;
         continue;
     }
 
     try {
-        $mail = new PHPMailer(true);
-        $mail->isSMTP();
-        $mail->Host = SMTP_HOST;
-        $mail->Port = SMTP_PORT;
-        $mail->CharSet = 'UTF-8';
-
-        if (!empty(SMTP_USERNAME) && !empty(SMTP_PASSWORD)) {
-            $mail->SMTPAuth = true;
-            $mail->Username = SMTP_USERNAME;
-            $mail->Password = SMTP_PASSWORD;
-
-            if (SMTP_PORT == 465) {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            } elseif (SMTP_PORT == 587) {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            }
-        } else {
-            $mail->SMTPAuth = false;
-            $mail->SMTPSecure = false;
-            $mail->SMTPAutoTLS = false;
-        }
-
-        $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-        $mail->addAddress($email, $fullName);
-
-        // Unsubscribe
-        $unsubscribeToken = base64_encode($email . ':' . substr(md5($email . SITE_URL), 0, 16));
-        $unsubscribe_url = SITE_URL . '/pages/unsubscribe.php?token=' . $unsubscribeToken;
-
-        // Переменные шаблона
-        $user_name = $fullName;
-        $webinar_title = $webinar['title'];
-        $webinar_slug = $webinar['slug'];
-        $webinar_description = $webinar['short_description'] ?? '';
-        $webinar_datetime_full = "{$formattedDate}, {$dayOfWeek}, в {$formattedTime} МСК";
-        $webinar_duration = $webinar['duration_minutes'] ?? 60;
-        $speaker_name = $webinar['speaker_name'] ?? '';
-        $speaker_position = $webinar['speaker_position'] ?? '';
-        $speaker_photo = '';
-        if (!empty($webinar['speaker_photo'])) {
-            $speaker_photo = str_starts_with($webinar['speaker_photo'], '/')
-                ? SITE_URL . $webinar['speaker_photo']
-                : SITE_URL . '/uploads/speakers/' . $webinar['speaker_photo'];
-        }
-        $certificate_price = $webinar['certificate_price'] ?? 200;
-        $certificate_hours = $webinar['certificate_hours'] ?? 2;
-        $site_url = SITE_URL;
-
-        // Рендер HTML-шаблона
-        ob_start();
-        include BASE_PATH . '/includes/email-templates/webinar_invitation.php';
-        $htmlBody = ob_get_clean();
-
-        // UTM для текстовой версии
-        $utm = 'utm_source=email&utm_medium=invite&utm_campaign=webinar-chitatelskie-marafony';
-        $webinarLink = SITE_URL . '/vebinar/' . $webinar['slug'] . '?' . $utm;
-
-        // Plain text версия
-        $textBody = "Здравствуйте, {$fullName}!\n\n";
-        $textBody .= "Приглашаем вас на бесплатный вебинар для педагогов!\n\n";
-        $textBody .= "«{$webinar['title']}»\n";
-        $textBody .= "Дата: {$webinar_datetime_full}\n";
-        $textBody .= "Продолжительность: {$webinar_duration} минут\n";
-        if ($speaker_name) {
-            $textBody .= "Спикер: {$speaker_name}\n";
-        }
-        $textBody .= "\nРегистрация бесплатная: {$webinarLink}\n\n";
-        $textBody .= "После вебинара можно получить именной сертификат на {$certificate_hours} часа ({$certificate_price} руб.)\n\n";
-        $textBody .= "С уважением,\nКоманда ФГОС-Практикум\n";
-        $textBody .= SITE_URL . "\n\n";
-        $textBody .= "Отписаться: {$unsubscribe_url}\n";
-
-        $mail->isHTML(true);
-        $mail->Subject = mb_encode_mimeheader($email_subject, 'UTF-8', 'B'); // из шаблона
-        $mail->Body = $htmlBody;
-        $mail->AltBody = $textBody;
-
-        // Заголовки отписки
-        $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubscribe_url . '>');
-        $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
-
-        $mail->send();
-
-        echo "[SENT] {$fullName} <{$email}>\n";
+        $res = sendOne($email, $name, (int)$r['user_id'], $webinar, $webinar_date, $webinar_datetime_full, false);
+        $upd = $db->prepare("UPDATE webinar_invitation_log SET status='sent', sent_at=NOW(), unisender_id=? WHERE id=?");
+        $upd->execute([$res['unisender_id'] ?? null, $r['id']]);
         $sent++;
-
-        // Пауза 500мс между письмами
-        usleep(500000);
-
-    } catch (Exception $e) {
-        echo "[FAIL] {$fullName} <{$email}> — " . $e->getMessage() . "\n";
+        echo "[SENT] {$email}\n";
+    } catch (\Throwable $e) {
+        markStatus($db, $r['id'], 'failed', substr($e->getMessage(), 0, 500));
         $failed++;
+        echo "[FAIL] {$email} — " . $e->getMessage() . "\n";
     }
+
+    usleep(1_500_000); // 1.5s между письмами
 }
 
-// ============================================
-// РЕЗУЛЬТАТ
-// ============================================
-echo "\n=== Результат ===\n";
-echo "Всего пользователей: {$totalUsers}\n";
-echo "Отправлено: {$sent}\n";
-echo "Пропущено: {$skipped}\n";
-echo "Ошибки: {$failed}\n";
+echo "Done. sent={$sent} failed={$failed} skipped={$skipped}\n";
+exit(0);
 
-// Логирование
-$mode = $testEmail ? "TEST({$testEmail})" : ($dryRun ? "DRY_RUN" : "SEND");
-$logMessage = "[" . date('Y-m-d H:i:s') . "] WEBINAR_INVITATION | Mode: {$mode} | Webinar: {$webinar['title']} | Total: {$totalUsers}, Sent: {$sent}, Skipped: {$skipped}, Failed: {$failed}\n";
-$logFile = BASE_PATH . '/logs/webinar-email-journey.log';
-$logDir = dirname($logFile);
-if (!file_exists($logDir)) {
-    mkdir($logDir, 0755, true);
+// =============== helpers ===============
+
+function markStatus(PDO $db, int $id, string $status, ?string $error = null): void {
+    $stmt = $db->prepare("UPDATE webinar_invitation_log SET status=?, error=?, sent_at=NOW() WHERE id=?");
+    $stmt->execute([$status, $error, $id]);
 }
-error_log($logMessage, 3, $logFile);
+
+function sendOne(string $email, string $name, int $userId, array $webinar, string $webinar_date, string $webinar_datetime_full, bool $dryRun): array {
+    // персональный sender (детерминированная ротация)
+    $sender = CourseEmailChain::pickPersonalSender($email);
+    $signatureName = explode(',', $sender['from_name'])[0]; // «Анна» / «Родион»
+
+    // unsubscribe-токен (тот же формат, что использует pages/unsubscribe.php: base64(email:md5(email+SITE_URL)[0:16]))
+    $token = base64_encode($email . ':' . substr(md5($email . SITE_URL), 0, 16));
+    $unsubscribe_url = SITE_URL . '/pages/unsubscribe.php?token=' . $token;
+
+    // переменные шаблона
+    $user_name             = $name;
+    $webinar_title         = $webinar['title'];
+    $webinar_slug          = $webinar['slug'];
+    $webinar_description   = $webinar['short_description'] ?? '';
+    $webinar_duration      = $webinar['duration_minutes'] ?? 60;
+    $speaker_name          = $webinar['speaker_name'] ?? '';
+    $speaker_position      = $webinar['speaker_position'] ?? '';
+    $speaker_photo         = '';
+    if (!empty($webinar['speaker_photo'])) {
+        $speaker_photo = str_starts_with($webinar['speaker_photo'], '/')
+            ? SITE_URL . $webinar['speaker_photo']
+            : SITE_URL . '/uploads/speakers/' . $webinar['speaker_photo'];
+    }
+    $certificate_hours     = $webinar['certificate_hours'] ?? 2;
+    $certificate_price     = $webinar['certificate_price'] ?? 200;
+    $site_url              = SITE_URL;
+    $sender_signature      = $signatureName . ', ФГОС-Практикум';
+    $footer_reason         = 'вы зарегистрированы на fgos.pro';
+
+    // magic-link: пользователь приходит уже авторизованным и сразу попадает на страницу вебинара
+    $utm = 'utm_source=email&utm_medium=invite&utm_campaign=webinar-osobyj-rebenok-may2026';
+    $targetPath = '/vebinar/' . $webinar['slug'] . '/?' . $utm;
+    if ($userId > 0) {
+        $webinar_link = generateMagicUrl($userId, $targetPath, 14);
+    } else {
+        $webinar_link = SITE_URL . $targetPath;
+    }
+    $webinarLink = $webinar_link;
+
+    ob_start();
+    include BASE_PATH . '/includes/email-templates/webinar_invitation_branded.php';
+    $html = ob_get_clean();
+
+    // нейтральная тема: без «бесплатно», «приглашаем», «акция», эмодзи и !!!.
+    $subject = 'Вебинар про особых детей — ' . $webinar_date . ', ' . ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'][(int)(new DateTime($webinar['scheduled_at'], new DateTimeZone('Europe/Moscow')))->format('w')];
+
+    $text  = "Здравствуйте" . ($name ? ', ' . $name : '') . ".\n\n";
+    $text .= "{$webinar_datetime_full} у нас вебинар «{$webinar_title}». Для участия нужна регистрация — это занимает минуту.\n\n";
+    if ($speaker_name) $text .= "Ведёт {$speaker_name}" . ($speaker_position ? ", {$speaker_position}" : '') . ". Длительность около {$webinar_duration} минут.\n\n";
+    $text .= "Записаться: {$webinar_link}\n\n";
+    $text .= "После эфира можно оформить именной сертификат на {$certificate_hours} ч. — он не обязателен, но иногда нужен для портфолио.\n\n";
+    $text .= "— {$sender_signature}\n\n";
+    $text .= "Если рассылка не нужна — отписаться: {$unsubscribe_url}\n";
+
+    if ($dryRun) {
+        echo "[DRY] -> {$email}\n  subject: {$subject}\n  from: {$sender['from_name']}\n";
+        return ['ok' => true, 'unisender_id' => null];
+    }
+
+    return EmailDispatcher::send([
+        'to_email'        => $email,
+        'to_name'         => $name,
+        'subject'         => $subject,
+        'html'            => $html,
+        'text'            => $text,
+        'from_name'       => $sender['from_name'],
+        'reply_to'        => $sender['reply_to'],
+        'reply_to_name'   => $sender['reply_to_name'],
+        'unsubscribe_url' => $unsubscribe_url,
+        'meta'            => [
+            'email_type'      => 'webinar',
+            'touchpoint_code' => 'invitation_mass',
+            'recipient_email' => $email,
+        ],
+    ]);
+}

@@ -1120,3 +1120,63 @@
     .sp-card__number { font-size: 36px; }
     .sp-skolkovo-logo { width: 60px; height: 60px; }
 }
+
+/* === Рассрочка 0% — карточка курса ===
+   Иерархия: главный акцент — рассрочка/мес, вторичная строка — общая цена. */
+.rd-card-price-block { display: flex; flex-direction: column; gap: 2px; }
+
+/* Главный акцент: «1 935 ₽/мес» */
+.rd-card-price-block .rd-price-installment {
+    order: 1;
+    font-size: 12px;
+    color: var(--ink-500);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+    line-height: 1.2;
+}
+.rd-card-price-block .rd-price-installment strong {
+    font: 800 22px var(--font-sans);
+    color: var(--ink-900);
+    letter-spacing: -.01em;
+    line-height: 1.1;
+}
+.rd-card-price-block .rd-price-prefix {
+    font-size: 12px;
+    color: var(--ink-500);
+    margin-right: 4px;
+    font-weight: 500;
+}
+
+/* Вторичная строка: «25 800 ₽ 23 220 ₽» */
+.rd-card-price-block .rd-price-now {
+    order: 2;
+    font: 500 13px var(--font-sans);
+    color: var(--ink-500);
+    letter-spacing: 0;
+}
+.rd-price-old {
+    text-decoration: line-through;
+    color: var(--ink-400);
+    font-weight: 500;
+    font-size: 12px;
+    margin-right: 6px;
+}
+
+.rd-installment-badge-wrap { display: inline-flex; align-items: center; }
+
+/* Не дать кнопке «К программе» сжиматься/переносить текст в карточке курса */
+.rd-card-price-block + .rd-join-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.rd-installment-badge {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    background: #ecfdf5;
+    color: #047857;
+    padding: 2px 6px;
+    border-radius: 999px;
+}

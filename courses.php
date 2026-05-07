@@ -14,6 +14,7 @@ require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/url-helper.php';
 require_once __DIR__ . '/includes/seo-url.php';
 require_once __DIR__ . '/classes/CoursePriceAB.php';
+require_once __DIR__ . '/includes/installment-helper.php';
 
 $abVariant = CoursePriceAB::getVariant();
 $discountPercent = CoursePriceAB::getDiscountPercent($abVariant);
@@ -430,12 +431,21 @@ include __DIR__ . '/includes/header-redesign.php';
                 <div class="rd-card-meta">
                   <?php echo htmlspecialchars(mb_substr(strip_tags($course['description'] ?? ''), 0, 120), ENT_QUOTES, 'UTF-8'); ?>…
                 </div>
+                <?php $installment = calculateInstallment($abPrice); ?>
                 <div class="rd-card-foot">
-                  <div class="rd-price-now">
-                    <?php if ($itemDiscountPercent > 0): ?>
-                      <span style="text-decoration:line-through;color:var(--ink-400);font-weight:500;font-size:13px;margin-right:6px;"><?php echo number_format($basePrice, 0, ',', ' '); ?> ₽</span><?php echo number_format($abPrice, 0, ',', ' '); ?> ₽
-                    <?php else: ?>
-                      <?php echo number_format($abPrice, 0, ',', ' '); ?> ₽
+                  <div class="rd-card-price-block">
+                    <div class="rd-price-now">
+                      <?php if ($itemDiscountPercent > 0): ?>
+                        <span class="rd-price-old"><?php echo number_format($basePrice, 0, ',', ' '); ?> ₽</span><?php echo number_format($abPrice, 0, ',', ' '); ?> ₽
+                      <?php else: ?>
+                        <?php echo number_format($abPrice, 0, ',', ' '); ?> ₽
+                      <?php endif; ?>
+                    </div>
+                    <?php if ($installment['available']): ?>
+                      <div class="rd-price-installment">
+                        <span class="rd-price-prefix">от</span><strong><?php echo formatRub($installment['monthly']); ?>/мес</strong>
+                        <span class="rd-installment-badge">рассрочка 0%</span>
+                      </div>
                     <?php endif; ?>
                   </div>
                   <span class="rd-join-btn">К программе</span>
@@ -863,6 +873,8 @@ var discountByType = {
     kpk: <?php echo CoursePriceAB::getDiscountPercent($abVariant, 'kpk'); ?>,
     pp:  <?php echo CoursePriceAB::getDiscountPercent($abVariant, 'pp'); ?>
 };
+window.COURSE_INSTALLMENT_MIN_PRICE = <?php echo (int)COURSE_INSTALLMENT_MIN_PRICE; ?>;
+window.COURSE_INSTALLMENT_MONTHS = <?php echo (int)COURSE_INSTALLMENT_MONTHS; ?>;
 
 function _coursesFmtPrice(num) { return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
 function _coursesEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
@@ -877,9 +889,21 @@ function renderCourseCard(course) {
     var ptLabel = course.program_type === 'pp' ? 'Профессиональная переподготовка' : 'Повышение квалификации';
     var d = discountByType[course.program_type] || 0;
     var basePrice = parseFloat(course.price) || 0;
+    var abPrice = _coursesAbPrice(basePrice, course);
     var priceHtml = d > 0
-        ? '<span style="text-decoration:line-through;color:var(--ink-400);font-weight:500;font-size:13px;margin-right:6px;">' + _coursesFmtPrice(basePrice) + ' ₽</span>' + _coursesFmtPrice(_coursesAbPrice(basePrice, course)) + ' ₽'
-        : _coursesFmtPrice(basePrice) + ' ₽';
+        ? '<span class="rd-price-old">' + _coursesFmtPrice(basePrice) + ' ₽</span>' + _coursesFmtPrice(abPrice) + ' ₽'
+        : _coursesFmtPrice(abPrice) + ' ₽';
+    var minInstallment = (window.COURSE_INSTALLMENT_MIN_PRICE || 10000);
+    var months = (window.COURSE_INSTALLMENT_MONTHS || 12);
+    var installmentHtml = '';
+    if (abPrice >= minInstallment) {
+        var monthly = Math.ceil(abPrice / months);
+        installmentHtml =
+            '<div class="rd-price-installment">' +
+              '<span class="rd-price-prefix">от</span><strong>' + _coursesFmtPrice(monthly) + ' ₽/мес</strong>' +
+              '<span class="rd-installment-badge">рассрочка 0%</span>' +
+            '</div>';
+    }
     return '<a class="rd-card" href="/kursy/' + encodeURIComponent(slug) + '/" data-course-id="' + course.id + '">' +
         '<div class="rd-card-pat"></div>' +
         '<div class="rd-card-tags">' +
@@ -889,7 +913,10 @@ function renderCourseCard(course) {
         '<h4>' + _coursesEsc(course.title) + '</h4>' +
         '<div class="rd-card-meta">' + _coursesEsc(desc) + '</div>' +
         '<div class="rd-card-foot">' +
-          '<div class="rd-price-now">' + priceHtml + '</div>' +
+          '<div class="rd-card-price-block">' +
+            '<div class="rd-price-now">' + priceHtml + '</div>' +
+            installmentHtml +
+          '</div>' +
           '<span class="rd-join-btn">К программе</span>' +
         '</div>' +
       '</a>';

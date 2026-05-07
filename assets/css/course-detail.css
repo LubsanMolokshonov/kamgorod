@@ -669,3 +669,189 @@
   .cd-course-price .amount { gap: 8px; }
   .cd-experts-grid { grid-template-columns: 1fr; }
 }
+
+/* === Рассрочка 0% — детальная страница курса === */
+.price-installment-info {
+    font-size: 13px;
+    color: var(--ink-500);
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.4;
+}
+.installment-pill {
+    font-size: 11px;
+    font-weight: 600;
+    background: #ecfdf5;
+    color: #047857;
+    padding: 3px 8px;
+    border-radius: 999px;
+    letter-spacing: .02em;
+}
+.cd-installment-row {
+    margin: 12px 0 16px;
+    padding: 12px 14px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+}
+.cd-installment-amount {
+    font-weight: 700;
+    font-size: 16px;
+    color: #047857;
+}
+.cd-installment-meta {
+    font-size: 13px;
+    color: var(--ink-600);
+    margin-top: 4px;
+    line-height: 1.45;
+}
+
+/* === Hero-карточка цены: акцент на рассрочке === */
+.cd-i-price.cd-i-price-installment {
+    background: linear-gradient(155deg, #ecfdf5 0%, #f0fdf4 60%, #ffffff 100%);
+    border: 1px solid #bbf7d0;
+}
+.cd-price-monthly {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 14px;
+    color: #065f46;
+}
+.cd-price-monthly-from {
+    font: 600 14px var(--font-sans);
+    color: #047857;
+    opacity: .85;
+}
+.cd-price-monthly-amount {
+    font: 800 34px var(--font-sans);
+    letter-spacing: -.02em;
+    line-height: 1;
+    color: #065f46;
+}
+.cd-price-monthly-period {
+    font: 600 16px var(--font-sans);
+    color: #047857;
+}
+.cd-price-monthly-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #047857;
+    font-weight: 500;
+}
+.cd-i-price-installment .installment-pill {
+    background: #047857;
+    color: #fff;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.cd-price-full-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed #bbf7d0;
+    font-size: 14px;
+}
+.cd-price-old {
+    text-decoration: line-through;
+    color: var(--ink-400);
+    font-weight: 500;
+}
+.cd-price-now {
+    font-weight: 700;
+    color: var(--ink-800);
+}
+.cd-price-discount-badge {
+    background: #ff4d6d;
+    color: #fff;
+    font: 600 11px var(--font-sans);
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: .02em;
+}
+.cd-price-full-label {
+    color: var(--ink-500);
+    font-size: 12px;
+    width: 100%;
+    margin-top: 2px;
+}
+
+/* === Большой ценовой блок: вариант с рассрочкой === */
+.cd-course-price-installment .label {
+    color: #a7f3d0;
+}
+.cd-course-price-installment .amount {
+    color: #fff;
+}
+.cd-big-from {
+    font-size: .35em;
+    font-weight: 600;
+    opacity: .8;
+    align-self: center;
+}
+.cd-big-period {
+    font-size: .32em;
+    font-weight: 600;
+    opacity: .85;
+}
+.cd-course-price-installment .note {
+    color: #c2cdff;
+    margin-bottom: 22px;
+}
+.cd-full-price-line {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 22px;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: var(--r-pill);
+    margin-bottom: 6px;
+    font-size: 16px;
+}
+.cd-full-price-label {
+    color: #b6c2ff;
+    font-weight: 500;
+    font-size: 14px;
+}
+.cd-full-price-old {
+    text-decoration: line-through;
+    color: rgba(255, 255, 255, .55);
+    font-weight: 500;
+}
+.cd-full-price-now {
+    color: #fff;
+    font-weight: 700;
+    font-size: 18px;
+}
+.cd-full-price-badge {
+    background: #ff4d6d;
+    color: #fff;
+    font: 700 12px var(--font-sans);
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    letter-spacing: .02em;
+}
+.cd-full-price-meta {
+    font-size: 13px;
+    color: #c2cdff;
+    opacity: .8;
+    margin-bottom: 26px;
+}
+@media (max-width: 768px) {
+    .cd-price-monthly-amount { font-size: 28px; }
+    .cd-full-price-line { padding: 10px 16px; font-size: 14px; }
+    .cd-full-price-now { font-size: 16px; }
+}

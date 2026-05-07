@@ -49,7 +49,7 @@ try {
     if ($bitrix->isConfigured()) {
         $stageNew = defined('BITRIX24_COURSE_STAGE_NEW') ? BITRIX24_COURSE_STAGE_NEW : 'C108:NEW';
         $abVariant = $enrollment['ab_variant'] ?? 'A';
-        $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
+        $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null);
 
         $dealId = $bitrix->createCourseDeal([
             'full_name' => $fullName,
@@ -102,7 +102,7 @@ try {
     $programLabel = Course::getProgramTypeLabel($course['program_type']);
     // Фактическая цена (фиксированная скидка / AB-вариант enrollment)
     $abVariant = $enrollment['ab_variant'] ?? 'A';
-    $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
+    $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null);
     $price = number_format($abPrice, 0, ',', ' ');
 
     $mail->Body = <<<HTML

@@ -404,6 +404,7 @@ class Course {
     public function getEnrollmentsByEmail($email) {
         return $this->db->query(
             "SELECT ce.id as enrollment_id, ce.status as enrollment_status, ce.created_at as enrolled_at,
+                    ce.payment_method, ce.installment_requested_at, ce.installment_monthly_amount,
                     c.id as course_id, c.title, c.slug, c.hours, c.price, c.program_type
              FROM course_enrollments ce
              JOIN courses c ON ce.course_id = c.id
@@ -420,11 +421,29 @@ class Course {
         return $this->db->queryOne(
             "SELECT ce.id as enrollment_id, ce.user_id, ce.status as enrollment_status,
                     ce.created_at as enrolled_at, ce.email, ce.full_name, ce.phone,
+                    ce.payment_method, ce.installment_requested_at, ce.installment_monthly_amount,
                     c.id as course_id, c.title, c.slug, c.hours, c.price, c.program_type
              FROM course_enrollments ce
              JOIN courses c ON ce.course_id = c.id
              WHERE ce.id = ?",
             [$enrollmentId]
+        );
+    }
+
+    /**
+     * Помечает заявку как «заявка на рассрочку отправлена».
+     * Используется AJAX-эндпоинтом /ajax/request-course-installment.php.
+     */
+    public function markInstallmentRequested(int $enrollmentId, int $monthlyAmount, ?string $bitrixDealId): bool {
+        return (bool)$this->db->execute(
+            "UPDATE course_enrollments
+                SET status = 'installment_requested',
+                    payment_method = 'installment',
+                    installment_requested_at = NOW(),
+                    installment_monthly_amount = ?,
+                    bitrix_installment_deal_id = ?
+              WHERE id = ?",
+            [$monthlyAmount, $bitrixDealId, $enrollmentId]
         );
     }
 

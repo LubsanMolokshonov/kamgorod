@@ -65,6 +65,20 @@ if (!defined('BITRIX24_COURSE_STAGE_1H'))      define('BITRIX24_COURSE_STAGE_1H'
 if (!defined('BITRIX24_COURSE_STAGE_MANAGER')) define('BITRIX24_COURSE_STAGE_MANAGER', 'C108:UC_DLXNLQ');
 if (!defined('BITRIX24_COURSE_STAGE_WON'))     define('BITRIX24_COURSE_STAGE_WON', 'C108:WON');
 
+// Рассрочка по курсам (без онлайн-оплаты, оформляется менеджером)
+if (!defined('COURSE_INSTALLMENT_MIN_PRICE')) {
+    define('COURSE_INSTALLMENT_MIN_PRICE', (int)($_ENV['COURSE_INSTALLMENT_MIN_PRICE'] ?? 10000));
+}
+if (!defined('COURSE_INSTALLMENT_MONTHS')) {
+    define('COURSE_INSTALLMENT_MONTHS', (int)($_ENV['COURSE_INSTALLMENT_MONTHS'] ?? 12));
+}
+// Стадия Bitrix24 для заявок на рассрочку. ID создаётся пользователем вручную
+// в воронке курсов; до настройки — fallback на менеджерскую стадию.
+if (!defined('BITRIX24_COURSE_STAGE_INSTALLMENT')) {
+    define('BITRIX24_COURSE_STAGE_INSTALLMENT',
+        $_ENV['BITRIX24_COURSE_STAGE_INSTALLMENT'] ?? BITRIX24_COURSE_STAGE_MANAGER);
+}
+
 // Bitrix24: воронка ЦДО (pipeline 4) — мониторинг для деактивации email-цепочки
 if (!defined('BITRIX24_CDO_PIPELINE_ID'))       define('BITRIX24_CDO_PIPELINE_ID', 4);
 if (!defined('BITRIX24_CDO_STAGE_DOCS'))        define('BITRIX24_CDO_STAGE_DOCS', 'C4:17');       // «Подготовка документов»

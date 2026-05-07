@@ -108,7 +108,7 @@ try {
 
             // Скорректированная цена (фиксированная скидка / AB-вариант enrollment)
             $abVariant = $fresh['ab_variant'] ?? 'A';
-            $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant);
+            $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null);
 
             $dealId = $bitrix->createCourseDeal([
                 'full_name' => $fresh['full_name'],

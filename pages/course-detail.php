@@ -11,6 +11,7 @@ require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/CourseExpert.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/installment-helper.php';
 
 $slug = $_GET['slug'] ?? '';
 
@@ -144,6 +145,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 
 $priceFormatted = number_format($abPrice, 0, ',', ' ');
 $basePriceFormatted = number_format($abBasePrice, 0, ',', ' ');
+$installment = calculateInstallment($abPrice);
 ?>
 
 <main>
@@ -310,21 +312,44 @@ $basePriceFormatted = number_format($abBasePrice, 0, ',', ' ');
           <div class="body">Дистанционная, в удобном темпе</div>
         </div>
 
-        <div class="cd-info-card cd-i-price">
+        <div class="cd-info-card cd-i-price <?php echo $installment['available'] ? 'cd-i-price-installment' : ''; ?>">
           <div style="display:flex;gap:12px;align-items:center;">
             <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21V3h5a4 4 0 0 1 0 8H6"/><path d="M6 15h8"/></svg></div>
             <h3>Стоимость</h3>
           </div>
-          <div class="price-row">
-            <?php echo $priceFormatted; ?> ₽
-            <?php if ($hasDiscount): ?>
-              <span style="display:inline-block;font:600 11px var(--font-sans);background:#ff4d6d;color:#fff;padding:3px 10px;border-radius:999px;margin-left:6px;vertical-align:middle;letter-spacing:.02em;">−<?php echo $discountPercent; ?>%</span>
-            <?php endif; ?>
-          </div>
-          <?php if ($hasDiscount): ?>
-            <div class="price-note" style="text-decoration:line-through;color:var(--ink-500);"><?php echo $basePriceFormatted; ?> ₽ — обычная цена</div>
+          <?php if ($installment['available']): ?>
+            <div class="cd-price-monthly">
+              <span class="cd-price-monthly-from">от</span>
+              <span class="cd-price-monthly-amount"><?php echo formatRub($installment['monthly']); ?></span>
+              <span class="cd-price-monthly-period">/мес</span>
+            </div>
+            <div class="cd-price-monthly-tag">
+              <span class="installment-pill">0%</span>
+              <span>рассрочка на <?php echo $installment['months']; ?> месяцев</span>
+            </div>
+            <div class="cd-price-full-line">
+              <?php if ($hasDiscount): ?>
+                <span class="cd-price-old"><?php echo $basePriceFormatted; ?> ₽</span>
+              <?php endif; ?>
+              <span class="cd-price-now"><?php echo $priceFormatted; ?> ₽</span>
+              <?php if ($hasDiscount): ?>
+                <span class="cd-price-discount-badge">−<?php echo $discountPercent; ?>%</span>
+              <?php endif; ?>
+              <span class="cd-price-full-label">или единоразово</span>
+            </div>
+            <div class="price-note">Оформляется в личном кабинете после записи</div>
           <?php else: ?>
-            <div class="price-note">Без скрытых платежей</div>
+            <div class="price-row">
+              <?php echo $priceFormatted; ?> ₽
+              <?php if ($hasDiscount): ?>
+                <span style="display:inline-block;font:600 11px var(--font-sans);background:#ff4d6d;color:#fff;padding:3px 10px;border-radius:999px;margin-left:6px;vertical-align:middle;letter-spacing:.02em;">−<?php echo $discountPercent; ?>%</span>
+              <?php endif; ?>
+            </div>
+            <?php if ($hasDiscount): ?>
+              <div class="price-note" style="text-decoration:line-through;color:var(--ink-500);"><?php echo $basePriceFormatted; ?> ₽ — обычная цена</div>
+            <?php else: ?>
+              <div class="price-note">Без скрытых платежей</div>
+            <?php endif; ?>
           <?php endif; ?>
         </div>
 
@@ -373,18 +398,40 @@ $basePriceFormatted = number_format($abBasePrice, 0, ',', ' ');
 <!-- БОЛЬШОЙ ЦЕНОВОЙ БЛОК -->
 <section class="rd-section tight">
   <div class="rd-wrap">
-    <div class="cd-course-price reveal">
-      <div class="label">Стоимость обучения</div>
-      <div class="amount">
-        <?php if ($hasDiscount): ?>
-          <span class="amount-old"><?php echo $basePriceFormatted; ?> ₽</span>
-        <?php endif; ?>
-        <span><?php echo $priceFormatted; ?> ₽</span>
-        <?php if ($hasDiscount): ?>
-          <span class="amount-badge">−<?php echo $discountPercent; ?>%</span>
-        <?php endif; ?>
-      </div>
-      <div class="note"><?php echo htmlspecialchars(Course::formatHours($course['hours'])); ?> обучения с <?php echo mb_strtolower($credentialType); ?></div>
+    <div class="cd-course-price <?php echo $installment['available'] ? 'cd-course-price-installment' : ''; ?> reveal">
+      <?php if ($installment['available']): ?>
+        <div class="label">Рассрочка 0% на <?php echo $installment['months']; ?> месяцев</div>
+        <div class="amount">
+          <span class="cd-big-from">от</span>
+          <span><?php echo formatRub($installment['monthly']); ?></span>
+          <span class="cd-big-period">/мес</span>
+        </div>
+        <div class="note">Без переплат и процентов · оформляется в личном кабинете после записи на курс</div>
+
+        <div class="cd-full-price-line">
+          <span class="cd-full-price-label">Полная стоимость:</span>
+          <?php if ($hasDiscount): ?>
+            <span class="cd-full-price-old"><?php echo $basePriceFormatted; ?> ₽</span>
+          <?php endif; ?>
+          <span class="cd-full-price-now"><?php echo $priceFormatted; ?> ₽</span>
+          <?php if ($hasDiscount): ?>
+            <span class="cd-full-price-badge">−<?php echo $discountPercent; ?>%</span>
+          <?php endif; ?>
+        </div>
+        <div class="cd-full-price-meta"><?php echo htmlspecialchars(Course::formatHours($course['hours'])); ?> обучения с <?php echo mb_strtolower($credentialType); ?></div>
+      <?php else: ?>
+        <div class="label">Стоимость обучения</div>
+        <div class="amount">
+          <?php if ($hasDiscount): ?>
+            <span class="amount-old"><?php echo $basePriceFormatted; ?> ₽</span>
+          <?php endif; ?>
+          <span><?php echo $priceFormatted; ?> ₽</span>
+          <?php if ($hasDiscount): ?>
+            <span class="amount-badge">−<?php echo $discountPercent; ?>%</span>
+          <?php endif; ?>
+        </div>
+        <div class="note"><?php echo htmlspecialchars(Course::formatHours($course['hours'])); ?> обучения с <?php echo mb_strtolower($credentialType); ?></div>
+      <?php endif; ?>
 
       <button type="button" class="rd-btn rd-btn-primary" onclick="openEnrollmentModal()">
         Оплатить курс
