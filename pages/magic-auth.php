@@ -1,9 +1,17 @@
 <?php
 /**
  * Magic Auth Handler
- * Авто-авторизация по HMAC-токену из email-ссылок
+ * Авто-авторизация по HMAC-токену из email-ссылок.
  *
- * URL: /pages/magic-auth.php?token=XXXXX&redirect=/pages/cabinet.php
+ * Поддерживаемые форматы (оба идут сюда после .htaccess rewrite или напрямую):
+ *   /m/<token>                       → token=<token>
+ *   /m/<token>/<b64_redirect>        → token=<token>&r=<b64>
+ *   /pages/magic-auth.php?token=...&redirect=...   (legacy, для уже отправленных писем)
+ *
+ * Опциональный параметр mid=<32hex> — message_id из письма; если передан,
+ * выставляется email_mid cookie/session (для атрибуции письмо→оплата) ровно так же,
+ * как это делает /api/email-track/click.php — magic-ссылки не оборачиваются в click-tracker,
+ * но атрибуцию мы хотим сохранить.
  */
 
 session_start();
@@ -13,11 +21,21 @@ require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../includes/magic-link-helper.php';
 
 $token = $_GET['token'] ?? '';
-$redirect = $_GET['redirect'] ?? '/pages/cabinet.php';
 
-// Валидация redirect — только внутренние URL
+// Redirect: новый параметр r= (base64url) приоритетнее legacy redirect=.
+$redirect = '/kabinet/';
+if (!empty($_GET['r'])) {
+    $decodedR = base64url_decode((string)$_GET['r']);
+    if ($decodedR !== false && $decodedR !== '') {
+        $redirect = $decodedR;
+    }
+} elseif (!empty($_GET['redirect'])) {
+    $redirect = (string)$_GET['redirect'];
+}
+
+// Защита от open-redirect: только относительные пути, без protocol-relative.
 if (!$redirect || $redirect[0] !== '/' || strpos($redirect, '//') === 0) {
-    $redirect = '/pages/cabinet.php';
+    $redirect = '/kabinet/';
 }
 
 // Пробрасываем UTM-параметры в redirect URL
@@ -32,17 +50,40 @@ if (!empty($utmParams)) {
     $redirect .= $separator . http_build_query($utmParams);
 }
 
+// Email message_id для атрибуции (опционально). Magic-ссылки не оборачиваются в click.php,
+// поэтому email_mid выставляем здесь — иначе атрибуция письмо→оплата потеряется.
+$mid = $_GET['mid'] ?? '';
+if ($mid && preg_match('~^[a-f0-9]{32}$~', $mid)) {
+    $_SESSION['email_mid'] = $mid;
+    setcookie('email_mid', $mid, [
+        'expires'  => time() + 30 * 24 * 3600,
+        'path'     => '/',
+        'secure'   => !empty($_SERVER['HTTPS']),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
 // Если пользователь уже авторизован — просто редиректим
 if (isset($_SESSION['user_id'])) {
     header('Location: ' . $redirect);
     exit;
 }
 
-// Валидируем токен
-$userId = validateMagicToken($token);
+// Diagnostic log: логируем неудачи (не сам токен — он содержит HMAC-подпись).
+$logFail = function (string $reason) use ($token, $mid): void {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '-';
+    $ua = mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? '-'), 0, 200);
+    error_log(sprintf(
+        'magic-auth: %s token_len=%d mid=%s ip=%s ua=%s',
+        $reason, strlen((string)$token), $mid !== '' ? $mid : '-', $ip, $ua
+    ));
+};
 
+// Валидируем токен
+$userId = $token !== '' ? validateMagicToken($token) : false;
 if (!$userId) {
-    // Токен невалидный или просрочен — отправляем на логин
+    $logFail($token === '' ? 'no_token' : 'invalid_token');
     header('Location: /pages/login.php?redirect=' . urlencode($redirect));
     exit;
 }
@@ -52,6 +93,7 @@ $userObj = new User($db);
 $user = $userObj->getById($userId);
 
 if (!$user) {
+    $logFail('user_not_found');
     header('Location: /pages/login.php?redirect=' . urlencode($redirect));
     exit;
 }

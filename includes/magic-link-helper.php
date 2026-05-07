@@ -55,7 +55,9 @@ function validateMagicToken($token) {
 }
 
 /**
- * Генерирует полный URL для magic-ссылки
+ * Генерирует полный URL для magic-ссылки в path-only формате /m/<token>/<b64_redirect>.
+ * Path-сегменты устойчивее к мангелингу в редиректорах (Unisender, Gmail, антиспам-сканеры),
+ * чем query-string — отсюда выбор формата вместо ?token=&redirect=.
  *
  * @param int $userId ID пользователя
  * @param string $targetPath Относительный путь (например, '/pages/cabinet.php?tab=events')
@@ -68,8 +70,11 @@ function generateMagicUrl($userId, $targetPath, $expiryDays = 7) {
     }
 
     $token = generateMagicToken($userId, $expiryDays);
-
-    return SITE_URL . '/pages/magic-auth.php?token=' . urlencode($token) . '&redirect=' . urlencode($targetPath);
+    $url = SITE_URL . '/m/' . $token;
+    if ($targetPath !== '' && $targetPath !== '/kabinet/') {
+        $url .= '/' . base64url_encode($targetPath);
+    }
+    return $url;
 }
 
 /**

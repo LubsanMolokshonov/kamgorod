@@ -300,6 +300,12 @@ class EmailTracker {
                 if (stripos($url, $redirectBase) === 0)                  return $raw;
                 if (stripos($url, '/api/email-track/') !== false)        return $raw;
 
+                // Magic-ссылки не оборачиваем (path-only формат устойчивее к редиректорам).
+                // Атрибуцию пробрасываем через ?mid= — magic-auth.php сам выставит email_mid cookie.
+                if (self::isMagicUrl($url)) {
+                    return self::appendMid($url, $messageId) . $tail;
+                }
+
                 $encoded = rtrim(strtr(base64_encode($url), '+/', '-_'), '=');
                 return $redirectBase . '?mid=' . $messageId . '&u=' . $encoded . $tail;
             },
@@ -330,6 +336,12 @@ class EmailTracker {
                 // Только http(s) — относительные ссылки в письмах обычно не встречаются
                 if (!preg_match('~^https?://~i', $trimmed)) return $m[0];
 
+                // Magic-ссылки не оборачиваем — добавляем только ?mid= для атрибуции.
+                if (self::isMagicUrl($trimmed)) {
+                    $withMid = self::appendMid($trimmed, $messageId);
+                    return $m[1] . htmlspecialchars($withMid, ENT_QUOTES, 'UTF-8') . $m[3];
+                }
+
                 $encoded = rtrim(strtr(base64_encode($trimmed), '+/', '-_'), '=');
                 $wrapped = $redirectBase . '?mid=' . $messageId . '&u=' . $encoded;
 
@@ -337,5 +349,23 @@ class EmailTracker {
             },
             $html
         ) ?? $html;
+    }
+
+    /**
+     * Magic-link URL? Учитываем оба формата: path-only /m/<token>... и legacy /pages/magic-auth.php.
+     */
+    private static function isMagicUrl(string $url): bool {
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        return $path === '/m' || strpos($path, '/m/') === 0 || strpos($path, '/pages/magic-auth.php') !== false;
+    }
+
+    /**
+     * Дописать ?mid=<messageId> в URL (или &mid=, если query-string уже есть).
+     * Не дублирует, если mid уже присутствует.
+     */
+    private static function appendMid(string $url, string $messageId): string {
+        if (preg_match('~[?&]mid=~', $url)) return $url;
+        $sep = strpos($url, '?') !== false ? '&' : '?';
+        return $url . $sep . 'mid=' . urlencode($messageId);
     }
 }
