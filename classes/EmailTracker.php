@@ -322,13 +322,14 @@ class EmailTracker {
         $redirectBase = rtrim(SITE_URL, '/') . '/api/email-track/click.php';
 
         return preg_replace_callback(
-            '~(<a\s[^>]*?href=")([^"]+)(")~i',
+            '~(<a\s[^>]*?href=")([^"]+)("[^>]*>)~i',
             function ($m) use ($messageId, $redirectBase, $skipUrl) {
                 $url = html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 $trimmed = trim($url);
 
                 if ($trimmed === '' || $trimmed[0] === '#') return $m[0];
                 if (preg_match('~^(mailto:|tel:|javascript:|data:)~i', $trimmed)) return $m[0];
+                if (stripos($m[0], 'data-no-track') !== false) return $m[0];
                 if ($skipUrl && strcasecmp($trimmed, $skipUrl) === 0) return $m[0];
                 if (stripos($trimmed, $redirectBase) === 0) return $m[0];
                 if (stripos($trimmed, '/api/email-track/') !== false) return $m[0];

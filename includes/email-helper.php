@@ -287,6 +287,32 @@ function renderTransactionalEmailLayout(string $headerTitle, string $headerSubti
 HTML;
 }
 
+/**
+ * Блок «Понравилось? Оставьте отзыв» с кнопками на Яндекс.Карты и 2GIS.
+ * Inline-CSS, table-вёрстка для двух кнопок рядом — надёжнее flex в почтовиках.
+ */
+function renderReviewRequestBlock(): string {
+    $yandexUrl = 'https://yandex.ru/maps/-/CPcmAX~R';
+    $gisUrl    = 'https://2gis.ru/moscow/firm/70000001112964399';
+
+    return <<<HTML
+        <div style="margin:30px 0 10px 0;padding:22px 20px;background:#f8f9fc;border:1px solid #e9ecf3;border-radius:10px;text-align:center;">
+            <p style="margin:0 0 6px 0;font-size:16px;font-weight:600;color:#2d3142;">Понравилось? Оставьте отзыв</p>
+            <p style="margin:0 0 18px 0;font-size:14px;color:#5a5f6b;">Ваш отзыв помогает другим педагогам найти нас и поддерживает нашу команду.</p>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;border-collapse:separate;">
+                <tr>
+                    <td style="padding:0 6px;">
+                        <a href="{$yandexUrl}" data-no-track="1" style="display:inline-block;background:#ffcc00;color:#1a1a1a;text-decoration:none;padding:11px 22px;border-radius:50px;font-size:14px;font-weight:600;">Яндекс.Карты</a>
+                    </td>
+                    <td style="padding:0 6px;">
+                        <a href="{$gisUrl}" data-no-track="1" style="display:inline-block;background:#19b56a;color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:50px;font-size:14px;font-weight:600;">2GIS</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+HTML;
+}
+
 function buildSuccessEmailBody(array $order, array $user, string $cabinetUrl): string {
     $orderNumber = htmlspecialchars($order['order_number'] ?? '', ENT_QUOTES, 'UTF-8');
     $fullName    = htmlspecialchars(trim((string)($user['full_name'] ?? '')), ENT_QUOTES, 'UTF-8');
@@ -294,12 +320,14 @@ function buildSuccessEmailBody(array $order, array $user, string $cabinetUrl): s
     $cabinetUrlEsc = htmlspecialchars($cabinetUrl, ENT_QUOTES, 'UTF-8');
 
     $btn = "<a href=\"{$cabinetUrlEsc}\" style=\"display:inline-block;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;box-shadow:0 4px 14px rgba(102,126,234,0.35);\">Открыть личный кабинет</a>";
+    $reviewBlock = renderReviewRequestBlock();
 
     $content = <<<HTML
         <p style="margin:0 0 18px 0;font-size:16px;">{$greet}</p>
         <p style="margin:0 0 18px 0;">Спасибо за оплату заказа <strong>№{$orderNumber}</strong>. Все ваши документы (дипломы, сертификаты, свидетельства) сформированы и доступны в личном кабинете.</p>
         <div style="text-align:center;margin:28px 0;">{$btn}</div>
         <p style="margin:0 0 12px 0;color:#5a5f6b;font-size:14px;">Ссылка действует 14 дней и автоматически авторизует вас на сайте — вводить пароль не нужно.</p>
+        {$reviewBlock}
         <p style="margin:18px 0 0 0;color:#5a5f6b;font-size:14px;">Если возникнут вопросы — ответьте на это письмо или напишите на <a href="mailto:info@fgos.pro" style="color:#667eea;">info@fgos.pro</a>.</p>
 HTML;
 

@@ -5,6 +5,9 @@
  */
 
 class Bitrix24Integration {
+    /** ID ответственного менеджера за курсы (контакт + сделка) */
+    const COURSE_RESPONSIBLE_USER_ID = 52226;
+
     private $webhookUrl;
     private $logFile;
 
@@ -318,11 +321,14 @@ class Bitrix24Integration {
      * @param array $registration Данные регистрации
      * @return string|null ID контакта
      */
-    private function findOrCreateContact($registration) {
+    private function findOrCreateContact($registration, $assignedById = null) {
         // Попробовать найти существующий контакт
         $contact = $this->findContact($registration['email']);
 
         if ($contact) {
+            if ($assignedById && (string)($contact['ASSIGNED_BY_ID'] ?? '') !== (string)$assignedById) {
+                $this->updateContact($contact['ID'], ['ASSIGNED_BY_ID' => $assignedById]);
+            }
             return $contact['ID'];
         }
 
@@ -343,6 +349,10 @@ class Bitrix24Integration {
 
         if (!empty($registration['phone'])) {
             $contactData['PHONE'] = [['VALUE' => $registration['phone'], 'VALUE_TYPE' => 'WORK']];
+        }
+
+        if ($assignedById) {
+            $contactData['ASSIGNED_BY_ID'] = $assignedById;
         }
 
         // Use institution type from user profile
@@ -434,7 +444,7 @@ class Bitrix24Integration {
      * @return string|null ID сделки или null
      */
     public function createCourseDeal($enrollment, $course, $stageId = null, $adjustedPrice = null, array $paymentInfo = []) {
-        $contactId = $this->findOrCreateContact($enrollment);
+        $contactId = $this->findOrCreateContact($enrollment, self::COURSE_RESPONSIBLE_USER_ID);
 
         $categoryId = defined('BITRIX24_COURSE_PIPELINE_ID') ? BITRIX24_COURSE_PIPELINE_ID : 108;
         if ($stageId === null) {
@@ -460,6 +470,7 @@ class Bitrix24Integration {
             'PROBABILITY' => 50,
             'OPPORTUNITY' => $adjustedPrice ?? $course['price'] ?? 0,
             'CURRENCY_ID' => 'RUB',
+            'ASSIGNED_BY_ID' => self::COURSE_RESPONSIBLE_USER_ID,
         ];
 
         // UTM-метки (стандартные поля Bitrix24)
@@ -522,6 +533,7 @@ class Bitrix24Integration {
             'SOURCE_DESCRIPTION' => 'Заявка на консультацию через Каменный город',
             'COMMENTS' => implode("\n", $comments),
             'OPENED' => 'Y',
+            'ASSIGNED_BY_ID' => self::COURSE_RESPONSIBLE_USER_ID,
         ];
 
         // UTM-метки

@@ -832,8 +832,11 @@ document.querySelectorAll('input[type="tel"]').forEach(function(input) {
 function appendTrackingData(formData) {
     var urlParams = new URLSearchParams(window.location.search);
     ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function(key) {
-        if (urlParams.get(key)) formData.append(key, urlParams.get(key));
+        var val = urlParams.get(key) || sessionStorage.getItem('_fgos_' + key);
+        if (val) formData.append(key, val);
     });
+    var visitId = sessionStorage.getItem('_fgos_visit_id');
+    if (visitId) formData.append('visit_id', visitId);
     var ymUid = document.cookie.match(/_ym_uid=(\d+)/);
     if (ymUid) formData.append('ym_uid', ymUid[1]);
     formData.append('source_page', window.location.pathname);

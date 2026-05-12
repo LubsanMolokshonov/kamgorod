@@ -299,5 +299,7 @@ if (!defined('EMAIL_TRACK_ALLOWED_HOSTS')) {
         'www.fgos.pro',
         'bizon365.ru',
         'bizon365.com',
+        'yandex.ru',
+        '2gis.ru',
     ]);
 }

@@ -326,6 +326,51 @@ body.rd-page main { margin-top: 0; }
 }
 .rd-login-btn:hover { border-color: var(--indigo-300); color: var(--indigo-700); opacity: 1; }
 
+/* Корзина в хедере */
+.rd-cart-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-pill);
+  background: #fff;
+  border: 1px solid var(--ink-200);
+  color: var(--ink-700);
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: border-color .2s, color .2s;
+}
+.rd-cart-btn:hover { border-color: var(--indigo-300); color: var(--indigo-700); }
+.rd-cart-btn.has-items { color: var(--indigo-700); border-color: var(--indigo-300); }
+.rd-cart-btn svg { display: block; }
+.rd-cart-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--indigo-700, #4338ca);
+  color: #fff;
+  font: 700 11px/18px var(--font-sans);
+  text-align: center;
+  box-shadow: 0 0 0 2px #fff;
+}
+.rd-mm-badge {
+  display: inline-block;
+  min-width: 20px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 10px;
+  background: var(--indigo-700, #4338ca);
+  color: #fff;
+  font: 700 12px/20px var(--font-sans);
+  text-align: center;
+  vertical-align: middle;
+}
+
 /* Мобильный бургер */
 .rd-menu-btn {
   display: none;
@@ -1003,7 +1048,7 @@ h1.rd-hero-title .accent {
 /* =====================================================
    СОЦСЕТИ
    ===================================================== */
-.rd-socials { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.rd-socials { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .rd-social {
   background: #fff;
   border: 1px solid var(--ink-200);
@@ -1032,6 +1077,8 @@ h1.rd-hero-title .accent {
 .si-tg { background: #2aabee; }
 .si-tg2 { background: #0088cc; }
 .si-mx { background: #ff5f00; }
+.si-ya { background: #FC3F1D; }
+.si-2gis { background: #19B362; }
 .rd-social .st { font: 700 16px var(--font-sans); color: var(--ink-900); }
 .rd-social .ss { font-size: 13px; color: var(--ink-500); margin-top: 2px; }
 

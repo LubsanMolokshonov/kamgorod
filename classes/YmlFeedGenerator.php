@@ -150,12 +150,12 @@ class YmlFeedGenerator
                 break;
 
             case 'courses':
-            case 'courses-ad':
                 $xml .= '<category id="3">Курсы для педагогов</category>' . "\n";
                 $kpk = self::COURSE_CATEGORIES['kpk'];
                 $xml .= '<category id="' . $kpk['id'] . '" parentId="3">' . $this->xmlEscape($kpk['name']) . '</category>' . "\n";
                 break;
 
+            case 'courses-ad':
             case 'retraining-ad':
                 $xml .= '<category id="3">Курсы для педагогов</category>' . "\n";
                 $pp = self::COURSE_CATEGORIES['pp'];
@@ -666,14 +666,14 @@ class YmlFeedGenerator
              FROM courses c
              LEFT JOIN course_specializations cs ON c.id = cs.course_id
              LEFT JOIN audience_specializations asp ON cs.specialization_id = asp.id
-             WHERE c.is_active = 1 AND c.program_type = 'kpk'
+             WHERE c.is_active = 1 AND c.program_type = 'pp'
              GROUP BY c.id
              ORDER BY c.display_order ASC, c.created_at DESC"
         );
 
         $xml = '';
         foreach ($courses as $course) {
-            $categoryId = self::COURSE_CATEGORIES[$course['program_type']]['id'] ?? 31;
+            $categoryId = self::COURSE_CATEGORIES[$course['program_type']]['id'] ?? 32;
             $docLabel = $course['program_type'] === 'pp' ? 'Диплом' : 'Удостоверение';
             $specs = !empty($course['specializations']) ? explode(',', $course['specializations']) : [];
             $primarySpec = $this->getPrimarySpecialization($specs);
