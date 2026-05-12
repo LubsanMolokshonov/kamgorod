@@ -10,6 +10,7 @@ require_once __DIR__ . "/../classes/Webinar.php";
 require_once __DIR__ . "/../classes/AudienceCategory.php";
 require_once __DIR__ . "/../classes/AudienceType.php";
 require_once __DIR__ . "/../includes/seo-url.php";
+require_once __DIR__ . "/../includes/catalog-meta.php";
 
 $webinarObj = new Webinar($db);
 
@@ -70,8 +71,24 @@ $webinars = $webinarObj->getAll($filters, 50);
 $totalWebinars = count($webinars);
 $counts = $webinarObj->countByStatus();
 
-$pageTitle       = "Вебинары для педагогов с сертификатом | " . SITE_NAME;
-$pageDescription = "Вебинары и видеолекции от ведущих экспертов в сфере образования. Бесплатное участие, именной сертификат на 2 ак. часа для аттестации и портфолио.";
+// Динамические H1/title/description с учётом статуса и аудитории
+$webinarStatusLabels = defined('WEBINAR_STATUS_LABELS') ? WEBINAR_STATUS_LABELS : [];
+$catalogBase = $webinarStatusLabels[$status] ?? 'Вебинары';
+$audiencePhrase = buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData ?? null);
+$hasAnyFilter = !empty($status) || !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
+
+$meta = buildCatalogMeta([
+    'base'             => $catalogBase,
+    'audiencePhrase'   => $audiencePhrase,
+    'hasFilter'        => $hasAnyFilter,
+    'titleSuffix'      => ' | ' . SITE_NAME,
+    'descriptionTpl'   => '{h1}. Бесплатное участие, именной сертификат на 2 ак. часа — для аттестации и портфолио.',
+    'h1FallbackPrefix' => 'Вебинары для педагогов с ',
+    'h1FallbackAccent' => 'именным сертификатом',
+]);
+$pageTitle       = $meta['title'];
+$pageDescription = $meta['description'];
+$h1Html          = $meta['h1_html'];
 $canonicalUrl    = SITE_URL . '/vebinary/';
 $ogImage         = SITE_URL . '/assets/images/og-webinars.jpg';
 $rdActivePage    = 'vebinary';
@@ -103,7 +120,7 @@ include __DIR__ . "/../includes/header-redesign.php";
         <span class="rd-pill indigo">Бесплатное участие</span>
         <span class="rd-pill">Сертификат 2 ак. часа</span>
       </div>
-      <h1 class="rd-hero-title rd-hero-title-sm reveal">Вебинары для педагогов с&nbsp;<span class="accent">именным сертификатом</span></h1>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo $h1Html; ?></h1>
       <p class="rd-hero-sub reveal">Смотрите видеолекции и прямые эфиры от ведущих экспертов в сфере образования. Бесплатное участие, сертификат на 2 ак. часа — для аттестации и портфолио.</p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Бесплатное участие в прямом эфире</div>
@@ -180,6 +197,8 @@ include __DIR__ . "/../includes/header-redesign.php";
            class="af-pill<?php echo empty($status) ? ' active' : ''; ?>">Все вебинары</a>
         <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
            class="af-pill<?php echo $status === 'upcoming' ? ' active' : ''; ?>">Предстоящие (<?php echo $counts["upcoming"]; ?>)</a>
+        <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'recordings', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
+           class="af-pill<?php echo $status === 'recordings' ? ' active' : ''; ?>">Архив записей (<?php echo $counts["recordings"]; ?>)</a>
         <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'videolecture', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
            class="af-pill<?php echo $status === 'videolecture' ? ' active' : ''; ?>">Видеолекции (<?php echo $counts["autowebinars"]; ?>)</a>
       </div>
@@ -200,6 +219,12 @@ include __DIR__ . "/../includes/header-redesign.php";
                     'url' => buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
                     'active' => ($status === 'upcoming'),
                     'count' => $counts["upcoming"]
+                ],
+                [
+                    'label' => 'Архив записей',
+                    'url' => buildSeoUrl('vebinary', ['status' => 'recordings', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
+                    'active' => ($status === 'recordings'),
+                    'count' => $counts["recordings"]
                 ],
                 [
                     'label' => 'Видеолекции',

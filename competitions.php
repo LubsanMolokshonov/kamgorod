@@ -8,6 +8,7 @@ require_once __DIR__ . '/classes/AudienceCategory.php';
 require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/url-helper.php';
 require_once __DIR__ . '/includes/seo-url.php';
+require_once __DIR__ . '/includes/catalog-meta.php';
 
 // Маппинг cc (URL slug) → category (internal key) для SEO URL из .htaccess
 if (isset($_GET['cc'])) {
@@ -27,8 +28,7 @@ redirectToSeoUrl('konkursy', [
     'as' => $selectedSpec,
 ]);
 
-$pageTitle       = 'Конкурсы для педагогов и школьников 2025-2026 | ' . SITE_NAME;
-$pageDescription = 'Всероссийские и международные конкурсы для учителей, педагогов и школьников. Официальные дипломы соответствуют ФГОС и принимаются при аттестации.';
+// $pageTitle/$pageDescription/$h1 формируются динамически ниже — после загрузки фильтров.
 $canonicalUrl    = SITE_URL . '/konkursy/';
 $ogImage         = SITE_URL . '/assets/images/og-competitions.jpg';
 $rdActivePage    = 'konkursy';
@@ -63,6 +63,38 @@ if ($selectedType) {
         $audienceSpecializations = $audienceTypeObj->getSpecializations($selectedTypeData['id']);
     }
 }
+
+// Загружаем специализацию (если выбрана), чтобы подставить её имя в H1/title
+$selectedSpecData = null;
+if (!empty($selectedSpec) && !empty($audienceSpecializations)) {
+    foreach ($audienceSpecializations as $as) {
+        if (($as['slug'] ?? '') === $selectedSpec) {
+            $selectedSpecData = $as;
+            break;
+        }
+    }
+}
+
+// Динамические H1/title/description
+$compCategoryLabels = defined('COMPETITION_CATEGORIES') ? COMPETITION_CATEGORIES : [];
+$catalogBase = ($category !== 'all' && isset($compCategoryLabels[$category]))
+    ? $compCategoryLabels[$category]
+    : 'Конкурсы';
+$audiencePhrase = buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData);
+$hasAnyFilter = ($category !== 'all') || !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
+
+$meta = buildCatalogMeta([
+    'base'           => $catalogBase,
+    'audiencePhrase' => $audiencePhrase,
+    'hasFilter'      => $hasAnyFilter,
+    'titleSuffix'    => ' 2025-2026 | ' . SITE_NAME,
+    'descriptionTpl' => '{h1}. Бесплатное участие, официальный диплом за 30 секунд. Дипломы соответствуют ФГОС и принимаются при аттестации.',
+    'h1FallbackPrefix' => 'Конкурсы для педагогов с ',
+    'h1FallbackAccent' => 'дипломом за&nbsp;30&nbsp;секунд',
+]);
+$pageTitle       = $meta['title'];
+$pageDescription = $meta['description'];
+$h1Html          = $meta['h1_html'];
 
 $competitionObj = new Competition($db);
 $filters = [];
@@ -114,7 +146,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <span class="rd-pill indigo">Соответствует ФГОС</span>
         <span class="rd-pill">Принимается при аттестации</span>
       </div>
-      <h1 class="rd-hero-title rd-hero-title-sm reveal">Конкурсы для педагогов с&nbsp;<span class="accent">дипломом за&nbsp;30&nbsp;секунд</span></h1>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo $h1Html; ?></h1>
       <p class="rd-hero-sub reveal">Участвуйте, отправляйте работу, получайте официальный диплом для портфолио и аттестации. Дипломы соответствуют ФГОС, выданы зарегистрированным СМИ.</p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Диплом сразу после оплаты</div>

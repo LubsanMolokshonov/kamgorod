@@ -278,8 +278,15 @@ body.rd-page main { margin-top: 0; }
   transition: opacity .2s, transform .2s;
   z-index: 10;
   min-width: 320px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .rd-search-dd.open { opacity: 1; transform: none; pointer-events: auto; }
+.rd-search-dd::-webkit-scrollbar { width: 8px; }
+.rd-search-dd::-webkit-scrollbar-thumb { background: var(--ink-200); border-radius: 4px; }
+.rd-search-dd::-webkit-scrollbar-thumb:hover { background: var(--ink-300); }
 .rd-search-dd-section {
   padding: 8px 10px;
   font: 600 11px var(--font-sans);

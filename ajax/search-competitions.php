@@ -34,7 +34,7 @@ try {
     $context = isset($_GET['context']) ? trim($_GET['context']) : 'all';
 
     // Валидация контекста
-    if (!in_array($context, ['all', 'competitions', 'olympiads'])) {
+    if (!in_array($context, ['all', 'competitions', 'olympiads', 'courses'])) {
         $context = 'all';
     }
 

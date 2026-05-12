@@ -12,6 +12,7 @@ require_once __DIR__ . '/classes/AudienceCategory.php';
 require_once __DIR__ . '/classes/AudienceType.php';
 require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/seo-url.php';
+require_once __DIR__ . '/includes/catalog-meta.php';
 
 $selectedCategory = $_GET['ac'] ?? '';
 $selectedType     = $_GET['at'] ?? '';
@@ -82,8 +83,21 @@ foreach ($allOlympiads as $o) {
     ];
 }
 
-$pageTitle       = 'Олимпиады для педагогов и учеников 2025-2026 | ' . SITE_NAME;
-$pageDescription = 'Всероссийские бесплатные олимпиады для педагогов и школьников. Пройдите тест и получите официальный диплом за 30 секунд.';
+$audiencePhrase = buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData ?? null, 'педагогов и учеников');
+$hasAnyFilter = !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
+
+$meta = buildCatalogMeta([
+    'base'             => 'Олимпиады',
+    'audiencePhrase'   => $audiencePhrase,
+    'hasFilter'        => $hasAnyFilter,
+    'titleSuffix'      => ' 2025-2026 | ' . SITE_NAME,
+    'descriptionTpl'   => '{h1}. Бесплатное участие, тест за 5 минут, официальный диплом за 30 секунд.',
+    'h1FallbackPrefix' => 'Олимпиады для педагогов и&nbsp;учеников с ',
+    'h1FallbackAccent' => 'дипломом за&nbsp;30&nbsp;секунд',
+]);
+$pageTitle       = $meta['title'];
+$pageDescription = $meta['description'];
+$h1Html          = $meta['h1_html'];
 $canonicalUrl    = SITE_URL . '/olimpiady/';
 $ogImage         = SITE_URL . '/assets/images/og-olympiads.jpg';
 $rdActivePage    = 'olimpiady';
@@ -112,7 +126,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <span class="rd-pill"><?php echo $totalOlympiads; ?>+ активных олимпиад</span>
         <span class="rd-pill indigo">Соответствует ФГОС</span>
       </div>
-      <h1 class="rd-hero-title rd-hero-title-sm reveal">Олимпиады для педагогов и&nbsp;учеников с&nbsp;<span class="accent">дипломом за&nbsp;30&nbsp;секунд</span></h1>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo $h1Html; ?></h1>
       <p class="rd-hero-sub reveal">Проверьте знания, получите результат сразу и оформите официальный диплом для портфолио и аттестации. Тест бесплатный — оплата только за оформление диплома.</p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Тест бесплатно · 10 вопросов</div>

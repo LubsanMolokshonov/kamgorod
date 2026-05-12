@@ -97,28 +97,34 @@ $totalPages = ceil($totalCount / $perPage);
 $subjects = $tagObj->getSubjects();
 $types = $typeObj->getWithCounts();
 
-// Page metadata
-$pageTitle = 'Педагогический онлайн-журнал — бесплатная публикация статей';
-if ($currentTag) {
-    $pageTitle = $currentTag['meta_title'] ?: $currentTag['name'] . ' — публикации';
-}
-if ($currentType) {
-    $pageTitle = $currentType['name'] . ' — журнал публикаций';
-}
-if ($selectedCategoryData || $selectedTypeData || !empty($selectedSpecData)) {
-    $audienceLabel = $selectedSpecData['name'] ?? $selectedTypeData['name'] ?? $selectedCategoryData['name'] ?? '';
-    if ($audienceLabel) {
-        $pageTitle = 'Публикации для ' . mb_strtolower($audienceLabel) . ' — педагогический онлайн-журнал';
-    }
-}
-$pageTitle .= ' | ' . SITE_NAME;
+// Динамические H1/title/description
+$hasAudience = $selectedCategoryData || $selectedTypeData || !empty($selectedSpecData);
+$audiencePhrase = buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData);
 
-$pageDescription = $currentTag['meta_description'] ?? 'Бесплатная публикация статей, методических разработок и материалов в электронном педагогическом журнале. Получите свидетельство о публикации с QR-кодом.';
-if ($selectedCategoryData || $selectedTypeData || !empty($selectedSpecData)) {
-    $audienceLabel = $selectedSpecData['name'] ?? $selectedTypeData['name'] ?? $selectedCategoryData['name'] ?? '';
-    if ($audienceLabel) {
-        $pageDescription = 'Бесплатная публикация статей и методических разработок для ' . mb_strtolower($audienceLabel) . '. Свидетельство о публикации с QR-кодом за 5 минут.';
-    }
+if ($currentTag) {
+    $tagName = $currentTag['name'];
+    $h1Plain = 'Публикации по теме «' . $tagName . '»';
+    $h1Html = 'Публикации по теме <span class="accent">«' . htmlspecialchars($tagName, ENT_QUOTES, 'UTF-8') . '»</span>';
+    $pageTitle = ($currentTag['meta_title'] ?: ($tagName . ' — публикации в педагогическом журнале')) . ' | ' . SITE_NAME;
+    $pageDescription = $currentTag['meta_description']
+        ?? ('Статьи и методические разработки по теме «' . $tagName . '» — публикуйтесь бесплатно, получите свидетельство с QR-кодом.');
+} elseif ($currentType) {
+    $typeName = $currentType['name'];
+    $h1Plain = $typeName . ' в педагогическом журнале';
+    $h1Html = htmlspecialchars($typeName, ENT_QUOTES, 'UTF-8') . ' <span class="accent">в педагогическом журнале</span>';
+    $pageTitle = $typeName . ' — публикация в педагогическом онлайн-журнале | ' . SITE_NAME;
+    $pageDescription = 'Бесплатная публикация: ' . mb_strtolower($typeName) . ' с выдачей свидетельства о публикации с QR-кодом за 5 минут.';
+} elseif ($hasAudience) {
+    $h1Plain = 'Публикации для ' . $audiencePhrase;
+    $h1Html = 'Публикации для <span class="accent">' . htmlspecialchars($audiencePhrase, ENT_QUOTES, 'UTF-8') . '</span>';
+    $pageTitle = $h1Plain . ' — педагогический онлайн-журнал | ' . SITE_NAME;
+    $pageDescription = 'Бесплатная публикация статей и методических разработок для ' . $audiencePhrase . '. Свидетельство о публикации с QR-кодом за 5 минут.';
+} else {
+    // Fallback (страница без фильтров) — hero-CTA сохраняем
+    $h1Plain = 'Публикуйте статьи в электронном педагогическом журнале';
+    $h1Html = 'Публикуйте статьи в&nbsp;<span class="accent">электронном педагогическом журнале</span>';
+    $pageTitle = 'Педагогический онлайн-журнал — бесплатная публикация статей | ' . SITE_NAME;
+    $pageDescription = 'Бесплатная публикация статей, методических разработок и материалов в электронном педагогическом журнале. Получите свидетельство о публикации с QR-кодом.';
 }
 
 $canonicalPath = '/zhurnal/';
@@ -477,12 +483,10 @@ include __DIR__ . '/../includes/header-redesign.php';
     <div class="rd-section-head reveal">
       <div>
         <div class="rd-eyebrow">Каталог журнала</div>
-        <h2 class="rd-section-title">
-          <?php if ($currentTag): echo htmlspecialchars($currentTag['name']);
-          elseif ($currentType): echo htmlspecialchars($currentType['name']);
-          elseif ($search): ?>Результаты поиска: «<?php echo htmlspecialchars($search); ?>»<?php
-          else: ?>Опубликованные материалы<?php endif; ?>
-        </h2>
+        <h1 class="rd-section-title">
+          <?php if ($search): ?>Результаты поиска: «<?php echo htmlspecialchars($search); ?>»<?php
+          else: echo $h1Html; endif; ?>
+        </h1>
         <p class="rd-section-sub">Найдено: <strong><?php echo $totalCount; ?></strong> <?php echo jr_publications_word($totalCount); ?>.<?php if ($currentTag && $currentTag['description']): ?> <?php echo htmlspecialchars($currentTag['description']); endif; ?></p>
       </div>
       <a href="/opublikovat" class="rd-btn rd-btn-primary head-cta">

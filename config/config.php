@@ -221,6 +221,26 @@ if (!defined('AUDIENCE_CATEGORIES')) {
     ]);
 }
 
+// Аудитория в родительном падеже — для динамических H1/title каталогов.
+// Используется buildAudiencePhrase() из includes/catalog-meta.php.
+if (!defined('AUDIENCE_CATEGORY_GENITIVE_MAP')) {
+    define('AUDIENCE_CATEGORY_GENITIVE_MAP', [
+        'pedagogi'      => 'педагогов',
+        'doshkolnikam'  => 'педагогов дошкольного образования',
+        'shkolnikam'    => 'учителей школ',
+        'studentam-spo' => 'преподавателей СПО',
+    ]);
+}
+
+// Человеческие названия статусов вебинаров — для динамических заголовков.
+if (!defined('WEBINAR_STATUS_LABELS')) {
+    define('WEBINAR_STATUS_LABELS', [
+        'upcoming'     => 'Предстоящие вебинары',
+        'recordings'   => 'Записи вебинаров',
+        'videolecture' => 'Видеолекции',
+    ]);
+}
+
 // @deprecated Используйте audience_categories/audience_types из БД. Оставлено для обратной совместимости.
 if (!defined('OLYMPIAD_AUDIENCES')) {
     define('OLYMPIAD_AUDIENCES', [

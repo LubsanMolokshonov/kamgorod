@@ -206,6 +206,7 @@ try {
 
     // Keep user_id in session
     $_SESSION['user_id'] = $userId;
+    $_SESSION['user_email'] = $data['email'];
 
     // ------------------------------------------------------------------
     // 8. Build e-commerce tracking payload and respond

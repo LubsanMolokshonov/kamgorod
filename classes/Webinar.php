@@ -169,7 +169,7 @@ class Webinar {
             if ($filters['status'] === 'upcoming') {
                 $where[] = "w.status IN ('scheduled', 'live')";
             } elseif ($filters['status'] === 'recordings') {
-                $where[] = "w.status = 'completed' AND w.video_url IS NOT NULL";
+                $where[] = "(w.status = 'videolecture' OR (w.status = 'completed' AND w.video_url IS NOT NULL))";
             } elseif ($filters['status'] === 'videolecture') {
                 $where[] = "w.status = 'videolecture'";
             } else {
@@ -352,7 +352,7 @@ class Webinar {
         $result = $this->db->query(
             "SELECT
                 SUM(CASE WHEN status IN ('scheduled', 'live') THEN 1 ELSE 0 END) as upcoming,
-                SUM(CASE WHEN status = 'completed' AND video_url IS NOT NULL THEN 1 ELSE 0 END) as recordings,
+                SUM(CASE WHEN status = 'videolecture' OR (status = 'completed' AND video_url IS NOT NULL) THEN 1 ELSE 0 END) as recordings,
                 SUM(CASE WHEN status = 'videolecture' THEN 1 ELSE 0 END) as autowebinars
              FROM webinars
              WHERE is_active = 1"

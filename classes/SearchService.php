@@ -636,27 +636,32 @@ class SearchService {
 
         $competitions = $this->search($query, $limit);
         $olympiads = $this->searchOlympiads($query, $limit);
+        $courses = $this->searchCourses($query, $limit);
 
-        return $this->mergeResults($competitions, $olympiads, $limit, $context);
+        return $this->mergeResults($competitions, $olympiads, $courses, $limit, $context);
     }
 
     /**
      * Объединить и приоритизировать результаты
      */
-    private function mergeResults($competitions, $olympiads, $limit, $context) {
+    private function mergeResults($competitions, $olympiads, $courses, $limit, $context) {
         switch ($context) {
             case 'competitions':
-                $merged = array_merge($competitions, $olympiads);
+                $merged = array_merge($competitions, $olympiads, $courses);
                 break;
             case 'olympiads':
-                $merged = array_merge($olympiads, $competitions);
+                $merged = array_merge($olympiads, $competitions, $courses);
                 break;
-            default: // 'all'
+            case 'courses':
+                $merged = array_merge($courses, $competitions, $olympiads);
+                break;
+            default: // 'all' — чередуем источники для разнообразия
                 $merged = [];
-                $maxLen = max(count($competitions), count($olympiads));
+                $maxLen = max(count($competitions), count($olympiads), count($courses));
                 for ($i = 0; $i < $maxLen; $i++) {
                     if (isset($competitions[$i])) $merged[] = $competitions[$i];
-                    if (isset($olympiads[$i]))     $merged[] = $olympiads[$i];
+                    if (isset($olympiads[$i]))    $merged[] = $olympiads[$i];
+                    if (isset($courses[$i]))      $merged[] = $courses[$i];
                 }
                 break;
         }
