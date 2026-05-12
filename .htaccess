@@ -24,6 +24,15 @@ RewriteCond %{HTTP_HOST} !^localhost [NC]
 RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
 RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
+# Trailing slash: канонический URL — со слэшем на конце.
+# Применяется только к GET/HEAD, к URL без расширения файла и не к существующим файлам/папкам.
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !\.[a-zA-Z0-9]+$
+RewriteCond %{REQUEST_URI} !/$
+RewriteRule ^(.+)$ /$1/ [R=301,L]
+
 # ================================================
 # APPLE UNIVERSAL LINKS (iOS-приложения у сайта нет)
 # Возвращаем 410 Gone, чтобы iOS и GSC прекратили запросы
