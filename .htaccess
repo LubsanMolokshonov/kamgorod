@@ -13,6 +13,10 @@ RewriteBase /
 # (ProxyPass не работает в .htaccess; используем RewriteRule с [P])
 RewriteRule ^ai-chat/api/(.*)$ http://ai-consultant:80/api/$1 [P,L]
 
+# www → non-www (301)
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+
 # HTTPS Redirect (пропускает localhost)
 RewriteCond %{HTTPS} off
 RewriteCond %{HTTP:X-Forwarded-Proto} !https
@@ -66,9 +70,16 @@ RewriteRule ^$ index.php [L]
 # Список конкурсов
 RewriteRule ^konkursy/?$ competitions.php [L,QSA]
 
-# Категория конкурса + аудитория (3 уровня): /konkursy/metodika/pedagogi/dou/logopediya/
-RewriteRule ^konkursy/(metodika|vneurochnaya|proekty|tvorchestvo)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ competitions.php?cc=$1&ac=$2&at=$3&as=$4 [L,QSA]
-RewriteRule ^konkursy/(metodika|vneurochnaya|proekty|tvorchestvo)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ competitions.php?cc=$1&ac=$2&at=$3 [L,QSA]
+# 301 со старого порядка ac/at/as → новый ac/as/at
+# Распознаём по факту: 2-й сегмент после ac/cc — слаг типа из закрытого множества
+RewriteRule ^konkursy/(metodika|vneurochnaya|proekty|tvorchestvo)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/([a-z0-9-]+)/?$ /konkursy/$1/$2/$4/$3/ [R=301,L]
+RewriteRule ^konkursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/([a-z0-9-]+)/?$ /konkursy/$1/$3/$2/ [R=301,L]
+
+# Категория конкурса + аудитория (новый порядок): /konkursy/metodika/pedagogi/matematika/nachalnaya-shkola/
+RewriteRule ^konkursy/(metodika|vneurochnaya|proekty|tvorchestvo)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ competitions.php?cc=$1&ac=$2&as=$3&at=$4 [L,QSA]
+# 3-сегментный: cc/ac/{slug} — если slug = тип, это уровень без специализации; иначе специализация
+RewriteRule ^konkursy/(metodika|vneurochnaya|proekty|tvorchestvo)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/?$ competitions.php?cc=$1&ac=$2&at=$3 [L,QSA]
+RewriteRule ^konkursy/(metodika|vneurochnaya|proekty|tvorchestvo)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ competitions.php?cc=$1&ac=$2&as=$3 [L,QSA]
 RewriteRule ^konkursy/(metodika|vneurochnaya|proekty|tvorchestvo)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ competitions.php?cc=$1&ac=$2 [L,QSA]
 
 # Категории конкурсов (без аудитории)
@@ -80,9 +91,11 @@ RewriteRule ^konkursy/vneurochnaya/?$ competitions.php?category=extracurricular 
 RewriteRule ^konkursy/proekty/?$ competitions.php?category=student_projects [L,QSA]
 RewriteRule ^konkursy/tvorchestvo/?$ competitions.php?category=creative [L,QSA]
 
-# Аудитория конкурсов (3 уровня): /konkursy/pedagogi/dou/logopediya/
-RewriteRule ^konkursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ competitions.php?ac=$1&at=$2&as=$3 [L,QSA]
-RewriteRule ^konkursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ competitions.php?ac=$1&at=$2 [L,QSA]
+# Аудитория конкурсов (новый порядок): /konkursy/pedagogi/matematika/nachalnaya-shkola/
+RewriteRule ^konkursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ competitions.php?ac=$1&as=$2&at=$3 [L,QSA]
+# 2-сегментный: ac/{slug} — если slug = тип, это уровень без специализации; иначе специализация
+RewriteRule ^konkursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/?$ competitions.php?ac=$1&at=$2 [L,QSA]
+RewriteRule ^konkursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ competitions.php?ac=$1&as=$2 [L,QSA]
 RewriteRule ^konkursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ competitions.php?ac=$1 [L,QSA]
 
 # Детальная страница конкурса (единый формат)
@@ -110,9 +123,14 @@ RewriteRule ^olimpiady/pedagogam-shkol/?$ /olimpiady/pedagogi/ [R=301,L]
 RewriteRule ^olimpiady/pedagogam-ovz/?$ /olimpiady/pedagogi/ [R=301,L]
 RewriteRule ^olimpiady/logopedy/?$ /olimpiady/pedagogi/ [R=301,L]
 
-# Аудитория олимпиад (3 уровня): /olimpiady/pedagogi/dou/logopediya/
-RewriteRule ^olimpiady/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ olympiads.php?ac=$1&at=$2&as=$3 [L,QSA]
-RewriteRule ^olimpiady/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ olympiads.php?ac=$1&at=$2 [L,QSA]
+# 301 со старого порядка ac/at/as → новый ac/as/at
+RewriteRule ^olimpiady/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/([a-z0-9-]+)/?$ /olimpiady/$1/$3/$2/ [R=301,L]
+
+# Аудитория олимпиад (новый порядок): /olimpiady/pedagogi/matematika/nachalnaya-shkola/
+RewriteRule ^olimpiady/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ olympiads.php?ac=$1&as=$2&at=$3 [L,QSA]
+# 2-сегментный: ac/{slug} — если slug = тип, это уровень без специализации
+RewriteRule ^olimpiady/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/?$ olympiads.php?ac=$1&at=$2 [L,QSA]
+RewriteRule ^olimpiady/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ olympiads.php?ac=$1&as=$2 [L,QSA]
 RewriteRule ^olimpiady/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ olympiads.php?ac=$1 [L,QSA]
 
 # Детальная страница олимпиады
@@ -138,9 +156,14 @@ RewriteRule ^kabinet/avtovebinar/(\d+)/?$ /kabinet/videolektsiya/$1/ [R=301,L]
 # Список вебинаров
 RewriteRule ^vebinary/?$ pages/webinars.php [L,QSA]
 
-# Статус + аудитория (3 уровня): /vebinary/predstoyashchie/pedagogi/dou/logopediya/
-RewriteRule ^vebinary/(predstoyashchie|zapisi|videolektsii)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ pages/webinars.php?sc=$1&ac=$2&at=$3&as=$4 [L,QSA]
-RewriteRule ^vebinary/(predstoyashchie|zapisi|videolektsii)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ pages/webinars.php?sc=$1&ac=$2&at=$3 [L,QSA]
+# 301 со старого порядка ac/at/as → новый ac/as/at
+RewriteRule ^vebinary/(predstoyashchie|zapisi|videolektsii)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/([a-z0-9-]+)/?$ /vebinary/$1/$2/$4/$3/ [R=301,L]
+RewriteRule ^vebinary/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/([a-z0-9-]+)/?$ /vebinary/$1/$3/$2/ [R=301,L]
+
+# Статус + аудитория (новый порядок): /vebinary/predstoyashchie/pedagogi/matematika/nachalnaya-shkola/
+RewriteRule ^vebinary/(predstoyashchie|zapisi|videolektsii)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ pages/webinars.php?sc=$1&ac=$2&as=$3&at=$4 [L,QSA]
+RewriteRule ^vebinary/(predstoyashchie|zapisi|videolektsii)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/?$ pages/webinars.php?sc=$1&ac=$2&at=$3 [L,QSA]
+RewriteRule ^vebinary/(predstoyashchie|zapisi|videolektsii)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ pages/webinars.php?sc=$1&ac=$2&as=$3 [L,QSA]
 RewriteRule ^vebinary/(predstoyashchie|zapisi|videolektsii)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ pages/webinars.php?sc=$1&ac=$2 [L,QSA]
 
 # Вебинары по статусу (без аудитории)
@@ -148,9 +171,10 @@ RewriteRule ^vebinary/predstoyashchie/?$ pages/webinars.php?status=upcoming [L,Q
 RewriteRule ^vebinary/zapisi/?$ pages/webinars.php?status=recordings [L,QSA]
 RewriteRule ^vebinary/videolektsii/?$ pages/webinars.php?status=videolecture [L,QSA]
 
-# Аудитория вебинаров без статуса (3 уровня): /vebinary/pedagogi/dou/logopediya/
-RewriteRule ^vebinary/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ pages/webinars.php?ac=$1&at=$2&as=$3 [L,QSA]
-RewriteRule ^vebinary/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ pages/webinars.php?ac=$1&at=$2 [L,QSA]
+# Аудитория вебинаров без статуса (новый порядок): /vebinary/pedagogi/matematika/nachalnaya-shkola/
+RewriteRule ^vebinary/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ pages/webinars.php?ac=$1&as=$2&at=$3 [L,QSA]
+RewriteRule ^vebinary/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/?$ pages/webinars.php?ac=$1&at=$2 [L,QSA]
+RewriteRule ^vebinary/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ pages/webinars.php?ac=$1&as=$2 [L,QSA]
 RewriteRule ^vebinary/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ pages/webinars.php?ac=$1 [L,QSA]
 
 # Детальная страница вебинара
