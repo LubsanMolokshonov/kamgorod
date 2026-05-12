@@ -169,7 +169,9 @@ RewriteRule ^zhurnal/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]
 RewriteRule ^zhurnal/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ pages/journal.php?ac=$1 [L,QSA]
 
 # Детальная страница публикации
-RewriteRule ^publikaciya/([a-z0-9-]+)/?$ pages/publication.php?slug=$1 [L,QSA]
+# Канонический URL — со слэшем на конце. Без слэша — 301-редирект.
+RewriteRule ^publikaciya/([a-z0-9-]+)$ /publikaciya/$1/ [R=301,L]
+RewriteRule ^publikaciya/([a-z0-9-]+)/$ pages/publication.php?slug=$1 [L,QSA]
 
 # Подача публикации
 RewriteRule ^opublikovat/?$ pages/submit-publication.php [L,QSA]

@@ -19,7 +19,7 @@ if ($slug) {
 } elseif ($id) {
     $publication = $publicationObj->getById($id);
     if ($publication && $publication['status'] === 'published' && $publication['slug']) {
-        header('Location: /publikaciya/' . urlencode($publication['slug']), true, 301);
+        header('Location: /publikaciya/' . urlencode($publication['slug']) . '/', true, 301);
         exit;
     }
 } else {
@@ -199,7 +199,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           <ul class="related-list">
             <?php foreach ($related as $rel): ?>
               <li>
-                <a href="/publikaciya/<?php echo urlencode($rel['slug']); ?>">
+                <a href="/publikaciya/<?php echo urlencode($rel['slug']); ?>/">
                   <span class="related-title"><?php echo htmlspecialchars($rel['title']); ?></span>
                   <span class="related-author"><?php echo htmlspecialchars($rel['author_name']); ?></span>
                 </a>
@@ -213,7 +213,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           <h3>Поделиться</h3>
           <div class="share-buttons">
             <?php
-            $shareUrl = urlencode(SITE_URL . '/publikaciya/' . $publication['slug']);
+            $shareUrl = urlencode(SITE_URL . '/publikaciya/' . $publication['slug'] . '/');
             $shareTitle = urlencode($publication['title']);
             ?>
             <a href="https://vk.com/share.php?url=<?php echo $shareUrl; ?>&title=<?php echo $shareTitle; ?>" target="_blank" class="share-btn vk" title="ВКонтакте">VK</a>

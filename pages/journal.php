@@ -13,6 +13,7 @@ require_once __DIR__ . '/../classes/PublicationTag.php';
 require_once __DIR__ . '/../classes/AudienceCategory.php';
 require_once __DIR__ . '/../classes/AudienceType.php';
 require_once __DIR__ . '/../includes/seo-url.php';
+require_once __DIR__ . '/../includes/catalog-meta.php';
 
 $publicationObj = new Publication($db);
 $typeObj = new PublicationType($db);
@@ -165,7 +166,7 @@ if (!$showLanding) {
             'author' => $p['author_name'] ?? '',
             'type' => $p['type_name'] ?? '',
             'annotation' => mb_substr(strip_tags($p['annotation'] ?? ''), 0, 160),
-            'url' => '/publikaciya/' . $p['slug'],
+            'url' => '/publikaciya/' . $p['slug'] . '/',
             'date' => $p['published_at'],
             'views' => (int)($p['views_count'] ?? 0),
         ];
@@ -588,7 +589,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <?php else: ?>
           <div class="rd-grid reveal-stagger" id="publicationsGrid">
             <?php foreach ($publications as $pub): ?>
-              <a class="rd-card pub-card" href="/publikaciya/<?php echo urlencode($pub['slug']); ?>">
+              <a class="rd-card pub-card" href="/publikaciya/<?php echo urlencode($pub['slug']); ?>/">
                 <div class="rd-card-pat"></div>
                 <div class="rd-card-tags">
                   <?php if (!empty($pub['type_name'])): ?>

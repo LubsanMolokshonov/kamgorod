@@ -97,7 +97,7 @@ $offersData = [
             'title' => $p['title'],
             'meta'  => $p['author_name'] . ' · ' . date('d.m.Y', strtotime($p['published_at'])),
             'price' => 'Читать',
-            'url'   => '/publikaciya/' . $p['slug'],
+            'url'   => '/publikaciya/' . $p['slug'] . '/',
         ];
     }, $topPublications),
 ];
