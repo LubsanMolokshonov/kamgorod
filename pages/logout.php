@@ -22,5 +22,5 @@ session_destroy();
 session_start();
 
 // Redirect to home page
-header('Location: /index.php');
+header('Location: /');
 exit();

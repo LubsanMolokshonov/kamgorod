@@ -96,4 +96,107 @@ if (!function_exists('buildAudiencePhrase')) {
             'description' => $description,
         ];
     }
+
+    /**
+     * Собирает «{свойства с предлогами}» — фразу со склонениями и предлогами
+     * для каталогов с новой URL-структурой ac → as → at.
+     *
+     * Источники:
+     *  - категория (ac): AUDIENCE_CATEGORY_GENITIVE_MAP по slug → «школьников»;
+     *    предлог «для» добавляется в коде, итог: «для школьников».
+     *  - предмет (as):  audience_specializations.seo_phrase — готовый фрагмент с предлогом
+     *    («по математике», «для логопедов»); fallback: 'по ' . lowercase(name).
+     *  - уровень (at):  audience_types.seo_phrase — короткий фрагмент без предлога
+     *    («1-4 классов», «начальной школы»); fallback: lowercase(name).
+     *
+     * Пустые части пропускаются, склейка через пробел.
+     */
+    function buildAudienceSeoPhrase(?array $cat, ?array $type, ?array $spec): string
+    {
+        $parts = [];
+
+        if ($cat) {
+            $map = defined('AUDIENCE_CATEGORY_GENITIVE_MAP') ? AUDIENCE_CATEGORY_GENITIVE_MAP : [];
+            $catPhrase = $map[$cat['slug']] ?? mb_strtolower($cat['name'] ?? '');
+            if ($catPhrase !== '') {
+                $parts[] = 'для ' . $catPhrase;
+            }
+        }
+
+        if ($spec) {
+            if (!empty($spec['seo_phrase'])) {
+                $parts[] = $spec['seo_phrase'];
+            } elseif (!empty($spec['name'])) {
+                $parts[] = 'по ' . mb_strtolower($spec['name']);
+            }
+        }
+
+        if ($type) {
+            if (!empty($type['seo_phrase'])) {
+                $parts[] = $type['seo_phrase'];
+            } elseif (!empty($type['name'])) {
+                $parts[] = mb_strtolower($type['name']);
+            }
+        }
+
+        return trim(implode(' ', $parts));
+    }
+
+    /**
+     * Собирает SEO-блоки страницы каталога по шаблонам с плейсхолдерами.
+     * Возвращает все строки готовыми к выводу.
+     *
+     * @param array $parts {
+     *   @var string $phrase            результат buildAudienceSeoPhrase()
+     *   @var int    $count             количество найденных элементов
+     *   @var string $titleTpl          шаблон <title> с {phrase}
+     *   @var string $descriptionTpl    шаблон meta description с {phrase}
+     *   @var string $h1Tpl             шаблон h1 с {phrase}
+     *   @var string $h1SubtextTpl      шаблон текста под h1 с {phrase}
+     *   @var string $h2Tpl             шаблон h2 с {phrase}
+     *   @var string $h2SubtextTpl      шаблон текста под h2 с {phrase} и {count}
+     * }
+     * @return array{title,description,h1,h1_html,h1_subtext,h2,h2_subtext}
+     */
+    function buildCatalogSeoBlocks(array $parts): array
+    {
+        $phrase = trim($parts['phrase'] ?? '');
+        $count  = (int)($parts['count'] ?? 0);
+        $replace = function(string $tpl) use ($phrase, $count) {
+            // {phrase} может быть пустым — схлопываем двойные пробелы и пробелы перед запятой/точкой.
+            $s = str_replace(['{phrase}', '{count}'], [$phrase, (string)$count], $tpl);
+            $s = preg_replace('/\s{2,}/u', ' ', $s);
+            $s = preg_replace('/\s+([,.;:])/u', '$1', $s);
+            return trim($s);
+        };
+
+        $title       = $replace($parts['titleTpl'] ?? '{phrase}');
+        $description = $replace($parts['descriptionTpl'] ?? '');
+        $h1Plain     = $replace($parts['h1Tpl'] ?? '{phrase}');
+        $h1Subtext   = $replace($parts['h1SubtextTpl'] ?? '');
+        $h2          = $replace($parts['h2Tpl'] ?? '');
+        $h2Subtext   = $replace($parts['h2SubtextTpl'] ?? '');
+
+        // HTML-версия H1: оборачиваем фразу в span.accent (если она есть).
+        if ($phrase !== '' && isset($parts['h1Tpl'])) {
+            $h1Html = str_replace(
+                '{phrase}',
+                '<span class="accent">' . htmlspecialchars($phrase, ENT_QUOTES, 'UTF-8') . '</span>',
+                htmlspecialchars($parts['h1Tpl'], ENT_QUOTES, 'UTF-8')
+            );
+            // Восстанавливаем экранированный плейсхолдер: htmlspecialchars не трогает {phrase}, ок.
+        } else {
+            $h1Html = htmlspecialchars($h1Plain, ENT_QUOTES, 'UTF-8');
+        }
+
+        return [
+            'title'       => $title,
+            'description' => $description,
+            'h1'          => $h1Plain,
+            'h1_html'     => $h1Html,
+            'h1_subtext'  => $h1Subtext,
+            'h2'          => $h2,
+            'h2_subtext'  => $h2Subtext,
+        ];
+    }
 }

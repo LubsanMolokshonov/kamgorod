@@ -41,12 +41,31 @@ function buildSeoUrl($section, $options = []) {
     }
 
     // Аудитория → сегменты пути
+    // Для konkursy/olimpiady/vebinary порядок: ac → as (специализация) → at (уровень/тип)
+    // Для kursy/zhurnal сохраняется старый порядок: ac → at → as
+    $reorderedSections = ['konkursy', 'olimpiady', 'vebinary'];
+    $useNewOrder = in_array($section, $reorderedSections, true);
+
     if (!empty($options['ac'])) {
         $path .= '/' . rawurlencode($options['ac']);
-        if (!empty($options['at'])) {
-            $path .= '/' . rawurlencode($options['at']);
+        if ($useNewOrder) {
+            // Новый порядок: ac/as/at
             if (!empty($options['as'])) {
                 $path .= '/' . rawurlencode($options['as']);
+                if (!empty($options['at'])) {
+                    $path .= '/' . rawurlencode($options['at']);
+                }
+            } elseif (!empty($options['at'])) {
+                // Уровень без специализации — старая 2-сегментная форма
+                $path .= '/' . rawurlencode($options['at']);
+            }
+        } else {
+            // Старый порядок: ac/at/as
+            if (!empty($options['at'])) {
+                $path .= '/' . rawurlencode($options['at']);
+                if (!empty($options['as'])) {
+                    $path .= '/' . rawurlencode($options['as']);
+                }
             }
         }
     } elseif ($section === 'kursy' && !empty($options['at'])) {

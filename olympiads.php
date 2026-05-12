@@ -32,18 +32,30 @@ $selectedCategoryData    = null;
 $audienceTypes           = [];
 $selectedTypeData        = null;
 $audienceSpecializations = [];
+$selectedSpecData        = null;
 
 if ($selectedCategory) {
     $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory);
     if ($selectedCategoryData) {
-        $audienceTypes = $audienceCatObj->getAudienceTypes($selectedCategoryData['id']);
+        $audienceSpecializations = $audienceCatObj->getSpecializations($selectedCategoryData['id']);
+        if ($selectedSpec) {
+            $audienceTypes = $audienceCatObj->getAudienceTypesWithSpec($selectedCategoryData['id'], $selectedSpec);
+        } else {
+            $audienceTypes = $audienceCatObj->getAudienceTypes($selectedCategoryData['id']);
+        }
+    }
+}
+
+if ($selectedSpec && !empty($audienceSpecializations)) {
+    foreach ($audienceSpecializations as $as) {
+        if (($as['slug'] ?? '') === $selectedSpec) {
+            $selectedSpecData = $as;
+            break;
+        }
     }
 }
 if ($selectedType) {
     $selectedTypeData = $audienceTypeObj->getBySlug($selectedType);
-    if ($selectedTypeData) {
-        $audienceSpecializations = $audienceTypeObj->getSpecializations($selectedTypeData['id']);
-    }
 }
 
 $olympiadObj = new Olympiad($db);
@@ -51,12 +63,8 @@ $filters = [];
 if ($selectedCategoryData) $filters['category_id'] = $selectedCategoryData['id'];
 if ($selectedTypeData)     $filters['audience_type_id'] = $selectedTypeData['id'];
 if (!empty($selectedSpec)) {
-    require_once __DIR__ . '/classes/AudienceSpecialization.php';
-    $specObj = new AudienceSpecialization($db);
-    $selectedSpecData = $specObj->getBySlug($selectedSpec);
-    if ($selectedSpecData) {
-        $filters['specialization_id'] = $selectedSpecData['id'];
-    }
+    // Фильтр по slug — агрегирует все строки audience_specializations с этим slug
+    $filters['specialization_slug'] = $selectedSpec;
 }
 
 $allOlympiads = !empty($filters)
@@ -67,6 +75,48 @@ $perPage           = 21;
 $totalOlympiads    = count($allOlympiads);
 $olympiads         = array_slice($allOlympiads, 0, $perPage);
 $hasMore           = $totalOlympiads > $perPage;
+
+// Counts per filter — скрываем пустые пункты + noindex пустых страниц
+$audienceCategoryCounts = [];
+foreach ($audienceCategories as $ac) {
+    $audienceCategoryCounts[$ac['slug']] = count($olympiadObj->getFilteredOlympiads(['category_id' => $ac['id']]));
+}
+$audienceCategories = array_values(array_filter($audienceCategories, function($ac) use ($audienceCategoryCounts) {
+    return ($audienceCategoryCounts[$ac['slug']] ?? 0) > 0;
+}));
+
+if (!empty($audienceSpecializations) && $selectedCategoryData) {
+    $audienceSpecCounts = [];
+    foreach ($audienceSpecializations as $as) {
+        $audienceSpecCounts[$as['slug']] = count($olympiadObj->getFilteredOlympiads([
+            'category_id'         => $selectedCategoryData['id'],
+            'specialization_slug' => $as['slug'],
+        ]));
+    }
+    $audienceSpecializations = array_values(array_filter($audienceSpecializations, function($as) use ($audienceSpecCounts) {
+        return ($audienceSpecCounts[$as['slug']] ?? 0) > 0;
+    }));
+}
+
+if (!empty($audienceTypes) && $selectedCategoryData) {
+    $audienceTypeCounts = [];
+    foreach ($audienceTypes as $at) {
+        $f = [
+            'category_id'      => $selectedCategoryData['id'],
+            'audience_type_id' => $at['id'],
+        ];
+        if (!empty($selectedSpec)) $f['specialization_slug'] = $selectedSpec;
+        $audienceTypeCounts[$at['slug']] = count($olympiadObj->getFilteredOlympiads($f));
+    }
+    $audienceTypes = array_values(array_filter($audienceTypes, function($at) use ($audienceTypeCounts) {
+        return ($audienceTypeCounts[$at['slug']] ?? 0) > 0;
+    }));
+}
+
+$hasOlympFilter = !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpec);
+if ($totalOlympiads === 0 && $hasOlympFilter) {
+    $noindex = true;
+}
 
 // Лёгкий массив для клиентского поиска
 $allOlympiadsJs = [];
@@ -83,21 +133,45 @@ foreach ($allOlympiads as $o) {
     ];
 }
 
-$audiencePhrase = buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData ?? null, 'педагогов и учеников');
-$hasAnyFilter = !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
+$hasAnyFilter      = !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
+$audienceSeoPhrase = buildAudienceSeoPhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData);
 
-$meta = buildCatalogMeta([
-    'base'             => 'Олимпиады',
-    'audiencePhrase'   => $audiencePhrase,
-    'hasFilter'        => $hasAnyFilter,
-    'titleSuffix'      => ' 2025-2026 | ' . SITE_NAME,
-    'descriptionTpl'   => '{h1}. Бесплатное участие, тест за 5 минут, официальный диплом за 30 секунд.',
-    'h1FallbackPrefix' => 'Олимпиады для педагогов и&nbsp;учеников с ',
-    'h1FallbackAccent' => 'дипломом за&nbsp;30&nbsp;секунд',
-]);
-$pageTitle       = $meta['title'];
-$pageDescription = $meta['description'];
-$h1Html          = $meta['h1_html'];
+// Дефолтные тексты (fallback)
+$h1Subtext = 'Проверьте знания, получите результат сразу и оформите официальный диплом для портфолио и аттестации. Тест бесплатный — оплата только за оформление диплома.';
+$h2Title   = 'Выберите олимпиаду под свою аудиторию';
+$h2Subtext = 'Найдено: <strong>' . (int)$totalOlympiads . '</strong> олимпиад. Все с дипломом победителя, призёра или участника.';
+
+if ($hasAnyFilter && $audienceSeoPhrase !== '') {
+    $seo = buildCatalogSeoBlocks([
+        'phrase'         => $audienceSeoPhrase,
+        'count'          => $totalOlympiads,
+        'titleTpl'       => 'Олимпиады {phrase} 2026 года — соответствие ФГОС | ' . SITE_NAME,
+        'descriptionTpl' => 'Всероссийские и международные олимпиады {phrase} для учителей, педагогов и школьников. Официальные дипломы олимпиад {phrase} соответствуют ФГОС и принимаются при аттестации.',
+        'h1Tpl'          => 'Олимпиады {phrase}',
+        'h1SubtextTpl'   => 'Пройдите тест в олимпиадах {phrase}, получите результат сразу и оформите официальный диплом для портфолио и аттестации. Дипломы соответствуют ФГОС, выданы зарегистрированным СМИ.',
+        'h2Tpl'          => 'Выберите олимпиаду {phrase} под свой уровень',
+        'h2SubtextTpl'   => 'Найдено: <strong>{count}</strong> олимпиад {phrase}. Все с дипломом победителя, призёра или участника.',
+    ]);
+    $pageTitle       = $seo['title'];
+    $pageDescription = $seo['description'];
+    $h1Html          = $seo['h1_html'];
+    $h1Subtext       = $seo['h1_subtext'];
+    $h2Title         = $seo['h2'];
+    $h2Subtext       = $seo['h2_subtext'];
+} else {
+    $meta = buildCatalogMeta([
+        'base'             => 'Олимпиады',
+        'audiencePhrase'   => buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData ?? null, 'педагогов и учеников'),
+        'hasFilter'        => $hasAnyFilter,
+        'titleSuffix'      => ' 2025-2026 | ' . SITE_NAME,
+        'descriptionTpl'   => '{h1}. Бесплатное участие, тест за 5 минут, официальный диплом за 30 секунд.',
+        'h1FallbackPrefix' => 'Олимпиады для педагогов и&nbsp;учеников с ',
+        'h1FallbackAccent' => 'дипломом за&nbsp;30&nbsp;секунд',
+    ]);
+    $pageTitle       = $meta['title'];
+    $pageDescription = $meta['description'];
+    $h1Html          = $meta['h1_html'];
+}
 $canonicalUrl    = SITE_URL . '/olimpiady/';
 $ogImage         = SITE_URL . '/assets/images/og-olympiads.jpg';
 $rdActivePage    = 'olimpiady';
@@ -127,7 +201,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <span class="rd-pill indigo">Соответствует ФГОС</span>
       </div>
       <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo $h1Html; ?></h1>
-      <p class="rd-hero-sub reveal">Проверьте знания, получите результат сразу и оформите официальный диплом для портфолио и аттестации. Тест бесплатный — оплата только за оформление диплома.</p>
+      <p class="rd-hero-sub reveal"><?php echo $h1Subtext; ?></p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Тест бесплатно · 10 вопросов</div>
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Результат сразу после теста</div>
@@ -183,8 +257,8 @@ include __DIR__ . '/includes/header-redesign.php';
     <div class="rd-section-head reveal">
       <div>
         <div class="rd-eyebrow">Каталог олимпиад</div>
-        <h2 class="rd-section-title">Выберите олимпиаду под свою аудиторию</h2>
-        <p class="rd-section-sub">Найдено: <strong><?php echo $totalOlympiads; ?></strong> олимпиад. Все с дипломом победителя, призёра или участника.</p>
+        <h2 class="rd-section-title"><?php echo htmlspecialchars($h2Title, ENT_QUOTES, 'UTF-8'); ?></h2>
+        <p class="rd-section-sub"><?php echo $h2Subtext; ?></p>
       </div>
       <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
@@ -214,26 +288,26 @@ include __DIR__ . '/includes/header-redesign.php';
         </div>
         <?php endif; ?>
 
-        <?php if (!empty($audienceTypes)): ?>
-        <h4>Уровень</h4>
+        <?php if (!empty($audienceSpecializations)): ?>
+        <h4>Предмет / специализация</h4>
         <div class="rd-chip-list">
-          <?php foreach ($audienceTypes as $at): ?>
-          <div class="rd-chip-row<?php echo $selectedType === $at['slug'] ? ' active' : ''; ?>">
+          <?php foreach ($audienceSpecializations as $as): ?>
+          <div class="rd-chip-row<?php echo $selectedSpec === $as['slug'] ? ' active' : ''; ?>">
             <label>
-              <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'at' => $at['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($at['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+              <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'as' => $as['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($as['name'], ENT_QUOTES, 'UTF-8'); ?></a>
             </label>
           </div>
           <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
-        <?php if (!empty($audienceSpecializations)): ?>
-        <h4>Специализация</h4>
+        <?php if (!empty($audienceTypes)): ?>
+        <h4>Уровень</h4>
         <div class="rd-chip-list">
-          <?php foreach ($audienceSpecializations as $as): ?>
-          <div class="rd-chip-row<?php echo $selectedSpec === $as['slug'] ? ' active' : ''; ?>">
+          <?php foreach ($audienceTypes as $at): ?>
+          <div class="rd-chip-row<?php echo $selectedType === $at['slug'] ? ' active' : ''; ?>">
             <label>
-              <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $as['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($as['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+              <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'as' => $selectedSpec, 'at' => $at['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($at['name'], ENT_QUOTES, 'UTF-8'); ?></a>
             </label>
           </div>
           <?php endforeach; ?>

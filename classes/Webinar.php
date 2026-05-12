@@ -164,6 +164,14 @@ class Webinar {
             $params[] = $filters['specialization_id'];
         }
 
+        // Filter by specialization slug — агрегирует все строки audience_specializations с этим slug
+        if (!empty($filters['specialization_slug'])) {
+            $sql .= " JOIN webinar_specializations ws2 ON w.id = ws2.webinar_id";
+            $sql .= " JOIN audience_specializations s2 ON ws2.specialization_id = s2.id";
+            $where[] = "s2.slug = ?";
+            $params[] = $filters['specialization_slug'];
+        }
+
         // Status filter
         if (!empty($filters['status'])) {
             if ($filters['status'] === 'upcoming') {

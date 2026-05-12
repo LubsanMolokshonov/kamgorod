@@ -180,7 +180,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <img src="/assets/images/cropped-logo_rosobrnadzor-2.png" alt="Рособрнадзор" class="od-license-card-logo">
         <h3>Образовательная лицензия</h3>
         <p>Лицензия на образовательную деятельность № Л035-01212-59/00203856 от 17.12.2021 г.</p>
-        <a href="https://islod.obrnadzor.gov.ru/rlic/details/c197b78b-ee10-1b2e-3837-6f0b1295bc1f/" target="_blank" rel="noopener noreferrer" class="od-license-card-link">
+        <a href="https://islod.obrnadzor.gov.ru/rlic/details/c197b78b-ee10-1b2e-3837-6f0b1295bc1f/" target="_blank" rel="noopener noreferrer nofollow" class="od-license-card-link">
           Проверить лицензию
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         </a>
@@ -189,7 +189,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <img src="/assets/images/eagle_s.svg" alt="Роскомнадзор" class="od-license-card-logo">
         <h3>Официальное СМИ</h3>
         <p>Свидетельство о регистрации СМИ Эл. №ФС 77-74524 от 24.12.2018.</p>
-        <a href="https://rkn.gov.ru/activity/mass-media/for-founders/media/?id=700411&page=" target="_blank" rel="noopener noreferrer" class="od-license-card-link">
+        <a href="https://rkn.gov.ru/activity/mass-media/for-founders/media/?id=700411&page=" target="_blank" rel="noopener noreferrer nofollow" class="od-license-card-link">
           Проверить свидетельство
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         </a>

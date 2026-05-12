@@ -149,6 +149,15 @@ class Olympiad {
             $params[] = $filters['specialization_id'];
         }
 
+        // Filter by specialization slug — агрегирует все спецификации с одинаковым slug
+        // (несколько строк audience_specializations могут иметь slug='matematika' для разных типов)
+        if (!empty($filters['specialization_slug'])) {
+            $joins[] = "JOIN olympiad_specializations os2 ON o.id = os2.olympiad_id";
+            $joins[] = "JOIN audience_specializations s2 ON os2.specialization_id = s2.id";
+            $wheres[] = "s2.slug = ?";
+            $params[] = $filters['specialization_slug'];
+        }
+
         // Legacy: filter by ENUM audience
         if (!empty($filters['audience']) && $filters['audience'] !== 'all') {
             $wheres[] = "o.target_audience = ?";

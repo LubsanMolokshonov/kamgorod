@@ -19,7 +19,7 @@ $jsonLd = [
     '@context' => 'https://schema.org',
     '@type' => 'Organization',
     'name' => SITE_NAME,
-    'url' => SITE_URL,
+    'url' => SITE_URL . '/',
     'description' => $pageDescription,
     'logo' => SITE_URL . '/assets/images/logo.svg',
 ];
@@ -301,13 +301,13 @@ window.rdOffersData = <?php echo json_encode($offersData, JSON_UNESCAPED_UNICODE
           <div class="badge">📜</div>
           <h4>Образовательная лицензия</h4>
           <p>№ Л035-01212-59/00203856 от 17.12.2021</p>
-          <a href="https://islod.obrnadzor.gov.ru/rlic/details/c197b78b-ee10-1b2e-3837-6f0b1295bc1f/" target="_blank" rel="noopener noreferrer">Проверить в реестре <span>→</span></a>
+          <a href="https://islod.obrnadzor.gov.ru/rlic/details/c197b78b-ee10-1b2e-3837-6f0b1295bc1f/" target="_blank" rel="noopener noreferrer nofollow">Проверить в реестре <span>→</span></a>
         </div>
         <div class="rd-trust-card">
           <div class="badge">📰</div>
           <h4>Официальное СМИ</h4>
           <p>Свидетельство Эл. №ФС 77-74524 от 24.12.2018</p>
-          <a href="https://rkn.gov.ru/activity/mass-media/for-founders/media/?id=700411&page=" target="_blank" rel="noopener noreferrer">Проверить в Роскомнадзоре <span>→</span></a>
+          <a href="https://rkn.gov.ru/activity/mass-media/for-founders/media/?id=700411&page=" target="_blank" rel="noopener noreferrer nofollow">Проверить в Роскомнадзоре <span>→</span></a>
         </div>
         <div class="rd-trust-card">
           <div class="badge">⚡</div>
@@ -370,19 +370,19 @@ window.rdOffersData = <?php echo json_encode($offersData, JSON_UNESCAPED_UNICODE
       <p class="rd-section-sub">Подписывайтесь, чтобы быть в курсе новостей и обновлений</p>
     </div>
     <div class="rd-socials reveal-stagger">
-      <a class="rd-social" href="https://vk.com/fgospro" target="_blank" rel="noopener noreferrer">
+      <a class="rd-social" href="https://vk.com/fgospro" target="_blank" rel="noopener noreferrer nofollow">
         <div class="si si-vk">VK</div>
         <div><div class="st">ВКонтакте</div><div class="ss">700+ подписчиков</div></div>
       </a>
-      <a class="rd-social" href="https://t.me/merovospitatel" target="_blank" rel="noopener noreferrer">
+      <a class="rd-social" href="https://t.me/merovospitatel" target="_blank" rel="noopener noreferrer nofollow">
         <div class="si si-tg">TG</div>
         <div><div class="st">Telegram-канал</div><div class="ss">200+ подписчиков</div></div>
       </a>
-      <a class="rd-social" href="https://t.me/eduregion_do" target="_blank" rel="noopener noreferrer">
+      <a class="rd-social" href="https://t.me/eduregion_do" target="_blank" rel="noopener noreferrer nofollow">
         <div class="si si-tg2">⌬</div>
         <div><div class="st">Telegram-чат</div><div class="ss">900+ участников</div></div>
       </a>
-      <a class="rd-social" href="https://max.ru/id5904368615_biz" target="_blank" rel="noopener noreferrer">
+      <a class="rd-social" href="https://max.ru/id5904368615_biz" target="_blank" rel="noopener noreferrer nofollow">
         <div class="si si-mx">МАX</div>
         <div><div class="st">Макс</div><div class="ss">100+ подписчиков</div></div>
       </a>

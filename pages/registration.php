@@ -15,7 +15,7 @@ require_once __DIR__ . '/../includes/session.php';
 $competitionId = $_GET['competition_id'] ?? null;
 
 if (!$competitionId) {
-    header('Location: /index.php');
+    header('Location: /');
     exit;
 }
 
@@ -24,7 +24,7 @@ $competitionObj = new Competition($db);
 $competition = $competitionObj->getById($competitionId);
 
 if (!$competition) {
-    header('Location: /index.php');
+    header('Location: /');
     exit;
 }
 

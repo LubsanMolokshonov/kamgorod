@@ -11,9 +11,6 @@ header('Content-Type: text/plain; charset=UTF-8');
 $siteUrl = rtrim(SITE_URL, '/');
 ?>
 User-agent: *
-Allow: /
-
-# Служебные страницы
 Disallow: /kabinet/
 Disallow: /korzina/
 Disallow: /vhod/
@@ -24,18 +21,22 @@ Disallow: /olimpiada-diplom/
 Disallow: /opublikovat/
 Disallow: /sertifikat-publikacii/
 Disallow: /payment-success/
-
-# Технические директории
 Disallow: /pages/
 Disallow: /ajax/
 Disallow: /database/
 Disallow: /classes/
 Disallow: /config/
 Disallow: /includes/
-
-# Файлы
 Disallow: /*.sql$
 Disallow: /*.log$
 Disallow: /*.env$
+Disallow: /?
+Disallow: /*?
+Allow: /*.js
+Allow: /*.css
+Allow: /*.png
+Allow: /*.webp
+Allow: /*.svg
+Allow: /*.jpg
 
 Sitemap: <?php echo $siteUrl; ?>/sitemap.xml

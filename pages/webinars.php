@@ -40,18 +40,30 @@ $selectedCategoryData = null;
 $audienceTypes = [];
 $selectedTypeData = null;
 $audienceSpecializations = [];
+$selectedSpecData = null;
 
 if ($selectedCategory) {
     $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory);
     if ($selectedCategoryData) {
-        $audienceTypes = $audienceCatObj->getAudienceTypes($selectedCategoryData['id']);
+        $audienceSpecializations = $audienceCatObj->getSpecializations($selectedCategoryData['id']);
+        if ($selectedSpec) {
+            $audienceTypes = $audienceCatObj->getAudienceTypesWithSpec($selectedCategoryData['id'], $selectedSpec);
+        } else {
+            $audienceTypes = $audienceCatObj->getAudienceTypes($selectedCategoryData['id']);
+        }
+    }
+}
+
+if ($selectedSpec && !empty($audienceSpecializations)) {
+    foreach ($audienceSpecializations as $as) {
+        if (($as['slug'] ?? '') === $selectedSpec) {
+            $selectedSpecData = $as;
+            break;
+        }
     }
 }
 if ($selectedType) {
     $selectedTypeData = $audienceTypeObj->getBySlug($selectedType);
-    if ($selectedTypeData) {
-        $audienceSpecializations = $audienceTypeObj->getSpecializations($selectedTypeData['id']);
-    }
 }
 
 $filters = [];
@@ -59,36 +71,102 @@ if ($status) $filters["status"] = $status;
 if ($selectedCategoryData) $filters['category_id'] = $selectedCategoryData['id'];
 if ($selectedTypeData)     $filters['audience_type_id'] = $selectedTypeData['id'];
 if (!empty($selectedSpec)) {
-    require_once __DIR__ . "/../classes/AudienceSpecialization.php";
-    $specObj = new AudienceSpecialization($db);
-    $selectedSpecData = $specObj->getBySlug($selectedSpec);
-    if (!empty($selectedSpecData)) {
-        $filters['specialization_id'] = $selectedSpecData['id'];
-    }
+    $filters['specialization_slug'] = $selectedSpec;
 }
 
 $webinars = $webinarObj->getAll($filters, 50);
 $totalWebinars = count($webinars);
 $counts = $webinarObj->countByStatus();
 
-// Динамические H1/title/description с учётом статуса и аудитории
+// Counts per filter — скрываем пустые пункты + noindex пустых страниц
+$baseStatusFilters = [];
+if ($status) $baseStatusFilters['status'] = $status;
+
+$audienceCategoryCounts = [];
+foreach ($audienceCategories as $ac) {
+    $f = $baseStatusFilters;
+    $f['category_id'] = $ac['id'];
+    $audienceCategoryCounts[$ac['slug']] = count($webinarObj->getAll($f, 9999));
+}
+$audienceCategories = array_values(array_filter($audienceCategories, function($ac) use ($audienceCategoryCounts) {
+    return ($audienceCategoryCounts[$ac['slug']] ?? 0) > 0;
+}));
+
+if (!empty($audienceSpecializations) && $selectedCategoryData) {
+    $audienceSpecCounts = [];
+    foreach ($audienceSpecializations as $as) {
+        $f = $baseStatusFilters;
+        $f['category_id']         = $selectedCategoryData['id'];
+        $f['specialization_slug'] = $as['slug'];
+        $audienceSpecCounts[$as['slug']] = count($webinarObj->getAll($f, 9999));
+    }
+    $audienceSpecializations = array_values(array_filter($audienceSpecializations, function($as) use ($audienceSpecCounts) {
+        return ($audienceSpecCounts[$as['slug']] ?? 0) > 0;
+    }));
+}
+
+if (!empty($audienceTypes) && $selectedCategoryData) {
+    $audienceTypeCounts = [];
+    foreach ($audienceTypes as $at) {
+        $f = $baseStatusFilters;
+        $f['category_id']      = $selectedCategoryData['id'];
+        $f['audience_type_id'] = $at['id'];
+        if (!empty($selectedSpec)) $f['specialization_slug'] = $selectedSpec;
+        $audienceTypeCounts[$at['slug']] = count($webinarObj->getAll($f, 9999));
+    }
+    $audienceTypes = array_values(array_filter($audienceTypes, function($at) use ($audienceTypeCounts) {
+        return ($audienceTypeCounts[$at['slug']] ?? 0) > 0;
+    }));
+}
+
+$hasWebinarFilter = !empty($status) || !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
+if ($totalWebinars === 0 && $hasWebinarFilter) {
+    $noindex = true;
+}
+
+// Динамические H1/title/description/тексты с учётом статуса и аудитории
 $webinarStatusLabels = defined('WEBINAR_STATUS_LABELS') ? WEBINAR_STATUS_LABELS : [];
 $catalogBase = $webinarStatusLabels[$status] ?? 'Вебинары';
-$audiencePhrase = buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData ?? null);
-$hasAnyFilter = !empty($status) || !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
+$hasAudienceFilter = !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
+$hasAnyFilter      = !empty($status) || $hasAudienceFilter;
+$audienceSeoPhrase = buildAudienceSeoPhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData ?? null);
 
-$meta = buildCatalogMeta([
-    'base'             => $catalogBase,
-    'audiencePhrase'   => $audiencePhrase,
-    'hasFilter'        => $hasAnyFilter,
-    'titleSuffix'      => ' | ' . SITE_NAME,
-    'descriptionTpl'   => '{h1}. Бесплатное участие, именной сертификат на 2 ак. часа — для аттестации и портфолио.',
-    'h1FallbackPrefix' => 'Вебинары для педагогов с ',
-    'h1FallbackAccent' => 'именным сертификатом',
-]);
-$pageTitle       = $meta['title'];
-$pageDescription = $meta['description'];
-$h1Html          = $meta['h1_html'];
+// Дефолтные тексты (fallback)
+$h1Subtext = 'Смотрите видеолекции и прямые эфиры от ведущих экспертов в сфере образования. Бесплатное участие, сертификат на 2 ак. часа — для аттестации и портфолио.';
+$h2Title   = 'Выберите вебинар или видеолекцию';
+$h2Subtext = 'Найдено: <strong>' . (int)$totalWebinars . '</strong>. Все с возможностью получить именной сертификат.';
+
+if ($hasAudienceFilter && $audienceSeoPhrase !== '') {
+    $seo = buildCatalogSeoBlocks([
+        'phrase'         => $audienceSeoPhrase,
+        'count'          => $totalWebinars,
+        'titleTpl'       => $catalogBase . ' {phrase} 2026 года — соответствие ФГОС | ' . SITE_NAME,
+        'descriptionTpl' => 'Вебинары и видеолекции {phrase} для учителей, педагогов и школьников. Именные сертификаты на 2 ак. часа соответствуют ФГОС и принимаются при аттестации.',
+        'h1Tpl'          => $catalogBase . ' {phrase}',
+        'h1SubtextTpl'   => 'Смотрите вебинары {phrase} от ведущих экспертов в сфере образования. Бесплатное участие, именной сертификат на 2 ак. часа — для аттестации и портфолио.',
+        'h2Tpl'          => 'Выберите вебинар {phrase} под свой уровень',
+        'h2SubtextTpl'   => 'Найдено: <strong>{count}</strong> вебинаров {phrase}. Все с возможностью получить именной сертификат.',
+    ]);
+    $pageTitle       = $seo['title'];
+    $pageDescription = $seo['description'];
+    $h1Html          = $seo['h1_html'];
+    $h1Subtext       = $seo['h1_subtext'];
+    $h2Title         = $seo['h2'];
+    $h2Subtext       = $seo['h2_subtext'];
+} else {
+    $meta = buildCatalogMeta([
+        'base'             => $catalogBase,
+        'audiencePhrase'   => buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData ?? null),
+        'hasFilter'        => $hasAnyFilter,
+        'titleSuffix'      => ' | ' . SITE_NAME,
+        'descriptionTpl'   => '{h1}. Бесплатное участие, именной сертификат на 2 ак. часа — для аттестации и портфолио.',
+        'h1FallbackPrefix' => 'Вебинары для педагогов с ',
+        'h1FallbackAccent' => 'именным сертификатом',
+    ]);
+    $pageTitle       = $meta['title'];
+    $pageDescription = $meta['description'];
+    $h1Html          = $meta['h1_html'];
+}
 $canonicalUrl    = SITE_URL . '/vebinary/';
 $ogImage         = SITE_URL . '/assets/images/og-webinars.jpg';
 $rdActivePage    = 'vebinary';
@@ -121,7 +199,7 @@ include __DIR__ . "/../includes/header-redesign.php";
         <span class="rd-pill">Сертификат 2 ак. часа</span>
       </div>
       <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo $h1Html; ?></h1>
-      <p class="rd-hero-sub reveal">Смотрите видеолекции и прямые эфиры от ведущих экспертов в сфере образования. Бесплатное участие, сертификат на 2 ак. часа — для аттестации и портфолио.</p>
+      <p class="rd-hero-sub reveal"><?php echo $h1Subtext; ?></p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Бесплатное участие в прямом эфире</div>
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Видеолекции — смотрите в любое время</div>
@@ -176,8 +254,8 @@ include __DIR__ . "/../includes/header-redesign.php";
     <div class="rd-section-head reveal">
       <div>
         <div class="rd-eyebrow">Каталог вебинаров</div>
-        <h2 class="rd-section-title">Выберите вебинар или видеолекцию</h2>
-        <p class="rd-section-sub">Найдено: <strong><?php echo $totalWebinars; ?></strong>. Все с возможностью получить именной сертификат.</p>
+        <h2 class="rd-section-title"><?php echo htmlspecialchars($h2Title, ENT_QUOTES, 'UTF-8'); ?></h2>
+        <p class="rd-section-sub"><?php echo $h2Subtext; ?></p>
       </div>
       <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
@@ -190,17 +268,24 @@ include __DIR__ . "/../includes/header-redesign.php";
       <?php
       $audienceFilterBaseUrl = '/vebinary';
       $extraPathPrefix = getSectionPathPrefix('vebinary', ['status' => $status]);
+      $audienceFilterReorderedUrl = true; // ac → as → at
       include __DIR__ . '/../includes/audience-filter.php';
       ?>
       <div class="af-categories" style="margin-top:8px;">
         <a href="<?php echo buildSeoUrl('vebinary', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
            class="af-pill<?php echo empty($status) ? ' active' : ''; ?>">Все вебинары</a>
+        <?php if ($counts["upcoming"] > 0 || $status === 'upcoming'): ?>
         <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
            class="af-pill<?php echo $status === 'upcoming' ? ' active' : ''; ?>">Предстоящие (<?php echo $counts["upcoming"]; ?>)</a>
+        <?php endif; ?>
+        <?php if ($counts["recordings"] > 0 || $status === 'recordings'): ?>
         <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'recordings', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
            class="af-pill<?php echo $status === 'recordings' ? ' active' : ''; ?>">Архив записей (<?php echo $counts["recordings"]; ?>)</a>
+        <?php endif; ?>
+        <?php if ($counts["autowebinars"] > 0 || $status === 'videolecture'): ?>
         <a href="<?php echo buildSeoUrl('vebinary', ['status' => 'videolecture', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>"
            class="af-pill<?php echo $status === 'videolecture' ? ' active' : ''; ?>">Видеолекции (<?php echo $counts["autowebinars"]; ?>)</a>
+        <?php endif; ?>
       </div>
     </div>
 
@@ -213,7 +298,7 @@ include __DIR__ . "/../includes/header-redesign.php";
             'allLabel' => 'Все вебинары',
             'allUrl' => buildSeoUrl('vebinary', ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
             'allActive' => empty($status),
-            'links' => [
+            'links' => array_values(array_filter([
                 [
                     'label' => 'Предстоящие',
                     'url' => buildSeoUrl('vebinary', ['status' => 'upcoming', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
@@ -232,7 +317,7 @@ include __DIR__ . "/../includes/header-redesign.php";
                     'active' => ($status === 'videolecture'),
                     'count' => $counts["autowebinars"]
                 ]
-            ]
+            ], function($l) { return ($l['count'] ?? 0) > 0 || !empty($l['active']); }))
         ];
         include __DIR__ . '/../includes/sidebar-filter.php';
         ?>

@@ -50,23 +50,23 @@ $selectedCategoryData   = null;
 $audienceTypes          = [];
 $selectedTypeData       = null;
 $audienceSpecializations = [];
+$selectedSpecData = null;
 
 if ($selectedCategory) {
     $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory);
     if ($selectedCategoryData) {
-        $audienceTypes = $audienceCatObj->getAudienceTypes($selectedCategoryData['id']);
-    }
-}
-if ($selectedType) {
-    $selectedTypeData = $audienceTypeObj->getBySlug($selectedType);
-    if ($selectedTypeData) {
-        $audienceSpecializations = $audienceTypeObj->getSpecializations($selectedTypeData['id']);
+        // Специализации (предметы) — агрегированные по slug, доступны сразу после выбора аудитории
+        $audienceSpecializations = $audienceCatObj->getSpecializations($selectedCategoryData['id']);
+        // Уровни (типы): если специализация выбрана — только применимые, иначе все
+        if ($selectedSpec) {
+            $audienceTypes = $audienceCatObj->getAudienceTypesWithSpec($selectedCategoryData['id'], $selectedSpec);
+        } else {
+            $audienceTypes = $audienceCatObj->getAudienceTypes($selectedCategoryData['id']);
+        }
     }
 }
 
-// Загружаем специализацию (если выбрана), чтобы подставить её имя в H1/title
-$selectedSpecData = null;
-if (!empty($selectedSpec) && !empty($audienceSpecializations)) {
+if ($selectedSpec && !empty($audienceSpecializations)) {
     foreach ($audienceSpecializations as $as) {
         if (($as['slug'] ?? '') === $selectedSpec) {
             $selectedSpecData = $as;
@@ -74,27 +74,12 @@ if (!empty($selectedSpec) && !empty($audienceSpecializations)) {
         }
     }
 }
+if ($selectedType) {
+    $selectedTypeData = $audienceTypeObj->getBySlug($selectedType);
+}
 
-// Динамические H1/title/description
-$compCategoryLabels = defined('COMPETITION_CATEGORIES') ? COMPETITION_CATEGORIES : [];
-$catalogBase = ($category !== 'all' && isset($compCategoryLabels[$category]))
-    ? $compCategoryLabels[$category]
-    : 'Конкурсы';
-$audiencePhrase = buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData);
 $hasAnyFilter = ($category !== 'all') || !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
-
-$meta = buildCatalogMeta([
-    'base'           => $catalogBase,
-    'audiencePhrase' => $audiencePhrase,
-    'hasFilter'      => $hasAnyFilter,
-    'titleSuffix'    => ' 2025-2026 | ' . SITE_NAME,
-    'descriptionTpl' => '{h1}. Бесплатное участие, официальный диплом за 30 секунд. Дипломы соответствуют ФГОС и принимаются при аттестации.',
-    'h1FallbackPrefix' => 'Конкурсы для педагогов с ',
-    'h1FallbackAccent' => 'дипломом за&nbsp;30&nbsp;секунд',
-]);
-$pageTitle       = $meta['title'];
-$pageDescription = $meta['description'];
-$h1Html          = $meta['h1_html'];
+$audienceSeoPhrase = buildAudienceSeoPhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData);
 
 $competitionObj = new Competition($db);
 $filters = [];
@@ -110,6 +95,102 @@ $allCompetitions   = !empty($filters)
 $totalCompetitions = count($allCompetitions);
 $competitions      = array_slice($allCompetitions, 0, $perPage);
 $hasMore           = $totalCompetitions > $perPage;
+
+// Counts per filter — скрываем пустые пункты + noindex пустых страниц
+$baseCatFilters = [];
+if ($category !== 'all') $baseCatFilters['category'] = $category;
+
+$compCategoryCounts = [];
+foreach (COMPETITION_CATEGORIES as $cat => $label) {
+    $f = [];
+    if ($selectedCategoryData) $f['audience_category'] = $selectedCategoryData['id'];
+    if (!empty($selectedType)) $f['audience_type']     = $selectedType;
+    if (!empty($selectedSpec)) $f['specialization']    = $selectedSpec;
+    $f['category'] = $cat;
+    $compCategoryCounts[$cat] = count($competitionObj->getFilteredCompetitions($f));
+}
+
+$audienceCategoryCounts = [];
+foreach ($audienceCategories as $ac) {
+    $f = $baseCatFilters;
+    $f['audience_category'] = $ac['id'];
+    $audienceCategoryCounts[$ac['slug']] = count($competitionObj->getFilteredCompetitions($f));
+}
+$audienceCategories = array_values(array_filter($audienceCategories, function($ac) use ($audienceCategoryCounts) {
+    return ($audienceCategoryCounts[$ac['slug']] ?? 0) > 0;
+}));
+
+if (!empty($audienceSpecializations) && $selectedCategoryData) {
+    $audienceSpecCounts = [];
+    foreach ($audienceSpecializations as $as) {
+        $f = $baseCatFilters;
+        $f['audience_category'] = $selectedCategoryData['id'];
+        $f['specialization']    = $as['slug'];
+        $audienceSpecCounts[$as['slug']] = count($competitionObj->getFilteredCompetitions($f));
+    }
+    $audienceSpecializations = array_values(array_filter($audienceSpecializations, function($as) use ($audienceSpecCounts) {
+        return ($audienceSpecCounts[$as['slug']] ?? 0) > 0;
+    }));
+}
+
+if (!empty($audienceTypes) && $selectedCategoryData) {
+    $audienceTypeCounts = [];
+    foreach ($audienceTypes as $at) {
+        $f = $baseCatFilters;
+        $f['audience_category'] = $selectedCategoryData['id'];
+        $f['audience_type']     = $at['slug'];
+        if (!empty($selectedSpec)) $f['specialization'] = $selectedSpec;
+        $audienceTypeCounts[$at['slug']] = count($competitionObj->getFilteredCompetitions($f));
+    }
+    $audienceTypes = array_values(array_filter($audienceTypes, function($at) use ($audienceTypeCounts) {
+        return ($audienceTypeCounts[$at['slug']] ?? 0) > 0;
+    }));
+}
+
+if ($totalCompetitions === 0 && (($category !== 'all') || !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData))) {
+    $noindex = true;
+}
+
+// Динамические H1/title/description/тексты
+$h1Subtext = 'Участвуйте, отправляйте работу, получайте официальный диплом для портфолио и аттестации. Дипломы соответствуют ФГОС, выданы зарегистрированным СМИ.';
+$h2Title   = 'Выберите конкурс под свой уровень и предмет';
+$h2Subtext = 'Найдено: <strong>' . (int)$totalCompetitions . '</strong> конкурсов. Все с дипломом победителя или участника.';
+
+if ($hasAnyFilter && $audienceSeoPhrase !== '') {
+    $seo = buildCatalogSeoBlocks([
+        'phrase'         => $audienceSeoPhrase,
+        'count'          => $totalCompetitions,
+        'titleTpl'       => 'Конкурсы {phrase} 2026 года — соответствие ФГОС | ' . SITE_NAME,
+        'descriptionTpl' => 'Всероссийские и международные конкурсы {phrase} для учителей, педагогов и школьников. Официальные дипломы конкурсов {phrase} соответствуют ФГОС и принимаются при аттестации.',
+        'h1Tpl'          => 'Конкурсы {phrase}',
+        'h1SubtextTpl'   => 'Участвуйте, отправляйте работу в конкурсах {phrase}, получайте официальный диплом для портфолио и аттестации. Дипломы соответствуют ФГОС, выданы зарегистрированным СМИ.',
+        'h2Tpl'          => 'Выберите конкурс {phrase} под свой уровень',
+        'h2SubtextTpl'   => 'Найдено: <strong>{count}</strong> конкурсов {phrase}. Все с дипломом победителя или участника.',
+    ]);
+    $pageTitle       = $seo['title'];
+    $pageDescription = $seo['description'];
+    $h1Html          = $seo['h1_html'];
+    $h1Subtext       = $seo['h1_subtext'];
+    $h2Title         = $seo['h2'];
+    $h2Subtext       = $seo['h2_subtext'];
+} else {
+    $compCategoryLabels = defined('COMPETITION_CATEGORIES') ? COMPETITION_CATEGORIES : [];
+    $catalogBase = ($category !== 'all' && isset($compCategoryLabels[$category]))
+        ? $compCategoryLabels[$category]
+        : 'Конкурсы';
+    $meta = buildCatalogMeta([
+        'base'             => $catalogBase,
+        'audiencePhrase'   => buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData),
+        'hasFilter'        => $hasAnyFilter,
+        'titleSuffix'      => ' 2025-2026 | ' . SITE_NAME,
+        'descriptionTpl'   => '{h1}. Бесплатное участие, официальный диплом за 30 секунд. Дипломы соответствуют ФГОС и принимаются при аттестации.',
+        'h1FallbackPrefix' => 'Конкурсы для педагогов с ',
+        'h1FallbackAccent' => 'дипломом за&nbsp;30&nbsp;секунд',
+    ]);
+    $pageTitle       = $meta['title'];
+    $pageDescription = $meta['description'];
+    $h1Html          = $meta['h1_html'];
+}
 
 // Готовим лёгкий массив для клиентского поиска (с предвычисленными url/label)
 $currentContextForJs = getCurrentAudienceContext();
@@ -147,7 +228,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <span class="rd-pill">Принимается при аттестации</span>
       </div>
       <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo $h1Html; ?></h1>
-      <p class="rd-hero-sub reveal">Участвуйте, отправляйте работу, получайте официальный диплом для портфолио и аттестации. Дипломы соответствуют ФГОС, выданы зарегистрированным СМИ.</p>
+      <p class="rd-hero-sub reveal"><?php echo $h1Subtext; ?></p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Диплом сразу после оплаты</div>
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Подходит для аттестации педагога</div>
@@ -215,8 +296,8 @@ include __DIR__ . '/includes/header-redesign.php';
     <div class="rd-section-head reveal">
       <div>
         <div class="rd-eyebrow">Каталог конкурсов</div>
-        <h2 class="rd-section-title">Выберите конкурс под свой уровень и предмет</h2>
-        <p class="rd-section-sub">Найдено: <strong><?php echo $totalCompetitions; ?></strong> конкурсов. Все с дипломом победителя или участника.</p>
+        <h2 class="rd-section-title"><?php echo htmlspecialchars($h2Title, ENT_QUOTES, 'UTF-8'); ?></h2>
+        <p class="rd-section-sub"><?php echo $h2Subtext; ?></p>
       </div>
       <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
@@ -237,6 +318,7 @@ include __DIR__ . '/includes/header-redesign.php';
             </label>
           </div>
           <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
+          <?php if (($compCategoryCounts[$cat] ?? 0) === 0 && $category !== $cat) continue; ?>
           <div class="rd-chip-row<?php echo $category === $cat ? ' active' : ''; ?>">
             <label>
               <a href="<?php echo buildSeoUrl('konkursy', ['category' => $cat, 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></a>
@@ -259,28 +341,28 @@ include __DIR__ . '/includes/header-redesign.php';
         </div>
         <?php endif; ?>
 
-        <!-- Тип аудитории (если выбрана категория) -->
-        <?php if (!empty($audienceTypes)): ?>
-        <h4>Уровень</h4>
+        <!-- Специализация (предмет) — показывается сразу после выбора аудитории -->
+        <?php if (!empty($audienceSpecializations)): ?>
+        <h4>Предмет / специализация</h4>
         <div class="rd-chip-list">
-          <?php foreach ($audienceTypes as $at): ?>
-          <div class="rd-chip-row<?php echo $selectedType === $at['slug'] ? ' active' : ''; ?>">
+          <?php foreach ($audienceSpecializations as $as): ?>
+          <div class="rd-chip-row<?php echo $selectedSpec === $as['slug'] ? ' active' : ''; ?>">
             <label>
-              <a href="<?php echo buildSeoUrl('konkursy', ['category' => $category !== 'all' ? $category : '', 'ac' => $selectedCategory, 'at' => $at['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($at['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+              <a href="<?php echo buildSeoUrl('konkursy', ['category' => $category !== 'all' ? $category : '', 'ac' => $selectedCategory, 'as' => $as['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($as['name'], ENT_QUOTES, 'UTF-8'); ?></a>
             </label>
           </div>
           <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
-        <!-- Специализации -->
-        <?php if (!empty($audienceSpecializations)): ?>
-        <h4>Специализация</h4>
+        <!-- Уровень (тип аудитории) — показывается после выбора специализации или сразу под аудиторией -->
+        <?php if (!empty($audienceTypes)): ?>
+        <h4>Уровень</h4>
         <div class="rd-chip-list">
-          <?php foreach ($audienceSpecializations as $as): ?>
-          <div class="rd-chip-row<?php echo $selectedSpec === $as['slug'] ? ' active' : ''; ?>">
+          <?php foreach ($audienceTypes as $at): ?>
+          <div class="rd-chip-row<?php echo $selectedType === $at['slug'] ? ' active' : ''; ?>">
             <label>
-              <a href="<?php echo buildSeoUrl('konkursy', ['category' => $category !== 'all' ? $category : '', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $as['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($as['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+              <a href="<?php echo buildSeoUrl('konkursy', ['category' => $category !== 'all' ? $category : '', 'ac' => $selectedCategory, 'as' => $selectedSpec, 'at' => $at['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($at['name'], ENT_QUOTES, 'UTF-8'); ?></a>
             </label>
           </div>
           <?php endforeach; ?>

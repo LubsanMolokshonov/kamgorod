@@ -59,6 +59,96 @@ class AudienceCategory {
     }
 
     /**
+     * Получить типы аудитории для категории, у которых есть специализация с указанным slug.
+     * Используется в новой URL-иерархии: после выбора специализации показать только применимые уровни.
+     */
+    public function getAudienceTypesWithSpec($categoryId, $specSlug, $activeOnly = true) {
+        $hasV2 = false;
+        try {
+            $row = $this->db->queryOne("SHOW TABLES LIKE 'audience_type_specializations'");
+            $hasV2 = !empty($row);
+        } catch (Exception $e) {
+            $hasV2 = false;
+        }
+
+        if ($hasV2) {
+            $sql = "SELECT DISTINCT t.*
+                    FROM audience_types t
+                    JOIN audience_type_specializations ats ON t.id = ats.audience_type_id
+                    JOIN audience_specializations s ON ats.specialization_id = s.id
+                    WHERE t.category_id = ? AND s.slug = ?";
+        } else {
+            $sql = "SELECT DISTINCT t.*
+                    FROM audience_types t
+                    JOIN audience_specializations s ON s.audience_type_id = t.id
+                    WHERE t.category_id = ? AND s.slug = ?";
+        }
+        if ($activeOnly) {
+            $sql .= " AND t.is_active = 1 AND s.is_active = 1";
+        }
+        $sql .= " ORDER BY t.display_order ASC, t.name ASC";
+
+        return $this->db->query($sql, [$categoryId, $specSlug]);
+    }
+
+    /**
+     * Получить уникальные специализации (по slug) для категории — агрегация по всем типам.
+     * Используется для URL-структуры ac/as/at, где специализация выбирается до уровня.
+     *
+     * @param int $categoryId
+     * @return array Массив [{id, slug, name, specialization_type, icon}] — id наименьший среди дублей slug
+     */
+    public function getSpecializations($categoryId, $activeOnly = true) {
+        // Проверим наличие junction-таблицы v2
+        $hasV2 = false;
+        try {
+            $row = $this->db->queryOne("SHOW TABLES LIKE 'audience_type_specializations'");
+            $hasV2 = !empty($row);
+        } catch (Exception $e) {
+            $hasV2 = false;
+        }
+
+        $hasSpecType = false;
+        try {
+            $col = $this->db->queryOne("SHOW COLUMNS FROM audience_specializations LIKE 'specialization_type'");
+            $hasSpecType = !empty($col);
+        } catch (Exception $e) {
+            $hasSpecType = false;
+        }
+
+        $specTypeSelect = $hasSpecType ? "MIN(s.specialization_type) as specialization_type," : "";
+        $iconSelect = $hasSpecType ? "MIN(s.icon) as icon," : "";
+        $orderBy = $hasSpecType
+            ? "ORDER BY MIN(s.specialization_type) ASC, MIN(s.display_order) ASC, s.slug ASC"
+            : "ORDER BY MIN(s.display_order) ASC, s.slug ASC";
+
+        if ($hasV2) {
+            $sql = "SELECT MIN(s.id) as id, s.slug, MIN(s.name) as name, MIN(s.seo_phrase) as seo_phrase, {$specTypeSelect} {$iconSelect}
+                           COUNT(DISTINCT t.id) as type_count
+                    FROM audience_specializations s
+                    JOIN audience_type_specializations ats ON s.id = ats.specialization_id
+                    JOIN audience_types t ON ats.audience_type_id = t.id
+                    WHERE t.category_id = ?";
+            if ($activeOnly) {
+                $sql .= " AND s.is_active = 1 AND t.is_active = 1";
+            }
+            $sql .= " GROUP BY s.slug {$orderBy}";
+        } else {
+            $sql = "SELECT MIN(s.id) as id, s.slug, MIN(s.name) as name, MIN(s.seo_phrase) as seo_phrase, {$specTypeSelect} {$iconSelect}
+                           COUNT(DISTINCT t.id) as type_count
+                    FROM audience_specializations s
+                    JOIN audience_types t ON s.audience_type_id = t.id
+                    WHERE t.category_id = ?";
+            if ($activeOnly) {
+                $sql .= " AND s.is_active = 1 AND t.is_active = 1";
+            }
+            $sql .= " GROUP BY s.slug {$orderBy}";
+        }
+
+        return $this->db->query($sql, [$categoryId]);
+    }
+
+    /**
      * Получить категории, у которых есть товары указанного типа
      * @param string $productType — 'olympiad', 'competition', 'webinar', 'publication', 'course'
      */

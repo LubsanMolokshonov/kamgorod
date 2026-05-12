@@ -12,7 +12,7 @@ require_once __DIR__ . '/../classes/User.php';
 
 // Get order number from URL
 if (!isset($_GET['order_number'])) {
-    header('Location: /index.php');
+    header('Location: /');
     exit;
 }
 
@@ -23,7 +23,7 @@ $orderObj = new Order($db);
 $order = $orderObj->getByOrderNumber($orderNumber);
 
 if (!$order) {
-    header('Location: /index.php');
+    header('Location: /');
     exit;
 }
 

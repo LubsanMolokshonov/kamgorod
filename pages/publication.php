@@ -74,7 +74,7 @@ $jsonLd = [
     'publisher' => [
         '@type' => 'Organization',
         'name' => SITE_NAME,
-        'url' => SITE_URL,
+        'url' => SITE_URL . '/',
         'logo' => SITE_URL . '/assets/images/logo.svg'
     ]
 ];
