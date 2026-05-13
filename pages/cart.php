@@ -32,6 +32,30 @@ $campaignRatePercent = 0;
 $campaignExpiresAt = null;
 
 if (isCartEmpty()) {
+    // Smart redirect: если пользователь пришёл по ссылке из устаревшего письма-напоминания
+    // («оплатите диплом»), а заказ уже оплачен, не показываем пустую корзину —
+    // ведём в кабинет. Это снимает жалобы вида «ссылки не работают / просят оплатить
+    // повторно» (см. инциденты май 2026, пользователи 5045/5723).
+    if (!empty($_SESSION['user_id']) && empty($_GET['no_redirect'])) {
+        $uid = (int)$_SESSION['user_id'];
+        $recentPaid = $db->prepare(
+            "SELECT 1 FROM (
+                SELECT created_at FROM registrations
+                 WHERE user_id = ? AND status IN ('paid','diploma_ready')
+                   AND created_at >= NOW() - INTERVAL 30 DAY
+                UNION ALL
+                SELECT created_at FROM olympiad_registrations
+                 WHERE user_id = ? AND status IN ('paid','diploma_ready')
+                   AND created_at >= NOW() - INTERVAL 30 DAY
+             ) p LIMIT 1"
+        );
+        $recentPaid->execute([$uid, $uid]);
+        if ($recentPaid->fetchColumn()) {
+            header('Location: /kabinet/?from=empty_cart_paid');
+            exit;
+        }
+    }
+
     // Show empty cart page
     $isEmpty = true;
     $allItems = [];
@@ -390,9 +414,14 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.disabled = true;
             btn.textContent = 'Обработка...';
 
-            // Добавляем UTM из sessionStorage для атрибуции
+            // Добавляем UTM из sessionStorage; fallback — cookie _fgos_utm_* (90 дней),
+            // которое переживает закрытие браузера/переход из почтового клиента.
+            function getCookieVal(name) {
+                var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+                return m ? decodeURIComponent(m[1]) : '';
+            }
             ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function(key) {
-                var val = sessionStorage.getItem('_fgos_' + key);
+                var val = sessionStorage.getItem('_fgos_' + key) || getCookieVal('_fgos_' + key);
                 if (val) formData.append(key, val);
             });
             var visitId = sessionStorage.getItem('_fgos_visit_id');
@@ -406,6 +435,19 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.redirect_url) {
+                    // Запоминаем заказ для ecommerce-replay: если пользователь не вернётся
+                    // на /pages/payment-success.php (закрыл вкладку Yookassa, оплатил с
+                    // мобильного банка и т.п.), событие purchase будет дослано на любой
+                    // следующей загрузке любой страницы сайта.
+                    if (data.order_number) {
+                        try {
+                            var pending = JSON.parse(localStorage.getItem('pending_ecommerce_orders') || '[]');
+                            if (pending.indexOf(data.order_number) === -1) {
+                                pending.push(data.order_number);
+                                localStorage.setItem('pending_ecommerce_orders', JSON.stringify(pending));
+                            }
+                        } catch(e) {}
+                    }
                     window.location.href = data.redirect_url;
                 } else {
                     alert(data.message || 'Произошла ошибка');

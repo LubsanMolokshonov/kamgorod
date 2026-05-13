@@ -166,9 +166,23 @@ if ($activeTab === 'courses') {
 $noindex = true;
 $useRedesignBody = true;
 
+// Баннер для пользователей, которых редиректнуло из пустой корзины (cart.php)
+// после клика на устаревшую ссылку из письма-напоминания.
+$showPaidNotice = ($_GET['from'] ?? '') === 'empty_cart_paid';
+
 // Include header
 include __DIR__ . '/../includes/header.php';
 ?>
+
+<?php if ($showPaidNotice): ?>
+<div style="max-width:1180px;margin:16px auto 0;padding:0 16px;">
+    <div style="background:#ecfdf5;border:1px solid #10b981;border-radius:10px;padding:14px 18px;color:#065f46;font-size:14px;line-height:1.5;">
+        <strong>Ваши заказы уже оплачены.</strong>
+        Ссылка в письме-напоминании привела вас сюда, потому что оплачивать больше нечего —
+        все ваши дипломы готовы и доступны ниже для скачивания.
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="cab-shell-wrap">
     <div class="cabinet-container cab-shell">
