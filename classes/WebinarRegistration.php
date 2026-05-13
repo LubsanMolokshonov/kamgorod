@@ -66,7 +66,7 @@ class WebinarRegistration {
      */
     public function update($id, $data) {
         $allowedFields = [
-            'full_name', 'email', 'phone', 'organization', 'position', 'city',
+            'user_id', 'full_name', 'email', 'phone', 'organization', 'position', 'city',
             'status', 'certificate_email_sent', 'bitrix24_lead_id', 'unisender_contact_id'
         ];
 
@@ -178,6 +178,29 @@ class WebinarRegistration {
              WHERE wr.user_id = ?
              ORDER BY w.scheduled_at DESC",
             [$userId]
+        );
+    }
+
+    /**
+     * Получить регистрации по user_id ИЛИ email (на случай рассинхрона:
+     * запись могла быть создана со старым user_id, но email совпадает с текущим юзером).
+     *
+     * @param int|null $userId
+     * @param string $email
+     * @return array
+     */
+    public function getByUserOrEmail($userId, $email) {
+        $userId = $userId ? (int)$userId : 0;
+        return $this->db->query(
+            "SELECT wr.*, w.title as webinar_title, w.slug as webinar_slug,
+                    w.scheduled_at, w.status as webinar_status, w.video_url,
+                    w.broadcast_url, w.certificate_price, w.certificate_hours
+             FROM webinar_registrations wr
+             JOIN webinars w ON wr.webinar_id = w.id
+             WHERE wr.user_id = ? OR wr.email = ?
+             GROUP BY wr.id
+             ORDER BY w.scheduled_at DESC",
+            [$userId, $email]
         );
     }
 

@@ -74,9 +74,21 @@ $certObj = new PublicationCertificate($db);
 $userPublications = $publicationObj->getByUser($_SESSION['user_id']);
 $userCertificates = $certObj->getByUser($_SESSION['user_id']);
 
-// Get user's webinar registrations
+// Get user's webinar registrations.
+// Тянем по user_id ИЛИ email — закрывает кейс, когда запись попала в БД с другим user_id
+// (например, юзер регался под одним аккаунтом, потом залогинился под другим с тем же email).
 $webinarRegObj = new WebinarRegistration($db);
-$userWebinars = $webinarRegObj->getByUser($_SESSION['user_id']);
+$userWebinars = $webinarRegObj->getByUserOrEmail($_SESSION['user_id'] ?? 0, $_SESSION['user_email']);
+
+// Самоисцеление: если запись привязана к чужому user_id, но email совпадает —
+// перепривязываем к текущему юзеру, чтобы дальше работало быстрее по user_id.
+foreach ($userWebinars as $w) {
+    if (!empty($_SESSION['user_id'])
+        && (int)$w['user_id'] !== (int)$_SESSION['user_id']
+        && strcasecmp($w['email'] ?? '', $_SESSION['user_email']) === 0) {
+        $webinarRegObj->update($w['id'], ['user_id' => $_SESSION['user_id']]);
+    }
+}
 
 // Get user's webinar certificates indexed by registration_id
 $webCertObj = new WebinarCertificate($db);

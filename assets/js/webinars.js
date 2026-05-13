@@ -253,6 +253,14 @@ function initRegistrationForm() {
                 successHtml += '<div style="margin-top: 16px;">' +
                     '<a href="' + cabinetUrl + '" class="btn btn-outline" style="display: inline-block;">Перейти в личный кабинет</a></div>';
 
+                // Авторедирект в кабинет для новых регистраций — чтобы юзер сразу видел свою карточку
+                // и не путался, открыв кабинет в другой вкладке под старой сессией.
+                if (!data.already_registered) {
+                    setTimeout(function() {
+                        window.location.href = cabinetUrl;
+                    }, 3000);
+                }
+
                 // Show success message
                 formMessage.className = 'form-message success';
                 formMessage.innerHTML = successHtml;
