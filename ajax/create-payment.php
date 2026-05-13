@@ -141,18 +141,20 @@ try {
         }
     }
     if (!empty($alreadyPaid)) {
-        // Чистим корзину от уже оплаченного
+        // Чистим корзину от уже оплаченного через стандартные remove*-функции —
+        // они зеркалят удаление в cart_items (write-through), иначе позиция
+        // вернётся в корзину при следующем logout/login.
         foreach ($alreadyPaid as $paidItem) {
             $type = $paidItem['type'];
-            $id = $paidItem['id'];
-            if ($type === 'registration' && isset($_SESSION['cart'])) {
-                $_SESSION['cart'] = array_values(array_diff($_SESSION['cart'], [$id]));
-            } elseif ($type === 'certificate' && isset($_SESSION['cart_certificates'])) {
-                $_SESSION['cart_certificates'] = array_values(array_diff($_SESSION['cart_certificates'], [$id]));
-            } elseif ($type === 'webinar_certificate' && isset($_SESSION['cart_webinar_certificates'])) {
-                $_SESSION['cart_webinar_certificates'] = array_values(array_diff($_SESSION['cart_webinar_certificates'], [$id]));
-            } elseif ($type === 'olympiad_registration' && isset($_SESSION['cart_olympiad_registrations'])) {
-                $_SESSION['cart_olympiad_registrations'] = array_values(array_diff($_SESSION['cart_olympiad_registrations'], [$id]));
+            $id = (int)$paidItem['id'];
+            if ($type === 'registration') {
+                removeFromCart($id);
+            } elseif ($type === 'certificate') {
+                removeCertificateFromCart($id);
+            } elseif ($type === 'webinar_certificate') {
+                removeWebinarCertificateFromCart($id);
+            } elseif ($type === 'olympiad_registration') {
+                removeOlympiadRegistrationFromCart($id);
             }
         }
         error_log(sprintf(
@@ -412,7 +414,24 @@ try {
             );
         }
 
-        // Clear the cart
+        // Очистка корзины: сначала вычистить cart_items (в local-mode заказа в orders нет,
+        // поэтому используем batch-delete по списку позиций), затем сбросить сессионные массивы.
+        if ($userId) {
+            $cartKeys = [];
+            foreach ($allItems as $it) {
+                $cartType = match ($it['type']) {
+                    'registration'          => 'registration',
+                    'certificate'           => 'publication_cert',
+                    'webinar_certificate'   => 'webinar_cert',
+                    'olympiad_registration' => 'olympiad_reg',
+                    default                 => null,
+                };
+                if ($cartType) {
+                    $cartKeys[] = ['type' => $cartType, 'id' => (int)$it['id']];
+                }
+            }
+            removeCartItemsBatch((int)$userId, $cartKeys);
+        }
         clearCart();
 
         // Пожизненная скидка лояльности: локальный bypass не проходит через
@@ -530,6 +549,30 @@ try {
         throw new Exception('Не удалось создать заказ');
     }
 
+    // Зарезервировать позиции корзины за этим заказом. При cancel/failed-вебхуке
+    // резерв снимется (releaseCartItemsReservation), при succeeded — удалятся
+    // ровно эти строки (removeCartItemsByOrderId). Внутри той же транзакции,
+    // что и createFromCart, чтобы не возникло «полу-зарезервированного» состояния.
+    $cartReservationKeys = [];
+    foreach ($allItems as $it) {
+        $cartType = match ($it['type']) {
+            'registration'          => 'registration',
+            'certificate'           => 'publication_cert',
+            'webinar_certificate'   => 'webinar_cert',
+            'olympiad_registration' => 'olympiad_reg',
+            default                 => null,
+        };
+        if ($cartType) {
+            $cartReservationKeys[] = ['type' => $cartType, 'id' => (int)$it['id']];
+        }
+    }
+    if (!reserveCartItemsForOrder((int)$userId, $cartReservationKeys, (int)$orderId)) {
+        // Коллизия: одна из позиций уже зарезервирована за другим заказом
+        // (юзер открыл два окна, нажал «Оплатить» дважды). Откатываемся, чтобы
+        // не создать дубль-заказ, который никогда не очистит cart_items.
+        throw new Exception('Позиция уже находится в другом неоплаченном заказе. Дождитесь окончания первой оплаты или отмените её.');
+    }
+
     // Сохраняем UTM-атрибуцию на заказе (first-click attribution)
     $utmSource = mb_substr(trim($_POST['utm_source'] ?? ''), 0, 255) ?: null;
     $utmMedium = mb_substr(trim($_POST['utm_medium'] ?? ''), 0, 255) ?: null;
@@ -582,12 +625,35 @@ try {
             );
         }
 
+        // 5. Cookie _fgos_utm_* (90 дней) — первый клик переживает закрытие браузера
+        // и переход из почтового клиента. Заполняется visit-tracker.js и magic-auth.php.
+        if (!$fallbackUtm && !empty($_COOKIE['_fgos_utm_source'])) {
+            $fallbackUtm = [
+                'utm_source'   => mb_substr(trim((string)$_COOKIE['_fgos_utm_source']), 0, 255),
+                'utm_medium'   => mb_substr(trim((string)($_COOKIE['_fgos_utm_medium'] ?? '')), 0, 255) ?: null,
+                'utm_campaign' => mb_substr(trim((string)($_COOKIE['_fgos_utm_campaign'] ?? '')), 0, 255) ?: null,
+                'utm_content'  => mb_substr(trim((string)($_COOKIE['_fgos_utm_content'] ?? '')), 0, 255) ?: null,
+                'utm_term'     => mb_substr(trim((string)($_COOKIE['_fgos_utm_term'] ?? '')), 0, 255) ?: null,
+            ];
+        }
+
         if ($fallbackUtm && !empty($fallbackUtm['utm_source'])) {
             $utmSource   = $fallbackUtm['utm_source'];
             $utmMedium   = $fallbackUtm['utm_medium'] ?? null;
             $utmCampaign = $fallbackUtm['utm_campaign'] ?? null;
             $utmContent  = $fallbackUtm['utm_content'] ?? null;
             $utmTerm     = $fallbackUtm['utm_term'] ?? null;
+        }
+
+        // 6. Last resort: пользователь пришёл по триггерному письму (есть email_mid),
+        // но UTM так и не нашлись ни в одной таблице. Помечаем синтетически как email/trigger,
+        // чтобы заказ не попал в «без UTM».
+        if (!$utmSource) {
+            $emailMidForAttr = $_SESSION['email_mid'] ?? ($_COOKIE['email_mid'] ?? null);
+            if ($emailMidForAttr) {
+                $utmSource = 'email';
+                $utmMedium = 'trigger';
+            }
         }
     }
 

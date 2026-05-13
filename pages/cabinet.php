@@ -116,6 +116,10 @@ foreach ($userOlympiadRegs as $reg) {
     }
 }
 
+// Незавершённые покупки (pending-записи, которые юзер клал в корзину, но не оплатил)
+$userObjForCabinet = new User($db);
+$unfinishedPurchases = $userObjForCabinet->getUnfinishedPurchases($_SESSION['user_id']);
+
 // Сохранить discount_token из email-цепочки курсов в сессию
 if (!empty($_GET['discount_token'])) {
     $_SESSION['email_discount_token'] = $_GET['discount_token'];
@@ -521,6 +525,68 @@ include __DIR__ . '/../includes/header.php';
                         .pending-olymp-banner { flex-direction: column; align-items: flex-start; text-align: left; }
                         .pending-olymp-banner .btn { width: 100%; text-align: center; }
                     }
+                </style>
+            <?php endif; ?>
+
+            <?php if (!empty($unfinishedPurchases)):
+                $typeBadges = [
+                    'webinar'     => ['label' => 'Вебинар',    'class' => 'badge-webinar',    'icon' => '🎥'],
+                    'publication' => ['label' => 'Публикация', 'class' => 'badge-publication','icon' => '📝'],
+                    'olympiad'    => ['label' => 'Олимпиада',  'class' => 'badge-olympiad',   'icon' => '🏆'],
+                ];
+            ?>
+                <section class="unfinished-purchases">
+                    <div class="unfinished-header">
+                        <h2>Незавершённые покупки (<?php echo count($unfinishedPurchases); ?>)</h2>
+                        <p class="unfinished-hint">Вы начали оформление, но не оплатили. Данные сохранены — вернитесь к покупке.</p>
+                    </div>
+
+                    <div class="registrations-grid">
+                        <?php foreach ($unfinishedPurchases as $up):
+                            $tb = $typeBadges[$up['type']] ?? ['label' => '', 'class' => '', 'icon' => ''];
+                        ?>
+                            <div class="registration-card unfinished-card" data-type="<?php echo htmlspecialchars($up['type']); ?>" data-id="<?php echo (int)$up['item_id']; ?>">
+                                <div class="card-header">
+                                    <h3><?php echo $tb['icon']; ?> <?php echo htmlspecialchars($up['title']); ?></h3>
+                                    <div class="card-badges">
+                                        <span class="event-type-badge <?php echo $tb['class']; ?>"><?php echo $tb['label']; ?></span>
+                                        <span class="status-badge" style="background-color:#fbbf24;">Ожидает оплаты</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="info-row">
+                                        <span class="label">Стоимость:</span>
+                                        <span class="value"><strong><?php echo number_format($up['price'], 0, ',', ' '); ?> ₽</strong></span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="label">Добавлено:</span>
+                                        <span class="value"><?php echo date('d.m.Y', strtotime($up['created_at'])); ?></span>
+                                    </div>
+                                </div>
+                                <div class="card-actions">
+                                    <button type="button" class="btn btn-primary js-add-pending">В корзину</button>
+                                    <button type="button" class="btn btn-link js-dismiss-pending">Удалить</button>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <?php if (count($unfinishedPurchases) >= 2): ?>
+                        <div class="unfinished-bulk">
+                            <button type="button" class="btn btn-success js-add-all-pending">
+                                Добавить всё (<?php echo count($unfinishedPurchases); ?>) и перейти к оплате
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                </section>
+                <style>
+                    .unfinished-purchases { margin-bottom: 32px; padding: 20px; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fde68a; border-radius: 12px; }
+                    .unfinished-header { margin-bottom: 16px; }
+                    .unfinished-header h2 { margin: 0 0 4px; color: #92400e; font-size: 20px; }
+                    .unfinished-hint { margin: 0; color: #78350f; font-size: 14px; }
+                    .unfinished-card { border: 1px solid #fbbf24 !important; background: #fff; }
+                    .unfinished-bulk { margin-top: 16px; text-align: center; }
+                    .unfinished-bulk .btn { padding: 12px 28px; font-size: 16px; }
                 </style>
             <?php endif; ?>
 
@@ -988,6 +1054,102 @@ function appealPublication(publicationId) {
     })
     .catch(function() { alert('Ошибка при подаче апелляции'); });
 }
+
+// Незавершённые покупки: добавить в корзину / удалить из блока / добавить всё
+(function() {
+    var csrf = '<?php echo generateCSRFToken(); ?>';
+
+    function postForm(url, params) {
+        var body = Object.keys(params).map(function(k) {
+            return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+        }).join('&');
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body
+        }).then(function(r) { return r.json(); });
+    }
+
+    function findCard(btn) {
+        var el = btn;
+        while (el && !(el.classList && el.classList.contains('unfinished-card'))) {
+            el = el.parentElement;
+        }
+        return el;
+    }
+
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.js-add-pending');
+        if (btn) {
+            var card = findCard(btn);
+            if (!card) return;
+            btn.disabled = true;
+            postForm('/ajax/cart-add-pending.php', {
+                csrf_token: csrf,
+                type: card.dataset.type,
+                id: card.dataset.id
+            }).then(function(data) {
+                if (data.success) {
+                    window.location.href = '/korzina/';
+                } else {
+                    btn.disabled = false;
+                    alert(data.message || 'Ошибка');
+                }
+            }).catch(function() {
+                btn.disabled = false;
+                alert('Ошибка сети');
+            });
+            return;
+        }
+
+        btn = e.target.closest('.js-dismiss-pending');
+        if (btn) {
+            var card = findCard(btn);
+            if (!card) return;
+            if (!confirm('Убрать эту позицию из «Незавершённых покупок»?')) return;
+            btn.disabled = true;
+            postForm('/ajax/dismiss-pending.php', {
+                csrf_token: csrf,
+                type: card.dataset.type,
+                id: card.dataset.id
+            }).then(function(data) {
+                if (data.success) {
+                    card.remove();
+                    var section = document.querySelector('.unfinished-purchases');
+                    if (section && !section.querySelector('.unfinished-card')) {
+                        section.remove();
+                    }
+                } else {
+                    btn.disabled = false;
+                    alert(data.message || 'Ошибка');
+                }
+            }).catch(function() {
+                btn.disabled = false;
+                alert('Ошибка сети');
+            });
+            return;
+        }
+
+        btn = e.target.closest('.js-add-all-pending');
+        if (btn) {
+            btn.disabled = true;
+            postForm('/ajax/cart-add-pending.php', {
+                csrf_token: csrf,
+                add_all: 1
+            }).then(function(data) {
+                if (data.success && data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    btn.disabled = false;
+                    alert(data.message || 'Ошибка');
+                }
+            }).catch(function() {
+                btn.disabled = false;
+                alert('Ошибка сети');
+            });
+        }
+    });
+})();
 </script>
 
 <?php if ($activeTab === 'courses'): ?>

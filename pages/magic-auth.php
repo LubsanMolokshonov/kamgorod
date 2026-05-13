@@ -19,6 +19,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../includes/magic-link-helper.php';
+require_once __DIR__ . '/../includes/session.php';
 
 $token = $_GET['token'] ?? '';
 
@@ -38,11 +39,23 @@ if (!$redirect || $redirect[0] !== '/' || strpos($redirect, '//') === 0) {
     $redirect = '/kabinet/';
 }
 
-// Пробрасываем UTM-параметры в redirect URL
+// Пробрасываем UTM-параметры в redirect URL и сохраняем в cookie на 90 дней.
+// Cookie переживает закрытие браузера и переход из почтового клиента — это то,
+// что страхует атрибуцию для холодных пользователей, которые попали в email-каплю
+// прямо после первого визита и кликают magic-link через сутки в новой сессии.
 $utmParams = [];
-foreach ($_GET as $key => $value) {
-    if (strpos($key, 'utm_') === 0 && $value !== '') {
+$allowedUtm = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+foreach ($allowedUtm as $key) {
+    $value = isset($_GET[$key]) ? mb_substr(trim((string)$_GET[$key]), 0, 255) : '';
+    if ($value !== '') {
         $utmParams[$key] = $value;
+        setcookie('_fgos_' . $key, $value, [
+            'expires'  => time() + 90 * 24 * 3600,
+            'path'     => '/',
+            'secure'   => !empty($_SERVER['HTTPS']),
+            'httponly' => false,  // visit-tracker.js должен иметь доступ для синхронизации с sessionStorage
+            'samesite' => 'Lax',
+        ]);
     }
 }
 if (!empty($utmParams)) {
@@ -114,13 +127,9 @@ setcookie(
     true
 );
 
-// Восстановить корзину из pending-регистраций
-$stmt = $db->prepare("SELECT id FROM registrations WHERE user_id = ? AND status = 'pending'");
-$stmt->execute([$user['id']]);
-$pendingRegs = $stmt->fetchAll(PDO::FETCH_COLUMN);
-if (!empty($pendingRegs)) {
-    $_SESSION['cart'] = $pendingRegs;
-}
+// Server-side cart: смержить гостевую сессионную корзину в cart_items и подтянуть
+// записи с других устройств. Источник истины для залогиненных — таблица cart_items.
+mergeSessionCartToDb((int)$user['id']);
 
 // Редирект на целевую страницу
 header('Location: ' . $redirect);

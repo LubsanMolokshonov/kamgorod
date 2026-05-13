@@ -9,6 +9,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/User.php';
+require_once __DIR__ . '/../includes/session.php';
 
 // Get order number from URL
 if (!isset($_GET['order_number'])) {
@@ -52,8 +53,13 @@ if ($paymentStatus === 'succeeded') {
     $_SESSION['user_id'] = $userId;
     $_SESSION['user_email'] = $order['email'];
 
-    // Clear cart
-    $_SESSION['cart'] = [];
+    // Чистим оплаченные позиции в cart_items (yookassa-webhook делает то же —
+    // но webhook может прийти позже, а юзер уже на success-странице).
+    // Остальные позиции (без резерва за этим заказом) — оставляем: пользователь
+    // мог в другом окне накидать что-то ещё.
+    removeCartItemsByOrderId((int)$order['id']);
+    // Сессионные массивы (все 4) — старая логика чистила только cart, теперь все.
+    clearCart();
 }
 
 // Определяем вкладку ЛК по типу товаров в заказе
@@ -489,35 +495,61 @@ include __DIR__ . '/../includes/header.php';
                 }
             });
 
-            // Яндекс Метрика: цель «Оплата курса» с ценностью
-            <?php if (!empty($hasCourseItems)):
-                // Посчитать сумму только курсов
+            // Универсальная цель «Оплата» — отправляется для ЛЮБОГО успешного заказа
+            // (раньше cabinet-цель была только для курсов, из-за этого Метрика
+            // недосчитывала ~половину платежей: олимпиады/вебинары/публикации).
+            // oplatakursa оставлен параллельно — на нём настроены цели в Я.Директе.
+            <?php
                 $courseTotalAmount = 0;
                 foreach ($order['items'] as $item) {
                     if (!empty($item['course_enrollment_id'])) {
                         $courseTotalAmount += (float)$item['price'];
                     }
                 }
+                $orderNumberJs = htmlspecialchars($order['order_number'], ENT_QUOTES);
+                $orderTotalJs = (float)$order['final_amount'];
             ?>
             if (typeof ym === 'function') {
+                ym(106465857, 'reachGoal', 'payment_success', {
+                    order_price: <?= $orderTotalJs ?>,
+                    order_id: '<?= $orderNumberJs ?>'
+                });
+                <?php if (!empty($hasCourseItems)): ?>
                 ym(106465857, 'reachGoal', 'oplatakursa', {order_price: <?= $courseTotalAmount ?>});
+                <?php endif; ?>
             }
-            <?php endif; ?>
 
-            // Очистить заказ из pending e-commerce трекинга (событие отправлено)
-            try {
-                var pendingOrders = JSON.parse(localStorage.getItem('pending_ecommerce_orders') || '[]');
-                var orderNum = '<?php echo htmlspecialchars($order['order_number'], ENT_QUOTES); ?>';
-                var idx = pendingOrders.indexOf(orderNum);
-                if (idx !== -1) {
-                    pendingOrders.splice(idx, 1);
-                    if (pendingOrders.length) {
-                        localStorage.setItem('pending_ecommerce_orders', JSON.stringify(pendingOrders));
-                    } else {
-                        localStorage.removeItem('pending_ecommerce_orders');
+            // Очистить заказ из pending e-commerce трекинга и зафиксировать на сервере,
+            // что событие доставлено в Метрику — иначе ecommerce-replay.js на следующем
+            // визите попытается отправить дубль.
+            (function() {
+                var orderNum = '<?= $orderNumberJs ?>';
+                try {
+                    var pendingOrders = JSON.parse(localStorage.getItem('pending_ecommerce_orders') || '[]');
+                    var idx = pendingOrders.indexOf(orderNum);
+                    if (idx !== -1) {
+                        pendingOrders.splice(idx, 1);
+                        if (pendingOrders.length) {
+                            localStorage.setItem('pending_ecommerce_orders', JSON.stringify(pendingOrders));
+                        } else {
+                            localStorage.removeItem('pending_ecommerce_orders');
+                        }
                     }
-                }
-            } catch(e) {}
+                } catch(e) {}
+
+                // dataLayer.push выполняется sync, но Метрика обрабатывает асинхронно —
+                // даём 1500ms на отправку, потом помечаем заказ как доставленный.
+                setTimeout(function() {
+                    var fd = new FormData();
+                    fd.append('order_number', orderNum);
+                    fetch('/ajax/mark-metrika-sent.php', {
+                        method: 'POST',
+                        body: fd,
+                        credentials: 'same-origin',
+                        keepalive: true
+                    }).catch(function(){});
+                }, 1500);
+            })();
             </script>
 
         <?php endif; ?>

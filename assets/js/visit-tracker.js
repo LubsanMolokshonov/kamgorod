@@ -8,7 +8,39 @@
     // Не трекаем админку
     if (window.location.pathname.indexOf('/admin/') === 0) return;
 
-    // Простая проверка на бота
+    var utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+
+    function setCookie(name, value, days) {
+        var expires = new Date(Date.now() + days * 86400000).toUTCString();
+        document.cookie = name + '=' + encodeURIComponent(value) +
+            '; expires=' + expires + '; path=/; SameSite=Lax' +
+            (location.protocol === 'https:' ? '; Secure' : '');
+    }
+
+    function getCookie(name) {
+        var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+        return m ? decodeURIComponent(m[1]) : '';
+    }
+
+    // UTM-захват из URL → sessionStorage + cookie 90д. Делаем РАНО, до bot-фильтра:
+    // запись на стороне браузера ничего не стоит, а у части реальных пользователей
+    // UA подменяется на «бот-подобный» (headless-обёртки, антидетект-расширения).
+    var urlParams = new URLSearchParams(window.location.search);
+    utmKeys.forEach(function(key) {
+        var val = urlParams.get(key);
+        if (val) {
+            sessionStorage.setItem('_fgos_' + key, val);
+            setCookie('_fgos_' + key, val, 90);
+        } else {
+            // Если UTM нет в URL, но есть в cookie (вернулся через сутки) — синхронизируем sessionStorage
+            var cookieVal = getCookie('_fgos_' + key);
+            if (cookieVal && !sessionStorage.getItem('_fgos_' + key)) {
+                sessionStorage.setItem('_fgos_' + key, cookieVal);
+            }
+        }
+    });
+
+    // Простая проверка на бота — для серверной записи визита
     var ua = navigator.userAgent.toLowerCase();
     var botPatterns = ['googlebot', 'yandexbot', 'bingbot', 'slurp', 'duckduckbot',
         'baiduspider', 'sogou', 'facebookexternalhit', 'twitterbot', 'linkedinbot',
@@ -17,17 +49,6 @@
     for (var i = 0; i < botPatterns.length; i++) {
         if (ua.indexOf(botPatterns[i]) !== -1) return;
     }
-
-    // Читаем UTM из URL и сохраняем в sessionStorage
-    var urlParams = new URLSearchParams(window.location.search);
-    var utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
-
-    utmKeys.forEach(function(key) {
-        var val = urlParams.get(key);
-        if (val) {
-            sessionStorage.setItem('_fgos_' + key, val);
-        }
-    });
 
     // Собираем UTM из sessionStorage
     function getStoredUtm() {

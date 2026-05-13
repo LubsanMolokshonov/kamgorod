@@ -185,7 +185,12 @@ class EmailJourney {
                 'competition_price' => $emailData['competition_price'],
                 'nomination' => $emailData['nomination'],
                 'work_title' => $emailData['work_title'],
-                'payment_url' => generateMagicUrl($emailData['user_id'], '/pages/cart.php'),
+                'payment_url' => generateMagicUrl($emailData['user_id'], '/pages/cart.php', 7, [
+                    'utm_source'   => 'email',
+                    'utm_medium'   => 'trigger',
+                    'utm_campaign' => 'registration_journey',
+                    'utm_content'  => $emailData['email_template'] ?? '',
+                ]),
                 'competition_url' => SITE_URL . '/konkursy/' . $emailData['competition_slug'],
                 'unsubscribe_url' => $unsubscribeUrl,
                 'site_url' => SITE_URL,

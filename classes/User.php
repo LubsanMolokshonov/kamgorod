@@ -70,6 +70,144 @@ class User {
     }
 
     /**
+     * Получить «незавершённые покупки» пользователя — pending-записи
+     * (webinar_certificates / publication_certificates / olympiad_registrations),
+     * которые он клал в корзину (есть строка в order_items), но так и не оплатил.
+     *
+     * Цена берётся из родительского товара (webinars.certificate_price /
+     * publications.price / olympiads.diploma_price), а не из pending-записи,
+     * чтобы при изменении цены пользователь увидел актуальную.
+     */
+    public function getUnfinishedPurchases($userId) {
+        $userId = (int)$userId;
+        if ($userId <= 0) return [];
+
+        $items = [];
+
+        // Вебинары
+        $webinars = $this->db->query(
+            "SELECT wc.id AS item_id,
+                    w.title,
+                    w.slug,
+                    COALESCE(w.certificate_price, wc.price) AS price,
+                    wc.created_at
+             FROM webinar_certificates wc
+             JOIN webinars w ON w.id = wc.webinar_id
+             JOIN order_items oi ON oi.webinar_certificate_id = wc.id
+             WHERE wc.user_id = ?
+               AND wc.status = 'pending'
+               AND NOT EXISTS (
+                   SELECT 1 FROM orders o2
+                   JOIN order_items oi2 ON oi2.order_id = o2.id
+                   WHERE oi2.webinar_certificate_id = wc.id
+                     AND o2.payment_status = 'succeeded'
+               )
+               AND NOT EXISTS (
+                   SELECT 1 FROM dismissed_pending_items d
+                   WHERE d.user_id = wc.user_id
+                     AND d.item_type = 'webinar_certificate'
+                     AND d.item_id = wc.id
+               )
+             GROUP BY wc.id
+             ORDER BY wc.created_at DESC",
+            [$userId]
+        );
+        foreach ($webinars as $row) {
+            $items[] = [
+                'type' => 'webinar',
+                'item_id' => (int)$row['item_id'],
+                'title' => $row['title'],
+                'price' => (float)$row['price'],
+                'url' => '/vebinary/' . $row['slug'] . '/',
+                'created_at' => $row['created_at'],
+            ];
+        }
+
+        // Публикации
+        $publications = $this->db->query(
+            "SELECT pc.id AS item_id,
+                    p.title,
+                    p.slug,
+                    COALESCE(pc.price, 149.00) AS price,
+                    pc.created_at
+             FROM publication_certificates pc
+             JOIN publications p ON p.id = pc.publication_id
+             JOIN order_items oi ON oi.certificate_id = pc.id
+             WHERE pc.user_id = ?
+               AND pc.status = 'pending'
+               AND NOT EXISTS (
+                   SELECT 1 FROM orders o2
+                   JOIN order_items oi2 ON oi2.order_id = o2.id
+                   WHERE oi2.certificate_id = pc.id
+                     AND o2.payment_status = 'succeeded'
+               )
+               AND NOT EXISTS (
+                   SELECT 1 FROM dismissed_pending_items d
+                   WHERE d.user_id = pc.user_id
+                     AND d.item_type = 'publication_certificate'
+                     AND d.item_id = pc.id
+               )
+             GROUP BY pc.id
+             ORDER BY pc.created_at DESC",
+            [$userId]
+        );
+        foreach ($publications as $row) {
+            $items[] = [
+                'type' => 'publication',
+                'item_id' => (int)$row['item_id'],
+                'title' => $row['title'],
+                'price' => (float)$row['price'],
+                'url' => '/zhurnal/' . $row['slug'] . '/',
+                'created_at' => $row['created_at'],
+            ];
+        }
+
+        // Олимпиады
+        $olympiads = $this->db->query(
+            "SELECT oreg.id AS item_id,
+                    ol.title,
+                    ol.slug,
+                    ol.diploma_price AS price,
+                    oreg.created_at
+             FROM olympiad_registrations oreg
+             JOIN olympiads ol ON ol.id = oreg.olympiad_id
+             JOIN order_items oi ON oi.olympiad_registration_id = oreg.id
+             WHERE oreg.user_id = ?
+               AND oreg.status = 'pending'
+               AND NOT EXISTS (
+                   SELECT 1 FROM orders o2
+                   JOIN order_items oi2 ON oi2.order_id = o2.id
+                   WHERE oi2.olympiad_registration_id = oreg.id
+                     AND o2.payment_status = 'succeeded'
+               )
+               AND NOT EXISTS (
+                   SELECT 1 FROM dismissed_pending_items d
+                   WHERE d.user_id = oreg.user_id
+                     AND d.item_type = 'olympiad_registration'
+                     AND d.item_id = oreg.id
+               )
+             GROUP BY oreg.id
+             ORDER BY oreg.created_at DESC",
+            [$userId]
+        );
+        foreach ($olympiads as $row) {
+            $items[] = [
+                'type' => 'olympiad',
+                'item_id' => (int)$row['item_id'],
+                'title' => $row['title'],
+                'price' => (float)$row['price'],
+                'url' => '/olimpiady/' . $row['slug'] . '/',
+                'created_at' => $row['created_at'],
+            ];
+        }
+
+        // Сортировка по дате (свежие сверху)
+        usort($items, fn($a, $b) => strtotime($b['created_at']) - strtotime($a['created_at']));
+
+        return $items;
+    }
+
+    /**
      * Find user by session token
      */
     public function findBySessionToken($token) {

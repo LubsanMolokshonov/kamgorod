@@ -126,6 +126,8 @@ foreach ($allJsonLd as $ld):
 
     <!-- Visit Tracker -->
     <script src="/assets/js/visit-tracker.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/visit-tracker.js'); ?>" defer></script>
+    <!-- E-commerce Replay: догоняющая отправка purchase в Метрику для оплат, где пользователь не дошёл до success-страницы -->
+    <script src="/assets/js/ecommerce-replay.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/ecommerce-replay.js'); ?>" defer></script>
     <!-- Redesign JS (хедер: мобильное меню + поиск) -->
     <script src="/assets/js/redesign.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/redesign.js'); ?>" defer></script>
 </head>

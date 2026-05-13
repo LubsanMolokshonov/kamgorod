@@ -214,8 +214,17 @@ class CourseEmailChain {
                 $abPrice = $basePrice;
             }
 
+            // UTM для атрибуции переходов из писем (см. magic-auth.php → cookie 90д
+            // и create-payment.php fallback). utm_content = индекс письма в цепочке.
+            $journeyUtm = [
+                'utm_source'   => 'email',
+                'utm_medium'   => 'trigger',
+                'utm_campaign' => 'course_chain',
+                'utm_content'  => 'delay_' . (int)($emailData['delay_minutes'] ?? 0),
+            ];
+
             // Magic-ссылка на кабинет с оплатой
-            $paymentUrl = generateMagicUrl($emailData['user_id'], '/kabinet/?tab=courses');
+            $paymentUrl = generateMagicUrl($emailData['user_id'], '/kabinet/?tab=courses', 7, $journeyUtm);
 
             // Ссылка со скидкой (для писем 24ч, 2д, 3д)
             $discountUrl = null;
@@ -224,7 +233,9 @@ class CourseEmailChain {
                 $discountToken = self::generateDiscountToken($emailData['enrollment_id'], 48);
                 $discountUrl = generateMagicUrl(
                     $emailData['user_id'],
-                    '/kabinet/?tab=courses&discount_token=' . urlencode($discountToken)
+                    '/kabinet/?tab=courses&discount_token=' . urlencode($discountToken),
+                    7,
+                    array_merge($journeyUtm, ['utm_content' => 'discount_' . (int)($emailData['delay_minutes'] ?? 0)])
                 );
                 $discountPrice = round($abPrice * 0.9);
             }

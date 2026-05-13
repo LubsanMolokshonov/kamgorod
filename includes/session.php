@@ -2,7 +2,19 @@
 /**
  * Session Management Helper Functions
  * Cart and session utilities
+ *
+ * Корзина для гостей живёт только в $_SESSION.
+ * Для залогиненных юзеров $_SESSION — read-кэш, источник истины — таблица cart_items.
+ * Write-through: каждая мутация сессионной корзины зеркалируется в БД (если есть user_id).
  */
+
+// item_type → ключ в $_SESSION
+const CART_TYPES = [
+    'registration'     => 'cart',
+    'publication_cert' => 'cart_certificates',
+    'webinar_cert'     => 'cart_webinar_certificates',
+    'olympiad_reg'     => 'cart_olympiad_registrations',
+];
 
 /**
  * Initialize session if not started
@@ -10,6 +22,238 @@
 function initSession() {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
+    }
+    cartEnsureLoadedFromDb();
+}
+
+/**
+ * Двунаправленная синхронизация корзины с БД при первом обращении в рамках сессии.
+ * Срабатывает один раз — ставит флаг $_SESSION['cart_db_loaded'].
+ * Покрывает любой путь логина (magic-auth, форма, AJAX, auto-login по cookie):
+ * как только в сессии появляется user_id, первый initSession() автомержит.
+ */
+function cartEnsureLoadedFromDb() {
+    if (!empty($_SESSION['cart_db_loaded'])) {
+        return;
+    }
+    $userId = $_SESSION['user_id'] ?? null;
+    if (!$userId) {
+        return;
+    }
+    syncSessionCartWithDb((int)$userId);
+    $_SESSION['cart_db_loaded'] = 1;
+}
+
+/**
+ * 1) Поднять текущие сессионные позиции в cart_items (INSERT IGNORE — не трогает
+ *    зарезервированные строки и не плодит дубли).
+ * 2) Подтянуть в сессию незарезервированные позиции из cart_items (с других устройств).
+ */
+function syncSessionCartWithDb(int $userId): void {
+    global $db;
+    if (!isset($db) || !$userId) {
+        return;
+    }
+    try {
+        // Шаг 1: push session → DB
+        $insertStmt = $db->prepare(
+            "INSERT IGNORE INTO cart_items (user_id, item_type, item_id) VALUES (?, ?, ?)"
+        );
+        foreach (CART_TYPES as $type => $sessKey) {
+            $items = $_SESSION[$sessKey] ?? [];
+            if (!is_array($items)) continue;
+            foreach ($items as $itemId) {
+                $id = (int)$itemId;
+                if ($id > 0) {
+                    $insertStmt->execute([$userId, $type, $id]);
+                }
+            }
+        }
+
+        // Шаг 2: pull DB → session
+        $selectStmt = $db->prepare(
+            "SELECT item_type, item_id FROM cart_items
+             WHERE user_id = ? AND reserved_in_order_id IS NULL"
+        );
+        $selectStmt->execute([$userId]);
+        $rows = $selectStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach (CART_TYPES as $type => $sessKey) {
+            if (!isset($_SESSION[$sessKey]) || !is_array($_SESSION[$sessKey])) {
+                $_SESSION[$sessKey] = [];
+            }
+        }
+        foreach ($rows as $r) {
+            $sessKey = CART_TYPES[$r['item_type']] ?? null;
+            if (!$sessKey) continue;
+            $itemId = (int)$r['item_id'];
+            if (!in_array($itemId, $_SESSION[$sessKey], true)) {
+                $_SESSION[$sessKey][] = $itemId;
+            }
+        }
+    } catch (Exception $e) {
+        error_log('syncSessionCartWithDb error: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Write-through: добавить/удалить item в cart_items, если пользователь залогинен.
+ * $action: 'add' | 'remove'
+ */
+function cartDbSync(string $itemType, int $itemId, string $action): void {
+    global $db;
+    if (!isset($db)) return;
+    if (!isset(CART_TYPES[$itemType])) return;
+    $userId = $_SESSION['user_id'] ?? null;
+    if (!$userId) return;
+
+    try {
+        if ($action === 'add') {
+            // INSERT IGNORE по UNIQUE(user_id, item_type, item_id).
+            // Если строка существует (в том числе зарезервированная за заказом) — не трогаем.
+            $stmt = $db->prepare(
+                "INSERT IGNORE INTO cart_items (user_id, item_type, item_id) VALUES (?, ?, ?)"
+            );
+            $stmt->execute([$userId, $itemType, $itemId]);
+        } elseif ($action === 'remove') {
+            $stmt = $db->prepare(
+                "DELETE FROM cart_items
+                 WHERE user_id = ? AND item_type = ? AND item_id = ?
+                   AND reserved_in_order_id IS NULL"
+            );
+            $stmt->execute([$userId, $itemType, $itemId]);
+        }
+    } catch (Exception $e) {
+        // Сбой БД не должен ломать корзинный flow — fallback на сессию.
+        error_log("cartDbSync({$itemType}, {$itemId}, {$action}) error: " . $e->getMessage());
+    }
+}
+
+/**
+ * При логине (явный вызов из magic-auth — для immediate-merge в рамках текущего запроса).
+ * Для остальных login-точек не обязателен: cartEnsureLoadedFromDb() в следующем
+ * initSession() автомержит.
+ */
+function mergeSessionCartToDb(int $userId): void {
+    syncSessionCartWithDb($userId);
+    $_SESSION['cart_db_loaded'] = 1;
+}
+
+/**
+ * Зарезервировать позиции корзины за заказом.
+ * $items: [['type' => 'registration', 'id' => 42], ...]
+ * Вызывать внутри той же транзакции, где создаётся заказ.
+ *
+ * Возвращает true, если зарезервированы ВСЕ позиции (или их не оказалось в cart_items —
+ * редко, но допустимо, если пользователь начал оплату до того как успел отработать
+ * write-through). Возвращает false, если хотя бы одна позиция уже зарезервирована
+ * за другим заказом (например, юзер открыл два окна и пытается оплатить дважды).
+ * Caller должен бросить исключение/откатить транзакцию.
+ */
+function reserveCartItemsForOrder(int $userId, array $items, int $orderId): bool {
+    global $db;
+    if (!isset($db) || !$userId || empty($items)) return true;
+
+    try {
+        // Сначала пробуем зарезервировать только незарезервированные строки.
+        $reserveStmt = $db->prepare(
+            "UPDATE cart_items SET reserved_in_order_id = ?
+             WHERE user_id = ? AND item_type = ? AND item_id = ?
+               AND reserved_in_order_id IS NULL"
+        );
+        // Отдельный SELECT проверяет, не зарезервирована ли позиция за ДРУГИМ заказом.
+        $checkStmt = $db->prepare(
+            "SELECT reserved_in_order_id FROM cart_items
+             WHERE user_id = ? AND item_type = ? AND item_id = ?"
+        );
+
+        foreach ($items as $it) {
+            $type = $it['type'] ?? null;
+            $id = isset($it['id']) ? (int)$it['id'] : 0;
+            if (!$type || $id <= 0 || !isset(CART_TYPES[$type])) continue;
+
+            $reserveStmt->execute([$orderId, $userId, $type, $id]);
+            if ($reserveStmt->rowCount() > 0) continue;
+
+            // Не обновили: либо строки нет (юзер собрал корзину до миграции/без логина —
+            // не считаем коллизией), либо она занята другим заказом → коллизия.
+            $checkStmt->execute([$userId, $type, $id]);
+            $existing = $checkStmt->fetchColumn();
+            if ($existing !== false && $existing !== null && (int)$existing !== $orderId) {
+                error_log(sprintf(
+                    'reserveCartItemsForOrder: collision user=%d %s:%d already reserved by order=%d (this order=%d)',
+                    $userId, $type, $id, (int)$existing, $orderId
+                ));
+                return false;
+            }
+        }
+        return true;
+    } catch (Exception $e) {
+        error_log("reserveCartItemsForOrder(order={$orderId}) error: " . $e->getMessage());
+        return true; // БД-сбой — не блокируем заказ, корзина починится позже.
+    }
+}
+
+/**
+ * Снять резерв с позиций (при cancel/failed-платеже) — позиции снова видны в корзине.
+ */
+function releaseCartItemsReservation(int $orderId): void {
+    global $db;
+    if (!isset($db) || !$orderId) return;
+
+    try {
+        $stmt = $db->prepare(
+            "UPDATE cart_items SET reserved_in_order_id = NULL
+             WHERE reserved_in_order_id = ?"
+        );
+        $stmt->execute([$orderId]);
+        // Следующий cartEnsureLoadedFromDb пересоберёт сессию.
+        if (session_status() === PHP_SESSION_ACTIVE) unset($_SESSION['cart_db_loaded']);
+    } catch (Exception $e) {
+        error_log("releaseCartItemsReservation(order={$orderId}) error: " . $e->getMessage());
+    }
+}
+
+/**
+ * Удалить из cart_items конкретные позиции пользователя (для local-mode bypass,
+ * где заказ в orders не создаётся, но корзину надо очистить).
+ * $items: [['type' => 'registration', 'id' => 42], ...]
+ */
+function removeCartItemsBatch(int $userId, array $items): void {
+    global $db;
+    if (!isset($db) || !$userId || empty($items)) return;
+
+    try {
+        $stmt = $db->prepare(
+            "DELETE FROM cart_items
+             WHERE user_id = ? AND item_type = ? AND item_id = ?"
+        );
+        foreach ($items as $it) {
+            $type = $it['type'] ?? null;
+            $id = $it['id'] ?? null;
+            if (!$type || !$id || !isset(CART_TYPES[$type])) continue;
+            $stmt->execute([$userId, $type, (int)$id]);
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) unset($_SESSION['cart_db_loaded']);
+    } catch (Exception $e) {
+        error_log("removeCartItemsBatch(user={$userId}) error: " . $e->getMessage());
+    }
+}
+
+/**
+ * Удалить из cart_items позиции, оплаченные в заказе (после succeeded).
+ * Что в корзине осталось без резерва — остаётся (пользователь мог докинуть в другом окне).
+ */
+function removeCartItemsByOrderId(int $orderId): void {
+    global $db;
+    if (!isset($db) || !$orderId) return;
+
+    try {
+        $stmt = $db->prepare("DELETE FROM cart_items WHERE reserved_in_order_id = ?");
+        $stmt->execute([$orderId]);
+        if (session_status() === PHP_SESSION_ACTIVE) unset($_SESSION['cart_db_loaded']);
+    } catch (Exception $e) {
+        error_log("removeCartItemsByOrderId(order={$orderId}) error: " . $e->getMessage());
     }
 }
 
@@ -33,6 +277,7 @@ function addToCart($registrationId) {
 
     if (!in_array($registrationId, $_SESSION['cart'])) {
         $_SESSION['cart'][] = $registrationId;
+        cartDbSync('registration', (int)$registrationId, 'add');
         return true;
     }
 
@@ -51,6 +296,7 @@ function addCertificateToCart($certificateId) {
 
     if (!in_array($certificateId, $_SESSION['cart_certificates'])) {
         $_SESSION['cart_certificates'][] = $certificateId;
+        cartDbSync('publication_cert', (int)$certificateId, 'add');
         return true;
     }
 
@@ -80,6 +326,7 @@ function removeCertificateFromCart($certificateId) {
     if ($key !== false) {
         unset($_SESSION['cart_certificates'][$key]);
         $_SESSION['cart_certificates'] = array_values($_SESSION['cart_certificates']);
+        cartDbSync('publication_cert', (int)$certificateId, 'remove');
         return true;
     }
 
@@ -98,6 +345,7 @@ function addWebinarCertificateToCart($webinarCertificateId) {
 
     if (!in_array($webinarCertificateId, $_SESSION['cart_webinar_certificates'])) {
         $_SESSION['cart_webinar_certificates'][] = $webinarCertificateId;
+        cartDbSync('webinar_cert', (int)$webinarCertificateId, 'add');
         return true;
     }
 
@@ -127,6 +375,7 @@ function removeWebinarCertificateFromCart($webinarCertificateId) {
     if ($key !== false) {
         unset($_SESSION['cart_webinar_certificates'][$key]);
         $_SESSION['cart_webinar_certificates'] = array_values($_SESSION['cart_webinar_certificates']);
+        cartDbSync('webinar_cert', (int)$webinarCertificateId, 'remove');
         return true;
     }
 
@@ -145,6 +394,7 @@ function addOlympiadRegistrationToCart($registrationId) {
 
     if (!in_array($registrationId, $_SESSION['cart_olympiad_registrations'])) {
         $_SESSION['cart_olympiad_registrations'][] = $registrationId;
+        cartDbSync('olympiad_reg', (int)$registrationId, 'add');
         return true;
     }
 
@@ -174,6 +424,7 @@ function removeOlympiadRegistrationFromCart($registrationId) {
     if ($key !== false) {
         unset($_SESSION['cart_olympiad_registrations'][$key]);
         $_SESSION['cart_olympiad_registrations'] = array_values($_SESSION['cart_olympiad_registrations']);
+        cartDbSync('olympiad_reg', (int)$registrationId, 'remove');
         return true;
     }
 
@@ -195,6 +446,7 @@ function removeFromCart($registrationId) {
     if ($key !== false) {
         unset($_SESSION['cart'][$key]);
         $_SESSION['cart'] = array_values($_SESSION['cart']); // Re-index array
+        cartDbSync('registration', (int)$registrationId, 'remove');
         return true;
     }
 
@@ -202,7 +454,9 @@ function removeFromCart($registrationId) {
 }
 
 /**
- * Clear cart (both registrations and certificates)
+ * Очистить все 4 сессионные корзины.
+ * cart_items НЕ трогает — для удаления оплаченных позиций используй
+ * removeCartItemsByOrderId(), для снятия резерва — releaseCartItemsReservation().
  */
 function clearCart() {
     initSession();
@@ -210,6 +464,9 @@ function clearCart() {
     $_SESSION['cart_certificates'] = [];
     $_SESSION['cart_webinar_certificates'] = [];
     $_SESSION['cart_olympiad_registrations'] = [];
+    // Сбрасываем флаг — следующий initSession пересоберёт сессию из cart_items,
+    // если там что-то осталось (например, после частичной оплаты).
+    unset($_SESSION['cart_db_loaded']);
 }
 
 /**
@@ -309,6 +566,10 @@ function clearUserSession() {
     unset($_SESSION['user_id']);
     unset($_SESSION['user_email']);
     unset($_SESSION['cart']);
+    unset($_SESSION['cart_certificates']);
+    unset($_SESSION['cart_webinar_certificates']);
+    unset($_SESSION['cart_olympiad_registrations']);
+    unset($_SESSION['cart_db_loaded']);
     unset($_SESSION['csrf_token']);
 }
 

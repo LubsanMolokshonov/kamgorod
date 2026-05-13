@@ -45,6 +45,7 @@ require_once __DIR__ . '/../../classes/User.php';
 require_once __DIR__ . '/../../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
+require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use YooKassa\Model\Notification\NotificationFactory;
@@ -282,6 +283,10 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                 logWebhook('INFO', $paymentId, "Course enrollment {$item['course_enrollment_id']} marked as paid", '');
             }
         }
+
+        // Удалить из cart_items позиции, оплаченные в этом заказе (server-side cart).
+        // Делаем внутри той же транзакции, чтобы при rollback откатилось всё вместе.
+        removeCartItemsByOrderId((int)$orderId);
 
         // COMMIT TRANSACTION
         $GLOBALS['db']->commit();
@@ -615,6 +620,10 @@ function handlePaymentCanceled($orderObj, $order, $payment) {
     try {
         // Update order status to failed
         $orderObj->updatePaymentStatus($orderId, 'failed');
+
+        // Снять резерв с cart_items — позиции снова видны в корзине,
+        // юзер сможет повторить попытку оплаты.
+        releaseCartItemsReservation((int)$orderId);
 
         logWebhook('INFO', $paymentId, "Order {$orderNumber} marked as failed (canceled)", '');
 

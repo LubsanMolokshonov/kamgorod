@@ -62,18 +62,35 @@ function validateMagicToken($token) {
  * @param int $userId ID пользователя
  * @param string $targetPath Относительный путь (например, '/pages/cabinet.php?tab=events')
  * @param int $expiryDays Срок действия в днях
+ * @param array $utm UTM-параметры (utm_source/medium/campaign/content/term) для атрибуции
+ *                   перехода из письма. Пустые значения отбрасываются. magic-auth.php
+ *                   при наличии utm_* в $_GET сохранит их в cookie _fgos_utm_* (90 дней).
  * @return string Полный URL magic-ссылки
  */
-function generateMagicUrl($userId, $targetPath, $expiryDays = 7) {
+function generateMagicUrl($userId, $targetPath, $expiryDays = 7, $utm = []) {
     if (!$userId) {
-        return SITE_URL . $targetPath;
+        $url = SITE_URL . $targetPath;
+    } else {
+        $token = generateMagicToken($userId, $expiryDays);
+        $url = SITE_URL . '/m/' . $token;
+        if ($targetPath !== '' && $targetPath !== '/kabinet/') {
+            $url .= '/' . base64url_encode($targetPath);
+        }
     }
 
-    $token = generateMagicToken($userId, $expiryDays);
-    $url = SITE_URL . '/m/' . $token;
-    if ($targetPath !== '' && $targetPath !== '/kabinet/') {
-        $url .= '/' . base64url_encode($targetPath);
+    if (!empty($utm) && is_array($utm)) {
+        $allowedKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+        $params = [];
+        foreach ($allowedKeys as $key) {
+            if (!empty($utm[$key])) {
+                $params[$key] = (string)$utm[$key];
+            }
+        }
+        if (!empty($params)) {
+            $url .= (strpos($url, '?') !== false ? '&' : '?') . http_build_query($params);
+        }
     }
+
     return $url;
 }
 
