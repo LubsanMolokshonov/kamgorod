@@ -128,8 +128,8 @@ include __DIR__ . '/../includes/header-redesign.php';
   <div class="rd-wrap">
     <div class="reveal" style="text-align:center;">
       <div class="rd-eyebrow" style="justify-content:center;">Как это работает</div>
-      <h2 class="rd-section-title">4 шага до публикации</h2>
-      <p class="rd-section-sub">От темы до свидетельства о&nbsp;публикации — занимает считанные минуты.</p>
+      <h2 class="rd-section-title" style="margin-left:auto;margin-right:auto;">4 шага до публикации</h2>
+      <p class="rd-section-sub" style="margin-left:auto;margin-right:auto;">От темы до свидетельства о&nbsp;публикации — занимает считанные минуты.</p>
     </div>
     <div class="rd-steps four reveal-stagger" style="margin-top:32px;">
       <div class="rd-step">
@@ -161,7 +161,7 @@ include __DIR__ . '/../includes/header-redesign.php';
   <div class="rd-wrap">
     <div class="reveal" style="text-align:center;">
       <div class="rd-eyebrow" style="justify-content:center;">Преимущества</div>
-      <h2 class="rd-section-title">Почему это удобно</h2>
+      <h2 class="rd-section-title" style="margin-left:auto;margin-right:auto;">Почему это удобно</h2>
     </div>
     <div class="rd-grid reveal-stagger" style="grid-template-columns:repeat(4, 1fr);margin-top:32px;">
       <div class="rd-card">
