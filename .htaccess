@@ -59,6 +59,9 @@ RewriteRule ^feeds/(competitions-ad|competitions|olympiads-ad|olympiads|courses-
 RewriteRule ^m/([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+)/?$ pages/magic-auth.php?token=$1&r=$2 [L,QSA]
 RewriteRule ^m/([A-Za-z0-9_-]+)/?$ pages/magic-auth.php?token=$1 [L,QSA]
 
+# Recovery link для failed-заказов (см. PaymentRecoveryChain). Path-формат как у /m/.
+RewriteRule ^r/([A-Za-z0-9_-]+)/?$ pages/cart-restore.php?token=$1 [L,QSA]
+
 # Email click-tracker (path-only формат, аналогично magic)
 RewriteRule ^c/([a-f0-9]{32})/([A-Za-z0-9_-]+)/?$ api/email-track/click.php?mid=$1&u=$2 [L,QSA]
 
