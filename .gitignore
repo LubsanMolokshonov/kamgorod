@@ -31,6 +31,14 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.cache
+/tmp/
+/.image-backup/
+
+# macOS Finder duplicates (e.g. "file 2.jpg")
+* 2.jpg
+* 2.png
+* 2.jpeg
+* 2.webp
 
 # Backup files
 *.backup
