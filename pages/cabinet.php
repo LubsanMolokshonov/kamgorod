@@ -96,11 +96,21 @@ $userOlympiadRegs = $olympRegObj->getByUser($_SESSION['user_id']);
 $courseObj = new Course($db);
 $userCourseEnrollments = $courseObj->getEnrollmentsByEmail($_SESSION['user_email']);
 
-// Index olympiad registrations by olympiad_id for quick lookup
+// Index olympiad registrations by olympiad_result_id.
+// Если у пользователя несколько регистраций на один результат (например, неоплаченная + оплаченная),
+// карточка в кабинете должна показывать оплаченную — иначе видит «Ожидает оплаты» при готовом дипломе.
 $olympRegsByResultId = [];
 $pendingOlympRegsCount = 0;
+$olympStatusPriority = ['diploma_ready' => 3, 'paid' => 2, 'pending' => 1];
 foreach ($userOlympiadRegs as $reg) {
-    $olympRegsByResultId[$reg['olympiad_result_id']] = $reg;
+    $rid = $reg['olympiad_result_id'];
+    $newPriority = $olympStatusPriority[$reg['status'] ?? ''] ?? 0;
+    $curPriority = isset($olympRegsByResultId[$rid])
+        ? ($olympStatusPriority[$olympRegsByResultId[$rid]['status'] ?? ''] ?? 0)
+        : -1;
+    if ($newPriority >= $curPriority) {
+        $olympRegsByResultId[$rid] = $reg;
+    }
     if (($reg['status'] ?? '') === 'pending') {
         $pendingOlympRegsCount++;
     }
