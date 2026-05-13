@@ -238,6 +238,24 @@ class AudienceSpecialization {
     }
 
     /**
+     * Специализации, к которым привязан хотя бы один активный курс заданного program_type.
+     * Используется в сайдбаре /kursy/ когда уровень (audience_type) не выбран.
+     */
+    public function getActiveByCoursesProgramType($programType) {
+        return $this->db->query(
+            "SELECT DISTINCT s.*
+             FROM audience_specializations s
+             JOIN course_specializations cs ON cs.specialization_id = s.id
+             JOIN courses c ON c.id = cs.course_id
+             WHERE s.is_active = 1
+               AND c.is_active = 1
+               AND c.program_type = ?
+             ORDER BY s.specialization_type ASC, s.display_order ASC, s.name ASC",
+            [$programType]
+        );
+    }
+
+    /**
      * Подсчитать количество конкурсов для специализации
      */
     public function getCompetitionCount($specializationId) {

@@ -257,6 +257,9 @@ RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(dou|nachalnaya-shk
 RewriteRule ^kursy/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|dopolnitelnoe-obrazovanie)/([a-z0-9-]+)/?$ courses.php?at=$1&as=$2 [L,QSA]
 RewriteRule ^kursy/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|dopolnitelnoe-obrazovanie)/?$ courses.php?at=$1 [L,QSA]
 
+# Тип программы + специализация (без выбранной аудитории/уровня): /kursy/perepodgotovka/matematika/
+RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/([a-z0-9-]+)/?$ courses.php?ct=$1&as=$2 [L,QSA]
+
 # Детальная страница курса
 RewriteRule ^kursy/([a-z0-9-]+)/?$ pages/course-detail.php?slug=$1 [L,QSA]
 

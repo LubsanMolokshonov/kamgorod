@@ -65,6 +65,11 @@ if ($selectedType) {
     if ($selectedTypeData) {
         $audienceSpecializations = $audienceTypeObj->getSpecializations($selectedTypeData['id']);
     }
+} elseif ($programType !== 'all') {
+    // Уровень не выбран — показываем все специализации, к которым реально привязан хотя бы один курс данного program_type
+    require_once __DIR__ . '/classes/AudienceSpecialization.php';
+    $specObjList = new AudienceSpecialization($db);
+    $audienceSpecializations = $specObjList->getActiveByCoursesProgramType($programType);
 }
 
 $selectedSpecData = null;
@@ -124,10 +129,10 @@ if (!empty($audienceTypes)) {
 }
 
 $audienceSpecCounts = [];
-if (!empty($selectedType) && !empty($audienceSpecializations)) {
+if (!empty($audienceSpecializations)) {
     $specBaseFilters = $catBaseFilters;
     if ($selectedCategoryData) $specBaseFilters['audience_category'] = $selectedCategoryData['id'];
-    $specBaseFilters['audience_type'] = $selectedType;
+    if (!empty($selectedType)) $specBaseFilters['audience_type'] = $selectedType;
     foreach ($audienceSpecializations as $spec) {
         $asFilters = $specBaseFilters;
         $asFilters['specialization'] = $spec['slug'];
