@@ -100,6 +100,30 @@ try {
         exit;
     }
 
+    // Защита от дублирующей регистрации на тот же olympiad_result_id:
+    // если у пользователя уже есть оплаченный/готовый диплом на этот результат,
+    // не даём создавать ещё одну pending-регистрацию (которая запустит цепочку
+    // напоминаний «оплатите диплом» — alert #87, май 2026).
+    $existingPaid = $db->prepare(
+        "SELECT id, status FROM olympiad_registrations
+         WHERE olympiad_result_id = ?
+           AND user_id = ?
+           AND status IN ('paid','diploma_ready')
+         ORDER BY id DESC LIMIT 1"
+    );
+    $existingPaid->execute([$result['id'], $userId]);
+    $paidReg = $existingPaid->fetch(PDO::FETCH_ASSOC);
+    if ($paidReg) {
+        echo json_encode([
+            'success'          => false,
+            'already_paid'     => true,
+            'registration_id'  => (int)$paidReg['id'],
+            'message'          => 'Диплом по этому результату уже оплачен и готов. Откройте личный кабинет → раздел «Олимпиады», чтобы скачать.',
+            'cabinet_url'      => '/kabinet/',
+        ]);
+        exit;
+    }
+
     // ------------------------------------------------------------------
     // 5. Create or update user profile
     // ------------------------------------------------------------------

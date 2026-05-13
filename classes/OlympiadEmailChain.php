@@ -139,6 +139,24 @@ class OlympiadEmailChain {
                 continue;
             }
 
+            // Защита от дублирующих регистраций на тот же olympiad_result_id:
+            // если у пользователя уже есть оплаченная/готовая регистрация на этот результат,
+            // не дёргать его напоминаниями оплатить «дубль» (alert #87, май 2026).
+            $paidSibling = $this->db->queryOne(
+                "SELECT id FROM olympiad_registrations
+                 WHERE olympiad_result_id = ?
+                   AND user_id = ?
+                   AND id != ?
+                   AND status IN ('paid','diploma_ready')
+                 LIMIT 1",
+                [$email['olympiad_result_id'], $email['user_id'], $email['olympiad_registration_id']]
+            );
+            if ($paidSibling) {
+                $this->updateEmailStatus($email['id'], 'skipped', 'Diploma already paid on another registration for the same result');
+                $results['skipped']++;
+                continue;
+            }
+
             if ($this->isUnsubscribed($email['email'])) {
                 $this->updateEmailStatus($email['id'], 'skipped', 'User unsubscribed');
                 $results['skipped']++;
@@ -209,7 +227,12 @@ class OlympiadEmailChain {
                 'placement_text' => $placementText,
                 'has_supervisor' => $emailData['has_supervisor'] ?? false,
                 'supervisor_name' => $emailData['supervisor_name'] ?? '',
-                'payment_url' => generateMagicUrl($emailData['user_id'], '/pages/cart.php'),
+                'payment_url' => generateMagicUrl($emailData['user_id'], '/pages/cart.php', 7, [
+                    'utm_source'   => 'email',
+                    'utm_medium'   => 'trigger',
+                    'utm_campaign' => 'olympiad_chain',
+                    'utm_content'  => $emailData['touchpoint_code'] ?? '',
+                ]),
                 'olympiad_url' => SITE_URL . '/olimpiady/' . $emailData['olympiad_slug'],
                 'diploma_url' => SITE_URL . '/olimpiada-diplom/' . ($emailData['olympiad_result_id'] ?? ''),
                 'unsubscribe_url' => $unsubscribeUrl,
