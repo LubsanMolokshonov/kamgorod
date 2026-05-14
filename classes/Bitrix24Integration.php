@@ -480,6 +480,32 @@ class Bitrix24Integration {
         if (!empty($enrollment['utm_content'])) $data['UTM_CONTENT'] = $enrollment['utm_content'];
         if (!empty($enrollment['utm_term'])) $data['UTM_TERM'] = $enrollment['utm_term'];
 
+        // Кастомные поля воронки «Курсы»
+        $courseNameParts = [];
+        if (!empty($course['program_type']) && class_exists('Course')) {
+            $courseNameParts[] = Course::getProgramTypeLabel($course['program_type']);
+        }
+        if (!empty($course['title'])) {
+            $courseNameParts[] = $course['title'];
+        }
+        if (!empty($course['hours']) && class_exists('Course')) {
+            $courseNameParts[] = Course::formatHours((int)$course['hours']);
+        }
+        if (!empty($courseNameParts)) {
+            $data['UF_CRM_1778232736654'] = implode(', ', $courseNameParts);
+        }
+
+        if (!empty($enrollment['user_id'])) {
+            if (!function_exists('generateMagicUrl')) {
+                require_once __DIR__ . '/../includes/magic-link-helper.php';
+            }
+            $data['UF_CRM_1778738836212'] = generateMagicUrl(
+                (int)$enrollment['user_id'],
+                '/kabinet/?tab=courses',
+                7
+            );
+        }
+
         if ($contactId) {
             $data['CONTACT_ID'] = $contactId;
         }
