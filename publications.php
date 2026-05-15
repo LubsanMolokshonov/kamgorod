@@ -53,7 +53,10 @@ $selectedTypeData        = null;
 $audienceSpecializations = [];
 
 // Категория аудитории не показывается в UI — автоматически берём первую доступную (обычно «Педагогам»),
-// чтобы подгрузить список уровней.
+// чтобы подгрузить список уровней. ВАЖНО: эта авто-подстановка нужна только для UI меню уровней,
+// в фильтр запроса она НЕ попадает — иначе на корневом /publikacii/ скрывались бы все публикации
+// без проставленной audience-категории.
+$categoryExplicit = !empty($_GET['ac']);
 if (!$selectedCategory && !empty($audienceCategories)) {
     $selectedCategory = $audienceCategories[0]['slug'];
 }
@@ -73,7 +76,7 @@ if ($selectedType) {
 
 // Фильтры для запроса публикаций
 $filters = [];
-if ($selectedCategoryData) {
+if ($categoryExplicit && $selectedCategoryData) {
     $filters['category_id'] = $selectedCategoryData['id'];
 }
 if (!empty($selectedType)) {
@@ -93,8 +96,10 @@ if (!empty($selectedSpec) && !empty($audienceSpecializations)) {
 
 // Получение публикаций
 $publicationObj    = new Publication($db);
+// Загружаем большую партию для client-side «Загрузить ещё», но общий счётчик берём отдельно,
+// чтобы LIMIT не занижал отображаемое число «Найдено: N».
 $allPublications   = $publicationObj->getPublished($perPage + 100, 0, $filters);
-$totalPublications = count($allPublications);
+$totalPublications = $publicationObj->countPublished($filters);
 $publications      = array_slice($allPublications, 0, $perPage);
 $hasMore           = $totalPublications > $perPage;
 
