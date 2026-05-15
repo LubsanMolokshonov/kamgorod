@@ -52,6 +52,7 @@ try {
         $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null);
 
         $dealId = $bitrix->createCourseDeal([
+            'user_id' => $enrollment['user_id'] ?? null,
             'full_name' => $fullName,
             'email' => $email,
             'phone' => $phone,

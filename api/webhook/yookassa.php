@@ -379,6 +379,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                                 $paidAmount = floatval($item['price']);
 
                                 $dealId = $bitrix->createCourseDeal([
+                                    'user_id' => $enrollment['user_id'] ?? null,
                                     'full_name' => $enrollment['full_name'],
                                     'email' => $enrollment['email'],
                                     'phone' => $enrollment['phone'],

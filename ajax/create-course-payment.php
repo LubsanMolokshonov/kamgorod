@@ -172,6 +172,7 @@ try {
                         // OPPORTUNITY = фактически уплачено ($finalPrice уже учитывает
                         // AB-вариант, таймер-скидку 10%, loyalty и email-кампанию).
                         $dealId = $bitrix->createCourseDeal([
+                            'user_id' => $freshEnrollment['user_id'] ?? $enrollmentUserId,
                             'full_name' => $freshEnrollment['full_name'],
                             'email' => $freshEnrollment['email'],
                             'phone' => $freshEnrollment['phone'],

@@ -502,7 +502,7 @@ class Bitrix24Integration {
             $data['UF_CRM_1778738836212'] = generateMagicUrl(
                 (int)$enrollment['user_id'],
                 '/kabinet/?tab=courses',
-                7
+                45
             );
         }
 
