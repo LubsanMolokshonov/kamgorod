@@ -154,13 +154,102 @@ include __DIR__ . '/includes/header-redesign.php';
       </div>
     </div>
 
-    <div class="rd-hero-art rd-hero-art-cat reveal">
+    <div class="rd-hero-art rd-hero-art-journal reveal">
       <div class="rd-blob"></div>
-      <div class="rd-float-card rd-fc-cat-1">
-        <div class="rd-fc-icon">📰</div>
-        <div class="rd-fc-text"><div class="rd-fc-t">Зарегистрированное СМИ</div><div class="rd-fc-s">Эл. №ФС 77-74524</div></div>
+      <!-- ВЕЕР СВИДЕТЕЛЬСТВ О ПУБЛИКАЦИИ -->
+      <div class="hero-diploma" style="position:absolute;inset:0;padding:0;">
+        <div class="diploma-stack">
+          <?php
+          $certData = [
+              ['name' => 'Иванова Мария Александровна',  'work' => 'Игровые технологии на уроках математики',                       'org' => 'МАОУ Гимназия №7, Пермь'],
+              ['name' => 'Козлова Анна Викторовна',      'work' => 'Развитие речи дошкольников через театрализованную деятельность', 'org' => 'МБДОУ ДС №45, Новосибирск'],
+              ['name' => 'Смирнова Ольга Николаевна',    'work' => 'Проектная деятельность как средство развития интереса',         'org' => 'МБОУ Лицей №3, Екатеринбург'],
+              ['name' => 'Петрова Елена Сергеевна',      'work' => 'Формирование читательской грамотности школьников',              'org' => 'МБОУ СОШ №12, Казань'],
+              ['name' => 'Соколов Дмитрий Игоревич',     'work' => 'Цифровые инструменты в преподавании истории',                   'org' => 'МБОУ Гимназия №1, Самара'],
+              ['name' => 'Морозова Татьяна Юрьевна',     'work' => 'Формирование УУД на уроках литературы',                          'org' => 'МАОУ СОШ №24, Тюмень'],
+          ];
+          $certThemes = [
+              ['accent' => '#4874FF', 'soft' => '#eef4ff', 'ink' => '#1e2a78'],
+              ['accent' => '#7b3ed6', 'soft' => '#f4eefc', 'ink' => '#3b1a78'],
+              ['accent' => '#0fa37f', 'soft' => '#e9f7f1', 'ink' => '#0b5a47'],
+              ['accent' => '#d8447e', 'soft' => '#fbeef3', 'ink' => '#7a1f49'],
+              ['accent' => '#e07a16', 'soft' => '#fcf2e3', 'ink' => '#7a3e0b'],
+              ['accent' => '#1e8aa8', 'soft' => '#e6f3f7', 'ink' => '#0e4a5c'],
+          ];
+          $wrap2 = function($s, $max = 28) {
+              $s = trim($s);
+              if (mb_strlen($s) <= $max) return [$s, ''];
+              $words = explode(' ', $s);
+              $line1 = ''; $i = 0;
+              while ($i < count($words) && mb_strlen($line1 . ' ' . $words[$i]) <= $max) {
+                  $line1 = $line1 === '' ? $words[$i] : $line1 . ' ' . $words[$i];
+                  $i++;
+              }
+              $line2 = trim(implode(' ', array_slice($words, $i)));
+              if (mb_strlen($line2) > $max) $line2 = mb_substr($line2, 0, $max - 1) . '…';
+              return [$line1, $line2];
+          };
+          foreach ($certData as $i => $c):
+              $idx   = $i + 1;
+              $t     = $certThemes[$i];
+              [$w1, $w2] = $wrap2('«' . $c['work'] . '»', 30);
+              $nm    = htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8');
+              $or    = htmlspecialchars($c['org'],  ENT_QUOTES, 'UTF-8');
+              $w1    = htmlspecialchars($w1, ENT_QUOTES, 'UTF-8');
+              $w2    = htmlspecialchars($w2, ENT_QUOTES, 'UTF-8');
+          ?>
+          <div class="diploma-item diploma-<?php echo $idx; ?>">
+            <svg class="pub-cert-svg" viewBox="0 0 595 842" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Свидетельство о публикации">
+              <rect width="595" height="842" fill="<?php echo $t['soft']; ?>"/>
+              <rect x="22" y="22" width="551" height="798" fill="#fff" stroke="<?php echo $t['accent']; ?>" stroke-width="3" rx="10"/>
+              <rect x="22" y="22" width="551" height="798" fill="none" stroke="<?php echo $t['accent']; ?>" stroke-width="1" stroke-dasharray="2 4" rx="10" opacity=".35"/>
+              <rect x="60" y="70" width="475" height="92" fill="<?php echo $t['accent']; ?>" rx="8"/>
+              <text x="297.5" y="110" text-anchor="middle" fill="#fff" font-family="Onest, Inter, sans-serif" font-weight="700" font-size="34" letter-spacing="3">СВИДЕТЕЛЬСТВО</text>
+              <text x="297.5" y="142" text-anchor="middle" fill="#fff" font-family="Onest, Inter, sans-serif" font-weight="500" font-size="18" letter-spacing="4">О ПУБЛИКАЦИИ</text>
+              <text x="297.5" y="220" text-anchor="middle" fill="#5a608a" font-family="Inter, sans-serif" font-size="18">настоящим подтверждается, что</text>
+              <text x="297.5" y="282" text-anchor="middle" fill="<?php echo $t['ink']; ?>" font-family="Onest, Inter, sans-serif" font-weight="700" font-size="26"><?php echo $nm; ?></text>
+              <text x="297.5" y="338" text-anchor="middle" fill="#5a608a" font-family="Inter, sans-serif" font-size="18">опубликовал(а) методический материал</text>
+              <text x="297.5" y="400" text-anchor="middle" fill="#3a3f6b" font-family="Inter, sans-serif" font-style="italic" font-size="22"><?php echo $w1; ?></text>
+              <?php if ($w2 !== ''): ?>
+              <text x="297.5" y="430" text-anchor="middle" fill="#3a3f6b" font-family="Inter, sans-serif" font-style="italic" font-size="22"><?php echo $w2; ?></text>
+              <?php endif; ?>
+              <text x="297.5" y="492" text-anchor="middle" fill="#6a6f8e" font-family="Inter, sans-serif" font-size="16"><?php echo $or; ?></text>
+              <line x1="120" y1="700" x2="260" y2="700" stroke="<?php echo $t['accent']; ?>" stroke-width="1.5" opacity=".5"/>
+              <text x="190" y="722" text-anchor="middle" fill="#6a6f8e" font-family="Inter, sans-serif" font-size="13">Подпись редактора</text>
+              <g transform="translate(360 660)">
+                <rect x="0" y="0" width="80" height="80" fill="#fff" stroke="<?php echo $t['accent']; ?>" stroke-width="2" rx="4"/>
+                <?php
+                $cells = [
+                    [0,0,1,1,1],[0,1,0,1,0],[1,0,1,0,1],[1,1,0,1,1],[0,1,1,0,1],
+                    [1,0,0,1,0],[0,1,1,1,1],[1,1,0,0,1],[0,0,1,1,0],[1,0,1,0,0],
+                ];
+                for ($r = 0; $r < 10; $r++) {
+                  for ($cc = 0; $cc < 10; $cc++) {
+                    if (($cells[$r][$cc % 5] ?? 0) === 1) {
+                      $cx = 8 + $cc * 6.4;
+                      $cy = 8 + $r * 6.4;
+                      echo '<rect x="' . $cx . '" y="' . $cy . '" width="6" height="6" fill="' . $t['ink'] . '"/>';
+                    }
+                  }
+                }
+                ?>
+                <rect x="8" y="8" width="18" height="18" fill="none" stroke="<?php echo $t['ink']; ?>" stroke-width="3"/>
+                <rect x="54" y="8" width="18" height="18" fill="none" stroke="<?php echo $t['ink']; ?>" stroke-width="3"/>
+                <rect x="8" y="54" width="18" height="18" fill="none" stroke="<?php echo $t['ink']; ?>" stroke-width="3"/>
+              </g>
+              <text x="400" y="758" text-anchor="middle" fill="#6a6f8e" font-family="Inter, sans-serif" font-size="11">проверьте подлинность</text>
+              <text x="44" y="784" fill="#9aa0bf" font-family="Inter, sans-serif" font-size="11">Эл. №ФС 77‑74524</text>
+              <text x="551" y="784" text-anchor="end" fill="#9aa0bf" font-family="Inter, sans-serif" font-size="11">fgos.pro/zhurnal</text>
+            </svg>
+          </div>
+          <?php endforeach; ?>
+        </div>
       </div>
-      <div class="rd-float-card rd-fc-cat-2">
+      <div class="rd-float-card rd-fc-jr-1">
+        <div class="rd-fc-icon">📰</div>
+        <div class="rd-fc-text"><div class="rd-fc-t">Зарегистрированное СМИ</div><div class="rd-fc-s">Эл. №ФС 77‑74524</div></div>
+      </div>
+      <div class="rd-float-card rd-fc-jr-2">
         <div class="rd-fc-icon">✓</div>
         <div class="rd-fc-text"><div class="rd-fc-t">Сертификат автору</div><div class="rd-fc-s">сразу после публикации</div></div>
       </div>
