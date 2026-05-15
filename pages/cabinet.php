@@ -112,7 +112,6 @@ $userCourseEnrollments = $courseObj->getEnrollmentsByEmail($_SESSION['user_email
 // Если у пользователя несколько регистраций на один результат (например, неоплаченная + оплаченная),
 // карточка в кабинете должна показывать оплаченную — иначе видит «Ожидает оплаты» при готовом дипломе.
 $olympRegsByResultId = [];
-$pendingOlympRegsCount = 0;
 $olympStatusPriority = ['diploma_ready' => 3, 'paid' => 2, 'pending' => 1];
 foreach ($userOlympiadRegs as $reg) {
     $rid = $reg['olympiad_result_id'];
@@ -123,10 +122,10 @@ foreach ($userOlympiadRegs as $reg) {
     if ($newPriority >= $curPriority) {
         $olympRegsByResultId[$rid] = $reg;
     }
-    if (($reg['status'] ?? '') === 'pending') {
-        $pendingOlympRegsCount++;
-    }
 }
+
+// Баннер «ждут оплаты» — считаем по реальному содержимому корзины (все типы позиций).
+$cartItemsCount = getCartCount();
 
 // Незавершённые покупки (pending-записи, которые юзер клал в корзину, но не оплатил)
 $userObjForCabinet = new User($db);
@@ -177,6 +176,7 @@ $pageDescription = 'Ваши регистрации и дипломы';
 $additionalCSS = ['/assets/css/cabinet-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/cabinet-redesign.css')];
 $additionalJS = [];
 if ($activeTab === 'courses') {
+    $additionalCSS[] = '/assets/css/max-cta.css?v=' . filemtime(__DIR__ . '/../assets/css/max-cta.css');
     $additionalJS[] = '/assets/js/course-cabinet.js?v=' . filemtime(__DIR__ . '/../assets/js/course-cabinet.js');
 }
 $noindex = true;
@@ -393,6 +393,14 @@ include __DIR__ . '/../includes/header.php';
                             </div>
                             <a href="/kursy/<?php echo htmlspecialchars($e['slug']); ?>/" class="checkout-item-link" title="Подробнее о курсе">→</a>
 
+                            <?php if (!$isInstallmentRequested): ?>
+                            <button type="button"
+                                    class="btn-cancel-enrollment"
+                                    data-enrollment-id="<?php echo $e['enrollment_id']; ?>"
+                                    title="Убрать курс из списка"
+                                    aria-label="Убрать курс из списка">×</button>
+                            <?php endif; ?>
+
                             <div class="checkout-item-actions">
                                 <?php if ($isInstallmentRequested): ?>
                                     <div class="installment-requested-badge">
@@ -401,6 +409,10 @@ include __DIR__ . '/../includes/header.php';
                                         </svg>
                                         Заявка на рассрочку отправлена. Менеджер свяжется в рабочее время.
                                     </div>
+                                    <?php
+                                        $maxCtaContext = 'installment';
+                                        include __DIR__ . '/../includes/partials/max-cta.php';
+                                    ?>
                                 <?php else: ?>
                                     <button type="button"
                                             class="btn-pay-online"
@@ -445,6 +457,16 @@ include __DIR__ . '/../includes/header.php';
                 <?php if (!empty($completedEnrollments)): ?>
                 <!-- Paid/Completed Courses -->
                 <div class="course-paid-section">
+                    <?php
+                        $hasPaidCourses = false;
+                        foreach ($completedEnrollments as $__ce) {
+                            if (($__ce['enrollment_status'] ?? '') === 'paid') { $hasPaidCourses = true; break; }
+                        }
+                        if ($hasPaidCourses):
+                            $maxCtaContext = 'cabinet-payment';
+                            include __DIR__ . '/../includes/partials/max-cta.php';
+                        endif;
+                    ?>
                     <h3>Оплаченные курсы (<?php echo count($completedEnrollments); ?>)</h3>
                     <div class="course-paid-list">
                         <?php foreach ($completedEnrollments as $enrollment):
@@ -511,16 +533,26 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             <?php endif; ?>
 
-            <?php if ($pendingOlympRegsCount > 0): ?>
+            <?php if ($cartItemsCount > 0): ?>
+                <?php
+                $mod10 = $cartItemsCount % 10;
+                $mod100 = $cartItemsCount % 100;
+                if ($mod10 === 1 && $mod100 !== 11) {
+                    $eventWord = 'мероприятие';
+                    $waitWord = 'ждёт';
+                } elseif ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14)) {
+                    $eventWord = 'мероприятия';
+                    $waitWord = 'ждут';
+                } else {
+                    $eventWord = 'мероприятий';
+                    $waitWord = 'ждут';
+                }
+                ?>
                 <div class="pending-olymp-banner">
                     <div class="pending-olymp-icon">⏳</div>
                     <div class="pending-olymp-body">
                         <strong>
-                            <?php if ($pendingOlympRegsCount === 1): ?>
-                                У вас 1 диплом олимпиады ждёт оплаты
-                            <?php else: ?>
-                                У вас <?php echo $pendingOlympRegsCount; ?> диплом(а/ов) олимпиады ждут оплаты
-                            <?php endif; ?>
+                            У вас <?php echo $cartItemsCount; ?> <?php echo $eventWord; ?> <?php echo $waitWord; ?> оплаты
                         </strong>
                         <span>Завершите оформление, чтобы получить PDF‑диплом с печатью организатора.</span>
                     </div>
@@ -1166,6 +1198,28 @@ function appealPublication(publicationId) {
 
 <?php if ($activeTab === 'courses'): ?>
 <script>window.csrfToken = '<?php echo generateCSRFToken(); ?>';</script>
+
+<!-- Max CTA modal: открывается после успешной заявки на рассрочку -->
+<div class="cd-form-modal" id="maxCtaModal" aria-hidden="true">
+    <div class="modal-box max-cta-modal-box">
+        <button type="button" class="close-modal" aria-label="Закрыть">×</button>
+        <?php
+            $maxCtaContext = 'installment';
+            $maxCtaVariant = 'modal-body';
+            include __DIR__ . '/../includes/partials/max-cta.php';
+        ?>
+    </div>
+</div>
+<script>
+(function() {
+    const modal = document.getElementById('maxCtaModal');
+    if (!modal) return;
+    const close = () => modal.classList.remove('active');
+    modal.querySelector('.close-modal')?.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+})();
+</script>
 <?php endif; ?>
 
 <?php

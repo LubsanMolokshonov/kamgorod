@@ -79,6 +79,11 @@ if (!defined('BITRIX24_COURSE_STAGE_INSTALLMENT')) {
         $_ENV['BITRIX24_COURSE_STAGE_INSTALLMENT'] ?? BITRIX24_COURSE_STAGE_MANAGER);
 }
 
+// Messenger Max — контакт менеджера для ускоренной обработки заявок на курсы.
+// Используется в CTA-блоках после оплаты курса и подачи заявки на рассрочку.
+if (!defined('MAX_MANAGER_PHONE')) define('MAX_MANAGER_PHONE', $_ENV['MAX_MANAGER_PHONE'] ?? '+7 922 304 44 13');
+if (!defined('MAX_MANAGER_URL'))   define('MAX_MANAGER_URL',   $_ENV['MAX_MANAGER_URL']   ?? 'https://max.ru/u/f9LHodD0cOJKXZhXUQImrGumTp40Eiu4o40RTZGhnpMVWgNe6tGt0x0OSco');
+
 // Bitrix24: воронка ЦДО (pipeline 4) — мониторинг для деактивации email-цепочки
 if (!defined('BITRIX24_CDO_PIPELINE_ID'))       define('BITRIX24_CDO_PIPELINE_ID', 4);
 if (!defined('BITRIX24_CDO_STAGE_DOCS'))        define('BITRIX24_CDO_STAGE_DOCS', 'C4:17');       // «Подготовка документов»
@@ -101,11 +106,12 @@ if (!defined('YANDEX_GPT_MODEL')) define('YANDEX_GPT_MODEL', $_ENV['YANDEX_GPT_M
 
 // Telegram Alerts (тех. уведомления в бот ИИ-консультанта)
 // Тот же бот используется в ai-consultant/src/bootstrap.php (AI_TELEGRAM_BOT_TOKEN)
+// Если TELEGRAM_BOT_TOKEN не задан — TelegramNotifier/AlertService молча отключают отправку.
 if (!defined('TELEGRAM_BOT_TOKEN')) {
-    define('TELEGRAM_BOT_TOKEN', $_ENV['TELEGRAM_BOT_TOKEN'] ?? '8287484412:AAH6g1iymi7oEv1zcFBMY0YB03e9_4MAwNs');
+    define('TELEGRAM_BOT_TOKEN', $_ENV['TELEGRAM_BOT_TOKEN'] ?? '');
 }
 if (!defined('TELEGRAM_ALERT_CHAT_ID')) {
-    define('TELEGRAM_ALERT_CHAT_ID', $_ENV['TELEGRAM_ALERT_CHAT_ID'] ?? '1177793865,-5215729575');
+    define('TELEGRAM_ALERT_CHAT_ID', $_ENV['TELEGRAM_ALERT_CHAT_ID'] ?? '');
 }
 
 // Минимальный интервал между chain-письмами одному получателю (минуты). 0 = отключено.
@@ -143,8 +149,9 @@ if (!defined('VK_GROUP_ID')) define('VK_GROUP_ID', (int)($_ENV['VK_GROUP_ID'] ??
 if (!defined('SESSION_LIFETIME')) define('SESSION_LIFETIME', $_ENV['SESSION_LIFETIME'] ?? 86400);
 if (!defined('COOKIE_LIFETIME')) define('COOKIE_LIFETIME', $_ENV['COOKIE_LIFETIME'] ?? 2592000); // 30 days
 
-// Magic Link Configuration (auto-login from email links)
-if (!defined('MAGIC_LINK_SECRET')) define('MAGIC_LINK_SECRET', $_ENV['MAGIC_LINK_SECRET'] ?? 'default-change-me');
+// Magic Link Configuration (auto-login from email links).
+// Обязательная переменная — если не задана, magic-link можно подделать.
+if (!defined('MAGIC_LINK_SECRET')) define('MAGIC_LINK_SECRET', $_ENV['MAGIC_LINK_SECRET'] ?? '');
 
 // Competition Categories
 if (!defined('COMPETITION_CATEGORIES')) {
@@ -301,7 +308,7 @@ date_default_timezone_set('Europe/Moscow');
 
 // A/B-тест цен курсов (отключён, победил вариант C — зафиксирована скидка 55%)
 if (!defined('COURSE_AB_TEST_ACTIVE')) define('COURSE_AB_TEST_ACTIVE', false);
-if (!defined('COURSE_AB_TEST_SECRET')) define('COURSE_AB_TEST_SECRET', $_ENV['COURSE_AB_TEST_SECRET'] ?? 'kG7x2pL9qR4mN8vW3jF5');
+if (!defined('COURSE_AB_TEST_SECRET')) define('COURSE_AB_TEST_SECRET', $_ENV['COURSE_AB_TEST_SECRET'] ?? '');
 if (!defined('COURSE_AB_TEST_COOKIE')) define('COURSE_AB_TEST_COOKIE', 'cab_v');
 if (!defined('COURSE_FIXED_DISCOUNT')) define('COURSE_FIXED_DISCOUNT', 55); // фолбэк, если program_type неизвестен
 if (!defined('COURSE_FIXED_DISCOUNT_KPK')) define('COURSE_FIXED_DISCOUNT_KPK', 55); // повышение квалификации

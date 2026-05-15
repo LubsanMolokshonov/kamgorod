@@ -94,6 +94,26 @@ $totalCourses = count($allCourses);
 $courses      = array_slice($allCourses, 0, $perPage);
 $hasMore      = $totalCourses > $perPage;
 
+// Преподаватели курсов из текущей выборки (только с реальной фотографией)
+$categoryExperts = [];
+if (!empty($allCourses)) {
+    $courseIds = array_column($allCourses, 'id');
+    $placeholders = implode(',', array_fill(0, count($courseIds), '?'));
+    $stmt = $db->prepare(
+        "SELECT DISTINCT ce.id, ce.full_name, ce.slug, ce.credentials, ce.photo_url, ce.display_order
+         FROM course_experts ce
+         JOIN course_expert_assignments cea ON ce.id = cea.expert_id
+         WHERE cea.course_id IN ($placeholders)
+           AND ce.is_active = 1
+           AND ce.photo_url IS NOT NULL
+           AND ce.photo_url <> ''
+           AND ce.photo_url NOT LIKE '%placeholder%'
+         ORDER BY ce.display_order ASC, ce.full_name ASC"
+    );
+    $stmt->execute($courseIds);
+    $categoryExperts = $stmt->fetchAll();
+}
+
 // Counts per filter (для скрытия пустых)
 $baseFilters = [];
 if ($selectedCategoryData) $baseFilters['audience_category'] = $selectedCategoryData['id'];
@@ -318,8 +338,8 @@ include __DIR__ . '/includes/header-redesign.php';
       <div>
         <div class="rd-eyebrow">Каталог курсов</div>
         <h2 class="rd-section-title">Выберите программу под свой уровень и предмет</h2>
-        <p class="rd-section-sub">Найдено: <strong><?php echo $totalCourses; ?></strong> программ. Все с удостоверением установленного образца и записью в ФИС ФРДО.</p>
       </div>
+      <p class="rd-section-sub">Найдено: <strong><?php echo $totalCourses; ?></strong> программ. Все с удостоверением установленного образца и записью в ФИС ФРДО.</p>
       <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
         Фильтры
@@ -473,12 +493,48 @@ include __DIR__ . '/includes/header-redesign.php';
   </div>
 </section>
 
+<?php if (!empty($categoryExperts) && count($categoryExperts) >= 3): ?>
+<!-- Преподаватели -->
+<section class="rd-section tight courses-experts-section">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <div>
+        <div class="rd-eyebrow">Преподаватели</div>
+        <h2 class="rd-section-title">Наши преподаватели</h2>
+      </div>
+      <p class="rd-section-sub">
+        Эксперты-практики ведут наши курсы. Всего в команде —
+        <?= count($categoryExperts) ?>.
+      </p>
+    </div>
+
+    <div class="courses-experts-scroll" data-experts-scroll>
+      <?php foreach ($categoryExperts as $expert): ?>
+        <article class="courses-expert-card">
+          <div class="photo">
+            <img src="<?= htmlspecialchars($expert['photo_url']) ?>"
+                 alt="<?= htmlspecialchars($expert['full_name']) ?>"
+                 loading="lazy">
+          </div>
+          <div class="name"><?= htmlspecialchars($expert['full_name']) ?></div>
+          <?php if (!empty($expert['credentials'])): ?>
+            <div class="credentials"><?= htmlspecialchars(mb_strimwidth($expert['credentials'], 0, 90, '…', 'UTF-8')) ?></div>
+          <?php endif; ?>
+        </article>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
+
 <!-- 4 шага -->
 <section class="rd-path rd-section">
   <div class="rd-wrap">
-    <div class="reveal">
-      <div class="rd-eyebrow">Как это работает</div>
-      <h2 class="rd-section-title">Четыре шага до удостоверения</h2>
+    <div class="rd-section-head reveal">
+      <div>
+        <div class="rd-eyebrow">Как это работает</div>
+        <h2 class="rd-section-title">Четыре шага до удостоверения</h2>
+      </div>
       <p class="rd-section-sub">От выбора программы до удостоверения в ФИС ФРДО — всё дистанционно и в удобном темпе.</p>
     </div>
     <div class="rd-steps four reveal-stagger">
@@ -670,9 +726,11 @@ include __DIR__ . '/includes/header-redesign.php';
 <section class="rd-section">
   <div class="rd-wrap">
     <div class="rd-faq">
-      <div class="reveal">
-        <div class="rd-eyebrow">FAQ</div>
-        <h2 class="rd-section-title">Вопросы о курсах</h2>
+      <div class="rd-section-head reveal">
+        <div>
+          <div class="rd-eyebrow">FAQ</div>
+          <h2 class="rd-section-title">Вопросы о курсах</h2>
+        </div>
         <p class="rd-section-sub">Не нашли ответ? Напишите <a href="mailto:info@fgos.pro" style="color:var(--indigo-600)">info@fgos.pro</a> или позвоните <a href="tel:+79223044413" style="color:var(--indigo-600)">+7 (922) 304-44-13</a>. Ежедневно 9:00–21:00.</p>
       </div>
       <div class="rd-faq-list reveal-stagger">

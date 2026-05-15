@@ -419,6 +419,29 @@
 }
 .checkout-item-link:hover { background: var(--indigo-50, #eef0ff); border-color: var(--indigo-300, #a4a8ff); }
 
+.btn-cancel-enrollment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-400, #9a9aae);
+  font-size: 20px;
+  line-height: 1;
+  border: 1px solid var(--ink-100, #e7e7ee);
+  cursor: pointer;
+  padding: 0;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.btn-cancel-enrollment:hover {
+  color: #dc2626;
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+.btn-cancel-enrollment:disabled { opacity: .5; cursor: wait; }
+
 .course-price-summary {
   padding: 16px 0;
   border-top: 1px solid var(--ink-100, #e7e7ee);

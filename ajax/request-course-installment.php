@@ -22,6 +22,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../classes/Bitrix24Integration.php';
+require_once __DIR__ . '/../classes/CourseEmailChain.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/installment-helper.php';
 
@@ -118,6 +119,19 @@ try {
         (int)$installment['monthly'],
         null
     );
+
+    // Письмо-подтверждение с CTA «Написать в Max» — ускоряет согласование рассрочки.
+    // Ошибка отправки не должна ломать заявку: ловим и логируем.
+    try {
+        $chain = new CourseEmailChain($db);
+        $chain->sendInstallmentRequestedConfirmation(
+            $enrollmentId,
+            (int)$installment['monthly'],
+            (int)$installment['months']
+        );
+    } catch (\Throwable $mailErr) {
+        error_log('request-course-installment: email send failed: ' . $mailErr->getMessage());
+    }
 
     echo json_encode([
         'success' => true,

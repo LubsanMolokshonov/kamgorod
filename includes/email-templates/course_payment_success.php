@@ -10,6 +10,8 @@
  */
 $utm = 'utm_source=email&utm_campaign=course-payment-success';
 $formattedPrice = number_format($course_price, 0, ',', ' ');
+$maxUrl   = defined('MAX_MANAGER_URL')   ? MAX_MANAGER_URL   : 'https://max.ru/u/f9LHodD0cOJKXZhXUQImrGumTp40Eiu4o40RTZGhnpMVWgNe6tGt0x0OSco';
+$maxPhone = defined('MAX_MANAGER_PHONE') ? MAX_MANAGER_PHONE : '+7 922 304 44 13';
 
 ob_start();
 ?>
@@ -76,6 +78,23 @@ ob_start();
             </td>
         </tr>
     </table>
+
+    <!-- Max CTA: ускоряет выдачу доступа менеджером -->
+    <div style="background: linear-gradient(135deg, #fff4e6 0%, #ffe8d6 100%); border: 1px solid #ffb86b; border-radius: 12px; padding: 22px; margin: 28px 0;">
+        <h3 style="margin: 0 0 8px; font-size: 17px; color: #2a1a06;">Напишите менеджеру в Max — и доступ откроют быстрее</h3>
+        <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.5; color: #4a3520;">
+            Доступы к материалам выдаёт менеджер вручную. Чтобы получить их раньше — напишите ему в Messenger Max.
+        </p>
+        <div style="text-align: center;">
+            <a href="<?php echo htmlspecialchars($maxUrl); ?>"
+               style="display: inline-block; padding: 12px 28px; background: #ff8c32; color: #fff; border-radius: 8px; font-weight: 600; font-size: 15px; text-decoration: none;">
+                Написать в Max
+            </a>
+            <p style="margin: 10px 0 0; font-size: 13px; color: #6b5638;">
+                или по номеру: <strong style="color: #2a1a06;"><?php echo htmlspecialchars($maxPhone); ?></strong>
+            </p>
+        </div>
+    </div>
 
     <div class="text-center" style="margin-top: 25px;">
         <?php $cab_link = $cabinet_url . (strpos($cabinet_url, '?') !== false ? '&' : '?') . $utm; ?>

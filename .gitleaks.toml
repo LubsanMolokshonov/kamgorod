@@ -1,0 +1,71 @@
+# gitleaks конфиг для fgos.pro
+# Запуск:
+#   gitleaks detect --source .                         # скан всей истории
+#   gitleaks detect --source . --no-git                # скан рабочей директории
+#   gitleaks protect --staged --redact                 # скан staged-файлов (используется в pre-commit hook)
+#
+# Документация: https://github.com/gitleaks/gitleaks
+
+# Расширяем встроенный набор правил, не заменяем.
+[extend]
+useDefault = true
+
+# Дополнительные правила под наши специфичные секреты
+[[rules]]
+id = "yookassa-secret-key"
+description = "Yookassa live/test Secret Key"
+regex = '''(live|test)_[A-Za-z0-9_-]{30,}'''
+tags = ["yookassa", "payment"]
+
+[[rules]]
+id = "telegram-bot-token"
+description = "Telegram Bot Token"
+regex = '''[0-9]{8,12}:[A-Za-z0-9_-]{30,40}'''
+tags = ["telegram"]
+
+[[rules]]
+id = "bitrix24-webhook-url"
+description = "Bitrix24 inbound webhook URL"
+regex = '''https?://[a-z0-9-]+\.bitrix24\.[a-z]+/rest/[0-9]+/[a-z0-9]{20,}/'''
+tags = ["bitrix24"]
+
+[[rules]]
+id = "unisender-go-api-key"
+description = "Unisender Go API key (32+ hex)"
+regex = '''(?i)unisender[_-]?(go[_-]?)?api[_-]?key["'\s:=]+[a-f0-9]{32,}'''
+tags = ["unisender", "email"]
+
+[allowlist]
+description = "Глобальные исключения"
+
+# Файлы и директории, которые либо безопасно игнорятся (vendor, кэши),
+# либо содержат заведомо допустимые упоминания секретов (примеры, шаблоны, доки с плейсхолдерами).
+paths = [
+  # .env содержит реальные секреты по дизайну, но он в .gitignore — в коммит не попадёт
+  '''(^|/)\.env$''',
+  '''(^|/)\.env\.local$''',
+  '''(^|/)\.env\.example$''',
+  '''(^|/)CLAUDE\.md$''',
+  '''(^|/)docs/INTEGRATION_README\.md$''',
+  '''(^|/)\.gitleaks\.toml$''',
+  '''(^|/)vendor/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)Сертификат/''',
+  '''(^|/)Сертификаты/''',
+  '''(^|/)Дипломы/''',
+  '''(^|/)logs/''',
+  '''(^|/)uploads/''',
+  '''(^|/)tests?/fixtures?/''',
+]
+
+# Заведомо публичные/безопасные значения, которые могут попадаться в коде
+regexes = [
+  # H1Pro public widget key — встраивается в HTML страницы, не секрет
+  '''h1p_w_[A-Za-z0-9_-]+''',
+  # Публичные Bitrix24-стадии вида "C108:UC_..." — не webhook
+  '''C\d+:[A-Z_]+''',
+  # Composer/npm плейсхолдеры
+  '''YOUR_[A-Z_]+_HERE''',
+  '''your_[a-z_]+(_here)?''',
+  '''change[_-]?me[_-]?[a-z0-9_-]*''',
+]

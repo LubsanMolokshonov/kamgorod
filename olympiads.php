@@ -258,8 +258,8 @@ include __DIR__ . '/includes/header-redesign.php';
       <div>
         <div class="rd-eyebrow">Каталог олимпиад</div>
         <h2 class="rd-section-title"><?php echo htmlspecialchars($h2Title, ENT_QUOTES, 'UTF-8'); ?></h2>
-        <p class="rd-section-sub"><?php echo $h2Subtext; ?></p>
       </div>
+      <p class="rd-section-sub"><?php echo $h2Subtext; ?></p>
       <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
         Фильтры
@@ -380,9 +380,11 @@ include __DIR__ . '/includes/header-redesign.php';
 <!-- 4 шага -->
 <section class="rd-path rd-section">
   <div class="rd-wrap">
-    <div class="reveal">
-      <div class="rd-eyebrow">Как это работает</div>
-      <h2 class="rd-section-title">Четыре шага до диплома</h2>
+    <div class="rd-section-head reveal">
+      <div>
+        <div class="rd-eyebrow">Как это работает</div>
+        <h2 class="rd-section-title">Четыре шага до диплома</h2>
+      </div>
       <p class="rd-section-sub">От выбора олимпиады до диплома в личном кабинете — 5–10 минут.</p>
     </div>
     <div class="rd-steps four reveal-stagger">
@@ -435,9 +437,11 @@ include __DIR__ . '/includes/header-redesign.php';
 <section class="rd-section">
   <div class="rd-wrap">
     <div class="rd-faq">
-      <div class="reveal">
-        <div class="rd-eyebrow">FAQ</div>
-        <h2 class="rd-section-title">Вопросы об олимпиадах</h2>
+      <div class="rd-section-head reveal">
+        <div>
+          <div class="rd-eyebrow">FAQ</div>
+          <h2 class="rd-section-title">Вопросы об олимпиадах</h2>
+        </div>
         <p class="rd-section-sub">Не нашли ответ? Напишите <a href="mailto:info@fgos.pro" style="color:var(--indigo-600)">info@fgos.pro</a> или позвоните <a href="tel:+79223044413" style="color:var(--indigo-600)">+7 (922) 304-44-13</a>.</p>
       </div>
       <div class="rd-faq-list reveal-stagger">

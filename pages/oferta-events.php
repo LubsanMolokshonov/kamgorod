@@ -390,5 +390,5 @@ include __DIR__ . '/../includes/header.php';
 
 <?php
 // Include footer
-include __DIR__ . '/../includes/footer.php';
+include __DIR__ . '/../includes/footer-redesign.php';
 ?>

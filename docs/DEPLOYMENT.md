@@ -20,7 +20,7 @@
 # Подключение к серверу
 Server: 141.105.69.45
 Username: root
-Password: 1uf_d7C23o
+Password: см. 1Password (запись «fgos.pro · root@141.105.69.45»)
 Port: 22
 
 # Загрузите следующие файлы:
@@ -57,7 +57,7 @@ scp -r api root@141.105.69.45:/path/to/project/
 
 ```bash
 ssh root@141.105.69.45
-# Пароль: 1uf_d7C23o
+# Пароль: см. 1Password
 ```
 
 Выполните команды:

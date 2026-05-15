@@ -52,7 +52,7 @@
 Конфигурация:
 - Сервер: `root@141.105.69.45`
 - Путь: `/var/www/html`
-- Авторизация: `sshpass -p '1uf_d7C23o' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`
+- Авторизация: используй ssh-ключ (`ssh -i ~/.ssh/id_ed25519`) или ssh-agent. Пароль root — в 1Password, в репо не храним.
 
 ### Фаза 4: Верификация
 

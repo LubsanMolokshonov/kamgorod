@@ -1164,6 +1164,21 @@
     margin-right: 6px;
 }
 
+/* Нет рассрочки — основная цена становится акцентной */
+.rd-card-price-block .rd-price-now:only-child {
+    font: 800 22px var(--font-sans);
+    color: var(--ink-900);
+    letter-spacing: -.01em;
+    line-height: 1.1;
+}
+.rd-card-price-block .rd-price-now:only-child .rd-price-old {
+    font: 500 13px var(--font-sans);
+    color: var(--ink-400);
+    text-decoration: line-through;
+    letter-spacing: 0;
+    margin-right: 6px;
+}
+
 .rd-installment-badge-wrap { display: inline-flex; align-items: center; }
 
 /* Не дать кнопке «К программе» сжиматься/переносить текст в карточке курса */
@@ -1179,4 +1194,69 @@
     color: #047857;
     padding: 2px 6px;
     border-radius: 999px;
+}
+
+/* ===== Преподаватели на категорийной странице ===== */
+.courses-experts-section .rd-section-sub { max-width: 640px; }
+
+.courses-experts-scroll {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 70%;
+    gap: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 4px 16px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+@media (min-width: 768px) {
+    .courses-experts-scroll {
+        /* ~5 карточек видно, следующая подглядывает справа (peek) */
+        grid-auto-columns: calc((100% - 16px * 4) / 5 - 24px);
+    }
+}
+
+.courses-expert-card {
+    scroll-snap-align: start;
+    background: #fff;
+    border: 1px solid var(--ink-200);
+    border-radius: var(--r-lg);
+    padding: 18px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    transition: border-color .2s, box-shadow .25s, transform .25s var(--ease-out);
+}
+.courses-expert-card:hover {
+    border-color: var(--indigo-200);
+    box-shadow: var(--sh-1);
+    transform: translateY(-2px);
+}
+.courses-expert-card .photo {
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--indigo-50);
+    border: 3px solid #fff;
+    box-shadow: 0 4px 14px rgba(20, 28, 80, .12);
+}
+.courses-expert-card .photo img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.courses-expert-card .name {
+    font: 700 14px var(--font-sans);
+    color: var(--ink-900);
+    line-height: 1.3;
+}
+.courses-expert-card .credentials {
+    font-size: 12.5px;
+    color: var(--ink-700);
+    line-height: 1.4;
 }

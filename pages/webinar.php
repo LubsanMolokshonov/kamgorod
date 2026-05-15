@@ -158,7 +158,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 <!-- О вебинаре + сайдбар -->
 <section class="rd-section">
   <div class="rd-wrap">
-    <div class="reveal" style="margin-bottom:28px;">
+    <div class="reveal rd-detail-head" style="margin-bottom:28px;">
       <div class="rd-eyebrow">О <?php echo $isAutowebinar ? 'видеолекции' : 'вебинаре'; ?></div>
       <h2 class="rd-section-title">Что внутри</h2>
     </div>

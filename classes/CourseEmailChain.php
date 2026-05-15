@@ -439,6 +439,89 @@ class CourseEmailChain {
         }
     }
 
+    /**
+     * Отправить письмо-подтверждение подачи заявки на рассрочку.
+     * Включает CTA «Написать в Max» для ускорения согласования.
+     */
+    public function sendInstallmentRequestedConfirmation($enrollmentId, $monthly, $months) {
+        $enrollment = $this->db->queryOne(
+            "SELECT ce.*, c.title AS course_title, c.hours AS course_hours,
+                    c.program_type AS course_program_type, c.slug AS course_slug
+             FROM course_enrollments ce
+             JOIN courses c ON ce.course_id = c.id
+             WHERE ce.id = ?",
+            [$enrollmentId]
+        );
+
+        if (!$enrollment) {
+            $this->log("INSTALLMENT_CONFIRM_SKIP | Enrollment #{$enrollmentId} not found");
+            return false;
+        }
+
+        require_once BASE_PATH . '/classes/EmailDispatcher.php';
+
+        try {
+            $sender = self::pickPersonalSender($enrollment['email']);
+
+            $programLabel = $enrollment['course_program_type'] === 'pp'
+                ? 'Профессиональная переподготовка'
+                : 'Повышение квалификации';
+            $documentLabel = $enrollment['course_program_type'] === 'pp'
+                ? 'Диплом о профессиональной переподготовке'
+                : 'Удостоверение о повышении квалификации';
+
+            $cabinetUrl = generateMagicUrl($enrollment['user_id'], '/kabinet/?tab=courses');
+
+            $unsubscribeToken = $this->generateUnsubscribeToken($enrollment['email']);
+            $unsubscribeUrl   = SITE_URL . '/pages/unsubscribe.php?token=' . urlencode($unsubscribeToken);
+
+            $templateData = [
+                'user_name'           => $enrollment['full_name'],
+                'course_title'        => $enrollment['course_title'],
+                'course_hours'        => $enrollment['course_hours'],
+                'course_program_type' => $enrollment['course_program_type'],
+                'program_label'       => $programLabel,
+                'document_label'      => $documentLabel,
+                'monthly_payment'     => $monthly,
+                'months'              => $months,
+                'course_url'          => SITE_URL . '/kursy/' . $enrollment['course_slug'] . '/',
+                'cabinet_url'         => $cabinetUrl,
+                'unsubscribe_url'     => $unsubscribeUrl,
+                'site_url'            => SITE_URL,
+                'site_name'           => defined('SITE_NAME') ? SITE_NAME : 'ФГОС-Практикум',
+                'footer_reason'       => 'Вы получили это письмо, потому что подали заявку на рассрочку по курсу на портале fgos.pro',
+                '_sender_name'        => self::extractFirstName($sender['from_name']),
+            ];
+
+            $htmlBody = $this->renderTemplate('course_installment_requested', $templateData);
+
+            $subject = 'Заявка на рассрочку принята — напишите менеджеру в Max для ускорения';
+
+            EmailDispatcher::send([
+                'to_email'        => $enrollment['email'],
+                'to_name'         => $enrollment['full_name'],
+                'subject'         => $subject,
+                'html'            => $htmlBody,
+                'from_name'       => $sender['from_name'],
+                'reply_to'        => $sender['reply_to'],
+                'reply_to_name'   => $sender['reply_to_name'],
+                'unsubscribe_url' => $unsubscribeUrl,
+                'meta'            => [
+                    'email_type'      => 'course',
+                    'touchpoint_code' => 'course_installment_requested',
+                    'user_id'         => $enrollment['user_id'] ?? null,
+                ],
+            ]);
+
+            $this->log("INSTALLMENT_CONFIRM | {$enrollment['email']} | Enrollment #{$enrollmentId}");
+            return true;
+
+        } catch (\Throwable $e) {
+            $this->log("INSTALLMENT_CONFIRM_ERROR | {$enrollment['email']} | " . $e->getMessage());
+            return false;
+        }
+    }
+
     // ──────────────────────────────────────────────
     //  Мониторинг ЦДО: деактивация email при прогрессе сделки
     // ──────────────────────────────────────────────

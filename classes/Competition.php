@@ -32,13 +32,27 @@ class Competition {
      * Optional category filter
      */
     public function getActiveCompetitions($category = 'all') {
+        // Подзапрос audience_priority: минимальный display_order аудитории конкурса
+        // (1=Педагоги, 2=Дошкольники, 3=Школьники, 4=СПО). NULL → 99, чтобы безадресные шли в хвост.
+        // Это даёт стабильный порядок «популярных» при равных display_order/created_at:
+        // карточки для учителей/воспитателей наверху, СПО — в конце.
+        $audPriority = "COALESCE((SELECT MIN(ac.display_order)
+                    FROM competition_audience_types cat
+                    JOIN audience_types at2 ON at2.id = cat.audience_type_id
+                    JOIN audience_categories ac ON ac.id = at2.category_id
+                    WHERE cat.competition_id = c.id), 99)";
+
         if ($category === 'all' || empty($category)) {
             return $this->db->query(
-                "SELECT * FROM competitions WHERE is_active = 1 ORDER BY display_order ASC, created_at DESC"
+                "SELECT c.* FROM competitions c
+                 WHERE c.is_active = 1
+                 ORDER BY c.display_order ASC, $audPriority ASC, c.created_at DESC, c.id ASC"
             );
         } else {
             return $this->db->query(
-                "SELECT * FROM competitions WHERE is_active = 1 AND category = ? ORDER BY display_order ASC, created_at DESC",
+                "SELECT c.* FROM competitions c
+                 WHERE c.is_active = 1 AND c.category = ?
+                 ORDER BY c.display_order ASC, $audPriority ASC, c.created_at DESC, c.id ASC",
                 [$category]
             );
         }

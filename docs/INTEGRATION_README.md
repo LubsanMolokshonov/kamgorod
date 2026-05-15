@@ -135,18 +135,22 @@ SMTP_FROM_EMAIL=noreply@ваш-домен.ru
 
 ## 🔑 Ключевые данные
 
+> ⚠️ Реальные пароли и ключи в этом файле НЕ хранятся. Все секреты — в `.env`
+> на сервере (`/var/www/.../.env`) и в личном 1Password/Bitwarden команды.
+> Если попали сюда из-за инцидента утечки — посмотрите git blame для контекста.
+
 **Сервер:**
 - IP: 141.105.69.45
 - User: root
-- Password: 1uf_d7C23o
+- Password: см. 1Password (запись «fgos.pro · root@141.105.69.45»)
 
 **ЮКасса:**
-- Shop ID: 1253458
-- Secret Key: live_SoEdKsTbbZ9qnmykbXx1VrsuA8uJZrV3P7EraKRZui4
-- Mode: production (БОЕВОЙ РЕЖИМ!)
+- Shop ID: см. `.env` на проде (`YOOKASSA_SHOP_ID`)
+- Secret Key: см. `.env` на проде (`YOOKASSA_SECRET_KEY`)
+- Mode: production
 
 **Webhook URL:**
-https://141.105.69.45/api/webhook/yookassa.php
+https://fgos.pro/api/webhook/yookassa.php
 
 ## ⚠️ ВАЖНО
 

@@ -42,6 +42,34 @@
             });
         });
 
+        document.querySelectorAll('.btn-cancel-enrollment').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (!confirm('Убрать этот курс из списка оформления?')) return;
+                var enrollmentId = btn.dataset.enrollmentId;
+                if (!enrollmentId) return;
+                btn.disabled = true;
+                fetch('/ajax/cancel-course-enrollment.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'csrf_token=' + encodeURIComponent(csrfToken)
+                        + '&enrollment_id=' + encodeURIComponent(enrollmentId)
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data && data.success) {
+                        window.location.reload();
+                    } else {
+                        alert((data && data.error) || 'Не удалось удалить заявку');
+                        btn.disabled = false;
+                    }
+                })
+                .catch(function() {
+                    alert('Ошибка сети. Попробуйте ещё раз.');
+                    btn.disabled = false;
+                });
+            });
+        });
+
         document.querySelectorAll('.btn-request-installment').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 if (!confirm('Оформить заявку на рассрочку 0% на 12 месяцев? Менеджер свяжется с вами для оформления.')) {
@@ -70,6 +98,11 @@
                                   '</svg>' +
                                   'Заявка на рассрочку отправлена. Менеджер свяжется в рабочее время.' +
                                 '</div>';
+                        }
+                        // Сразу предложить написать в Max — это ускоряет согласование рассрочки.
+                        var maxModal = document.getElementById('maxCtaModal');
+                        if (maxModal) {
+                            maxModal.classList.add('active');
                         }
                     } else {
                         alert((data && data.error) || 'Не удалось оформить заявку');

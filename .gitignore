@@ -1,6 +1,23 @@
 # Environment variables
 .env
 .env.*
+!.env.example
+
+# Security: keys and credentials (страховка от случайного коммита)
+*.key
+*.pem
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+*_secret
+*_secret.*
+*credentials*
+.secrets/
+service-account*.json
+gcp-key*.json
 
 # Composer
 /vendor/

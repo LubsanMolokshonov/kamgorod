@@ -930,11 +930,12 @@ h1.rd-hero-title .accent {
   border-radius: 50%;
   border: 2px dashed rgba(255,255,255,.12);
 }
-.rd-trust-head { max-width: 540px; position: relative; z-index: 1; }
+.rd-trust-head { position: relative; z-index: 1; }
+.rd-trust-head > div { max-width: 540px; }
 .rd-trust-head .rd-eyebrow { color: #b6c2ff; }
 .rd-trust-head .rd-eyebrow::before { background: #b6c2ff; }
 .rd-trust-head h2 { color: #fff; }
-.rd-trust-head p { color: #c2cdff; margin-top: 12px; line-height: 1.5; font-size: 16px; }
+.rd-trust-head .rd-section-sub { color: #c2cdff; line-height: 1.5; font-size: 16px; max-width: 540px; text-align: right; }
 .rd-trust-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

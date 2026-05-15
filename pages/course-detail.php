@@ -372,8 +372,10 @@ $installment = calculateInstallment($abPrice);
 <section class="rd-section">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
-      <span class="rd-eyebrow">Программа</span>
-      <h2 class="rd-section-title">Программа курса</h2>
+      <div>
+        <div class="rd-eyebrow">Программа</div>
+        <h2 class="rd-section-title">Программа курса</h2>
+      </div>
       <p class="rd-section-sub">
         <?php
         echo count($modules) . ' ';
@@ -480,8 +482,10 @@ $installment = calculateInstallment($abPrice);
 <section class="rd-section tight">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
-      <span class="rd-eyebrow">Преподаватели</span>
-      <h2 class="rd-section-title">Преподаватели курса</h2>
+      <div>
+        <div class="rd-eyebrow">Преподаватели</div>
+        <h2 class="rd-section-title">Преподаватели курса</h2>
+      </div>
       <p class="rd-section-sub">Опытные эксперты-практики с многолетним стажем.</p>
     </div>
     <div class="cd-experts-grid reveal-stagger">
@@ -514,37 +518,45 @@ $installment = calculateInstallment($abPrice);
       <span class="rd-eyebrow">Результаты</span>
       <h2 class="rd-section-title">Что вы получите после курса</h2>
     </div>
+    <?php
+    $renderOutcomeItems = function(array $items): void {
+        foreach ($items as $raw) {
+            $raw = trim((string)$raw);
+            if ($raw === '') continue;
+            if (strpos($raw, "\n") !== false) {
+                $parts = preg_split('/\n+/u', $raw);
+            } elseif (mb_strlen($raw) > 220) {
+                $parts = preg_split('/(?<=[\.!?])\s+(?=[А-ЯA-Z])/u', $raw);
+            } else {
+                $parts = [$raw];
+            }
+            foreach ($parts as $p) {
+                $p = trim($p);
+                if ($p === '') continue;
+                echo '<li>' . htmlspecialchars($p, ENT_QUOTES, 'UTF-8') . '</li>';
+            }
+        }
+    };
+    ?>
     <div class="cd-outcomes-grid reveal-stagger">
       <?php if (!empty($outcomes['knowledge'])): ?>
       <div class="cd-outcome">
         <h3>Знания</h3>
-        <ul>
-          <?php foreach ($outcomes['knowledge'] as $item): ?>
-            <li><?php echo htmlspecialchars($item); ?></li>
-          <?php endforeach; ?>
-        </ul>
+        <ul><?php $renderOutcomeItems($outcomes['knowledge']); ?></ul>
       </div>
       <?php endif; ?>
 
       <?php if (!empty($outcomes['skills'])): ?>
       <div class="cd-outcome">
         <h3>Умения</h3>
-        <ul>
-          <?php foreach ($outcomes['skills'] as $item): ?>
-            <li><?php echo htmlspecialchars($item); ?></li>
-          <?php endforeach; ?>
-        </ul>
+        <ul><?php $renderOutcomeItems($outcomes['skills']); ?></ul>
       </div>
       <?php endif; ?>
 
       <?php if (!empty($outcomes['abilities'])): ?>
       <div class="cd-outcome">
         <h3>Навыки</h3>
-        <ul>
-          <?php foreach ($outcomes['abilities'] as $item): ?>
-            <li><?php echo htmlspecialchars($item); ?></li>
-          <?php endforeach; ?>
-        </ul>
+        <ul><?php $renderOutcomeItems($outcomes['abilities']); ?></ul>
       </div>
       <?php endif; ?>
     </div>

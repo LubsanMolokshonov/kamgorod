@@ -347,9 +347,11 @@ include __DIR__ . '/../includes/header-redesign.php';
 <!-- Steps -->
 <section class="rd-path rd-section">
   <div class="rd-wrap">
-    <div class="reveal">
-      <div class="rd-eyebrow">Как это работает</div>
-      <h2 class="rd-section-title">4 шага до публикации</h2>
+    <div class="rd-section-head reveal">
+      <div>
+        <div class="rd-eyebrow">Как это работает</div>
+        <h2 class="rd-section-title">4 шага до публикации</h2>
+      </div>
       <p class="rd-section-sub">От идеи до свидетельства о&nbsp;публикации — занимает считанные минуты.</p>
     </div>
     <div class="rd-steps four reveal-stagger">
@@ -425,9 +427,11 @@ include __DIR__ . '/../includes/header-redesign.php';
 <section class="rd-section">
   <div class="rd-wrap">
     <div class="rd-faq">
-      <div class="reveal">
-        <div class="rd-eyebrow">FAQ</div>
-        <h2 class="rd-section-title">Вопросы о публикации</h2>
+      <div class="rd-section-head reveal">
+        <div>
+          <div class="rd-eyebrow">FAQ</div>
+          <h2 class="rd-section-title">Вопросы о публикации</h2>
+        </div>
         <p class="rd-section-sub">Не нашли ответ? Напишите <a href="mailto:info@fgos.pro" style="color:var(--indigo-600)">info@fgos.pro</a> или позвоните <a href="tel:+79223044413" style="color:var(--indigo-600)">+7 (922) 304‑44‑13</a>.</p>
       </div>
       <div class="rd-faq-list reveal-stagger">
@@ -487,8 +491,8 @@ include __DIR__ . '/../includes/header-redesign.php';
           <?php if ($search): ?>Результаты поиска: «<?php echo htmlspecialchars($search); ?>»<?php
           else: echo $h1Html; endif; ?>
         </h1>
-        <p class="rd-section-sub">Найдено: <strong><?php echo $totalCount; ?></strong> <?php echo jr_publications_word($totalCount); ?>.<?php if ($currentTag && $currentTag['description']): ?> <?php echo htmlspecialchars($currentTag['description']); endif; ?></p>
       </div>
+      <p class="rd-section-sub">Найдено: <strong><?php echo $totalCount; ?></strong> <?php echo jr_publications_word($totalCount); ?>.<?php if ($currentTag && $currentTag['description']): ?> <?php echo htmlspecialchars($currentTag['description']); endif; ?></p>
       <a href="/opublikovat" class="rd-btn rd-btn-primary head-cta">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         Опубликовать

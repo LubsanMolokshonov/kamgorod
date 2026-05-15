@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Pre-commit hook: блокируем коммит, если gitleaks нашёл секрет в staged-файлах.
+#
+# Включается один раз на машине разработчика:
+#   git config core.hooksPath .githooks
+#
+# Установить gitleaks (macOS):  brew install gitleaks
+# Линукс:  https://github.com/gitleaks/gitleaks/releases
+
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "⚠️  gitleaks не установлен — пропускаю проверку секретов."
+  echo "    Установить:  brew install gitleaks"
+  exit 0
+fi
+
+# protect --staged сканирует только то, что уйдёт в коммит.
+# --redact скрывает значения в выводе, чтобы они не утекли в логи терминала.
+if ! gitleaks protect --staged --redact --no-banner; then
+  echo ""
+  echo "🛑 Обнаружены потенциальные секреты в staged-файлах."
+  echo "   Проверьте вывод выше, при ложном срабатывании:"
+  echo "   1) Добавьте путь/regex в .gitleaks.toml [allowlist]"
+  echo "   2) Или переснимите коммит с --no-verify (НЕ РЕКОМЕНДУЕТСЯ)"
+  exit 1
+fi
+
+exit 0

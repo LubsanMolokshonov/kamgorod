@@ -121,7 +121,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <a href="/konkursy" class="rd-btn rd-btn-primary">Подобрать конкурс
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
-        <a href="/kursy" class="rd-btn rd-btn-ghost">Все курсы повышения квалификации</a>
+        <a href="/kursy/perepodgotovka/" class="rd-btn rd-btn-ghost">Все курсы профессиональной переподготовки</a>
       </div>
       <div class="rd-hero-trust reveal-stagger">
         <div class="rd-trust-item">
@@ -226,7 +226,7 @@ include __DIR__ . '/includes/header-redesign.php';
       <a class="rd-feat rd-feat-5" href="/kursy">
         <div class="rd-feat-pat"></div>
         <div class="ic">📚</div>
-        <h3>Курсы и переподготовка</h3>
+        <h3>Курсы повышения квалификации и переподготовки</h3>
         <p>Программы КПК и профессиональной переподготовки с удостоверением.</p>
         <div class="rd-feat-foot">
           <div class="rd-feat-num"><?php echo $totalCourses; ?>+ <small>программ</small></div>
@@ -291,10 +291,12 @@ window.rdOffersData = <?php echo json_encode($offersData, JSON_UNESCAPED_UNICODE
 <section class="rd-section">
   <div class="rd-wrap">
     <div class="rd-trust-band reveal">
-      <div class="rd-trust-head">
-        <div class="rd-eyebrow">Документы и аккредитации</div>
-        <h2 class="rd-section-title">Все документы в порядке. Можно проверить.</h2>
-        <p>Мы — официальное СМИ и резидент Сколково с лицензией на образовательную деятельность. Каждый документ можно проверить по реестру.</p>
+      <div class="rd-trust-head rd-section-head">
+        <div>
+          <div class="rd-eyebrow">Документы и аккредитации</div>
+          <h2 class="rd-section-title">Все документы в порядке. Можно проверить.</h2>
+        </div>
+        <p class="rd-section-sub">Мы — официальное СМИ и резидент Сколково с лицензией на образовательную деятельность. Каждый документ можно проверить по реестру.</p>
       </div>
       <div class="rd-trust-cards reveal-stagger">
         <div class="rd-trust-card">

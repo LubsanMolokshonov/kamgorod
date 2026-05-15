@@ -286,8 +286,10 @@ $priceFormatted = number_format($competition['price'], 0, ',', ' ');
 <section class="rd-section">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
-      <span class="rd-eyebrow">Цели</span>
-      <h2 class="rd-section-title">Цели конкурса</h2>
+      <div>
+        <div class="rd-eyebrow">Цели</div>
+        <h2 class="rd-section-title">Цели конкурса</h2>
+      </div>
       <p class="rd-section-sub">Конкурс направлен на достижение следующих целей.</p>
     </div>
     <div class="cd-goals-grid reveal-stagger">
@@ -315,8 +317,10 @@ $priceFormatted = number_format($competition['price'], 0, ',', ' ');
 <section class="rd-section tight" style="background:var(--ink-50);">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
-      <span class="rd-eyebrow">Задачи</span>
-      <h2 class="rd-section-title">Задачи конкурса</h2>
+      <div>
+        <div class="rd-eyebrow">Задачи</div>
+        <h2 class="rd-section-title">Задачи конкурса</h2>
+      </div>
       <p class="rd-section-sub">Для достижения поставленных целей решаются следующие задачи.</p>
     </div>
     <div class="cd-objectives reveal-stagger">
@@ -342,8 +346,10 @@ $priceFormatted = number_format($competition['price'], 0, ',', ' ');
 <section class="rd-section">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
-      <span class="rd-eyebrow">Номинации</span>
-      <h2 class="rd-section-title">Номинации конкурса</h2>
+      <div>
+        <div class="rd-eyebrow">Номинации</div>
+        <h2 class="rd-section-title">Номинации конкурса</h2>
+      </div>
       <p class="rd-section-sub">Выберите одну из следующих номинаций при регистрации.</p>
     </div>
     <div class="cd-noms-grid reveal-stagger">

@@ -231,6 +231,32 @@
   margin: 0 0 14px;
 }
 .rd-prose p:last-child { margin-bottom: 0; }
+.rd-prose ul,
+.rd-prose ol {
+  font: 400 16px/1.7 var(--font-text);
+  color: var(--ink-700);
+  margin: 0 0 14px;
+  padding-left: 1.4em;
+  list-style-position: outside;
+}
+.rd-prose ul { list-style-type: disc; }
+.rd-prose ol { list-style-type: decimal; }
+.rd-prose li {
+  font: inherit;
+  margin: 0 0 6px;
+  padding-left: 0.25em;
+}
+.rd-prose li::marker {
+  color: var(--ink-700);
+  font-size: 1em;
+}
+.rd-prose li:last-child { margin-bottom: 0; }
+.rd-prose strong,
+.rd-prose b {
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 700;
+}
 .cd-about-actions {
   margin-top: 24px;
 }

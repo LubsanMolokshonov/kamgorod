@@ -24,8 +24,9 @@ define('AI_YANDEX_GPT_FOLDER_ID', getenv('YANDEX_GPT_FOLDER_ID') ?: '');
 define('AI_YANDEX_GPT_MODEL', getenv('YANDEX_GPT_MODEL') ?: 'yandexgpt-lite');
 define('AI_SITE_URL', getenv('SITE_URL') ?: 'https://fgos.pro');
 define('AI_ADMIN_ALERT_EMAIL', getenv('ADMIN_ALERT_EMAIL') ?: 'info@fgos.pro');
-define('AI_TELEGRAM_BOT_TOKEN', getenv('TELEGRAM_BOT_TOKEN') ?: '8287484412:AAH6g1iymi7oEv1zcFBMY0YB03e9_4MAwNs');
-define('AI_TELEGRAM_ALERT_CHAT_ID', getenv('TELEGRAM_ALERT_CHAT_ID') ?: '1177793865,-5215729575');
+// Если токен не задан — AlertService::notifyTelegram() молча выходит (см. guard на пустоту).
+define('AI_TELEGRAM_BOT_TOKEN', getenv('TELEGRAM_BOT_TOKEN') ?: '');
+define('AI_TELEGRAM_ALERT_CHAT_ID', getenv('TELEGRAM_ALERT_CHAT_ID') ?: '');
 
 // Автозагрузка классов
 spl_autoload_register(function ($class) {

@@ -448,6 +448,24 @@ class Course {
     }
 
     /**
+     * Soft-cancel заявки пользователя на курс из ЛК.
+     * Возвращает false, если заявка не принадлежит юзеру или уже оплачена/отменена/в рассрочке.
+     */
+    public function cancelEnrollmentByUser(int $enrollmentId, string $userEmail): bool {
+        $row = $this->db->queryOne(
+            "SELECT email, status FROM course_enrollments WHERE id = ?",
+            [$enrollmentId]
+        );
+        if (!$row || $row['email'] !== $userEmail) return false;
+        if (in_array($row['status'], ['paid', 'cancelled', 'installment_requested'], true)) return false;
+
+        return (bool)$this->db->execute(
+            "UPDATE course_enrollments SET status = 'cancelled' WHERE id = ?",
+            [$enrollmentId]
+        );
+    }
+
+    /**
      * Проверка: действует ли скидка 10% (в течение 10 минут после записи)
      */
     public function isDiscountEligible($enrollment) {

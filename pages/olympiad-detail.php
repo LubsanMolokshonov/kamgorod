@@ -171,8 +171,10 @@ include __DIR__ . '/../includes/header-redesign.php';
 <section class="rd-section">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
-      <span class="rd-eyebrow">Документы</span>
-      <h2 class="rd-section-title">Лицензия и аккредитации</h2>
+      <div>
+        <div class="rd-eyebrow">Документы</div>
+        <h2 class="rd-section-title">Лицензия и аккредитации</h2>
+      </div>
       <p class="rd-section-sub">Наш портал имеет все необходимые документы для ведения образовательной деятельности.</p>
     </div>
     <div class="od-license-grid reveal-stagger">
@@ -211,8 +213,10 @@ include __DIR__ . '/../includes/header-redesign.php';
 <section class="rd-section rd-path">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
-      <span class="rd-eyebrow">Как пройти</span>
-      <h2 class="rd-section-title">4 шага до диплома</h2>
+      <div>
+        <div class="rd-eyebrow">Как пройти</div>
+        <h2 class="rd-section-title">4 шага до диплома</h2>
+      </div>
       <p class="rd-section-sub">Простой процесс — займёт не больше 10 минут.</p>
     </div>
     <div class="rd-steps four reveal-stagger">
