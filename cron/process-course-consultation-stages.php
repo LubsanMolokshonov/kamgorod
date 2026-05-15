@@ -137,6 +137,9 @@ try {
     //    Берём консультации активные (status='new'), моложе 7 дней,
     //    с заведённой сделкой, и двигаем по текущему этапу и возрасту.
     // ─────────────────────────────────────────────────────────────
+    // Только status='new'. Заявки на рассрочку (installment_requested)
+    // сюда не попадают намеренно — их этапы ведут Битрикс-роботы,
+    // а обратную сверку этапа делает cron/sync-course-deal-stages.php.
     $rows = $dbObj->query(
         "SELECT id, bitrix_lead_id, bitrix_stage, created_at,
                 TIMESTAMPDIFF(MINUTE, created_at, NOW()) AS age_minutes
@@ -237,6 +240,9 @@ try {
     //    Создание сделки делает process-course-bitrix.php; здесь
     //    только двигаем по тем же этапам прозвона и закрываем по ЦДО.
     // ─────────────────────────────────────────────────────────────
+    // installment_requested не двигаем: после заявки на рассрочку этапы
+    // меняют только Битрикс-роботы. Обратную сверку (включая финальный
+    // WON → status='paid') делает cron/sync-course-deal-stages.php.
     $enrollRows = $dbObj->query(
         "SELECT id, bitrix_lead_id, bitrix_stage, created_at,
                 TIMESTAMPDIFF(MINUTE, created_at, NOW()) AS age_minutes

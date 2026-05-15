@@ -169,9 +169,8 @@ try {
                 if ($freshEnrollment && empty($freshEnrollment['bitrix_lead_id'])) {
                     $course = $courseObj->getById($freshEnrollment['course_id']);
                     if ($course) {
-                        // A/B-тест: фактическая цена для CRM
-                        $abPriceCrm = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null);
-
+                        // OPPORTUNITY = фактически уплачено ($finalPrice уже учитывает
+                        // AB-вариант, таймер-скидку 10%, loyalty и email-кампанию).
                         $dealId = $bitrix->createCourseDeal([
                             'full_name' => $freshEnrollment['full_name'],
                             'email' => $freshEnrollment['email'],
@@ -183,7 +182,7 @@ try {
                             'utm_term' => $freshEnrollment['utm_term'] ?? '',
                             'ym_uid' => $freshEnrollment['ym_uid'] ?? '',
                             'source_page' => $freshEnrollment['source_page'] ?? '',
-                        ], $course, $paidStage, $abPriceCrm);
+                        ], $course, $paidStage, $finalPrice);
 
                         if ($dealId) {
                             $dbObj->update('course_enrollments', [
@@ -208,6 +207,14 @@ try {
                     } else {
                         $moved = $bitrix->moveDeal($freshEnrollment['bitrix_lead_id'], $paidStage);
                         if ($moved) {
+                            try {
+                                $bitrix->updateDeal($freshEnrollment['bitrix_lead_id'], [
+                                    'OPPORTUNITY' => $finalPrice,
+                                    'CURRENCY_ID' => 'RUB',
+                                ]);
+                            } catch (Exception $e) {
+                                error_log("Local course payment Bitrix24 updateDeal OPPORTUNITY failed for deal {$freshEnrollment['bitrix_lead_id']}: " . $e->getMessage());
+                            }
                             $dbObj->update('course_enrollments', [
                                 'bitrix_stage' => $paidStage,
                             ], 'id = ?', [$enrollmentId]);

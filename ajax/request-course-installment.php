@@ -6,6 +6,12 @@
  * курса в Bitrix24 на «РАССРОЧКА <название курса>» (стадию не меняет)
  * и помечает enrollment как `installment_requested`. Менеджер связывается
  * с клиентом и оформляет рассрочку через банк-партнёр вручную.
+ *
+ * После этого этапы сделки в B24 ведут только Битрикс-роботы — сервер
+ * такие сделки не двигает (cron/process-course-consultation-stages.php
+ * фильтрует по status='new'). В обратную сторону актуальный этап
+ * подтягивается через cron/sync-course-deal-stages.php — он же выставит
+ * status='paid', когда сделка попадёт в C108:WON.
  */
 
 header('Content-Type: application/json; charset=UTF-8');

@@ -373,9 +373,10 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                             // Сделка ещё не создана — создаём с этапом "Оплата на сайте"
                             $course = $courseObj->getById($enrollment['course_id']);
                             if ($course) {
-                                // A/B-тест: фактическая цена из варианта enrollment
-                                $abVariant = $enrollment['ab_variant'] ?? 'A';
-                                $abPriceCrm = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null);
+                                // OPPORTUNITY = фактически уплачено (order_items.price уже
+                                // содержит final_amount c учётом таймер-скидки 10%, loyalty,
+                                // email-кампании и AB-варианта; см. Order::createForCourseEnrollment).
+                                $paidAmount = floatval($item['price']);
 
                                 $dealId = $bitrix->createCourseDeal([
                                     'full_name' => $enrollment['full_name'],
@@ -388,14 +389,14 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                                     'utm_term' => $enrollment['utm_term'] ?? '',
                                     'ym_uid' => $enrollment['ym_uid'] ?? '',
                                     'source_page' => $enrollment['source_page'] ?? '',
-                                ], $course, $paidStage, $abPriceCrm);
+                                ], $course, $paidStage, $paidAmount);
 
                                 if ($dealId) {
                                     $dbHelper->update('course_enrollments', [
                                         'bitrix_lead_id' => $dealId,
                                         'bitrix_stage' => $paidStage,
                                     ], 'id = ?', [$item['course_enrollment_id']]);
-                                    logWebhook('INFO', $paymentId, "Bitrix24 course deal {$dealId} created (stage: {$paidStage}) for enrollment {$item['course_enrollment_id']}", '');
+                                    logWebhook('INFO', $paymentId, "Bitrix24 course deal {$dealId} created (stage: {$paidStage}, OPPORTUNITY={$paidAmount}) for enrollment {$item['course_enrollment_id']}", '');
                                 }
                             }
                         } else {
@@ -416,10 +417,21 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                             } else {
                                 $moved = $bitrix->moveDeal($enrollment['bitrix_lead_id'], $paidStage);
                                 if ($moved) {
+                                    // Скорректировать OPPORTUNITY на фактически уплаченную сумму
+                                    // (учитывает таймер-скидку 10 минут, loyalty, email-кампанию).
+                                    $paidAmount = floatval($item['price']);
+                                    try {
+                                        $bitrix->updateDeal($enrollment['bitrix_lead_id'], [
+                                            'OPPORTUNITY' => $paidAmount,
+                                            'CURRENCY_ID' => 'RUB',
+                                        ]);
+                                    } catch (Exception $e) {
+                                        logWebhook('WARNING', $paymentId, "Bitrix24 updateDeal OPPORTUNITY failed for deal {$enrollment['bitrix_lead_id']}: " . $e->getMessage(), '');
+                                    }
                                     $dbHelper->update('course_enrollments', [
                                         'bitrix_stage' => $paidStage,
                                     ], 'id = ?', [$item['course_enrollment_id']]);
-                                    logWebhook('INFO', $paymentId, "Bitrix24 deal {$enrollment['bitrix_lead_id']} moved to {$paidStage} for enrollment {$item['course_enrollment_id']}", '');
+                                    logWebhook('INFO', $paymentId, "Bitrix24 deal {$enrollment['bitrix_lead_id']} moved to {$paidStage}, OPPORTUNITY={$paidAmount} for enrollment {$item['course_enrollment_id']}", '');
                                 } else {
                                     logWebhook('ERROR', $paymentId, "Bitrix24 moveDeal FAILED for deal {$enrollment['bitrix_lead_id']} → {$paidStage} (enrollment {$item['course_enrollment_id']})", '');
                                 }
