@@ -5,7 +5,7 @@
  *
  * Основное создание сделки происходит сразу в scripts/process-course-enrollment.php.
  * Этот крон — fallback для записей, где первая попытка не удалась:
- * - status = 'paid' → сделка на этапе "Оплата на сайте" (BITRIX24_COURSE_STAGE_PAID)
+ * - status = 'paid' → сделка на этапе "Оплаченная сделка" (BITRIX24_COURSE_STAGE_PAID)
  * - status != 'paid' → сделка на этапе "Новая" (BITRIX24_COURSE_STAGE_NEW)
  *
  * Crontab (every 5 min): docker exec pedagogy_web php /var/www/html/cron/process-course-bitrix.php
@@ -60,7 +60,7 @@ try {
     $courseObj = new Course($db);
 
     $stageNew = defined('BITRIX24_COURSE_STAGE_NEW') ? BITRIX24_COURSE_STAGE_NEW : 'C108:NEW';
-    $stagePaid = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:EXECUTING';
+    $stagePaid = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:UC_8RO3WZ';
 
     // Выборка записей старше 10 минут без bitrix_lead_id
     $enrollments = $dbObj->query(

@@ -57,13 +57,17 @@ if (!defined('BITRIX24_WEBHOOK_URL')) define('BITRIX24_WEBHOOK_URL', $_ENV['BITR
 if (!defined('BITRIX24_WEBINAR_PIPELINE_ID')) define('BITRIX24_WEBINAR_PIPELINE_ID', $_ENV['BITRIX24_WEBINAR_PIPELINE_ID'] ?? 102);
 if (!defined('BITRIX24_COURSE_PIPELINE_ID')) define('BITRIX24_COURSE_PIPELINE_ID', $_ENV['BITRIX24_COURSE_PIPELINE_ID'] ?? 108);
 if (!defined('BITRIX24_COURSE_STAGE_NEW')) define('BITRIX24_COURSE_STAGE_NEW', 'C108:NEW');
-if (!defined('BITRIX24_COURSE_STAGE_PAID')) define('BITRIX24_COURSE_STAGE_PAID', 'C108:WON');
+// Стадия успешно оплаченной сделки — воронка «ФГОС-Практикум (Курсы)»,
+// этап «Оплаченная сделка» (C108:UC_8RO3WZ). Раньше использовался C108:WON
+// («Сделка успешна»); оплаченные сделки переведены в отдельный этап.
+if (!defined('BITRIX24_COURSE_STAGE_PAID')) {
+    define('BITRIX24_COURSE_STAGE_PAID', $_ENV['BITRIX24_COURSE_STAGE_PAID'] ?? 'C108:UC_8RO3WZ');
+}
 
 // Bitrix24: стадии email-цепочки курсов (pipeline 108)
 if (!defined('BITRIX24_COURSE_STAGE_15MIN'))   define('BITRIX24_COURSE_STAGE_15MIN', 'C108:UC_HWWIFQ');
 if (!defined('BITRIX24_COURSE_STAGE_1H'))      define('BITRIX24_COURSE_STAGE_1H', 'C108:UC_1YOFLO');
 if (!defined('BITRIX24_COURSE_STAGE_MANAGER')) define('BITRIX24_COURSE_STAGE_MANAGER', 'C108:UC_DLXNLQ');
-if (!defined('BITRIX24_COURSE_STAGE_WON'))     define('BITRIX24_COURSE_STAGE_WON', 'C108:WON');
 
 // Рассрочка по курсам (без онлайн-оплаты, оформляется менеджером)
 if (!defined('COURSE_INSTALLMENT_MIN_PRICE')) {
@@ -98,6 +102,8 @@ if (!defined('UNISENDER_API_KEY'))      define('UNISENDER_API_KEY',      $_ENV['
 if (!defined('UNISENDER_API_ENDPOINT')) define('UNISENDER_API_ENDPOINT', $_ENV['UNISENDER_API_ENDPOINT'] ?? 'https://go2.unisender.ru/ru/transactional/api/v1/');
 if (!defined('UNISENDER_SENDER_EMAIL')) define('UNISENDER_SENDER_EMAIL', $_ENV['UNISENDER_SENDER_EMAIL'] ?? 'info@fgos.pro');
 if (!defined('UNISENDER_SENDER_NAME'))  define('UNISENDER_SENDER_NAME',  $_ENV['UNISENDER_SENDER_NAME']  ?? 'ФГОС-Практикум');
+// Секрет для проверки вебхука доставки (api/webhook/unisender.php). Пусто — проверка отключена.
+if (!defined('UNISENDER_WEBHOOK_SECRET')) define('UNISENDER_WEBHOOK_SECRET', $_ENV['UNISENDER_WEBHOOK_SECRET'] ?? '');
 
 // Yandex GPT AI Moderation
 if (!defined('YANDEX_GPT_API_KEY')) define('YANDEX_GPT_API_KEY', $_ENV['YANDEX_GPT_API_KEY'] ?? '');

@@ -367,7 +367,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                             continue;
                         }
 
-                        $paidStage = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:EXECUTING';
+                        $paidStage = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:UC_8RO3WZ';
 
                         if (empty($enrollment['bitrix_lead_id'])) {
                             // Сделка ещё не создана — создаём с этапом "Оплата на сайте"
@@ -401,7 +401,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                                 }
                             }
                         } else {
-                            // Сделка уже создана (cron-ом или ajax-ом) — пытаемся перевести в "Сделка успешна".
+                            // Сделка уже создана (cron-ом или ajax-ом) — пытаемся перевести в "Оплаченная сделка".
                             // Сначала проверяем CATEGORY_ID: если сделка перенесена менеджером в чужую воронку
                             // (например, ЦДО для подготовки документов), не трогаем — она уже в работе.
                             $coursePipelineId = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;

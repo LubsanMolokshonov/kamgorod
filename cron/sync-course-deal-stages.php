@@ -7,8 +7,8 @@
  * заявки на рассрочку (status='installment_requested') и обычные «зависшие»
  * сделки, которые менеджер вручную закрывает в B24. Чтобы админка
  * (admin/courses/) корректно показывала paid_count, нужно подтянуть
- * результат обратно: STAGE_ID → bitrix_stage, при WON → status='paid',
- * при LOSE → status='cancelled'.
+ * результат обратно: STAGE_ID → bitrix_stage, при «Оплаченная сделка» →
+ * status='paid', при LOSE → status='cancelled'.
  *
  * Что НЕ делает: не двигает сделки в Битрикс — двигают только Битрикс-роботы.
  *
@@ -43,7 +43,7 @@ file_put_contents($lockFile, getmypid());
 $MAX_AGE_DAYS  = 90;
 $BATCH_SIZE    = 200;
 $COURSE_PIPELINE = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
-$STAGE_WON     = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:WON';
+$STAGE_PAID    = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:UC_8RO3WZ';
 
 $logFile = BASE_PATH . '/logs/sync-course-deal-stages.log';
 if (!file_exists(dirname($logFile))) {
@@ -120,7 +120,7 @@ try {
 
             $statusChange = null;
             if ($category === $COURSE_PIPELINE) {
-                if ($stageId === $STAGE_WON && $r['status'] !== 'paid') {
+                if ($stageId === $STAGE_PAID && $r['status'] !== 'paid') {
                     $update['status'] = 'paid';
                     $statusChange = 'paid';
                     $paid++;

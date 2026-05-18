@@ -427,9 +427,9 @@ class CourseEmailChain {
 
             $this->log("PAY_CONFIRM | {$enrollment['email']} | Enrollment #{$enrollmentId} | Order {$orderNumber}");
 
-            // Bitrix24: перевести сделку в «Сделка успешна» (C108:WON)
-            $wonStage = defined('BITRIX24_COURSE_STAGE_WON') ? BITRIX24_COURSE_STAGE_WON : 'C108:WON';
-            $this->moveBitrixStage($enrollmentId, $wonStage);
+            // Bitrix24: перевести сделку в «Оплаченная сделка» (C108:UC_8RO3WZ)
+            $paidStage = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:UC_8RO3WZ';
+            $this->moveBitrixStage($enrollmentId, $paidStage);
 
             return true;
 

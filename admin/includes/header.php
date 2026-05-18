@@ -99,6 +99,11 @@ $currentAdmin = Admin::verifySession();
                     <span>E-mail трекинг</span>
                 </a>
 
+                <a href="/admin/old-base/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/old-base/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">📨</span>
+                    <span>Рассылки (старая база)</span>
+                </a>
+
                 <a href="/admin/ai-generator/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/ai-generator/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">🤖</span>
                     <span>AI-генератор</span>
