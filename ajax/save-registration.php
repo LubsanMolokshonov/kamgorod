@@ -125,7 +125,10 @@ try {
         $_SESSION['cart'] = [];
     }
 
-    if (!in_array($registrationId, $_SESSION['cart'])) {
+    // Каст к int: lastInsertId() отдаёт строку, а строгое сравнение типов
+    // в syncSessionCartWithDb() иначе не распознаёт дубль и задваивает позицию.
+    $registrationId = (int)$registrationId;
+    if (!in_array($registrationId, $_SESSION['cart'], true)) {
         $_SESSION['cart'][] = $registrationId;
     }
 

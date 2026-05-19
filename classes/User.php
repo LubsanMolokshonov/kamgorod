@@ -254,7 +254,8 @@ class User {
         $updateData = [];
 
         // Only update provided fields
-        $allowedFields = ['full_name', 'phone', 'city', 'organization', 'profession', 'session_token', 'institution_type_id'];
+        $allowedFields = ['full_name', 'phone', 'city', 'organization', 'profession', 'session_token', 'institution_type_id',
+                          'author_bio', 'avatar_path', 'social_vk', 'social_telegram'];
 
         if ($this->isV2()) {
             $allowedFields[] = 'audience_category_id';

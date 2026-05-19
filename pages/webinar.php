@@ -71,6 +71,26 @@ $ogImage = !empty($webinar['cover_image'])
     : SITE_URL . '/og-image/webinar/' . $webinar['slug'] . '.jpg';
 $ogType = 'article';
 
+// FAQ-блок + микроразметка Schema.org/FAQPage
+require_once __DIR__ . '/../includes/faq-helper.php';
+$faqItems = [
+    ['q' => 'Как получить ссылку на ' . ($isAutowebinar ? 'видеолекцию' : 'вебинар') . '?',
+     'a' => 'После регистрации ссылка придёт на email. ' . ($isAutowebinar ? 'Доступ — сразу.' : 'За 24 часа и за час до эфира пришлём напоминания.')],
+    ['q' => 'Участие платное?',
+     'a' => 'Нет, участие бесплатное. Платный — только именной сертификат участника (' . number_format((float)$webinar['certificate_price'], 0, ',', ' ') . ' ₽).'],
+    ['q' => 'Будет ли запись?',
+     'a' => 'Да, после эфира пришлём ссылку на запись и презентацию спикера.'],
+    ['q' => 'Как получить сертификат?',
+     'a' => 'После просмотра пройдите короткий тест из 5 вопросов и оформите именной сертификат на ' . (int)$webinar['certificate_hours'] . ' ак. ч.'],
+];
+if (!$isAutowebinar) {
+    $faqItems[] = ['q' => 'Можно задать вопрос спикеру?',
+        'a' => 'Да. В прямом эфире можно задавать вопросы в чате — спикер ответит на самые интересные в конце.'];
+}
+$faqItems[] = ['q' => 'Что нужно для участия?',
+    'a' => 'Компьютер, планшет или смартфон с интернетом. Платформа работает в браузере — установка не нужна.'];
+$jsonLdArray = [$jsonLd, buildFaqJsonLd($faqItems)];
+
 include __DIR__ . '/../includes/header-redesign.php';
 ?>
 
@@ -289,34 +309,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <div class="rd-eyebrow">FAQ</div>
         <h2 class="rd-section-title">Частые вопросы</h2>
       </div>
-      <div class="rd-faq-list reveal-stagger">
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Как получить ссылку на <?php echo $isAutowebinar ? 'видеолекцию' : 'вебинар'; ?>? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>После регистрации ссылка придёт на email. <?php echo $isAutowebinar ? 'Доступ — сразу.' : 'За 24 часа и за час до эфира пришлём напоминания.'; ?></div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Участие платное? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Нет, участие бесплатное. Платный — только именной сертификат участника (<?php echo number_format((float)$webinar['certificate_price'], 0, ',', ' '); ?> ₽).</div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Будет ли запись? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Да, после эфира пришлём ссылку на запись и презентацию спикера.</div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Как получить сертификат? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>После просмотра пройдите короткий тест из 5 вопросов и оформите именной сертификат на <?php echo (int)$webinar['certificate_hours']; ?> ак. ч.</div></div>
-        </div>
-        <?php if (!$isAutowebinar): ?>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Можно задать вопрос спикеру? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Да. В прямом эфире можно задавать вопросы в чате — спикер ответит на самые интересные в конце.</div></div>
-        </div>
-        <?php endif; ?>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Что нужно для участия? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Компьютер, планшет или смартфон с интернетом. Платформа работает в браузере — установка не нужна.</div></div>
-        </div>
-      </div>
+      <?php renderFaqList($faqItems); ?>
     </div>
   </div>
 </section>

@@ -237,6 +237,23 @@ include __DIR__ . '/includes/header-redesign.php';
   </div>
 </section>
 
+<!-- Преимущества (GEO-блок) -->
+<section class="rd-section tight rd-advantages-section">
+  <div class="rd-wrap">
+    <div class="reveal">
+      <div class="rd-eyebrow">Почему мы</div>
+      <h2 class="rd-section-title">Почему педагоги выбирают ФГОС.ПРО</h2>
+    </div>
+    <ul class="rd-advantages reveal">
+      <li>✅ Диплом за 2 рабочих дня — или до 5 дней при загрузке</li>
+      <li>✅ Принимается при аттестации во всех регионах РФ</li>
+      <li>✅ Резидент Сколково и официальное СМИ (проверьте в реестре)</li>
+      <li>✅ Цена от 169 ₽, акция «2+1» — третье участие бесплатно</li>
+      <li>✅ Бессрочное хранение дипломов в личном кабинете</li>
+    </ul>
+  </div>
+</section>
+
 <!-- 3 шага до диплома -->
 <section class="rd-path rd-section tight">
   <div class="rd-wrap">

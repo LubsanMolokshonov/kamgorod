@@ -719,6 +719,29 @@ h1.rd-hero-title .accent {
 .rd-feat-5 .rd-feat-pat { background: var(--violet-500); }
 
 /* =====================================================
+   ПРЕИМУЩЕСТВА (GEO-блок)
+   ===================================================== */
+.rd-advantages {
+  margin-top: 28px;
+  list-style: none;
+  padding: 24px 28px;
+  background: var(--ink-50);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-lg);
+  display: grid;
+  gap: 4px;
+  max-width: 760px;
+}
+.rd-advantages li {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink-700);
+  font-weight: 500;
+  padding: 12px 0;
+}
+.rd-advantages li + li { border-top: 1px solid var(--ink-200); }
+
+/* =====================================================
    3 ШАГА
    ===================================================== */
 .rd-path {

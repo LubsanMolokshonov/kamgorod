@@ -144,6 +144,7 @@ $additionalCSS = [
     '/assets/css/competition-detail.css?v=' . filemtime(__DIR__ . '/../assets/css/competition-detail.css'),
     '/assets/css/journal-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/journal-redesign.css'),
     '/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/../assets/css/audience-filter.css'),
+    '/assets/css/publication-extras.css?v=' . filemtime(__DIR__ . '/../assets/css/publication-extras.css'),
 ];
 $additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/../assets/js/audience-filter.js')];
 $ogImage = SITE_URL . '/assets/images/og-journal.jpg';
@@ -160,6 +161,19 @@ $jsonLd = [
         'url' => SITE_URL
     ]
 ];
+
+// FAQ-блок + микроразметка Schema.org/FAQPage
+require_once __DIR__ . '/../includes/faq-helper.php';
+$faqItems = [
+    ['q' => 'Публикация действительно бесплатная?', 'a' => 'Да, размещение материала в&nbsp;журнале полностью бесплатно. Оплачивается только оформление свидетельства о&nbsp;публикации (299&nbsp;₽), если оно вам нужно.'],
+    ['q' => 'Какие материалы можно публиковать?', 'a' => 'Методические разработки, конспекты уроков, статьи, сценарии мероприятий, презентации, рабочие программы и&nbsp;другие авторские педагогические материалы.'],
+    ['q' => 'Как быстро публикуется материал?', 'a' => 'Модерация занимает до&nbsp;24&nbsp;часов. После одобрения работа сразу появляется в&nbsp;каталоге журнала.'],
+    ['q' => 'Подходит ли свидетельство для аттестации?', 'a' => 'Да, наше свидетельство принимается аттестационными комиссиями как подтверждение обобщения и&nbsp;распространения педагогического опыта.'],
+    ['q' => 'Могу ли я удалить свою публикацию?', 'a' => 'Да, вы можете обратиться в&nbsp;поддержку для удаления или редактирования публикации в&nbsp;любой момент.'],
+];
+// FAQ-блок виден только на лендинге (без фильтров) — JSON-LD добавляем только там,
+// чтобы разметка совпадала с видимым контентом.
+$jsonLdArray = $showLanding ? [$jsonLd, buildFaqJsonLd($faqItems)] : [$jsonLd];
 
 // Готовим данные для клиентского поиска по публикациям (когда показан каталог)
 $allForSearch = [];
@@ -434,28 +448,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         </div>
         <p class="rd-section-sub">Не нашли ответ? Напишите <a href="mailto:info@fgos.pro" style="color:var(--indigo-600)">info@fgos.pro</a> или позвоните <a href="tel:+79223044413" style="color:var(--indigo-600)">+7 (922) 304‑44‑13</a>.</p>
       </div>
-      <div class="rd-faq-list reveal-stagger">
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Публикация действительно бесплатная? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Да, размещение материала в&nbsp;журнале полностью бесплатно. Оплачивается только оформление свидетельства о&nbsp;публикации (299&nbsp;₽), если оно вам нужно.</div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Какие материалы можно публиковать? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Методические разработки, конспекты уроков, статьи, сценарии мероприятий, презентации, рабочие программы и&nbsp;другие авторские педагогические материалы.</div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Как быстро публикуется материал? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Модерация занимает до&nbsp;24&nbsp;часов. После одобрения работа сразу появляется в&nbsp;каталоге журнала.</div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Подходит ли свидетельство для аттестации? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Да, наше свидетельство принимается аттестационными комиссиями как подтверждение обобщения и&nbsp;распространения педагогического опыта.</div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Могу ли я удалить свою публикацию? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Да, вы можете обратиться в&nbsp;поддержку для удаления или редактирования публикации в&nbsp;любой момент.</div></div>
-        </div>
-      </div>
+      <?php renderFaqList($faqItems); ?>
     </div>
   </div>
 </section>
@@ -613,6 +606,9 @@ include __DIR__ . '/../includes/header-redesign.php';
                 <div class="pub-author"><?php echo htmlspecialchars($pub['author_name']); ?></div>
                 <div class="pub-meta-line">
                   <span><?php echo jr_format_date($pub['published_at'], $russianMonths); ?></span>
+                  <?php if ((int)($pub['rating_count'] ?? 0) > 0): ?>
+                    <span class="rd-card-rating">★ <?php echo number_format((float)$pub['rating_avg'], 1, '.', ''); ?></span>
+                  <?php endif; ?>
                   <span class="meta-views">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     <?php echo number_format($pub['views_count']); ?>

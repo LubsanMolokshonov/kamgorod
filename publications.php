@@ -36,6 +36,7 @@ $additionalCSS = [
     '/assets/css/competition-detail.css?v=' . filemtime(__DIR__ . '/assets/css/competition-detail.css'),
     '/assets/css/journal-redesign.css?v=' . filemtime(__DIR__ . '/assets/css/journal-redesign.css'),
     '/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/assets/css/audience-filter.css'),
+    '/assets/css/publication-extras.css?v=' . filemtime(__DIR__ . '/assets/css/publication-extras.css'),
 ];
 $additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/assets/js/audience-filter.js')];
 
@@ -350,11 +351,14 @@ include __DIR__ . '/includes/header-redesign.php';
                   <?php endif; ?>
                 </div>
                 <div class="rd-card-foot">
-                  <?php if (!empty($pub['views_count']) && $pub['views_count'] > 0): ?>
-                    <span style="font-size:13px;color:var(--ink-500);">👁 <?php echo (int)$pub['views_count']; ?></span>
-                  <?php else: ?>
-                    <span></span>
-                  <?php endif; ?>
+                  <span style="font-size:13px;color:var(--ink-500);display:flex;gap:10px;align-items:center;">
+                    <?php if ((int)($pub['rating_count'] ?? 0) > 0): ?>
+                      <span class="rd-card-rating">★ <?php echo number_format((float)$pub['rating_avg'], 1, '.', ''); ?></span>
+                    <?php endif; ?>
+                    <?php if (!empty($pub['views_count']) && $pub['views_count'] > 0): ?>
+                      <span>👁 <?php echo (int)$pub['views_count']; ?></span>
+                    <?php endif; ?>
+                  </span>
                   <span class="rd-join-btn">Читать</span>
                 </div>
               </a>

@@ -210,6 +210,10 @@ RewriteRule ^zhurnal/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ pages/j
 RewriteRule ^publikaciya/([a-z0-9-]+)$ /publikaciya/$1/ [R=301,L]
 RewriteRule ^publikaciya/([a-z0-9-]+)/$ pages/publication.php?slug=$1 [L,QSA]
 
+# Страница автора публикаций
+RewriteRule ^avtor/([0-9]+)$ /avtor/$1/ [R=301,L]
+RewriteRule ^avtor/([0-9]+)/$ pages/author.php?id=$1 [L,QSA]
+
 # Подача публикации
 RewriteRule ^opublikovat/?$ pages/submit-publication.php [L,QSA]
 

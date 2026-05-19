@@ -1,0 +1,208 @@
+/* publication-extras.css
+   Оглавление статьи, блок рейтинга и страница автора.
+   Использует CSS-переменные редизайна (redesign.css). */
+
+/* ===== Оглавление (TOC) ===== */
+.pub-toc {
+  margin: 24px 0 28px;
+  padding: 20px 24px;
+  background: var(--indigo-50);
+  border: 1px solid var(--indigo-100);
+  border-radius: var(--r-lg);
+}
+.pub-toc-title {
+  font: 700 15px/1.2 var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--indigo-700);
+  margin-bottom: 12px;
+}
+.pub-toc-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: toc;
+}
+.pub-toc-item {
+  margin: 0;
+  padding: 4px 0;
+  line-height: 1.45;
+}
+.pub-toc-item a {
+  color: var(--ink-700);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+.pub-toc-item a:hover {
+  color: var(--indigo-600);
+  border-bottom-color: var(--indigo-300);
+}
+.pub-toc-l2 { counter-increment: toc; }
+.pub-toc-l2 a::before {
+  content: counter(toc) ". ";
+  color: var(--indigo-500);
+  font-weight: 700;
+}
+.pub-toc-l3 {
+  padding-left: 22px;
+  font-size: 14px;
+}
+.pub-toc-l3 a::before {
+  content: "— ";
+  color: var(--ink-400);
+}
+
+/* смещение якоря под фиксированный хедер */
+.pub-body h2[id],
+.pub-body h3[id] {
+  scroll-margin-top: 90px;
+}
+
+/* ===== Блок рейтинга ===== */
+.pub-rating {
+  margin: 32px 0;
+  padding: 24px;
+  text-align: center;
+  background: var(--paper);
+  border: 1px solid var(--ink-100);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+}
+.pub-rating-title {
+  font: 700 17px/1.2 var(--font-sans);
+  color: var(--ink-900);
+  margin-bottom: 12px;
+}
+.pub-rating-stars {
+  display: inline-flex;
+  gap: 4px;
+}
+.pub-star {
+  padding: 2px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+  color: var(--ink-200);
+  transition: color .12s, transform .12s;
+}
+.pub-star svg { fill: currentColor; }
+.pub-star:hover { transform: scale(1.12); }
+.pub-star.is-active,
+.pub-star.is-preview { color: var(--amber-400); }
+.pub-rating.is-voted .pub-star {
+  cursor: default;
+  pointer-events: none;
+}
+.pub-rating.is-voted .pub-star:hover { transform: none; }
+.pub-rating-summary {
+  margin-top: 10px;
+  font: 500 15px/1.3 var(--font-sans);
+  color: var(--ink-500);
+}
+.pub-rating-avg {
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--ink-900);
+  margin-right: 6px;
+}
+.pub-rating-thanks {
+  margin-top: 8px;
+  font: 600 14px/1.3 var(--font-sans);
+  color: var(--indigo-600);
+}
+
+/* рейтинг в карточках списков */
+.rd-card-rating {
+  color: #b8860b;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ===== Страница автора ===== */
+.author-hero {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 24px 0 8px;
+}
+.author-hero-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--ink-100);
+  flex-shrink: 0;
+}
+.author-hero-info h1 {
+  font: 800 30px/1.15 var(--font-sans);
+  color: var(--ink-900);
+  margin: 0 0 6px;
+}
+.author-hero-org {
+  color: var(--ink-500);
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.author-hero-stats {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--indigo-50);
+  color: var(--indigo-700);
+  border-radius: var(--r-pill);
+  font: 600 13px/1.2 var(--font-sans);
+}
+.author-hero-social {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.author-social-link {
+  padding: 6px 14px;
+  border: 1px solid var(--indigo-200);
+  border-radius: var(--r-pill);
+  color: var(--indigo-600);
+  font: 600 13px/1.2 var(--font-sans);
+  text-decoration: none;
+  transition: background .15s, color .15s;
+}
+.author-social-link:hover {
+  background: var(--indigo-600);
+  color: #fff;
+}
+.author-bio {
+  margin: 20px 0 8px;
+  padding: 18px 22px;
+  background: var(--ink-50);
+  border-radius: var(--r-lg);
+  color: var(--ink-700);
+  line-height: 1.6;
+  font-size: 15px;
+}
+.author-pubs-title {
+  margin: 32px 0 16px;
+  font: 800 22px/1.2 var(--font-sans);
+  color: var(--ink-900);
+}
+
+/* ссылка автора в шапке статьи и сайдбаре */
+a.author-name { color: inherit; text-decoration: none; }
+a.author-name:hover { color: var(--indigo-600); }
+a.author-avatar { text-decoration: none; }
+.author-profile-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--indigo-600);
+  font: 600 14px/1.2 var(--font-sans);
+  text-decoration: none;
+}
+.author-profile-link:hover { text-decoration: underline; }
+
+@media (max-width: 560px) {
+  .author-hero { gap: 16px; }
+  .author-hero-avatar { width: 88px; height: 88px; }
+  .author-hero-info h1 { font-size: 24px; }
+}

@@ -8,6 +8,7 @@ class FileUploader {
     private $uploadDir;
     private $allowedTypes;
     private $maxSize;
+    private $allowedExtensions;
     private $errors = [];
 
     /**
@@ -15,8 +16,9 @@ class FileUploader {
      * @param string $uploadDir Base upload directory
      * @param array $allowedTypes Allowed MIME types
      * @param int $maxSize Max file size in bytes (default 10MB)
+     * @param array|null $allowedExtensions Allowed file extensions (default pdf/doc/docx)
      */
-    public function __construct($uploadDir = null, $allowedTypes = null, $maxSize = null) {
+    public function __construct($uploadDir = null, $allowedTypes = null, $maxSize = null, $allowedExtensions = null) {
         $this->uploadDir = $uploadDir ?? __DIR__ . '/../uploads/publications/';
         $this->allowedTypes = $allowedTypes ?? [
             'application/pdf',
@@ -24,6 +26,7 @@ class FileUploader {
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         ];
         $this->maxSize = $maxSize ?? 10 * 1024 * 1024; // 10MB
+        $this->allowedExtensions = $allowedExtensions ?? ['pdf', 'doc', 'docx'];
 
         // Ensure upload directory exists
         $this->ensureDirectoryExists($this->uploadDir);
@@ -103,15 +106,14 @@ class FileUploader {
         $mimeType = $finfo->file($file['tmp_name']);
 
         if (!in_array($mimeType, $this->allowedTypes)) {
-            $this->errors[] = 'Неподдерживаемый тип файла. Разрешены: PDF, DOC, DOCX';
+            $this->errors[] = 'Неподдерживаемый тип файла. Разрешены: ' . strtoupper(implode(', ', $this->allowedExtensions));
             return false;
         }
 
         // Additional check by extension
         $extension = strtolower($this->getExtension($file['name']));
-        $allowedExtensions = ['pdf', 'doc', 'docx'];
 
-        if (!in_array($extension, $allowedExtensions)) {
+        if (!in_array($extension, $this->allowedExtensions)) {
             $this->errors[] = 'Неподдерживаемое расширение файла';
             return false;
         }

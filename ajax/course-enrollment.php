@@ -80,6 +80,14 @@ try {
         ]);
     }
 
+    // Сериализация проверки дубля и вставки. Фронт блокирует кнопку, но при
+    // двух параллельных запросах (две вкладки, сетевой ретрай) оба прошли бы
+    // SELECT до INSERT и создали две заявки. GET_LOCK не даёт им идти парал.
+    // Лок снимается явно ниже, а также автоматически при закрытии соединения
+    // в конце запроса — поэтому ветка catch его не держит.
+    $enrollLock = 'course_enroll:' . $courseId . ':' . md5(mb_strtolower($email));
+    $db->prepare("SELECT GET_LOCK(?, 10)")->execute([$enrollLock]);
+
     // Check for duplicate enrollment
     $dbObj = new Database($db);
     $existing = $dbObj->queryOne(
@@ -88,6 +96,8 @@ try {
     );
 
     if ($existing) {
+        $db->prepare("SELECT RELEASE_LOCK(?)")->execute([$enrollLock]);
+
         // Set session for auto-login
         if (!getUserId()) {
             setUserId($userId);
@@ -135,6 +145,8 @@ try {
     $enrollmentData['ab_variant'] = $abVariant;
 
     $enrollmentId = $dbObj->insert('course_enrollments', $enrollmentData);
+
+    $db->prepare("SELECT RELEASE_LOCK(?)")->execute([$enrollLock]);
 
     // Set session
     if (!getUserId()) {

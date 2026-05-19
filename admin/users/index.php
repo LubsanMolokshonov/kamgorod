@@ -83,6 +83,7 @@ include __DIR__ . '/../includes/header.php';
                         <th>Регистраций</th>
                         <th>Оплачено</th>
                         <th>Дата регистрации</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -96,6 +97,7 @@ include __DIR__ . '/../includes/header.php';
                             <td><?php echo $user['registration_count']; ?></td>
                             <td><?php echo $user['paid_count']; ?></td>
                             <td><?php echo date('d.m.Y', strtotime($user['created_at'])); ?></td>
+                            <td><a href="/admin/users/edit.php?id=<?php echo $user['id']; ?>" class="btn btn-secondary btn-sm">Редактировать</a></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

@@ -55,19 +55,26 @@ function syncSessionCartWithDb(int $userId): void {
         return;
     }
     try {
-        // Шаг 1: push session → DB
+        // Шаг 1: push session → DB + нормализация типов в сессии.
+        // PDO::lastInsertId() возвращает строку, поэтому позиции в $_SESSION
+        // могут лежать строками ("123"). Шаг 2 сравнивает дубли строго
+        // (in_array(..., true)), и "123" !== 123 — позиция задваивается.
+        // Приводим к int (заодно дедуплицируем), чтобы Шаг 2 видел дубли.
         $insertStmt = $db->prepare(
             "INSERT IGNORE INTO cart_items (user_id, item_type, item_id) VALUES (?, ?, ?)"
         );
         foreach (CART_TYPES as $type => $sessKey) {
             $items = $_SESSION[$sessKey] ?? [];
             if (!is_array($items)) continue;
+            $normalized = [];
             foreach ($items as $itemId) {
                 $id = (int)$itemId;
-                if ($id > 0) {
+                if ($id > 0 && !in_array($id, $normalized, true)) {
+                    $normalized[] = $id;
                     $insertStmt->execute([$userId, $type, $id]);
                 }
             }
+            $_SESSION[$sessKey] = $normalized;
         }
 
         // Шаг 2: pull DB → session
