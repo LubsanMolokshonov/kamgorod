@@ -148,8 +148,10 @@ class OldBaseCampaignProcessor {
                 ? self::renderBody($camp['plain_body'], $rec, $camp, $unsubscribeUrl)
                 : null;
 
+            $firstName = self::firstName($rec['full_name'] ?? '');
             $subject = self::interpolate($camp['subject'], [
-                '{{name}}' => self::firstName($rec['full_name'] ?? ''),
+                '{{name}}'     => $firstName,
+                '{{greeting}}' => self::greeting($firstName),
             ]);
 
             $sendParams = [
@@ -197,20 +199,32 @@ class OldBaseCampaignProcessor {
     }
 
     /**
-     * Подстановка простых плейсхолдеров {{name}} в теле + автоматическая
-     * замена UTM-маркера {{cta_url}} на CTA-URL с UTM (если auto_utm=1).
+     * Подстановка плейсхолдеров {{name}}, {{greeting}}, {{email}} в теле +
+     * автоматическая замена UTM-маркера {{cta_url}} на CTA-URL с UTM (если auto_utm=1).
      */
     private static function renderBody(string $body, array $rec, array $camp, string $unsubscribeUrl): string {
         $cta = $camp['cta_url'] ?? '';
         if ($cta && !empty($camp['auto_utm'])) {
             $cta = OldBaseCampaign::appendUtm($cta, $camp['code']);
         }
+        $firstName = self::firstName($rec['full_name'] ?? '');
         return self::interpolate($body, [
-            '{{name}}'            => self::firstName($rec['full_name'] ?? ''),
+            '{{name}}'            => $firstName,
+            '{{greeting}}'        => self::greeting($firstName),
             '{{email}}'           => $rec['email'],
             '{{cta_url}}'         => $cta,
             '{{unsubscribe_url}}' => $unsubscribeUrl,
         ]);
+    }
+
+    /**
+     * Приветствие с именем, если оно известно, иначе — без имени.
+     * {{greeting}} → «Здравствуйте, Светлана!» или «Здравствуйте!».
+     */
+    private static function greeting(string $firstName): string {
+        return $firstName !== ''
+            ? 'Здравствуйте, ' . $firstName . '!'
+            : 'Здравствуйте!';
     }
 
     private static function interpolate(string $tpl, array $map): string {

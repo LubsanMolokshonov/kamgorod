@@ -49,7 +49,9 @@ $htmlBody = <<<'HTML'
 <body style="margin:0; padding:0; background:#ffffff;">
 <div style="max-width:560px; margin:0 auto; padding:28px 22px; font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif; font-size:16px; line-height:1.62; color:#1a1a1a;">
 
-  <p style="margin:0 0 16px;">Здравствуйте!</p>
+  <p style="margin:0 0 16px;">{{greeting}}</p>
+
+  <p style="margin:0 0 16px;">Меня зовут Родион Брехач, я главный редактор электронного журнала fgos.pro. Пишу вам по делу.</p>
 
   <p style="margin:0 0 16px;">Написание статьи для портфолио или аттестации обычно отнимает вечера: структура, формулировки, оформление. Мы сделали инструмент, который берёт это на себя.</p>
 
@@ -70,9 +72,10 @@ $htmlBody = <<<'HTML'
     <a href="{{cta_url}}" style="display:inline-block; background:#1e3aa8; color:#ffffff; text-decoration:none; font-size:16px; font-weight:600; padding:14px 30px; border-radius:8px;">Создать статью за 3 минуты</a>
   </p>
 
-  <p style="margin:0 0 24px;">Попробуйте прямо сейчас — статья останется в журнале под вашим именем.</p>
+  <p style="margin:0 0 24px;">Попробуйте прямо сейчас — статья останется в журнале под вашим именем, а я лично увижу её в ленте новых материалов.</p>
 
-  <p style="margin:0 0 4px; color:#555555;">— Редакция журнала <a href="https://fgos.pro" style="color:#1e3aa8;">fgos.pro</a></p>
+  <p style="margin:0 0 2px;">С уважением,</p>
+  <p style="margin:0 0 4px; color:#555555;">Родион Брехач — главный редактор журнала <a href="https://fgos.pro" style="color:#1e3aa8;">fgos.pro</a></p>
 
   <p style="margin:18px 0 0; font-size:12px; color:#999999; border-top:1px solid #eeeeee; padding-top:14px;">
     Вы получили это письмо, потому что ваш адрес есть в базе образовательного центра «Каменный город». Если письмо пришло по ошибке — <a href="{{unsubscribe_url}}" style="color:#999999;">отписаться от рассылки</a>.
@@ -84,7 +87,10 @@ $htmlBody = <<<'HTML'
 HTML;
 
 $plainBody = <<<'TEXT'
-Здравствуйте!
+{{greeting}}
+
+Меня зовут Родион Брехач, я главный редактор электронного журнала fgos.pro.
+Пишу вам по делу.
 
 Написание статьи для портфолио или аттестации обычно отнимает вечера: структура,
 формулировки, оформление. Мы сделали инструмент, который берёт это на себя.
@@ -106,9 +112,11 @@ $plainBody = <<<'TEXT'
 
 Создать статью за 3 минуты: {{cta_url}}
 
-Попробуйте прямо сейчас — статья останется в журнале под вашим именем.
+Попробуйте прямо сейчас — статья останется в журнале под вашим именем,
+а я лично увижу её в ленте новых материалов.
 
-— Редакция журнала fgos.pro
+С уважением,
+Родион Брехач — главный редактор журнала fgos.pro
 
 Вы получили это письмо, потому что ваш адрес есть в базе центра «Каменный город».
 Отписаться от рассылки: {{unsubscribe_url}}
@@ -134,12 +142,29 @@ $rampSchedule = [
 
 $campaign = new OldBaseCampaign($db);
 
+// Идемпотентность: если черновик с таким code уже есть — удаляем и пересоздаём.
+// Удаляем только в статусе draft, чтобы не затронуть уже запущенную рассылку.
+$existing = $db->query(
+    "SELECT id, status FROM old_base_campaigns WHERE code = 'generator-statej-old-base'"
+)->fetch(PDO::FETCH_ASSOC);
+if ($existing) {
+    if ($existing['status'] !== 'draft') {
+        fwrite(STDERR, "Кампания generator-statej-old-base уже в статусе '{$existing['status']}' — прерываю.\n");
+        exit(1);
+    }
+    $stmt = $db->prepare('DELETE FROM old_base_campaign_recipients WHERE campaign_id = ?');
+    $stmt->execute([(int)$existing['id']]);
+    $stmt = $db->prepare('DELETE FROM old_base_campaigns WHERE id = ?');
+    $stmt->execute([(int)$existing['id']]);
+    echo "Старый черновик id={$existing['id']} удалён, пересоздаю.\n";
+}
+
 $id = $campaign->create([
     'code'              => 'generator-statej-old-base',
     'name'              => 'Генератор статей — старая база, 10 000 (never_sent)',
     'subject'           => 'Педагогическая статья за 3 минуты — и публикация в журнале',
-    'from_name'         => 'Редакция журнала fgos.pro',
-    'from_email'        => null,
+    'from_name'         => 'Родион Брехач, главный редактор fgos.pro',
+    'from_email'        => 'rodion@fgos.pro',
     'html_body'         => $htmlBody,
     'plain_body'        => $plainBody,
     'cta_url'           => 'https://fgos.pro/generator-statej/',
