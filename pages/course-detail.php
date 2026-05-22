@@ -108,7 +108,16 @@ $jsonLd = [
         'courseMode' => 'online',
         'courseWorkload' => 'PT' . $course['hours'] . 'H'
     ],
-    'educationalCredentialAwarded' => $credentialType,
+    'educationalCredentialAwarded' => [
+        '@type' => 'EducationalOccupationalCredential',
+        'name' => $credentialType,
+        'credentialCategory' => 'professional-certification',
+        'recognizedBy' => [
+            '@type' => 'Organization',
+            'name' => SITE_NAME,
+            'url' => SITE_URL . '/'
+        ]
+    ],
     'numberOfCredits' => (int)$course['hours'],
     'educationalLevel' => 'Дополнительное профессиональное образование',
     'isAccessibleForFree' => false

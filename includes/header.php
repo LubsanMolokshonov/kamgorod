@@ -163,6 +163,7 @@ $isLoggedIn = isset($_SESSION['user_email']);
           <a class="rd-sd-item" href="/opublikovat"><div class="ico">📝</div><div><div class="t">Опубликовать материал</div><div class="s">Свидетельство о публикации</div></div></a>
         </div>
       </div>
+      <a class="rd-nav-link<?php echo $rdActivePage === 'team' ? ' active' : ''; ?>" href="/team">Команда</a>
     </nav>
 
     <div class="rd-nav-right">
@@ -224,6 +225,7 @@ $isLoggedIn = isset($_SESSION['user_email']);
     <a class="rd-mm-link" href="/zhurnal">Журнал</a>
     <a class="rd-mm-link rd-mm-sub" href="/publikacii/">— Опубликованные материалы</a>
     <a class="rd-mm-link rd-mm-sub" href="/opublikovat">— Опубликовать материал</a>
+    <a class="rd-mm-link" href="/team">Команда</a>
     <a class="rd-mm-link" href="/o-portale">О портале</a>
     <a class="rd-mm-link" href="/korzina">Корзина<?php if ($rdCartCount > 0): ?> <span class="rd-mm-badge"><?php echo $rdCartCount; ?></span><?php endif; ?></a>
     <?php if ($isLoggedIn): ?>

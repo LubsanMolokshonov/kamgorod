@@ -312,6 +312,8 @@ RewriteRule ^politika-konfidencialnosti/?$ pages/privacy.php [L,QSA]
 RewriteRule ^oferta-kursy/?$ pages/oferta-courses.php [L,QSA]
 RewriteRule ^oferta-meropriyatiya/?$ pages/oferta-events.php [L,QSA]
 RewriteRule ^oferta-materialy/?$ pages/oferta-materials.php [L,QSA]
+RewriteRule ^team/?$ pages/team.php [L,QSA]
+RewriteRule ^komanda/?$ /team [R=301,L]
 
 # Кастомная 404 страница
 ErrorDocument 404 /pages/404.php

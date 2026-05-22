@@ -17,11 +17,37 @@ $ogImage = SITE_URL . '/assets/images/og-home.jpg';
 
 $jsonLd = [
     '@context' => 'https://schema.org',
-    '@type' => 'Organization',
-    'name' => SITE_NAME,
-    'url' => SITE_URL . '/',
-    'description' => $pageDescription,
-    'logo' => SITE_URL . '/assets/images/logo.svg',
+    '@graph' => [
+        [
+            '@type' => 'WebSite',
+            'name'  => SITE_NAME . ' — конкурсы и курсы для педагогов',
+            'url'   => SITE_URL . '/',
+            'description' => $pageDescription,
+        ],
+        [
+            '@type' => 'EducationalOrganization',
+            'name'  => SITE_NAME,
+            'url'   => SITE_URL . '/',
+            'logo'  => SITE_URL . '/assets/images/logo.svg',
+            'description' => 'Официальное СМИ и резидент Сколково. '
+                . 'Лицензия на образовательную деятельность.',
+            'founder' => [
+                '@type' => 'Person',
+                'name'  => 'Александр Дмитриевич Воронов',
+            ],
+            'foundingDate' => '2018-12-24',
+            'address' => [
+                '@type' => 'PostalAddress',
+                'addressCountry' => 'RU',
+                'addressLocality' => 'Пермь',
+            ],
+            'sameAs' => [
+                'https://vk.com/fgospro',
+                'https://t.me/merovospitatel',
+                'https://t.me/eduregion_do',
+            ],
+        ],
+    ],
 ];
 
 // Данные из БД

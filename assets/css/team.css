@@ -1,0 +1,243 @@
+/* ============================================================
+   Страница «Команда» — /team
+   Использует токены из redesign.css (--indigo-*, --ink-*, --r-*, --sh-*)
+   ============================================================ */
+
+.team-container {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* ── Hero ───────────────────────────────────────────────── */
+.team-hero {
+    background: radial-gradient(120% 90% at 80% 0%, var(--indigo-50) 0%, var(--rd-bg, #fbfbfd) 60%);
+    padding: 72px 0 56px;
+    border-bottom: 1px solid var(--ink-100);
+}
+.team-hero-inner {
+    max-width: 720px;
+}
+.team-eyebrow {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--indigo-500);
+    margin-bottom: 14px;
+}
+.team-hero h1 {
+    font-size: clamp(32px, 5vw, 48px);
+    line-height: 1.1;
+    font-weight: 800;
+    color: var(--ink-900);
+    margin: 0 0 18px;
+}
+.team-hero-sub {
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--ink-500);
+    margin: 0 0 32px;
+}
+.team-hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+}
+.team-stat {
+    display: flex;
+    flex-direction: column;
+}
+.team-stat-num {
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--indigo-600);
+    line-height: 1;
+}
+.team-stat-label {
+    font-size: 14px;
+    color: var(--ink-500);
+    margin-top: 6px;
+}
+
+/* ── Секции ─────────────────────────────────────────────── */
+.team-section {
+    padding: 64px 0;
+}
+.team-section-alt {
+    background: var(--ink-50);
+}
+.team-section-head {
+    max-width: 640px;
+    margin: 0 0 40px;
+}
+.team-section-head h2 {
+    font-size: clamp(26px, 3.5vw, 34px);
+    font-weight: 800;
+    color: var(--ink-900);
+    margin: 0 0 12px;
+}
+.team-section-head p {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--ink-500);
+    margin: 0;
+}
+
+/* ── Сетка карточек ─────────────────────────────────────── */
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+}
+.team-grid-core {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.team-card {
+    background: var(--paper, #fff);
+    border: 1px solid var(--ink-100);
+    border-radius: var(--r-lg, 20px);
+    padding: 28px 24px;
+    text-align: center;
+    transition: transform .2s var(--ease-out, ease), box-shadow .2s ease, border-color .2s ease;
+}
+.team-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--sh-2);
+    border-color: var(--indigo-200);
+}
+.team-card-sm {
+    padding: 24px 18px;
+}
+
+/* ── Фото / аватар ──────────────────────────────────────── */
+.team-photo {
+    position: relative;
+    width: 104px;
+    height: 104px;
+    margin: 0 auto 16px;
+}
+.team-photo img {
+    position: absolute;
+    inset: 0;
+    width: 104px;
+    height: 104px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid var(--paper, #fff);
+    box-shadow: var(--sh-1);
+}
+
+.team-avatar {
+    width: 104px;
+    height: 104px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: .02em;
+}
+.team-avatar-sm {
+    margin: 0;
+}
+.team-photo .team-avatar {
+    position: absolute;
+    inset: 0;
+}
+
+.team-avatar-tone-1 { background: linear-gradient(135deg, var(--indigo-400), var(--indigo-600)); }
+.team-avatar-tone-2 { background: linear-gradient(135deg, var(--sky-500), var(--indigo-500)); }
+.team-avatar-tone-3 { background: linear-gradient(135deg, var(--teal-500), var(--sky-500)); }
+.team-avatar-tone-4 { background: linear-gradient(135deg, var(--violet-500), var(--indigo-500)); }
+.team-avatar-tone-5 { background: linear-gradient(135deg, var(--rose-500), var(--violet-500)); }
+
+/* ── Текст карточки ─────────────────────────────────────── */
+.team-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ink-900);
+    margin: 0 0 6px;
+    line-height: 1.3;
+}
+.team-role {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--indigo-500);
+    margin: 0 0 8px;
+}
+.team-desc {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink-500);
+    margin: 0;
+}
+.team-org {
+    font-size: 13px;
+    color: var(--ink-400);
+    margin: 0 0 8px;
+}
+.team-badge {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--indigo-600);
+    background: var(--indigo-50);
+    border-radius: var(--r-pill, 999px);
+}
+
+/* ── Ссылки и CTA ───────────────────────────────────────── */
+.team-cta-inline {
+    margin-top: 32px;
+    text-align: center;
+}
+.team-link {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--indigo-600);
+    text-decoration: none;
+}
+.team-link:hover {
+    text-decoration: underline;
+}
+
+.team-final-cta {
+    text-align: center;
+    max-width: 560px;
+    margin: 0 auto;
+}
+.team-final-cta h2 {
+    font-size: clamp(26px, 3.5vw, 34px);
+    font-weight: 800;
+    color: var(--ink-900);
+    margin: 0 0 12px;
+}
+.team-final-cta p {
+    font-size: 16px;
+    color: var(--ink-500);
+    margin: 0 0 28px;
+}
+.team-cta-buttons {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* ── Адаптив ────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .team-hero { padding: 52px 0 40px; }
+    .team-section { padding: 48px 0; }
+    .team-hero-stats { gap: 24px; }
+    .team-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+    .team-card { padding: 22px 16px; }
+    .team-avatar, .team-photo, .team-photo img { width: 84px; height: 84px; }
+    .team-avatar { font-size: 28px; }
+}
