@@ -269,6 +269,33 @@ class Bitrix24Integration {
         return false;
     }
 
+    /**
+     * Добавить комментарий в таймлайн сделки
+     *
+     * @param string $dealId ID сделки
+     * @param string $comment Текст комментария
+     * @return bool Успешность операции
+     */
+    public function addDealComment($dealId, $comment) {
+        $params = [
+            'fields' => [
+                'ENTITY_ID' => $dealId,
+                'ENTITY_TYPE' => 'deal',
+                'COMMENT' => $comment,
+            ],
+        ];
+
+        $result = $this->call('crm.timeline.comment.add', $params);
+
+        if ($result && isset($result['result'])) {
+            $this->log("Deal comment added to {$dealId}");
+            return true;
+        }
+
+        $this->log("Failed to add comment to deal {$dealId}: " . json_encode($result), 'error');
+        return false;
+    }
+
     // ==================== Вспомогательные методы для вебинаров ====================
 
     /**

@@ -409,11 +409,49 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                             $dealCategory = $dealData ? (int)($dealData['CATEGORY_ID'] ?? -1) : -1;
 
                             if ($dealCategory !== $coursePipelineId) {
-                                logWebhook('INFO', $paymentId, "Bitrix24 deal {$enrollment['bitrix_lead_id']} is in pipeline {$dealCategory} (not {$coursePipelineId}) — leaving as-is for enrollment {$item['course_enrollment_id']}", '');
-                                if ($dealData && !empty($dealData['STAGE_ID'])) {
-                                    $dbHelper->update('course_enrollments', [
-                                        'bitrix_stage' => $dealData['STAGE_ID'],
-                                    ], 'id = ?', [$item['course_enrollment_id']]);
+                                // Сделка перенесена менеджером в чужую воронку (например, ЦДО).
+                                // Перенести её обратно через API нельзя (crm.deal.update игнорирует
+                                // CATEGORY_ID), поэтому создаём НОВУЮ сделку в воронке курсов на
+                                // этапе «Оплаченная сделка», а в старой сделке оставляем комментарий.
+                                $course = $courseObj->getById($enrollment['course_id']);
+                                $oldDealId = $enrollment['bitrix_lead_id'];
+                                if ($course) {
+                                    $paidAmount = floatval($item['price']);
+                                    $newDealId = $bitrix->createCourseDeal([
+                                        'user_id' => $enrollment['user_id'] ?? null,
+                                        'full_name' => $enrollment['full_name'],
+                                        'email' => $enrollment['email'],
+                                        'phone' => $enrollment['phone'],
+                                        'utm_source' => $enrollment['utm_source'] ?? '',
+                                        'utm_medium' => $enrollment['utm_medium'] ?? '',
+                                        'utm_campaign' => $enrollment['utm_campaign'] ?? '',
+                                        'utm_content' => $enrollment['utm_content'] ?? '',
+                                        'utm_term' => $enrollment['utm_term'] ?? '',
+                                        'ym_uid' => $enrollment['ym_uid'] ?? '',
+                                        'source_page' => $enrollment['source_page'] ?? '',
+                                    ], $course, $paidStage, $paidAmount);
+
+                                    if ($newDealId) {
+                                        $dbHelper->update('course_enrollments', [
+                                            'bitrix_lead_id' => $newDealId,
+                                            'bitrix_stage' => $paidStage,
+                                        ], 'id = ?', [$item['course_enrollment_id']]);
+
+                                        try {
+                                            $bitrix->addDealComment($oldDealId,
+                                                "Клиент оплатил этот курс онлайн на сайте (" . number_format($paidAmount, 2, ',', ' ') . " ₽). "
+                                                . "Оплата отражена новой сделкой #{$newDealId} в воронке «ФГОС-Практикум (Курсы)» → «Оплаченная сделка». "
+                                                . "Эта сделка в воронке #{$dealCategory} — возможный дубль.");
+                                        } catch (Exception $e) {
+                                            logWebhook('WARNING', $paymentId, "Bitrix24 addDealComment failed for old deal {$oldDealId}: " . $e->getMessage(), '');
+                                        }
+
+                                        logWebhook('INFO', $paymentId, "Bitrix24 deal {$oldDealId} is in pipeline {$dealCategory} (not {$coursePipelineId}) — created new course deal {$newDealId} (stage: {$paidStage}, OPPORTUNITY={$paidAmount}) for enrollment {$item['course_enrollment_id']}", '');
+                                    } else {
+                                        logWebhook('ERROR', $paymentId, "Bitrix24 failed to create course deal for enrollment {$item['course_enrollment_id']} (old deal {$oldDealId} in pipeline {$dealCategory})", '');
+                                    }
+                                } else {
+                                    logWebhook('WARNING', $paymentId, "Bitrix24: course #{$enrollment['course_id']} not found, skipped new deal for enrollment {$item['course_enrollment_id']}", '');
                                 }
                             } else {
                                 $moved = $bitrix->moveDeal($enrollment['bitrix_lead_id'], $paidStage);
