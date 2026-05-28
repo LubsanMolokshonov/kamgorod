@@ -12,6 +12,9 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/UserTokens.php';
 require_once __DIR__ . '/../classes/MaterialAdapter.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/material-tracking.php';
+
+trackMaterialVisit($db, '/material-adapter/');
 
 $userId = $_SESSION['user_id'] ?? null;
 $balance = null;
@@ -51,7 +54,7 @@ include __DIR__ . '/../includes/header-redesign.php';
     <?php if (!$userId): ?>
       <div class="mat-notice">
         <a href="/vhod?return=<?= urlencode('/material-adapter/') ?>">Войдите</a>
-        или зарегистрируйтесь — 100 токенов в подарок.
+        или зарегистрируйтесь — <?= UserTokens::signupBonus() ?> токенов в подарок.
       </div>
     <?php else: ?>
       <div class="mat-balance-pill">

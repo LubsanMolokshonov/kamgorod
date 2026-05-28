@@ -162,4 +162,90 @@ class MaterialsAnalytics
 
         return $result;
     }
+
+    /**
+     * Разбивка воронки по рекламной кампании (utm_campaign).
+     * Визиты считаются по material_landing_visits, остальные стадии атрибутируются через
+     * users.utm_campaign (проставляется при регистрации из воронки). Так оплаты привязываются
+     * к кампании, на которую пришёл пользователь — для сверки с рекламным кабинетом.
+     */
+    public function getCampaignBreakdown(string $startDate, string $endDate): array
+    {
+        $none = '(без кампании)';
+
+        $visitsByCampaign = [];
+        foreach ($this->db->query(
+            "SELECT COALESCE(NULLIF(utm_campaign, ''), ?) AS k, COUNT(*) AS c
+             FROM material_landing_visits WHERE created_at BETWEEN ? AND ?
+             GROUP BY k",
+            [$none, $startDate, $endDate]
+        ) as $row) {
+            $visitsByCampaign[$row['k']] = (int)$row['c'];
+        }
+
+        $regByCampaign = [];
+        foreach ($this->db->query(
+            "SELECT COALESCE(NULLIF(u.utm_campaign, ''), ?) AS k, COUNT(DISTINCT u.id) AS c
+             FROM users u
+             WHERE u.created_at BETWEEN ? AND ?
+               AND EXISTS (SELECT 1 FROM material_landing_visits v WHERE v.user_id = u.id)
+             GROUP BY k",
+            [$none, $startDate, $endDate]
+        ) as $row) {
+            $regByCampaign[$row['k']] = (int)$row['c'];
+        }
+
+        $genByCampaign = [];
+        foreach ($this->db->query(
+            "SELECT COALESCE(NULLIF(u.utm_campaign, ''), ?) AS k, COUNT(DISTINCT mg.user_id) AS c
+             FROM material_generations mg
+             JOIN users u ON u.id = mg.user_id
+             WHERE mg.status = 'done' AND mg.created_at BETWEEN ? AND ?
+             GROUP BY k",
+            [$none, $startDate, $endDate]
+        ) as $row) {
+            $genByCampaign[$row['k']] = (int)$row['c'];
+        }
+
+        $payByCampaign = [];
+        foreach ($this->db->query(
+            "SELECT COALESCE(NULLIF(u.utm_campaign, ''), ?) AS k,
+                    COUNT(*) AS cnt, COALESCE(SUM(tp.price_rub), 0) AS revenue
+             FROM token_transactions tt
+             JOIN users u ON u.id = tt.user_id
+             JOIN token_packages tp ON tp.id = tt.package_id
+             WHERE tt.reason = 'purchase' AND tt.created_at BETWEEN ? AND ?
+             GROUP BY k",
+            [$none, $startDate, $endDate]
+        ) as $row) {
+            $payByCampaign[$row['k']] = $row;
+        }
+
+        $campaigns = array_unique(array_merge(
+            array_keys($visitsByCampaign),
+            array_keys($regByCampaign),
+            array_keys($genByCampaign),
+            array_keys($payByCampaign)
+        ));
+
+        $result = [];
+        foreach ($campaigns as $c) {
+            $visits = $visitsByCampaign[$c] ?? 0;
+            $paid = (int)($payByCampaign[$c]['cnt'] ?? 0);
+            $generated = $genByCampaign[$c] ?? 0;
+            $result[] = [
+                'campaign'      => $c,
+                'visits'        => $visits,
+                'registered'    => $regByCampaign[$c] ?? 0,
+                'generated'     => $generated,
+                'paid'          => $paid,
+                'revenue'       => (float)($payByCampaign[$c]['revenue'] ?? 0),
+                'conv_visit_to_paid' => $visits > 0 ? round($paid / $visits * 100, 1) : 0,
+            ];
+        }
+
+        usort($result, fn($a, $b) => $b['revenue'] <=> $a['revenue'] ?: $b['visits'] <=> $a['visits']);
+
+        return $result;
+    }
 }

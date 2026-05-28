@@ -15,10 +15,16 @@ class NotEnoughTokensException extends RuntimeException {}
 
 class UserTokens
 {
-    private const SIGNUP_BONUS_TOKENS = 100;
+    private const SIGNUP_BONUS_TOKENS = 30;
 
     private $db;
     private $pdo;
+
+    /** Размер стартового бонуса — единый источник правды для UI и логики. */
+    public static function signupBonus(): int
+    {
+        return self::SIGNUP_BONUS_TOKENS;
+    }
 
     public function __construct($pdo)
     {

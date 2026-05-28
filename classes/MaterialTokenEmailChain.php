@@ -80,6 +80,46 @@ class MaterialTokenEmailChain
     }
 
     /**
+     * Запланировать письма «превью без оплаты» (event-driven: при генерации превью
+     * залогиненным, регистрации с непривязанным превью, попадании в paywall).
+     * period_key = текущий месяц — не чаще раза в календарный месяц на пользователя.
+     * Ставит только если есть незаблокированное (неоплаченное) превью.
+     */
+    public function schedulePreviewAbandon(int $userId): int
+    {
+        $user = $this->getUser($userId);
+        if (!$user || empty($user['email']) || $this->isUnsubscribed($user['email'])) {
+            return 0;
+        }
+        if (!$this->hasLockedPreview($userId)) {
+            return 0;
+        }
+
+        $period = date('Y-m');
+        $touchpoints = $this->db->query(
+            "SELECT * FROM material_email_touchpoints
+              WHERE track = 'preview_abandon' AND is_active = 1
+              ORDER BY display_order ASC"
+        );
+
+        $count = 0;
+        foreach ($touchpoints as $tp) {
+            $scheduledAt = date('Y-m-d H:i:s', time() + ((int)$tp['delay_minutes'] * 60));
+            $count += $this->db->execute(
+                "INSERT IGNORE INTO material_email_log
+                    (user_id, track, touchpoint_id, period_key, email, status, scheduled_at)
+                 VALUES (?, 'preview_abandon', ?, ?, ?, 'pending', ?)",
+                [$userId, $tp['id'], $period, $user['email'], $scheduledAt]
+            );
+        }
+
+        if ($count > 0) {
+            $this->log("SCHEDULE preview_abandon | user #{$userId} | {$count} touchpoints");
+        }
+        return $count;
+    }
+
+    /**
      * Сканер балансовых писем: ставит в очередь bal_low / bal_zero для активных
      * пользователей, у которых баланс просел. period_key = текущий месяц —
      * повторно не чаще раза в календарный месяц.
@@ -223,7 +263,7 @@ class MaterialTokenEmailChain
      */
     public function cancelPendingForUser(int $userId, array $tracks): int
     {
-        $tracks = array_values(array_intersect($tracks, ['onboarding', 'balance', 'reactivation']));
+        $tracks = array_values(array_intersect($tracks, ['onboarding', 'balance', 'reactivation', 'preview_abandon']));
         if (empty($tracks)) {
             return 0;
         }
@@ -330,6 +370,11 @@ class MaterialTokenEmailChain
 
             case 'mat_re_30d':
                 return !$this->generatedSince($userId, 30);
+
+            case 'mat_pa_1h':
+            case 'mat_pa_24h':
+                // ещё есть неоплаченное (заблокированное) превью
+                return $this->hasLockedPreview($userId);
         }
         return true;
     }
@@ -364,6 +409,12 @@ class MaterialTokenEmailChain
             $generatorUrl = generateMagicUrl($userId, '/material-generator/', 7, $utm);
             $balanceUrl   = generateMagicUrl($userId, '/material-balance/', 7, $utm);
 
+            // Ссылка на последнее неоплаченное превью (для трека preview_abandon)
+            $lockedSlug = $this->latestLockedPreviewSlug($userId);
+            $lockedMaterialUrl = $lockedSlug
+                ? generateMagicUrl($userId, '/material/' . rawurlencode($lockedSlug) . '/', 7, $utm)
+                : $generatorUrl;
+
             // Скидочная ссылка для писем со скидкой
             $buyUrlWithDiscount = null;
             $discountPercent = null;
@@ -387,6 +438,7 @@ class MaterialTokenEmailChain
                 'generator_url'       => $generatorUrl,
                 'balance_url'         => $balanceUrl,
                 'buy_url_with_discount' => $buyUrlWithDiscount ?? $balanceUrl,
+                'locked_material_url' => $lockedMaterialUrl,
                 'discount_percent'    => $discountPercent,
                 'discount_deadline'   => $discountDeadline,
                 'material_types'      => $this->topMaterialTypes(),
@@ -575,6 +627,30 @@ class MaterialTokenEmailChain
             [$userId]
         );
         return (int)($row['c'] ?? 0);
+    }
+
+    /** Есть ли у пользователя неоплаченное (заблокированное) сгенерированное превью. */
+    private function hasLockedPreview(int $userId): bool
+    {
+        $row = $this->db->queryOne(
+            "SELECT 1 AS x FROM materials
+              WHERE user_id = ? AND is_generated = 1 AND is_unlocked = 0
+              LIMIT 1",
+            [$userId]
+        );
+        return !empty($row);
+    }
+
+    /** Slug последнего неоплаченного превью пользователя (для ссылки в письме). */
+    private function latestLockedPreviewSlug(int $userId): ?string
+    {
+        $row = $this->db->queryOne(
+            "SELECT slug FROM materials
+              WHERE user_id = ? AND is_generated = 1 AND is_unlocked = 0
+              ORDER BY created_at DESC LIMIT 1",
+            [$userId]
+        );
+        return $row['slug'] ?? null;
     }
 
     private function generatedSince(int $userId, int $days): bool

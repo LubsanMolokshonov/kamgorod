@@ -10,6 +10,9 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/MaterialType.php';
 require_once __DIR__ . '/../classes/UserTokens.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/material-tracking.php';
+
+trackMaterialVisit($db, '/material-generator/');
 
 $typeObj = new MaterialType($db);
 $types = $typeObj->getWithCounts();
@@ -57,7 +60,7 @@ include __DIR__ . '/../includes/header-redesign.php';
     <?php if ($userId): ?>
       <div class="mat-balance-pill">Ваш баланс: <strong><?= number_format((int)$balance, 0, '', ' ') ?> токенов</strong> · <a href="/material-balance/">пополнить</a></div>
     <?php else: ?>
-      <div class="mat-notice"><a href="/vhod?return=<?= urlencode($_SERVER['REQUEST_URI']) ?>">Войдите или зарегистрируйтесь</a> — мы подарим 100 токенов на старт.</div>
+      <div class="mat-notice">Выберите тип материала — <strong>первый бесплатно</strong>. Дарим <strong><?= UserTokens::signupBonus() ?> токенов</strong> на старт, регистрация прямо в форме.</div>
     <?php endif; ?>
   </div>
 </section>

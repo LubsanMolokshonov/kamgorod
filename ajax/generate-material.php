@@ -26,6 +26,7 @@ require_once __DIR__ . '/../classes/MaterialType.php';
 require_once __DIR__ . '/../classes/UserTokens.php';
 require_once __DIR__ . '/../classes/OpenRouterAIService.php';
 require_once __DIR__ . '/../classes/MaterialGenerator.php';
+require_once __DIR__ . '/../includes/material-tracking.php';
 
 set_time_limit(120);
 
@@ -40,10 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     respond(['success' => false, 'error' => 'Method not allowed', 'code' => 'method'], 405);
 }
 
-$userId = $_SESSION['user_id'] ?? null;
-if (!$userId) {
-    respond(['success' => false, 'error' => 'Войдите, чтобы сгенерировать материал', 'code' => 'unauthorized'], 401);
-}
+// Превью-генерация бесплатна и доступна анониму (без регвола). Оплата — на скачивании.
+$userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+$funnelSessionId = materialFunnelSessionId();
+$ip = $_SERVER['REMOTE_ADDR'] ?? null;
 
 $csrf = $_POST['csrf'] ?? '';
 if (!validateCSRFToken($csrf)) {
@@ -74,21 +75,33 @@ foreach ($allowedParamKeys as $key) {
     }
 }
 
+// Лимит бесплатных превью-генераций (защита от слива денег на ИИ)
+$rateError = materialPreviewRateLimit($db, $userId, $funnelSessionId, $ip);
+if ($rateError !== null) {
+    respond(['success' => false, 'error' => $rateError, 'code' => 'rate_limited'], 429);
+}
+
 try {
     $generator = new MaterialGenerator($db);
-    $result = $generator->generate((int)$userId, $typeSlug, $params);
+    $result = $generator->generate($userId, $typeSlug, $params, 'preview', $funnelSessionId, $ip);
 
-    $tokens = new UserTokens($db);
+    // Залогиненному, не оплатившему скачивание, — запланировать дожим preview_abandon
+    if ($userId !== null) {
+        try {
+            require_once __DIR__ . '/../classes/MaterialTokenEmailChain.php';
+            (new MaterialTokenEmailChain($db))->schedulePreviewAbandon($userId);
+        } catch (Throwable $e) {
+            error_log('generate schedulePreviewAbandon: ' . $e->getMessage());
+        }
+    }
 
     respond([
-        'success'        => true,
-        'material_id'    => $result['material_id'],
-        'material_slug'  => $result['material_slug'],
-        'file_format'    => $result['file_format'],
-        'tokens_charged' => $result['tokens_charged'],
-        'tokens_left'    => $tokens->getBalance((int)$userId),
-        'redirect_url'   => '/material/' . rawurlencode($result['material_slug']) . '/',
-        'download_url'   => '/material-download.php?id=' . $result['material_id'],
+        'success'           => true,
+        'material_id'       => $result['material_id'],
+        'material_slug'     => $result['material_slug'],
+        'file_format'       => $result['file_format'],
+        'unlock_token_cost' => $result['unlock_token_cost'],
+        'redirect_url'      => '/material/' . rawurlencode($result['material_slug']) . '/',
     ]);
 } catch (NotEnoughTokensException $e) {
     respond([

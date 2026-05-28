@@ -57,8 +57,13 @@ class MaterialGenerator
      *   'file_format'   => string,
      * ]
      */
-    public function generate(int $userId, string $typeSlug, array $params): array
+    public function generate(?int $userId, string $typeSlug, array $params, string $mode = 'full', ?string $funnelSessionId = null, ?string $ipAddress = null): array
     {
+        $isPreview = ($mode === 'preview');
+        if (!$isPreview && $userId === null) {
+            throw new InvalidArgumentException('Полная генерация требует авторизации');
+        }
+
         $type = $this->typeObj->getBySlug($typeSlug);
         if (!$type) {
             throw new InvalidArgumentException("Тип материала '{$typeSlug}' не найден");
@@ -66,21 +71,28 @@ class MaterialGenerator
         $typeId = (int)$type['id'];
         $tokenCost = (int)($type['token_cost_default'] ?? 10);
 
-        // 1. Списать токены до запуска ИИ — иначе расход без оплаты
-        $chargeTxnId = $this->tokens->charge(
-            $userId,
-            $tokenCost,
-            'generation',
-            ['notes' => 'material_type=' . $typeSlug]
-        );
+        // 1. Списать токены до запуска ИИ — только в full-режиме. В preview генерация
+        //    бесплатна, оплата переносится на разблокировку скачивания.
+        $chargeTxnId = null;
+        if (!$isPreview) {
+            $chargeTxnId = $this->tokens->charge(
+                $userId,
+                $tokenCost,
+                'generation',
+                ['notes' => 'material_type=' . $typeSlug]
+            );
+        }
 
         // 2. Создать лог
         $generationId = $this->db->insert('material_generations', [
             'user_id' => $userId,
+            'funnel_session_id' => $funnelSessionId,
+            'ip_address' => $ipAddress,
             'material_type_id' => $typeId,
             'ai_model_used' => $this->ai->resolveModel($type['ai_model_key'] ?? 'default'),
             'status' => 'running',
-            'tokens_charged' => $tokenCost,
+            'mode' => $mode,
+            'tokens_charged' => $isPreview ? 0 : $tokenCost,
             'input_params_json' => json_encode($params, JSON_UNESCAPED_UNICODE),
         ]);
 
@@ -115,25 +127,31 @@ class MaterialGenerator
                 ?? ($params['topic'] ?? ($type['name'] . ' — материал')));
             $slug = $this->materialObj->generateSlug($title);
 
-            // 6. Рендерим файл по output_format типа
-            $renderResult = $this->renderFile($type['output_format'], $aiData, $title, $slug);
+            // 6. Рендерим файл по output_format типа. В preview файл не нужен —
+            //    скачивание формирует PDF из content на лету (material-download.php),
+            //    поэтому экономим время и не пишем файл на диск до оплаты.
+            $renderResult = $isPreview ? null : $this->renderFile($type['output_format'], $aiData, $title, $slug);
 
-            // 7. Создаём Material как DRAFT — доступен автору, не публикуется в общий каталог
+            // 7. Создаём Material как DRAFT — доступен автору, не публикуется в общий каталог.
+            //    preview: is_unlocked=0, unlock_token_cost=цена; full: is_unlocked=1 (оплачено при генерации).
             $materialId = $this->materialObj->create([
                 'user_id' => $userId,
+                'funnel_session_id' => $isPreview ? $funnelSessionId : null,
                 'title' => $title,
                 'slug' => $slug,
                 'description' => mb_substr(strip_tags((string)($aiData['intro'] ?? $aiData['title'] ?? '')), 0, 500),
                 'content' => (new \MaterialHtmlRenderer())->render($aiData),
                 'material_type_id' => $typeId,
-                'file_path' => $renderResult['file_path'],
-                'file_size' => $renderResult['file_size'],
-                'file_format' => $renderResult['file_format'],
+                'file_path' => $renderResult['file_path'] ?? null,
+                'file_size' => $renderResult['file_size'] ?? null,
+                'file_format' => $renderResult['file_format'] ?? ($type['output_format'] ?? null),
                 'is_generated' => true,
                 'ai_model_used' => $aiResponse['model'] ?? null,
                 'ai_prompt' => $prompt,
                 'ai_params' => $params,
-                'token_cost' => 0, // автор скачивает бесплатно — он уже заплатил при генерации
+                'token_cost' => 0,
+                'is_unlocked' => $isPreview ? 0 : 1,
+                'unlock_token_cost' => $isPreview ? $tokenCost : 0,
                 'status' => 'draft',
             ]);
 
@@ -147,11 +165,13 @@ class MaterialGenerator
                 );
             }
 
-            // 7b. Обложка через YandexART — best-effort, НЕ должна валить генерацию
-            //     (текст и файл уже оплачены пользователем).
+            // 7b. Обложка через YandexART — best-effort, НЕ должна валить генерацию.
+            //     Для анонимного превью пропускаем (контроль расходов на ИИ-картинки):
+            //     обложка появится у залогиненных и в full-режиме.
+            $skipCover = ($isPreview && $userId === null);
             try {
-                $art = new YandexArtService();
-                if ($art->isEnabled()) {
+                $art = $skipCover ? null : new YandexArtService();
+                if ($art && $art->isEnabled()) {
                     $imagePrompt = trim((string)($aiData['image_prompt'] ?? ''));
                     if ($imagePrompt === '') {
                         $imagePrompt = 'Образовательная иллюстрация по теме «' . $title . '»'
@@ -185,22 +205,26 @@ class MaterialGenerator
             );
 
             return [
-                'material_id'    => $materialId,
-                'material_slug'  => $slug,
-                'generation_id'  => $generationId,
-                'tokens_charged' => $tokenCost,
-                'file_path'      => $renderResult['file_path'],
-                'file_format'    => $renderResult['file_format'],
+                'material_id'       => $materialId,
+                'material_slug'     => $slug,
+                'generation_id'     => $generationId,
+                'mode'              => $mode,
+                'tokens_charged'    => $isPreview ? 0 : $tokenCost,
+                'unlock_token_cost' => $isPreview ? $tokenCost : 0,
+                'file_path'         => $renderResult['file_path'] ?? null,
+                'file_format'       => $renderResult['file_format'] ?? ($type['output_format'] ?? null),
             ];
         } catch (Throwable $e) {
-            // Refund и зафиксировать ошибку
-            try {
-                $this->tokens->refund($userId, $tokenCost, $chargeTxnId, [
-                    'generation_id' => $generationId,
-                    'notes' => 'auto-refund on generation failure',
-                ]);
-            } catch (Throwable $refundError) {
-                error_log('MaterialGenerator: refund failed for txn=' . $chargeTxnId . ': ' . $refundError->getMessage());
+            // Refund только если в этом вызове было списание (full-режим)
+            if ($chargeTxnId !== null) {
+                try {
+                    $this->tokens->refund($userId, $tokenCost, $chargeTxnId, [
+                        'generation_id' => $generationId,
+                        'notes' => 'auto-refund on generation failure',
+                    ]);
+                } catch (Throwable $refundError) {
+                    error_log('MaterialGenerator: refund failed for txn=' . $chargeTxnId . ': ' . $refundError->getMessage());
+                }
             }
 
             $this->db->update(

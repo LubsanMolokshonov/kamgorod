@@ -34,6 +34,7 @@ $currentMonthName = $monthNames[$filterMonth] . ' ' . $filterYear;
 $analytics = new MaterialsAnalytics($db);
 $totals = $analytics->getTotals($startDate, $endDate);
 $daily = $analytics->getDailyBreakdown($startDate, $endDate);
+$campaigns = $analytics->getCampaignBreakdown($startDate, $endDate);
 
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -135,6 +136,49 @@ include __DIR__ . '/../includes/header.php';
             <div class="kpi-label">Выручка</div>
             <div class="kpi-conv">покупки токенов</div>
         </div>
+    </div>
+</div>
+
+<!-- Разбивка по рекламным кампаниям -->
+<div class="content-card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h2>По рекламным кампаниям (utm_campaign)</h2>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <?php if (empty($campaigns)): ?>
+            <div class="empty-state">
+                <div class="empty-state-icon">📣</div>
+                <h3>Нет данных</h3>
+                <p>В выбранном периоде нет визитов с UTM-метками</p>
+            </div>
+        <?php else: ?>
+            <table class="daily-table">
+                <thead>
+                    <tr>
+                        <th>Кампания</th>
+                        <th>Визиты</th>
+                        <th>Регистрации</th>
+                        <th>Сгенерировало</th>
+                        <th>Оплаты</th>
+                        <th>Выручка</th>
+                        <th>Виз.→Оплата</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($campaigns as $row): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($row['campaign']); ?></td>
+                            <td class="<?php echo $row['visits'] === 0 ? 'num-zero' : ''; ?>"><?php echo $row['visits']; ?></td>
+                            <td class="<?php echo $row['registered'] === 0 ? 'num-zero' : ''; ?>"><?php echo $row['registered']; ?></td>
+                            <td class="<?php echo $row['generated'] === 0 ? 'num-zero' : ''; ?>"><?php echo $row['generated']; ?></td>
+                            <td class="<?php echo $row['paid'] === 0 ? 'num-zero' : ''; ?>"><strong><?php echo $row['paid']; ?></strong></td>
+                            <td class="<?php echo $row['revenue'] == 0 ? 'num-zero' : ''; ?>"><?php echo number_format($row['revenue'], 0, ',', ' '); ?> &#8381;</td>
+                            <td class="<?php echo $row['conv_visit_to_paid'] == 0 ? 'num-zero' : ''; ?>"><?php echo $row['conv_visit_to_paid']; ?>%</td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
     </div>
 </div>
 

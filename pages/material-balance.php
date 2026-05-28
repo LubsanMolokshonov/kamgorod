@@ -35,6 +35,33 @@ $history = $tokens->getHistory((int)$userId, 50);
 $justPaid = !empty($_GET['paid']);
 $csrf = generateCSRFToken();
 
+// Брошенная корзина: пришли с paywall конкретного материала — после оплаты вернём к нему.
+$dbh = new Database($db);
+$returnTo = '/material-balance/?paid=1';
+$pendingMaterial = null;
+$unlockMaterialId = (int)($_GET['unlock_material'] ?? 0);
+if ($unlockMaterialId > 0) {
+    $pm = $dbh->queryOne("SELECT slug, title FROM materials WHERE id = ? AND user_id = ?", [$unlockMaterialId, (int)$userId]);
+    if ($pm) {
+        $pendingMaterial = $pm;
+        $returnTo = '/material/' . rawurlencode($pm['slug']) . '/?paid=1';
+    }
+}
+
+// Социальное доказательство и оценка «сколько материалов хватит»
+$generatedCount = (int)($dbh->queryOne("SELECT COUNT(*) AS c FROM materials WHERE is_generated = 1")['c'] ?? 0);
+$avgCost = (int)($dbh->queryOne("SELECT ROUND(AVG(token_cost_default)) AS a FROM material_types WHERE is_active = 1")['a'] ?? 0);
+if ($avgCost < 1) { $avgCost = 17; }
+// База для «экономии %» — самая дорогая цена за токен среди пакетов (обычно мелкий пакет)
+$maxPerToken = 0.0;
+foreach ($packages as $p) {
+    $tt = (int)$p['tokens'] + (int)$p['bonus_tokens'];
+    if ($tt > 0) {
+        $pt = (float)$p['price_rub'] / $tt;
+        if ($pt > $maxPerToken) { $maxPerToken = $pt; }
+    }
+}
+
 // Скидка из письма (HMAC-токен). Влияет только на цену пакета, не на число токенов.
 $discountToken = trim((string)($_GET['discount'] ?? ''));
 $discountPercent = 0;
@@ -90,6 +117,13 @@ include __DIR__ . '/../includes/header-redesign.php';
       </div>
     <?php endif; ?>
 
+    <?php if ($pendingMaterial): ?>
+      <div class="mat-notice" style="background:#eef2ff;border-color:#c7d2fe;">
+        <strong>Ваш материал «<?= htmlspecialchars($pendingMaterial['title'], ENT_QUOTES, 'UTF-8') ?>» ждёт.</strong>
+        Пополните баланс — и сразу вернётесь к нему, чтобы скачать.
+      </div>
+    <?php endif; ?>
+
     <div class="mat-balance-hero">
       <div>
         <div class="bh-label">Текущий баланс</div>
@@ -103,6 +137,9 @@ include __DIR__ . '/../includes/header-redesign.php';
     </div>
 
     <h2 class="rd-section-title" style="font-size:24px;margin-top:40px;">Пополнить баланс</h2>
+    <?php if ($generatedCount > 0): ?>
+      <p style="color:var(--ink-400,#64748b);margin-top:-4px;">На платформе уже сгенерировано <strong><?= number_format($generatedCount, 0, '', ' ') ?></strong> материалов. Токены не сгорают.</p>
+    <?php endif; ?>
     <?php if ($discountPercent > 0): ?>
       <div class="mat-notice" style="background:#fff0f3;border-color:#fbc8d1;color:#a01030;">
         <strong>Скидка <?= (int)$discountPercent ?>% активна.</strong>
@@ -116,6 +153,8 @@ include __DIR__ . '/../includes/header-redesign.php';
           $finalPrice = $discountPercent > 0 ? round($origPrice * (100 - $discountPercent) / 100) : $origPrice;
           $perToken = $totalTokens > 0 ? $finalPrice / $totalTokens : 0;
           $featured = ($i === 1);
+          $materialsEstimate = $avgCost > 0 ? (int)floor($totalTokens / $avgCost) : 0;
+          $savingsPercent = ($maxPerToken > 0 && $perToken > 0) ? (int)round((1 - $perToken / $maxPerToken) * 100) : 0;
       ?>
         <div class="mat-pack<?= $featured ? ' mat-pack-featured' : '' ?>">
           <?php if ($featured): ?><div class="mat-pack-tag">Выгодно</div><?php endif; ?>
@@ -135,7 +174,10 @@ include __DIR__ . '/../includes/header-redesign.php';
           <?php else: ?>
             <div class="mat-pack-price"><?= number_format($origPrice, 0, '', ' ') ?> ₽</div>
           <?php endif; ?>
-          <div class="mat-pack-per">~ <?= number_format($perToken, 2, ',', '') ?> ₽ за токен</div>
+          <div class="mat-pack-per">~ <?= number_format($perToken, 2, ',', '') ?> ₽ за токен<?php if ($savingsPercent > 0): ?> · <span style="color:#16a34a;font-weight:600;">выгода <?= $savingsPercent ?>%</span><?php endif; ?></div>
+          <?php if ($materialsEstimate > 0): ?>
+            <div class="mat-pack-per">≈ <?= $materialsEstimate ?> материалов</div>
+          <?php endif; ?>
           <button type="button" class="buy-tokens-btn rd-btn <?= $featured ? 'rd-btn-primary' : 'rd-btn-ghost' ?>" data-package-id="<?= (int)$p['id'] ?>" style="width:100%;justify-content:center;">Купить</button>
         </div>
       <?php endforeach; ?>
@@ -170,13 +212,18 @@ include __DIR__ . '/../includes/header-redesign.php';
 
     <input type="hidden" id="csrf-token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
     <input type="hidden" id="discount-token" value="<?= htmlspecialchars($discountToken, ENT_QUOTES, 'UTF-8') ?>">
+    <input type="hidden" id="return-to" value="<?= htmlspecialchars($returnTo, ENT_QUOTES, 'UTF-8') ?>">
 
     <script>
+    <?php if ($justPaid): ?>
+    if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'material_tokens_paid'); }
+    <?php endif; ?>
     document.querySelectorAll('.buy-tokens-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var packageId = btn.dataset.packageId;
             var csrf = document.getElementById('csrf-token').value;
             var discount = document.getElementById('discount-token').value;
+            var returnTo = document.getElementById('return-to').value;
             btn.disabled = true;
             btn.style.opacity = '0.5';
             btn.textContent = 'Создаём платёж…';
@@ -185,6 +232,7 @@ include __DIR__ . '/../includes/header-redesign.php';
             fd.append('csrf', csrf);
             fd.append('package_id', packageId);
             if (discount) { fd.append('discount', discount); }
+            if (returnTo) { fd.append('return_to', returnTo); }
 
             fetch('/ajax/buy-tokens.php', { method: 'POST', body: fd, credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })

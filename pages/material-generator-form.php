@@ -10,9 +10,12 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/MaterialType.php';
 require_once __DIR__ . '/../classes/UserTokens.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/material-tracking.php';
 
 $typeObj = new MaterialType($db);
 $typeSlug = $_GET['type_slug'] ?? '';
+
+trackMaterialVisit($db, '/material-generator/' . ($typeSlug !== '' ? $typeSlug . '/' : ''));
 $type = $typeSlug ? $typeObj->getBySlug($typeSlug) : null;
 
 if (!$type) {
@@ -37,6 +40,18 @@ if ($userId) {
 
 $csrfToken = generateCSRFToken();
 $cost = (int)$type['token_cost_default'];
+
+// Преимущества под конкретный тип — релевантность лендинга рекламному объявлению
+$typeBenefits = [
+    'tehkarta-uroka'   => ['Структура строго по ФГОС: цели, УУД, этапы', 'Готовая таблица — копируйте в свой план', 'Учёт особенностей класса и ОВЗ'],
+    'konspekt-uroka'   => ['Развёрнутый ход урока с репликами учителя', 'Этапы с хронометражем', 'Домашнее задание и оборудование'],
+    'rabochiy-list'    => ['5–8 заданий разных типов', 'Ключи с ответами для проверки', 'Под возраст и тему вашего класса'],
+    'test-kontrolnaya' => ['Вопросы с вариантами и пояснениями', 'Нужное вам количество вопросов', 'Готово к печати и выдаче'],
+    'prezentatsiya'    => ['10–20 слайдов с заметками для учителя', 'Логика: титул → содержание → итоги', 'Под предмет, класс и тему'],
+    'klassnyy-chas'    => ['Сценарий с целью и структурой', 'Вопросы для обсуждения и рефлексия', 'Под возраст и воспитательную задачу'],
+    'ktp-fragment'     => ['Таблица КТП с УУД и контролем', 'Нужное количество часов', 'Соответствие программе (ФОП/ФГОС)'],
+];
+$benefits = $typeBenefits[$type['slug']] ?? [];
 
 // Какие поля формы нужны — определяем по плейсхолдерам в шаблоне промпта
 $template = (string)($type['ai_prompt_template'] ?? '');
@@ -84,17 +99,44 @@ include __DIR__ . '/../includes/header-redesign.php';
     </div>
     <h1 class="rd-hero-title rd-hero-title-sm" style="margin-top:18px;"><?= htmlspecialchars($type['name'], ENT_QUOTES, 'UTF-8') ?></h1>
     <p class="rd-hero-sub" style="max-width:640px;"><?= htmlspecialchars($type['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+    <?php if (!empty($benefits)): ?>
+      <ul class="mat-hero-benefits" style="list-style:none;padding:0;margin:16px 0 0;display:flex;flex-wrap:wrap;gap:8px 20px;max-width:720px;">
+        <?php foreach ($benefits as $b): ?>
+          <li style="position:relative;padding-left:24px;font-size:15px;">
+            <span style="position:absolute;left:0;color:#16a34a;">✓</span><?= htmlspecialchars($b, ENT_QUOTES, 'UTF-8') ?>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
   </div>
 </section>
 
+<?php
+$bonus = UserTokens::signupBonus();
+// Пресеты-примеры для быстрого заполнения (заполняются только существующие поля формы)
+$presets = [
+    ['label' => '🧮 Математика, 3 класс', 'subject' => 'Математика', 'class' => '3 класс', 'topic' => 'Умножение и деление'],
+    ['label' => '📖 Русский язык, 5 класс', 'subject' => 'Русский язык', 'class' => '5 класс', 'topic' => 'Имя прилагательное'],
+    ['label' => '🌍 Окружающий мир, 2 класс', 'subject' => 'Окружающий мир', 'class' => '2 класс', 'topic' => 'Времена года'],
+];
+?>
 <section class="mat-page">
   <div class="rd-wrap mat-form-wrap">
-    <?php if (!$userId): ?>
-      <div class="mat-notice"><a href="/vhod?return=<?= urlencode('/material-generator/' . $type['slug'] . '/') ?>">Войдите или зарегистрируйтесь</a> — мы подарим 100 токенов на старт.</div>
-    <?php else: ?>
-      <div class="mat-balance-pill">
-        Баланс: <strong><?= number_format((int)$balance, 0, '', ' ') ?> токенов</strong> · Стоимость генерации: <strong><?= $cost ?> токенов</strong>
-        <?php if ($balance < $cost): ?> · <a href="/material-balance/">пополнить</a><?php endif; ?>
+      <div class="mat-notice">
+        <strong>Генерация бесплатна.</strong> Заполните поля → получите готовый материал.
+        Скачивание чистого файла (PDF) — <strong><?= $cost ?> токенов</strong>.
+        <?php if ($userId): ?>
+          Ваш баланс: <strong><?= number_format((int)$balance, 0, '', ' ') ?></strong> токенов.
+        <?php else: ?>
+          Первый материал бесплатно — дарим <strong><?= $bonus ?> токенов</strong> при регистрации.
+        <?php endif; ?>
+      </div>
+
+      <div class="mat-presets" style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0;">
+        <span style="color:var(--ink-400,#8b90a8);font-size:14px;align-self:center;">Примеры:</span>
+        <?php foreach ($presets as $i => $p): ?>
+          <button type="button" class="rd-btn rd-btn-ghost mat-preset" data-preset="<?= $i ?>" style="font-size:14px;padding:6px 12px;"><?= htmlspecialchars($p['label'], ENT_QUOTES, 'UTF-8') ?></button>
+        <?php endforeach; ?>
       </div>
 
       <form id="generator-form" onsubmit="return false;">
@@ -127,7 +169,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <?php endforeach; ?>
 
         <button type="submit" id="generator-submit" class="rd-btn rd-btn-primary">
-          Сгенерировать за <?= $cost ?> токенов
+          Сгенерировать бесплатно
         </button>
       </form>
 
@@ -145,8 +187,20 @@ include __DIR__ . '/../includes/header-redesign.php';
           var statusEl = document.getElementById('generator-status');
           var errorEl = document.getElementById('generator-error');
           var submitBtn = document.getElementById('generator-submit');
+          var presets = <?= json_encode($presets, JSON_UNESCAPED_UNICODE) ?>;
 
-          form.addEventListener('submit', function () {
+          // Пресеты — заполняют существующие поля формы
+          document.querySelectorAll('.mat-preset').forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                  var p = presets[+btn.getAttribute('data-preset')];
+                  ['subject', 'class', 'topic'].forEach(function (f) {
+                      var el = form.querySelector('[name="' + f + '"]');
+                      if (el && p[f]) el.value = p[f];
+                  });
+              });
+          });
+
+          function runGeneration() {
               errorEl.style.display = 'none';
               errorEl.textContent = '';
               statusEl.style.display = 'block';
@@ -158,6 +212,8 @@ include __DIR__ . '/../includes/header-redesign.php';
                   .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
                   .then(function (res) {
                       if (res.data && res.data.success) {
+                          // Единая цель-конверсия для рекламы: «реклама → генерация» (совпадает с material_generations в БД)
+                          if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'material_preview'); }
                           window.location.href = res.data.redirect_url;
                           return;
                       }
@@ -165,8 +221,8 @@ include __DIR__ . '/../includes/header-redesign.php';
                       submitBtn.disabled = false;
                       submitBtn.style.opacity = '1';
                       var msg = (res.data && res.data.error) ? res.data.error : 'Ошибка генерации';
-                      if (res.data && res.data.code === 'not_enough_tokens' && res.data.buy_url) {
-                          msg += ' <a href="' + res.data.buy_url + '">Пополнить →</a>';
+                      if (res.data && res.data.code === 'rate_limited' && !res.data.success) {
+                          msg += ' <a href="/vhod?return=' + encodeURIComponent(location.pathname) + '">Зарегистрироваться →</a>';
                       }
                       errorEl.innerHTML = msg;
                       errorEl.style.display = 'block';
@@ -178,10 +234,15 @@ include __DIR__ . '/../includes/header-redesign.php';
                       errorEl.textContent = 'Сеть прервалась. Попробуйте ещё раз.';
                       errorEl.style.display = 'block';
                   });
+          }
+
+          // Превью-генерация бесплатна и не требует регистрации — оплата на скачивании.
+          form.addEventListener('submit', function () {
+              if (!form.checkValidity()) { form.reportValidity(); return; }
+              runGeneration();
           });
       })();
       </script>
-    <?php endif; ?>
   </div>
 </section>
 

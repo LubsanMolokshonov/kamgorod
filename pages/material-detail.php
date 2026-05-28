@@ -7,6 +7,8 @@ session_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Material.php';
+require_once __DIR__ . '/../classes/UserTokens.php';
+require_once __DIR__ . '/../includes/session.php';
 
 $materialObj = new Material($db);
 
@@ -14,15 +16,25 @@ $slug = $_GET['slug'] ?? '';
 $material = $slug ? $materialObj->getBySlug($slug) : null;
 
 // Непубличный материал (черновик/на модерации/отклонён) виден только автору и админу.
+// Анонимное превью (user_id IS NULL) — владельцу текущей воронки по funnel_session cookie.
 $currentUserId = $_SESSION['user_id'] ?? null;
 $isAuthor = $material && $currentUserId && (int)$material['user_id'] === (int)$currentUserId;
 $isAdmin  = isset($_SESSION['admin_id']);
 $isPublished = $material && $material['status'] === 'published';
+$fsidCookie = $_COOKIE['mat_fsid'] ?? '';
+$isOwnerAnon = $material
+    && $material['user_id'] === null
+    && !empty($material['funnel_session_id'])
+    && strlen($fsidCookie) === 32
+    && $material['funnel_session_id'] === $fsidCookie;
+
+// Заблокированное превью (сгенерировано, не оплачено) — показываем урезанную версию + paywall
+$isLocked = $material && (int)$material['is_generated'] === 1 && (int)$material['is_unlocked'] === 0;
 
 $rdActivePage = 'materialy';
 $additionalCSS = ['/assets/css/materials.css?v=' . filemtime(__DIR__ . '/../assets/css/materials.css')];
 
-if (!$material || (!$isPublished && !$isAuthor && !$isAdmin)) {
+if (!$material || (!$isPublished && !$isAuthor && !$isAdmin && !$isOwnerAnon)) {
     http_response_code(404);
     $pageTitle = 'Материал не найден — ' . SITE_NAME;
     include __DIR__ . '/../includes/header-redesign.php';
@@ -124,27 +136,139 @@ include __DIR__ . '/../includes/header-redesign.php';
       <p class="mat-detail-desc"><?= nl2br(htmlspecialchars($material['description'], ENT_QUOTES, 'UTF-8')) ?></p>
     <?php endif; ?>
 
-    <?php if (!empty($material['content'])): ?>
-      <div class="mat-detail-content"><?= $material['content'] /* HTML, доверенный из админки/ИИ-генератора */ ?></div>
-    <?php endif; ?>
-
-    <div class="mat-download">
-      <div class="dl-count">↓ <?= (int)$material['downloads_count'] ?> скачиваний</div>
-      <div class="dl-cost">
-        <?php if ((int)$material['token_cost'] > 0): ?>
-          Скачивание: <strong><?= (int)$material['token_cost'] ?> токенов</strong>
-        <?php else: ?>
-          <strong>Скачать бесплатно</strong>
-        <?php endif; ?>
+    <?php if ($isLocked): ?>
+      <?php
+        // Урезанное превью: только текстовый отрывок (полный форматированный материал — за оплату).
+        $excerpt = trim(preg_replace('/\s+/u', ' ', strip_tags((string)$material['content'])));
+        $excerpt = mb_substr($excerpt, 0, 600);
+        $unlockCost = (int)$material['unlock_token_cost'];
+        $csrfToken = generateCSRFToken();
+        $bonus = UserTokens::signupBonus();
+        $balance = $currentUserId ? (new UserTokens($db))->getBalance((int)$currentUserId) : null;
+      ?>
+      <div class="mat-detail-content mat-locked-preview" style="position:relative; max-height:320px; overflow:hidden;">
+        <p><?= nl2br(htmlspecialchars($excerpt, ENT_QUOTES, 'UTF-8')) ?>…</p>
+        <div style="position:absolute; inset:auto 0 0 0; height:160px; background:linear-gradient(to bottom, rgba(255,255,255,0), #fff);"></div>
       </div>
-      <?php if (!empty($material['file_path'])): ?>
+
+      <div class="mat-paywall" style="border:1px solid #e2e8f0; border-radius:16px; padding:24px; margin:20px 0; text-align:center; background:#f8fafc;">
+        <?php if (!empty($_GET['paid'])): ?>
+          <div class="mat-notice" style="background:#e7f5e7;border-color:#a7d8a7;margin-bottom:16px;">Оплата принята — нажмите «Скачать». Если токены ещё не зачислились, обновите страницу через минуту.</div>
+        <?php endif; ?>
+        <h3 style="margin:0 0 8px;">Материал готов 🎉</h3>
+        <p style="margin:0 0 16px; color:#475569;">Скачайте полную версию (PDF) — оформлено, с титулом и обложкой.</p>
+        <button type="button" id="unlock-btn" class="rd-btn rd-btn-primary" data-material="<?= (int)$material['id'] ?>">
+          Скачать за <?= $unlockCost ?> токенов
+        </button>
+        <?php if ($currentUserId): ?>
+          <p style="margin:12px 0 0; font-size:14px; color:#64748b;">Ваш баланс: <strong><?= number_format((int)$balance, 0, '', ' ') ?></strong> токенов<?php if ((int)$balance < $unlockCost): ?> · <a href="/material-balance/">пополнить</a><?php endif; ?></p>
+        <?php else: ?>
+          <p style="margin:12px 0 0; font-size:14px; color:#64748b;">Первый материал бесплатно — дарим <?= $bonus ?> токенов при регистрации.</p>
+        <?php endif; ?>
+        <div id="unlock-error" class="mat-error" style="display:none; margin-top:12px;"></div>
+      </div>
+
+      <!-- Модалка быстрой регистрации (для анонима перед оплатой) -->
+      <div id="reg-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:#fff; border-radius:16px; max-width:420px; width:100%; padding:28px; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+          <h3 style="margin:0 0 6px;">Куда сохранить материал?</h3>
+          <p style="margin:0 0 18px; color:#64748b; font-size:14px;">Первый материал бесплатно. Дарим <?= $bonus ?> токенов на старт.</p>
+          <div class="mat-field"><label>Email <span class="req">*</span></label><input type="email" id="reg-email" placeholder="example@mail.ru" required></div>
+          <div class="mat-field"><label>ФИО <span class="req">*</span></label><input type="text" id="reg-name" placeholder="Иванов Иван Иванович" required></div>
+          <label class="checkbox-label" style="display:flex; gap:8px; align-items:flex-start; font-size:13px; margin:10px 0 16px;">
+            <input type="checkbox" id="reg-agree">
+            <span>Принимаю <a href="/pages/terms.php" target="_blank">условия</a> и <a href="/pages/privacy.php" target="_blank">политику конфиденциальности</a></span>
+          </label>
+          <div id="reg-error" class="mat-error" style="display:none; margin-bottom:12px;"></div>
+          <button type="button" id="reg-submit" class="rd-btn rd-btn-primary" style="width:100%;">Продолжить</button>
+          <button type="button" id="reg-cancel" class="rd-btn rd-btn-ghost" style="width:100%; margin-top:8px;">Отмена</button>
+        </div>
+      </div>
+
+      <script>
+      (function () {
+          var csrf = <?= json_encode($csrfToken) ?>;
+          var materialId = <?= (int)$material['id'] ?>;
+          var isLoggedIn = <?= $currentUserId ? 'true' : 'false' ?>;
+          var unlockBtn = document.getElementById('unlock-btn');
+          var unlockError = document.getElementById('unlock-error');
+          var modal = document.getElementById('reg-modal');
+          var regError = document.getElementById('reg-error');
+          var regSubmit = document.getElementById('reg-submit');
+
+          function showErr(el, msg) { el.innerHTML = msg; el.style.display = 'block'; }
+
+          function doUnlock() {
+              unlockError.style.display = 'none';
+              unlockBtn.disabled = true;
+              var fd = new FormData();
+              fd.append('csrf', csrf);
+              fd.append('material_id', materialId);
+              fetch('/ajax/unlock-material.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                  .then(function (r) { return r.json(); })
+                  .then(function (d) {
+                      unlockBtn.disabled = false;
+                      if (d && d.success) {
+                          // Цель-конверсия: материал разблокирован (оплаченная генерация)
+                          if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'material_unlocked'); }
+                          window.location.href = d.download_url;
+                          return;
+                      }
+                      if (d && d.code === 'unauthorized') { modal.style.display = 'flex'; return; }
+                      var msg = (d && d.error) ? d.error : 'Не удалось разблокировать';
+                      if (d && d.code === 'not_enough_tokens' && d.buy_url) {
+                          msg += ' <a href="' + d.buy_url + '">Пополнить →</a>';
+                      }
+                      showErr(unlockError, msg);
+                  })
+                  .catch(function () { unlockBtn.disabled = false; showErr(unlockError, 'Сеть прервалась. Попробуйте ещё раз.'); });
+          }
+
+          unlockBtn.addEventListener('click', function () {
+              if (isLoggedIn) { doUnlock(); } else { modal.style.display = 'flex'; }
+          });
+          document.getElementById('reg-cancel').addEventListener('click', function () { modal.style.display = 'none'; });
+
+          regSubmit.addEventListener('click', function () {
+              regError.style.display = 'none';
+              var email = document.getElementById('reg-email').value.trim();
+              var name = document.getElementById('reg-name').value.trim();
+              var agree = document.getElementById('reg-agree').checked;
+              if (!email || !name || !agree) { showErr(regError, 'Заполните email, ФИО и примите условия'); return; }
+              regSubmit.disabled = true;
+              var fd = new FormData();
+              fd.append('csrf', csrf); fd.append('email', email); fd.append('full_name', name); fd.append('agreement', '1');
+              fetch('/ajax/quick-register.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                  .then(function (r) { return r.json(); })
+                  .then(function (d) {
+                      regSubmit.disabled = false;
+                      if (d && d.success) { isLoggedIn = true; modal.style.display = 'none'; doUnlock(); }
+                      else { showErr(regError, (d && d.error) ? d.error : 'Ошибка регистрации'); }
+                  })
+                  .catch(function () { regSubmit.disabled = false; showErr(regError, 'Сеть прервалась. Попробуйте ещё раз.'); });
+          });
+      })();
+      </script>
+
+    <?php else: ?>
+      <?php if (!empty($material['content'])): ?>
+        <div class="mat-detail-content"><?= $material['content'] /* HTML, доверенный из админки/ИИ-генератора */ ?></div>
+      <?php endif; ?>
+
+      <div class="mat-download">
+        <div class="dl-count">↓ <?= (int)$material['downloads_count'] ?> скачиваний</div>
+        <div class="dl-cost">
+          <?php if ((int)$material['token_cost'] > 0): ?>
+            Скачивание: <strong><?= (int)$material['token_cost'] ?> токенов</strong>
+          <?php else: ?>
+            <strong>Скачать бесплатно</strong>
+          <?php endif; ?>
+        </div>
         <a href="/material-download.php?id=<?= (int)$material['id'] ?>" class="rd-btn rd-btn-primary" style="background:#fff;color:var(--indigo-700,#1a2f8a);">
           Скачать (PDF)
         </a>
-      <?php else: ?>
-        <div style="color:rgba(255,255,255,.7);">Файл будет готов в ближайшее время</div>
-      <?php endif; ?>
-    </div>
+      </div>
+    <?php endif; ?>
 
     <?php if (!empty($material['type_slug'])): ?>
       <div class="mat-similar">

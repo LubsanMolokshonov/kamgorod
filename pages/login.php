@@ -8,6 +8,8 @@ session_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/material-tracking.php';
+require_once __DIR__ . '/../classes/UserTokens.php';
 
 // Безопасный возврат после входа: только относительный URL внутри сайта
 $returnUrl = $_GET['return'] ?? $_POST['return'] ?? '';
@@ -64,6 +66,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Redirect to cabinet after short delay
                 header('Refresh: 1; URL=' . $returnUrl);
             }
+
+            // Атрибуция привлечения из воронки материалов (COALESCE — только если пусто)
+            persistMaterialUtmToUser($db, (int)$_SESSION['user_id']);
+            // Привязать анонимные превью-материалы к пользователю
+            claimAnonymousMaterials($db, (int)$_SESSION['user_id']);
         } catch (PDOException $e) {
             error_log("Login error: " . $e->getMessage());
             $error = 'Произошла ошибка. Пожалуйста, попробуйте позже.';
@@ -152,10 +159,10 @@ include __DIR__ . '/../includes/header.php';
         <div class="login-info">
             <h3>Что дает регистрация?</h3>
             <ul>
-                <li>Доступ к личному кабинету</li>
-                <li>История участия в конкурсах</li>
-                <li>Хранение и скачивание дипломов</li>
-                <li>Уведомления о новых конкурсах</li>
+                <li><strong>Первый материал бесплатно</strong> — <?= UserTokens::signupBonus() ?> токенов в подарок</li>
+                <li>7 типов материалов по ФОП и ФГОС за 30 секунд</li>
+                <li>Личный кабинет: история генераций и дипломов</li>
+                <li>Конкурсы, олимпиады, вебинары и публикации</li>
             </ul>
         </div>
     </div>

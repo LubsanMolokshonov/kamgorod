@@ -15,29 +15,10 @@ require_once __DIR__ . '/../classes/MaterialType.php';
 require_once __DIR__ . '/../classes/TokenPackage.php';
 require_once __DIR__ . '/../classes/UserTokens.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/material-tracking.php';
 
-// Логируем уникальный визит на лендинг материалов (одна запись на PHP-сессию)
-try {
-    $sid = session_id();
-    if ($sid) {
-        $stmt = $db->prepare(
-            "INSERT IGNORE INTO material_landing_visits
-             (php_session_id, user_id, ip_address, user_agent, referrer, utm_source, utm_campaign)
-             VALUES (?, ?, ?, ?, ?, ?, ?)"
-        );
-        $stmt->execute([
-            $sid,
-            $_SESSION['user_id'] ?? null,
-            $_SERVER['REMOTE_ADDR'] ?? null,
-            substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500) ?: null,
-            substr($_SERVER['HTTP_REFERER'] ?? '', 0, 500) ?: null,
-            isset($_GET['utm_source']) ? substr($_GET['utm_source'], 0, 100) : null,
-            isset($_GET['utm_campaign']) ? substr($_GET['utm_campaign'], 0, 100) : null,
-        ]);
-    }
-} catch (\Throwable $e) {
-    error_log('material_landing_visits log: ' . $e->getMessage());
-}
+// Логируем визит и захватываем UTM/funnel_session_id (точка входа воронки материалов)
+trackMaterialVisit($db, '/materialy/');
 
 $materialObj = new Material($db);
 $typeObj     = new MaterialType($db);
@@ -68,7 +49,7 @@ $typeEmoji = [
 ];
 
 $pageTitle = 'Материалы ФОП через ИИ — создавайте и адаптируйте уроки за 30 секунд | ' . SITE_NAME;
-$pageDescription = 'Генерируйте техкарты, конспекты, рабочие листы, тесты, презентации и классные часы под ФОП и ФАОП ОВЗ. Адаптируйте свои материалы под класс через ИИ. 100 токенов в подарок.';
+$pageDescription = 'Генерируйте техкарты, конспекты, рабочие листы, тесты, презентации и классные часы под ФОП и ФАОП ОВЗ. Адаптируйте свои материалы под класс через ИИ. Первый материал бесплатно.';
 $canonicalUrl = SITE_URL . '/materialy/';
 $rdActivePage = 'materialy';
 $additionalCSS = ['/assets/css/materials.css?v=' . filemtime(__DIR__ . '/../assets/css/materials.css')];
@@ -103,7 +84,7 @@ include __DIR__ . '/../includes/header-redesign.php';
     <div>
       <div class="rd-pill-row reveal-stagger">
         <span class="rd-pill"><span class="dot"></span>Под ФГОС 2026 · ФОП · ФАОП ОВЗ</span>
-        <span class="rd-pill indigo">100 токенов в подарок</span>
+        <span class="rd-pill indigo">Первый материал бесплатно</span>
         <span class="rd-pill">DOCX · PDF · PPTX</span>
       </div>
       <h1 class="rd-hero-title rd-hero-title-sm reveal">Материалы к урокам <span class="accent">за 30 секунд</span> — с помощью ИИ</h1>
@@ -122,7 +103,7 @@ include __DIR__ . '/../includes/header-redesign.php';
       <?php if ($userId): ?>
         <p class="mat-hero-balance">Ваш баланс: <strong><?= number_format((int)$balance, 0, '', ' ') ?> токенов</strong> · <a href="/material-balance/">пополнить</a></p>
       <?php else: ?>
-        <p class="mat-hero-balance"><a href="/vhod?return=<?= urlencode('/material-generator/') ?>">Зарегистрируйтесь</a> — подарим 100 токенов на первые материалы.</p>
+        <p class="mat-hero-balance"><strong>Первый материал бесплатно</strong> — дарим <?= UserTokens::signupBonus() ?> токенов на старт, регистрация прямо в форме.</p>
       <?php endif; ?>
     </div>
 
@@ -305,7 +286,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <div class="rd-eyebrow">Тарифы</div>
         <h2 class="rd-section-title">Платите токенами — только за то, что создаёте</h2>
       </div>
-      <p class="rd-section-sub">При регистрации дарим 100 токенов. Дальше пополняйте баланс пакетами — токены не сгорают.</p>
+      <p class="rd-section-sub">Первый материал бесплатно, на старте дарим <?= UserTokens::signupBonus() ?> токенов. Дальше пополняйте баланс пакетами — токены не сгорают.</p>
     </div>
     <div class="mat-packs reveal-stagger">
       <?php foreach ($packages as $i => $p):
@@ -409,7 +390,7 @@ include __DIR__ . '/../includes/header-redesign.php';
       <div class="rd-faq-list reveal-stagger">
         <div class="rd-faq-item">
           <button class="rd-faq-q">Что такое токены и сколько их нужно? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Токены — внутренняя валюта генератора. Один материал стоит 10–25 токенов в зависимости от типа. При регистрации мы дарим 100 токенов — этого хватает на 5–7 материалов. Дальше баланс пополняется пакетами.</div></div>
+          <div class="rd-faq-a"><div>Токены — внутренняя валюта генератора. Один материал стоит 10–25 токенов в зависимости от типа. При регистрации дарим <?= UserTokens::signupBonus() ?> токенов — этого хватает на первый материал бесплатно. Дальше баланс пополняется пакетами.</div></div>
         </div>
         <div class="rd-faq-item">
           <button class="rd-faq-q">Материалы соответствуют ФОП и ФГОС 2026? <span class="pm">+</span></button>
@@ -441,7 +422,7 @@ include __DIR__ . '/../includes/header-redesign.php';
   <div class="rd-wrap">
     <div class="mat-final reveal">
       <h2>Соберите первый материал прямо сейчас</h2>
-      <p>100 токенов в подарок при регистрации — хватит на несколько уроков.</p>
+      <p>Первый материал бесплатно — попробуйте генератор прямо сейчас.</p>
       <div class="rd-hero-cta" style="justify-content:center;">
         <a href="/material-generator/" class="rd-btn rd-btn-primary">Сгенерировать материал
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>

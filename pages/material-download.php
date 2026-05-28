@@ -26,9 +26,17 @@ if ($materialId <= 0) {
 $materialObj = new Material($db);
 $material = $materialObj->getById($materialId);
 
-if (!$material || empty($material['file_path'])) {
+// PDF формируется на лету из content (renderPageStyle), поэтому достаточно content или файла.
+if (!$material || (empty($material['content']) && empty($material['file_path']))) {
     http_response_code(404);
     echo 'Материал не найден';
+    exit;
+}
+
+// Сгенерированное превью без оплаты скачать нельзя — только через разблокировку (ajax/unlock-material.php).
+if ((int)$material['is_generated'] === 1 && (int)$material['is_unlocked'] === 0) {
+    http_response_code(403);
+    echo 'Материал не разблокирован. <a href="/material/' . htmlspecialchars(rawurlencode((string)$material['slug']), ENT_QUOTES, 'UTF-8') . '/">Открыть страницу материала →</a>';
     exit;
 }
 
@@ -71,11 +79,11 @@ if (!$isAuthor && $cost > 0) {
     }
 }
 
-// Путь к файлу
-$absolutePath = dirname(__DIR__) . '/' . ltrim((string)$material['file_path'], '/');
-if (!is_file($absolutePath)) {
+// PDF формируется на лету из content (см. renderPageStyle ниже), отдельный файл на диске
+// не требуется — поэтому наличие file_path не проверяем. Для отдачи нужен content.
+if (empty($material['content'])) {
     http_response_code(410);
-    echo 'Файл удалён или не найден на диске';
+    echo 'Материал пуст или недоступен';
     exit;
 }
 

@@ -80,6 +80,13 @@ if ($discountToken !== '') {
     }
 }
 
+// Куда вернуть после оплаты (брошенная корзина — назад к материалу). Только относительный путь.
+$returnPath = '/material-balance/?paid=1';
+$rt = (string)($_POST['return_to'] ?? '');
+if ($rt !== '' && $rt[0] === '/' && !str_starts_with($rt, '//') && strlen($rt) <= 300) {
+    $returnPath = $rt;
+}
+
 $description = "Покупка пакета «{$package['name']}» — {$totalTokens} токенов на fgos.pro"
     . ($discountPercent > 0 ? " (скидка {$discountPercent}%)" : '');
 $idempotencyKey = 'tokens_' . $userId . '_' . $packageId . '_' . substr(uniqid('', true), -10);
@@ -96,7 +103,7 @@ try {
             ],
             'confirmation' => [
                 'type' => 'redirect',
-                'return_url' => SITE_URL . '/material-balance/?paid=1',
+                'return_url' => SITE_URL . $returnPath,
             ],
             'capture' => true,
             'description' => $description,

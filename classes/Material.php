@@ -20,6 +20,7 @@ class Material
     {
         return $this->db->insert('materials', [
             'user_id' => $data['user_id'] ?? null,
+            'funnel_session_id' => $data['funnel_session_id'] ?? null,
             'title' => $data['title'],
             'description' => $data['description'] ?? '',
             'content' => $data['content'] ?? '',
@@ -35,6 +36,8 @@ class Material
             'ai_params_json' => isset($data['ai_params']) ? json_encode($data['ai_params'], JSON_UNESCAPED_UNICODE) : null,
             'program_compliance' => $data['program_compliance'] ?? null,
             'token_cost' => $data['token_cost'] ?? 0,
+            'is_unlocked' => array_key_exists('is_unlocked', $data) ? (int)(bool)$data['is_unlocked'] : 1,
+            'unlock_token_cost' => $data['unlock_token_cost'] ?? 0,
             'slug' => $data['slug'] ?? $this->generateSlug($data['title']),
             'meta_title' => $data['meta_title'] ?? null,
             'meta_description' => $data['meta_description'] ?? null,
@@ -49,7 +52,8 @@ class Material
             'title', 'description', 'content', 'material_type_id',
             'file_path', 'file_original_name', 'file_size', 'file_format', 'preview_image_url',
             'is_generated', 'ai_model_used', 'ai_prompt',
-            'program_compliance', 'token_cost',
+            'program_compliance', 'token_cost', 'is_unlocked', 'unlock_token_cost',
+            'funnel_session_id',
             'slug', 'meta_title', 'meta_description',
             'status', 'moderation_comment', 'published_at',
         ];
