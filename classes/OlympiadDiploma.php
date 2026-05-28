@@ -241,9 +241,16 @@ class OlympiadDiploma {
      * Generate PDF
      */
     private function generatePDF($registration, $template, $recipientType) {
+        // Имя участника берём из снапшота на самой регистрации (миграция 123),
+        // чтобы не зависеть от текущего users.full_name — он может смениться
+        // между подачей формы и генерацией PDF (alert #90).
+        $participantName = !empty($registration['participant_name'])
+            ? $registration['participant_name']
+            : $registration['user_full_name'];
+
         $recipientName = $recipientType === 'supervisor'
             ? $registration['supervisor_name']
-            : $registration['user_full_name'];
+            : $participantName;
 
         $recipientOrganization = $recipientType === 'supervisor'
             ? ($registration['supervisor_organization'] ?? $registration['organization'])

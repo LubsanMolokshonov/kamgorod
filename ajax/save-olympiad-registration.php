@@ -142,10 +142,17 @@ try {
         ]);
         $userId = $newUserId;
     } else {
-        // Update existing user with any newly provided fields
+        // Update existing user with any newly provided fields.
+        // ВАЖНО: full_name НЕ перезаписываем — это ломало дипломы при нескольких заявках
+        // на один olympiad_result_id (alert #90). Имя участника снапшотится в
+        // olympiad_registrations.participant_name ниже. full_name заполняем только если он пуст
+        // (например, у нового аккаунта, который зарегистрирован магиклинком без ФИО).
         $userId = $userInfo['id'];
-        $updateFields = ['full_name' => $data['fio']];
+        $updateFields = [];
 
+        if (empty($userInfo['full_name']) && !empty($data['fio'])) {
+            $updateFields['full_name'] = $data['fio'];
+        }
         if (!empty($data['phone'])) {
             $updateFields['phone'] = $data['phone'];
         }
@@ -156,7 +163,9 @@ try {
             $updateFields['organization'] = $data['organization'];
         }
 
-        $userObj->update($userId, $updateFields);
+        if (!empty($updateFields)) {
+            $userObj->update($userId, $updateFields);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -189,6 +198,7 @@ try {
 
     $registrationId = $registrationObj->create([
         'user_id'                 => $userId,
+        'participant_name'        => mb_substr(trim($data['fio']), 0, 55),
         'olympiad_id'             => $result['olympiad_id'],
         'olympiad_result_id'      => $result['id'],
         'diploma_template_id'     => (int)$data['template_id'],

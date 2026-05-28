@@ -17,6 +17,7 @@ class OlympiadRegistration {
     public function create($data) {
         return $this->db->insert('olympiad_registrations', [
             'user_id' => $data['user_id'],
+            'participant_name' => $data['participant_name'] ?? null,
             'olympiad_id' => $data['olympiad_id'],
             'olympiad_result_id' => $data['olympiad_result_id'],
             'diploma_template_id' => $data['diploma_template_id'] ?? 1,
@@ -80,6 +81,7 @@ class OlympiadRegistration {
      */
     public function update($id, $data) {
         $allowedFields = [
+            'participant_name',
             'diploma_template_id', 'organization', 'city', 'competition_type',
             'participation_date', 'has_supervisor', 'supervisor_name',
             'supervisor_email', 'supervisor_organization', 'status'
