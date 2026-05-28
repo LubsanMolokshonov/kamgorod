@@ -110,6 +110,17 @@ if (!defined('YANDEX_GPT_API_KEY')) define('YANDEX_GPT_API_KEY', $_ENV['YANDEX_G
 if (!defined('YANDEX_GPT_FOLDER_ID')) define('YANDEX_GPT_FOLDER_ID', $_ENV['YANDEX_GPT_FOLDER_ID'] ?? '');
 if (!defined('YANDEX_GPT_MODEL')) define('YANDEX_GPT_MODEL', $_ENV['YANDEX_GPT_MODEL'] ?? 'yandexgpt-lite');
 
+// YandexART — генерация обложек материалов (те же креды Yandex Cloud, что и GPT-модерация).
+if (!defined('YANDEX_ART_ENABLED')) define('YANDEX_ART_ENABLED', ($_ENV['YANDEX_ART_ENABLED'] ?? '1') === '1');
+if (!defined('YANDEX_ART_MODEL'))   define('YANDEX_ART_MODEL',   $_ENV['YANDEX_ART_MODEL'] ?? 'yandex-art/latest');
+if (!defined('YANDEX_ART_TIMEOUT')) define('YANDEX_ART_TIMEOUT', (int)($_ENV['YANDEX_ART_TIMEOUT'] ?? 25));
+
+// OpenRouter — генератор материалов ФОП. Используются дешёвые open-source модели.
+if (!defined('OPENROUTER_API_KEY'))         define('OPENROUTER_API_KEY',         $_ENV['OPENROUTER_API_KEY']         ?? '');
+if (!defined('OPENROUTER_MODEL_DEFAULT'))   define('OPENROUTER_MODEL_DEFAULT',   $_ENV['OPENROUTER_MODEL_DEFAULT']   ?? 'meta-llama/llama-3.3-70b-instruct');
+if (!defined('OPENROUTER_MODEL_STRUCTURED'))define('OPENROUTER_MODEL_STRUCTURED',$_ENV['OPENROUTER_MODEL_STRUCTURED']?? 'qwen/qwen-2.5-72b-instruct');
+if (!defined('OPENROUTER_MODEL_FAST'))      define('OPENROUTER_MODEL_FAST',      $_ENV['OPENROUTER_MODEL_FAST']      ?? 'google/gemini-2.0-flash-001');
+
 // Telegram Alerts (тех. уведомления в бот ИИ-консультанта)
 // Тот же бот используется в ai-consultant/src/bootstrap.php (AI_TELEGRAM_BOT_TOKEN)
 // Если TELEGRAM_BOT_TOKEN не задан — TelegramNotifier/AlertService молча отключают отправку.

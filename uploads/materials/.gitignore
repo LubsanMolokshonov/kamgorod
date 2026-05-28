@@ -1,0 +1,10 @@
+# Ignore all generated material files
+*.pdf
+*.pptx
+*.docx
+*.jpeg
+*.jpg
+*.png
+
+# Keep the directory structure in git
+!.gitignore

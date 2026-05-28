@@ -1,0 +1,275 @@
+/* =====================================================
+   Страница материала — типографика и слайды.
+   Использует токены из redesign.css (--indigo-*, --ink-*, --font-*).
+   ===================================================== */
+
+.material-detail {
+    padding: 40px 0 64px;
+}
+.material-detail__wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.material-detail__crumbs {
+    font-size: 14px;
+    color: var(--ink-500, #5a608a);
+}
+.material-detail__crumbs a {
+    color: var(--indigo-600, #1e3aa8);
+    text-decoration: none;
+}
+.material-detail__crumbs a:hover { text-decoration: underline; }
+
+.material-detail__kicker {
+    margin: 18px 0 6px;
+    font-size: 12px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-400, #8389ad);
+}
+
+.material-detail__title {
+    margin: 0 0 16px;
+    font-family: var(--font-sans, 'Onest', sans-serif);
+    font-size: clamp(26px, 4vw, 38px);
+    line-height: 1.12;
+    letter-spacing: -.01em;
+    color: var(--ink-900, #0e1330);
+}
+
+/* Плашка «черновик» */
+.material-detail__draft {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 0 0 20px;
+    padding: 14px 16px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 12px;
+    color: #9a3412;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.material-detail__draft b { color: #7c2d12; }
+
+/* Программы / бейджи */
+.material-detail__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 18px;
+}
+.material-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--indigo-50, #ecefff);
+    color: var(--indigo-800, #12246d);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Обложка */
+.material-detail__cover {
+    width: 100%;
+    max-width: 640px;
+    border-radius: 16px;
+    margin: 8px 0 20px;
+    box-shadow: 0 6px 20px rgba(20, 28, 80, .08);
+}
+.material-detail__cover--placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(135deg, var(--indigo-100, #d6dcff), var(--indigo-200, #aab6f3));
+    color: var(--indigo-700, #182f8a);
+    font-size: 48px;
+}
+
+.material-detail__lead {
+    font-size: 17px;
+    color: var(--ink-700, #2a3056);
+    line-height: 1.6;
+    margin: 0 0 8px;
+}
+
+/* =====================================================
+   Тело материала — стилизуем потомков (HTML от ИИ).
+   ===================================================== */
+.material-content {
+    margin: 24px 0;
+    padding: 28px;
+    background: #fff;
+    border: 1px solid var(--ink-200, #dde0ec);
+    border-radius: 16px;
+    color: var(--ink-700, #2a3056);
+    font-family: var(--font-text, 'Inter', sans-serif);
+    font-size: 16px;
+    line-height: 1.65;
+}
+.material-content > :first-child { margin-top: 0; }
+.material-content > :last-child { margin-bottom: 0; }
+
+.material-content h1,
+.material-content h2,
+.material-content h3,
+.material-content h4 {
+    font-family: var(--font-sans, 'Onest', sans-serif);
+    color: var(--ink-900, #0e1330);
+    line-height: 1.25;
+    letter-spacing: -.01em;
+}
+.material-content h1 { font-size: 26px; margin: 0 0 16px; }
+.material-content h2 {
+    font-size: 21px;
+    margin: 32px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--indigo-100, #d6dcff);
+    color: var(--indigo-800, #12246d);
+}
+.material-content h3 { font-size: 17px; margin: 22px 0 8px; color: var(--indigo-700, #182f8a); }
+
+.material-content p { margin: 0 0 14px; }
+.material-content ul,
+.material-content ol { margin: 0 0 16px; padding-left: 22px; }
+.material-content li { margin: 4px 0; }
+.material-content strong { color: var(--ink-900, #0e1330); }
+.material-content a { color: var(--indigo-600, #1e3aa8); }
+
+.material-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 20px;
+    font-size: 15px;
+}
+.material-content th,
+.material-content td {
+    border: 1px solid var(--ink-200, #dde0ec);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+}
+.material-content th {
+    background: var(--indigo-50, #ecefff);
+    color: var(--indigo-800, #12246d);
+    font-family: var(--font-sans, 'Onest', sans-serif);
+    font-weight: 600;
+}
+.material-content tbody tr:nth-child(even) td {
+    background: var(--ink-50, #f6f7fb);
+}
+
+/* =====================================================
+   Слайды презентации (on-page)
+   ===================================================== */
+.md-slides {
+    display: grid;
+    gap: 16px;
+    margin: 0 0 8px;
+}
+.md-slide {
+    border: 1px solid var(--ink-200, #dde0ec);
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(20, 28, 80, .06);
+}
+.md-slide__bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--indigo-600, #1e3aa8);
+    color: #fff;
+}
+.md-slide__num {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, .18);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+}
+.md-slide__title {
+    margin: 0;
+    font-family: var(--font-sans, 'Onest', sans-serif);
+    font-size: 18px;
+    line-height: 1.25;
+    color: #fff;
+}
+.md-slide__body { padding: 16px 20px 18px; }
+.md-slide__bullets { margin: 0; padding-left: 22px; }
+.md-slide__bullets li { margin: 6px 0; color: var(--ink-700, #2a3056); line-height: 1.55; }
+.md-slide__notes {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px dashed var(--ink-200, #dde0ec);
+    font-size: 14px;
+    color: var(--ink-500, #5a608a);
+}
+
+/* =====================================================
+   Блок скачивания
+   ===================================================== */
+.material-download {
+    margin: 32px 0;
+    padding: 26px;
+    background: var(--indigo-600, #1e3aa8);
+    color: #fff;
+    border-radius: 16px;
+    text-align: center;
+}
+.material-download__meta { font-size: 14px; opacity: .8; margin-bottom: 8px; }
+.material-download__price { font-size: 20px; margin-bottom: 18px; }
+.material-download__btn {
+    display: inline-block;
+    padding: 13px 30px;
+    background: #fff;
+    color: var(--indigo-700, #182f8a);
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: transform .15s ease;
+}
+.material-download__btn:hover { transform: translateY(-1px); }
+.material-download__pending { color: rgba(255, 255, 255, .7); }
+
+/* CTA «похожий материал» */
+.material-cta {
+    margin: 32px 0;
+    padding: 22px 24px;
+    background: var(--indigo-50, #ecefff);
+    border-radius: 16px;
+}
+.material-cta h3 { margin: 0 0 8px; font-family: var(--font-sans, 'Onest', sans-serif); color: var(--ink-900, #0e1330); }
+.material-cta p { margin: 0 0 14px; color: var(--ink-700, #2a3056); }
+.material-cta__btn {
+    display: inline-block;
+    padding: 11px 22px;
+    background: var(--indigo-600, #1e3aa8);
+    color: #fff;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* Теги */
+.material-tags { margin: 24px 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.material-tags a {
+    display: inline-block;
+    padding: 5px 12px;
+    background: var(--ink-100, #eceef6);
+    color: var(--ink-700, #2a3056);
+    border-radius: 999px;
+    font-size: 13px;
+    text-decoration: none;
+}
+.material-tags a:hover { background: var(--indigo-50, #ecefff); color: var(--indigo-700, #182f8a); }

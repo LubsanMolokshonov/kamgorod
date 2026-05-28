@@ -92,6 +92,106 @@ try {
 
     logWebhook('INFO', $paymentId, "Event: {$eventType}, Status: {$paymentStatus}", '');
 
+    // ============================================================
+    // Покупка токенов для генератора материалов ФОП
+    // metadata.payment_type='tokens' — обрабатываем отдельной веткой,
+    // без Order/order_items. Идемпотентность — по token_transactions.payment_id.
+    // ============================================================
+    $metadata = method_exists($payment, 'getMetadata') ? ($payment->getMetadata() ?: null) : null;
+    $metaArray = $metadata ? (is_array($metadata) ? $metadata : (method_exists($metadata, 'toArray') ? $metadata->toArray() : (array)$metadata)) : [];
+
+    if (($metaArray['payment_type'] ?? null) === 'tokens') {
+        require_once __DIR__ . '/../../classes/UserTokens.php';
+        require_once __DIR__ . '/../../classes/TokenPackage.php';
+
+        if ($paymentStatus !== \YooKassa\Model\Payment\PaymentStatus::SUCCEEDED) {
+            logWebhook('INFO', $paymentId, "Tokens payment status={$paymentStatus} — wait for SUCCEEDED", '');
+            http_response_code(200);
+            echo json_encode(['status' => 'tokens_waiting']);
+            exit;
+        }
+
+        $tokensUserId  = (int)($metaArray['user_id']   ?? 0);
+        $tokensPackage = (int)($metaArray['package_id'] ?? 0);
+        if ($tokensUserId <= 0 || $tokensPackage <= 0) {
+            logWebhook('ERROR', $paymentId, 'Tokens payment without user_id/package_id metadata', json_encode($metaArray));
+            http_response_code(200);
+            echo json_encode(['status' => 'tokens_bad_metadata']);
+            exit;
+        }
+
+        // Идемпотентность: по payment_id + reason='purchase'
+        $alreadyCredited = (new Database($GLOBALS['db']))->queryOne(
+            "SELECT id FROM token_transactions WHERE payment_id = ? AND reason = 'purchase' LIMIT 1",
+            [$paymentId]
+        );
+        if ($alreadyCredited) {
+            logWebhook('INFO', $paymentId, "Tokens already credited for payment {$paymentId}", '');
+            http_response_code(200);
+            echo json_encode(['status' => 'tokens_already_credited']);
+            exit;
+        }
+
+        $packageObj = new TokenPackage($GLOBALS['db']);
+        $package = $packageObj->getById($tokensPackage);
+        if (!$package) {
+            logWebhook('ERROR', $paymentId, "Tokens package #{$tokensPackage} not found", '');
+            http_response_code(200);
+            echo json_encode(['status' => 'tokens_package_not_found']);
+            exit;
+        }
+
+        $totalTokens = $packageObj->totalTokens($package);
+        $amountRub = (float)$payment->getAmount()->getValue();
+        $tokens = new UserTokens($GLOBALS['db']);
+        try {
+            $txnId = $tokens->credit($tokensUserId, $totalTokens, 'purchase', [
+                'package_id' => $tokensPackage,
+                'payment_id' => $paymentId,
+                'notes' => 'Yookassa ' . $payment->getAmount()->getValue() . ' ' . $payment->getAmount()->getCurrency(),
+            ]);
+            logWebhook('INFO', $paymentId, "Tokens credited: user={$tokensUserId} amount={$totalTokens} package={$tokensPackage} txn={$txnId}", '');
+        } catch (Throwable $e) {
+            logWebhook('ERROR', $paymentId, 'Tokens credit failed: ' . $e->getMessage(), '');
+            http_response_code(200);
+            echo json_encode(['status' => 'tokens_credit_error']);
+            exit;
+        }
+
+        // Bitrix24: оплаченная сделка в воронке «Курсы» (CATEGORY_ID=108)
+        try {
+            if (defined('BITRIX24_WEBHOOK_URL') && BITRIX24_WEBHOOK_URL) {
+                require_once __DIR__ . '/../../classes/Bitrix24Integration.php';
+                $userRow = (new Database($GLOBALS['db']))->queryOne(
+                    "SELECT email, full_name, phone FROM users WHERE id = ?",
+                    [$tokensUserId]
+                );
+                $bitrix = new Bitrix24Integration();
+                $dealId = $bitrix->createDeal([
+                    'TITLE' => 'Покупка токенов «' . $package['name'] . '» (' . $totalTokens . ')',
+                    'CATEGORY_ID' => 108,
+                    'STAGE_ID' => 'C108:WON',
+                    'OPPORTUNITY' => $amountRub,
+                    'CURRENCY_ID' => 'RUB',
+                    'COMMENTS' => "Покупка пакета токенов на fgos.pro\n"
+                                . "User: #{$tokensUserId}, email: " . ($userRow['email'] ?? '—') . "\n"
+                                . "Tokens: {$totalTokens}\n"
+                                . "Yookassa payment: {$paymentId}",
+                    'UF_CRM_USER_EMAIL' => $userRow['email'] ?? '',
+                ]);
+                if ($dealId) {
+                    logWebhook('INFO', $paymentId, "Bitrix24 token deal created: #{$dealId}", '');
+                }
+            }
+        } catch (Throwable $e) {
+            logWebhook('WARNING', $paymentId, 'Bitrix24 deal creation failed (non-fatal): ' . $e->getMessage(), '');
+        }
+
+        http_response_code(200);
+        echo json_encode(['status' => 'tokens_credited', 'tokens' => $totalTokens]);
+        exit;
+    }
+
     // Initialize classes
     $orderObj = new Order($GLOBALS['db']);
     $registrationObj = new Registration($GLOBALS['db']);

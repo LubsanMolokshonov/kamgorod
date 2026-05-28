@@ -13,7 +13,9 @@ RewriteBase /
 # (ProxyPass не работает в .htaccess; используем RewriteRule с [P])
 RewriteRule ^ai-chat/api/(.*)$ http://ai-consultant:80/api/$1 [P,L]
 
-# www → non-www (301)
+# www → non-www (301) — не трогаем localhost
+RewriteCond %{HTTP_HOST} !^localhost [NC]
+RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
 RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
 RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 
@@ -27,11 +29,21 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 # Trailing slash: канонический URL — со слэшем на конце.
 # Применяется только к GET/HEAD, к URL без расширения файла и не к существующим файлам/папкам.
 # Явный https:// в Location — иначе Apache за nginx-прокси теряет схему и отдаёт http://
+# На localhost оставляем http://, чтобы локальная разработка не требовала SSL.
 RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_URI} !\.[a-zA-Z0-9]+$
 RewriteCond %{REQUEST_URI} !/$
+RewriteCond %{HTTP_HOST} ^(localhost|127\.0\.0\.1) [NC]
+RewriteRule ^(.+)$ http://%{HTTP_HOST}/$1/ [R=301,L]
+
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !\.[a-zA-Z0-9]+$
+RewriteCond %{REQUEST_URI} !/$
+RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1) [NC]
 RewriteRule ^(.+)$ https://%{HTTP_HOST}/$1/ [R=301,L]
 
 # ================================================
@@ -216,6 +228,42 @@ RewriteRule ^avtor/([0-9]+)/$ pages/author.php?id=$1 [L,QSA]
 
 # Подача публикации
 RewriteRule ^opublikovat/?$ pages/submit-publication.php [L,QSA]
+
+# ================================================
+# МАТЕРИАЛЫ ФОП (каталог + ИИ-генератор)
+# ================================================
+
+# Лендинг раздела «Материалы ФОП»
+RewriteRule ^materialy/?$ pages/materials-landing.php [L,QSA]
+
+# Каталог материалов
+RewriteRule ^materialy/katalog/?$ pages/materials-catalog.php [L,QSA]
+
+# Аудитория каталога (3 уровня): /materialy/katalog/pedagogi/dou/logopediya/
+RewriteRule ^materialy/katalog/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ pages/materials-catalog.php?ac=$1&at=$2&as=$3 [L,QSA]
+RewriteRule ^materialy/katalog/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ pages/materials-catalog.php?ac=$1&at=$2 [L,QSA]
+RewriteRule ^materialy/katalog/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ pages/materials-catalog.php?ac=$1 [L,QSA]
+
+# 301 со старых path-based URL каталога (до переноса под /katalog/)
+RewriteRule ^materialy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)(/.*)?$ /materialy/katalog/$1$2 [R=301,L]
+
+# Детальная страница материала
+# Канонический URL — со слэшем на конце. Без слэша — 301-редирект.
+RewriteRule ^material/([a-z0-9-]+)$ /material/$1/ [R=301,L]
+RewriteRule ^material/([a-z0-9-]+)/$ pages/material-detail.php?slug=$1 [L,QSA]
+
+# ИИ-генератор материалов
+RewriteRule ^material-generator/?$ pages/material-generator.php [L,QSA]
+RewriteRule ^material-generator/([a-z0-9-]+)/?$ pages/material-generator-form.php?type_slug=$1 [L,QSA]
+
+# Раздача файлов материалов
+RewriteRule ^material-download\.php$ pages/material-download.php [L,QSA]
+
+# Личный кабинет токенов
+RewriteRule ^material-balance/?$ pages/material-balance.php [L,QSA]
+
+# Адаптация материала
+RewriteRule ^material-adapter/?$ pages/material-adapter.php [L,QSA]
 
 # Генератор статей
 RewriteRule ^generator-statej/?$ pages/article-generator.php [L,QSA]

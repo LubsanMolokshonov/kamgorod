@@ -19,6 +19,8 @@ require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
+require_once __DIR__ . '/../classes/Material.php';
+require_once __DIR__ . '/../classes/UserTokens.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/installment-helper.php';
 
@@ -109,18 +111,25 @@ $courseObj = new Course($db);
 $userCourseEnrollments = $courseObj->getEnrollmentsByEmail($_SESSION['user_email']);
 
 // Index olympiad registrations by olympiad_result_id.
-// Если у пользователя несколько регистраций на один результат (например, неоплаченная + оплаченная),
-// карточка в кабинете должна показывать оплаченную — иначе видит «Ожидает оплаты» при готовом дипломе.
+// «primary» — для статуса карточки (приоритет diploma_ready > paid > pending),
+// «paid» — список ВСЕХ оплаченных регистраций на этот результат, чтобы показать
+// все купленные дипломы (alert #90: учитель купил 3 диплома, видел только 1).
 $olympRegsByResultId = [];
 $olympStatusPriority = ['diploma_ready' => 3, 'paid' => 2, 'pending' => 1];
 foreach ($userOlympiadRegs as $reg) {
     $rid = $reg['olympiad_result_id'];
+    if (!isset($olympRegsByResultId[$rid])) {
+        $olympRegsByResultId[$rid] = ['primary' => null, 'paid' => []];
+    }
     $newPriority = $olympStatusPriority[$reg['status'] ?? ''] ?? 0;
-    $curPriority = isset($olympRegsByResultId[$rid])
-        ? ($olympStatusPriority[$olympRegsByResultId[$rid]['status'] ?? ''] ?? 0)
+    $curPriority = $olympRegsByResultId[$rid]['primary']
+        ? ($olympStatusPriority[$olympRegsByResultId[$rid]['primary']['status'] ?? ''] ?? 0)
         : -1;
     if ($newPriority >= $curPriority) {
-        $olympRegsByResultId[$rid] = $reg;
+        $olympRegsByResultId[$rid]['primary'] = $reg;
+    }
+    if (in_array($reg['status'] ?? '', ['paid', 'diploma_ready'], true)) {
+        $olympRegsByResultId[$rid]['paid'][] = $reg;
     }
 }
 
@@ -142,8 +151,22 @@ $activeTab = $_GET['tab'] ?? 'events';
 if (in_array($activeTab, ['diplomas', 'publications', 'webinars', 'olympiads'])) {
     $activeTab = 'events';
 }
-if (!in_array($activeTab, ['courses', 'events'])) {
+if (!in_array($activeTab, ['courses', 'events', 'materials'])) {
     $activeTab = 'events';
+}
+
+// Данные для вкладки «Материалы ФОП» — баланс токенов, мои материалы, история транзакций
+$materialsData = null;
+if ($activeTab === 'materials') {
+    $materialObj = new Material($db);
+    $tokensObj = new UserTokens($db);
+    // Идемпотентный стартовый бонус — на случай, если юзер не заходил ещё в генератор
+    $tokensObj->grantSignupBonusIfNeeded((int)$_SESSION['user_id']);
+    $materialsData = [
+        'list'    => $materialObj->getByUser((int)$_SESSION['user_id']),
+        'balance' => $tokensObj->getRecord((int)$_SESSION['user_id']),
+        'history' => $tokensObj->getHistory((int)$_SESSION['user_id'], 30),
+    ];
 }
 
 // Собираем единый хронологический список мероприятий
@@ -235,6 +258,13 @@ include __DIR__ . '/../includes/header.php';
                     Мероприятия
                     <?php if (!empty($allEvents)): ?>
                         <span class="tab-count"><?php echo count($allEvents); ?></span>
+                    <?php endif; ?>
+                </a>
+                <a href="?tab=materials" class="cabinet-tab <?php echo $activeTab === 'materials' ? 'active' : ''; ?>">
+                    <span class="tab-icon">🤖</span>
+                    Материалы ФОП
+                    <?php if ($materialsData !== null && !empty($materialsData['list'])): ?>
+                        <span class="tab-count"><?php echo count($materialsData['list']); ?></span>
                     <?php endif; ?>
                 </a>
             </nav>
@@ -512,7 +542,7 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             <?php endif; ?>
 
-        <?php else: ?>
+        <?php elseif ($activeTab === 'events'): ?>
             <!-- Events Tab -->
             <?php if (isset($_GET['payment']) && $_GET['payment'] === 'success'): ?>
                 <div class="success-message">
@@ -905,7 +935,9 @@ include __DIR__ . '/../includes/header.php';
                                 $placementLabel = $placementLabels[$result['placement']] ?? 'Участник';
                                 $placementColor = $placementColors[$result['placement']] ?? '#6b7280';
                                 $hasPlace = in_array($result['placement'], ['1', '2', '3']);
-                                $olympReg = $olympRegsByResultId[$result['id']] ?? null;
+                                $olympRegGroup = $olympRegsByResultId[$result['id']] ?? null;
+                                $olympReg = $olympRegGroup['primary'] ?? null;
+                                $olympPaidRegs = $olympRegGroup['paid'] ?? [];
                                 $diplomaPaid = $olympReg && in_array($olympReg['status'], ['paid', 'diploma_ready']);
                                 $diplomaPending = $olympReg && ($olympReg['status'] ?? '') === 'pending';
                             ?>
@@ -942,16 +974,26 @@ include __DIR__ . '/../includes/header.php';
                                     </div>
                                     <div class="card-actions">
                                         <?php if ($diplomaPaid && $olympReg): ?>
-                                            <a href="/ajax/download-olympiad-diploma.php?id=<?php echo $olympReg['id']; ?>&type=participant"
-                                               class="btn btn-success btn-download">
-                                                Скачать диплом
-                                            </a>
-                                            <?php if (!empty($olympReg['has_supervisor']) && !empty($olympReg['supervisor_name'])): ?>
-                                                <a href="/ajax/download-olympiad-diploma.php?id=<?php echo $olympReg['id']; ?>&type=supervisor"
+                                            <?php
+                                            // Если на этот результат оплачено несколько дипломов
+                                            // (разные ФИО участников) — показываем каждый отдельной кнопкой.
+                                            $hasMultiple = count($olympPaidRegs) > 1;
+                                            foreach ($olympPaidRegs as $paidReg):
+                                                $partLabel = $hasMultiple && !empty($paidReg['participant_name'])
+                                                    ? ' — ' . htmlspecialchars($paidReg['participant_name'])
+                                                    : '';
+                                            ?>
+                                                <a href="/ajax/download-olympiad-diploma.php?id=<?php echo $paidReg['id']; ?>&type=participant"
                                                    class="btn btn-success btn-download">
-                                                    Диплом руководителя
+                                                    Скачать диплом<?php echo $partLabel; ?>
                                                 </a>
-                                            <?php endif; ?>
+                                                <?php if (!empty($paidReg['has_supervisor']) && !empty($paidReg['supervisor_name'])): ?>
+                                                    <a href="/ajax/download-olympiad-diploma.php?id=<?php echo $paidReg['id']; ?>&type=supervisor"
+                                                       class="btn btn-success btn-download">
+                                                        Диплом руководителя<?php echo $partLabel; ?>
+                                                    </a>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
                                         <?php elseif ($diplomaPending): ?>
                                             <a href="/korzina/" class="btn btn-primary" style="background: #d97706; border-color: #d97706;">
                                                 Завершить оплату
@@ -983,6 +1025,128 @@ include __DIR__ . '/../includes/header.php';
                     <a href="/olimpiady/" class="btn btn-outline">Олимпиады</a>
                     <a href="/vebinary/" class="btn btn-outline">Вебинары</a>
                     <a href="/opublikovat/" class="btn btn-outline">Опубликовать</a>
+                </div>
+            <?php endif; ?>
+
+        <?php elseif ($activeTab === 'materials'):
+            $mBalance = (int)($materialsData['balance']['balance'] ?? 0);
+            $mEarned  = (int)($materialsData['balance']['lifetime_earned'] ?? 0);
+            $mSpent   = (int)($materialsData['balance']['lifetime_spent'] ?? 0);
+            $mList    = $materialsData['list'];
+            $mHistory = $materialsData['history'];
+            $reasonLabels = [
+                'signup_bonus' => 'Стартовый бонус',
+                'purchase'     => 'Покупка пакета',
+                'generation'   => 'Генерация материала',
+                'adaptation'   => 'Адаптация материала',
+                'download'     => 'Скачивание материала',
+                'refund'       => 'Возврат (ошибка генерации)',
+                'admin_grant'  => 'Начисление администратором',
+                'admin_deduct' => 'Списание администратором',
+            ];
+            $statusLabels = [
+                'draft'     => ['Черновик',      '#9ca3af'],
+                'review'    => ['На модерации',  '#f59e0b'],
+                'published' => ['Опубликован',   '#3b82f6'],
+                'rejected'  => ['Отклонён',      '#ef4444'],
+                'archived'  => ['В архиве',      '#6b7280'],
+            ];
+        ?>
+            <!-- Materials Tab -->
+            <div class="materials-balance-card" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; padding:24px; background:#1f2937; color:#fff; border-radius:12px; margin-bottom:24px;">
+                <div>
+                    <div style="font-size:13px; color:#9ca3af;">Баланс токенов</div>
+                    <div style="font-size:40px; font-weight:700; line-height:1.1;"><?php echo number_format($mBalance, 0, '', ' '); ?></div>
+                    <div style="font-size:12px; color:#9ca3af; margin-top:4px;">
+                        Получено: <?php echo number_format($mEarned, 0, '', ' '); ?> · Потрачено: <?php echo number_format($mSpent, 0, '', ' '); ?>
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <a href="/material-generator/" class="btn btn-primary" style="background:#fff; color:#1f2937;">Сгенерировать новый</a>
+                    <a href="/material-balance/" class="btn btn-outline" style="border-color:#fff; color:#fff;">Пополнить</a>
+                </div>
+            </div>
+
+            <?php if (empty($mList)): ?>
+                <div class="empty-cabinet">
+                    <div class="empty-icon">🤖</div>
+                    <h2>У вас пока нет сгенерированных материалов</h2>
+                    <p>Создайте технологическую карту, конспект, тест или презентацию за 30 секунд</p>
+                    <a href="/material-generator/" class="btn btn-primary">К генератору</a>
+                </div>
+            <?php else: ?>
+                <div class="registrations-section">
+                    <h2>Мои материалы (<?php echo count($mList); ?>)</h2>
+                    <div class="registrations-grid">
+                        <?php foreach ($mList as $m):
+                            [$stLabel, $stColor] = $statusLabels[$m['status']] ?? ['—', '#9ca3af'];
+                            $detailUrl = !empty($m['slug']) ? '/material/' . rawurlencode($m['slug']) . '/' : null;
+                        ?>
+                            <div class="registration-card">
+                                <div class="card-header">
+                                    <h3><?php echo htmlspecialchars($m['title'] ?? 'Без названия', ENT_QUOTES, 'UTF-8'); ?></h3>
+                                    <div class="card-badges">
+                                        <span class="event-type-badge"><?php echo htmlspecialchars($m['type_name'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <span class="status-badge" style="background-color: <?php echo $stColor; ?>;"><?php echo $stLabel; ?></span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="info-row">
+                                        <span class="label">Создано:</span>
+                                        <span class="value"><?php echo date('d.m.Y H:i', strtotime($m['created_at'])); ?></span>
+                                    </div>
+                                    <?php if (!empty($m['output_format'])): ?>
+                                        <div class="info-row">
+                                            <span class="label">Формат:</span>
+                                            <span class="value"><?php echo strtoupper(htmlspecialchars($m['output_format'], ENT_QUOTES, 'UTF-8')); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="card-actions">
+                                    <?php if ($detailUrl && in_array($m['status'], ['draft', 'review', 'published'], true)): ?>
+                                        <a href="<?php echo $detailUrl; ?>" class="btn btn-primary" target="_blank">Открыть</a>
+                                        <a href="/material-download.php?id=<?php echo (int)$m['id']; ?>" class="btn btn-success">Скачать</a>
+                                    <?php elseif ($m['status'] === 'rejected'): ?>
+                                        <span style="color:#991b1b; font-size:13px;">Отклонён модератором<?php echo !empty($m['moderation_comment']) ? ': ' . htmlspecialchars($m['moderation_comment'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($mHistory)): ?>
+                <div class="registrations-section" style="margin-top:32px;">
+                    <h2>История операций с токенами</h2>
+                    <table style="width:100%; border-collapse:collapse; margin-top:12px; background:#fff; border-radius:8px; overflow:hidden;">
+                        <thead>
+                            <tr style="background:#f3f4f6; text-align:left;">
+                                <th style="padding:10px;">Дата</th>
+                                <th style="padding:10px;">Операция</th>
+                                <th style="padding:10px; text-align:right;">Изменение</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($mHistory as $h): ?>
+                                <tr style="border-top:1px solid #e5e7eb;">
+                                    <td style="padding:10px; color:#6b7280; font-size:13px;">
+                                        <?php echo date('d.m.Y H:i', strtotime($h['created_at'])); ?>
+                                    </td>
+                                    <td style="padding:10px;">
+                                        <?php echo htmlspecialchars($reasonLabels[$h['reason']] ?? $h['reason'], ENT_QUOTES, 'UTF-8'); ?>
+                                        <?php if (!empty($h['notes'])): ?>
+                                            <div style="font-size:11px; color:#9ca3af;"><?php echo htmlspecialchars($h['notes'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="padding:10px; text-align:right; font-weight:600;
+                                               color: <?php echo (int)$h['delta'] >= 0 ? '#059669' : '#dc2626'; ?>;">
+                                        <?php echo (int)$h['delta'] >= 0 ? '+' : ''; ?><?php echo number_format((int)$h['delta'], 0, '', ' '); ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             <?php endif; ?>
         <?php endif; ?>

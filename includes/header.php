@@ -163,6 +163,14 @@ $isLoggedIn = isset($_SESSION['user_email']);
           <a class="rd-sd-item" href="/opublikovat"><div class="ico">📝</div><div><div class="t">Опубликовать материал</div><div class="s">Свидетельство о публикации</div></div></a>
         </div>
       </div>
+      <div class="rd-nav-item rd-has-dd">
+        <a class="rd-nav-link<?php echo $rdActivePage === 'materialy' ? ' active' : ''; ?>" href="/materialy/">Материалы ФОП</a>
+        <div class="rd-nav-dd">
+          <a class="rd-sd-item" href="/material-generator/"><div class="ico">⚡</div><div><div class="t">ИИ-генератор материалов</div><div class="s">Сделать материал под ваш урок за 30 секунд</div></div></a>
+          <a class="rd-sd-item" href="/material-adapter/"><div class="ico">🔄</div><div><div class="t">Адаптировать материал</div><div class="s">Подогнать под ОВЗ / другой класс</div></div></a>
+          <a class="rd-sd-item" href="/materialy/katalog/"><div class="ico">🗂️</div><div><div class="t">Каталог материалов</div><div class="s">Готовые техкарты, конспекты, тесты, презентации</div></div></a>
+        </div>
+      </div>
       <a class="rd-nav-link<?php echo $rdActivePage === 'team' ? ' active' : ''; ?>" href="/team">Команда</a>
     </nav>
 
@@ -225,6 +233,10 @@ $isLoggedIn = isset($_SESSION['user_email']);
     <a class="rd-mm-link" href="/zhurnal">Журнал</a>
     <a class="rd-mm-link rd-mm-sub" href="/publikacii/">— Опубликованные материалы</a>
     <a class="rd-mm-link rd-mm-sub" href="/opublikovat">— Опубликовать материал</a>
+    <a class="rd-mm-link" href="/materialy/">Материалы ФОП</a>
+    <a class="rd-mm-link rd-mm-sub" href="/material-generator/">— ИИ-генератор</a>
+    <a class="rd-mm-link rd-mm-sub" href="/material-adapter/">— Адаптировать материал</a>
+    <a class="rd-mm-link rd-mm-sub" href="/materialy/katalog/">— Каталог материалов</a>
     <a class="rd-mm-link" href="/team">Команда</a>
     <a class="rd-mm-link" href="/o-portale">О портале</a>
     <a class="rd-mm-link" href="/korzina">Корзина<?php if ($rdCartCount > 0): ?> <span class="rd-mm-badge"><?php echo $rdCartCount; ?></span><?php endif; ?></a>

@@ -159,6 +159,7 @@ class AudienceCategory {
             'webinar'      => ['webinar_audience_categories',     'webinar_id',     'webinars',     'is_active = 1'],
             'publication'  => ['publication_audience_categories',  'publication_id', 'publications', "status = 'published'"],
             'course'       => ['course_audience_categories',       'course_id',      'courses',      'is_active = 1'],
+            'material'     => ['material_audience_categories',     'material_id',    'materials',    "status = 'published'"],
         ];
 
         if (!isset($tableMap[$productType])) {
@@ -223,12 +224,21 @@ class AudienceCategory {
             [$categoryId]
         );
 
+        $materials = $this->db->queryOne(
+            "SELECT COUNT(DISTINCT mac.material_id) as total
+             FROM material_audience_categories mac
+             JOIN materials m ON mac.material_id = m.id
+             WHERE mac.category_id = ? AND m.status = 'published'",
+            [$categoryId]
+        );
+
         return [
             'competitions' => $competitions['total'] ?? 0,
             'olympiads' => $olympiads['total'] ?? 0,
             'webinars' => $webinars['total'] ?? 0,
             'publications' => $publications['total'] ?? 0,
-            'courses' => $courses['total'] ?? 0
+            'courses' => $courses['total'] ?? 0,
+            'materials' => $materials['total'] ?? 0,
         ];
     }
 }
