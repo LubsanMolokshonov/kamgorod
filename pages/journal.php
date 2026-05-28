@@ -189,6 +189,7 @@ if (!$showLanding) {
             'url' => '/publikaciya/' . $p['slug'] . '/',
             'date' => $p['published_at'],
             'views' => (int)($p['views_count'] ?? 0),
+            'cover' => $p['cover_image_url'] ?? '',
         ];
     }
 }
@@ -506,6 +507,18 @@ include __DIR__ . '/../includes/header-redesign.php';
     </div>
 
     <div class="rd-catalog">
+      <!-- Поиск (на мобильных — над фильтрами) -->
+      <div class="rd-comp-search" style="margin-bottom:16px;">
+        <div style="position:relative;">
+          <svg style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--ink-400);pointer-events:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" id="publicationSearchInput" placeholder="Поиск по публикациям — например, «методическая разработка» или «дошкольники»" autocomplete="off" value="<?php echo htmlspecialchars($search); ?>" style="width:100%;padding:14px 44px 14px 46px;font-size:15px;border:1.5px solid var(--ink-200,#e5e7eb);border-radius:12px;background:#fff;outline:none;transition:border-color .15s, box-shadow .15s;" onfocus="this.style.borderColor='var(--indigo-500,#6366f1)';this.style.boxShadow='0 0 0 4px rgba(99,102,241,.12)';" onblur="this.style.borderColor='var(--ink-200,#e5e7eb)';this.style.boxShadow='none';">
+          <button type="button" id="publicationSearchClear" aria-label="Очистить" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer;padding:8px;color:var(--ink-400);line-height:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div id="publicationSearchStatus" style="display:none;margin-top:10px;font-size:14px;color:var(--ink-500,#6b7280);"></div>
+      </div>
+
       <!-- Sidebar -->
       <aside class="rd-filters" id="rdFiltersPanel">
         <h4>Тип публикации</h4>
@@ -550,18 +563,6 @@ include __DIR__ . '/../includes/header-redesign.php';
 
       <!-- Main -->
       <div class="rd-catalog-main">
-        <!-- Search -->
-        <div class="rd-comp-search" style="margin-bottom:16px;">
-          <div style="position:relative;">
-            <svg style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--ink-400);pointer-events:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="search" id="publicationSearchInput" placeholder="Поиск по публикациям — например, «методическая разработка» или «дошкольники»" autocomplete="off" value="<?php echo htmlspecialchars($search); ?>" style="width:100%;padding:14px 44px 14px 46px;font-size:15px;border:1.5px solid var(--ink-200,#e5e7eb);border-radius:12px;background:#fff;outline:none;transition:border-color .15s, box-shadow .15s;" onfocus="this.style.borderColor='var(--indigo-500,#6366f1)';this.style.boxShadow='0 0 0 4px rgba(99,102,241,.12)';" onblur="this.style.borderColor='var(--ink-200,#e5e7eb)';this.style.boxShadow='none';">
-            <button type="button" id="publicationSearchClear" aria-label="Очистить" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer;padding:8px;color:var(--ink-400);line-height:0;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </div>
-          <div id="publicationSearchStatus" style="display:none;margin-top:10px;font-size:14px;color:var(--ink-500,#6b7280);"></div>
-        </div>
-
         <!-- Sort -->
         <div class="rd-sort-bar">
           <span class="results-count"><?php echo $totalCount; ?> <?php echo jr_publications_word($totalCount); ?></span>
@@ -590,8 +591,12 @@ include __DIR__ . '/../includes/header-redesign.php';
         <?php else: ?>
           <div class="rd-grid reveal-stagger" id="publicationsGrid">
             <?php foreach ($publications as $pub): ?>
-              <a class="rd-card pub-card" href="/publikaciya/<?php echo urlencode($pub['slug']); ?>/">
-                <div class="rd-card-pat"></div>
+              <a class="rd-card pub-card<?php echo !empty($pub['cover_image_url']) ? ' has-cover' : ''; ?>" href="/publikaciya/<?php echo urlencode($pub['slug']); ?>/">
+                <?php if (!empty($pub['cover_image_url'])): ?>
+                  <img class="pub-card-cover" src="<?php echo htmlspecialchars($pub['cover_image_url']); ?>" alt="<?php echo htmlspecialchars($pub['title']); ?>" loading="lazy">
+                <?php else: ?>
+                  <div class="rd-card-pat"></div>
+                <?php endif; ?>
                 <div class="rd-card-tags">
                   <?php if (!empty($pub['type_name'])): ?>
                     <span class="rd-tag indigo"><?php echo htmlspecialchars($pub['type_name']); ?></span>
@@ -699,8 +704,8 @@ var allPublicationsData = <?php echo json_encode($allForSearch, JSON_UNESCAPED_U
 
     function renderCard(p) {
         var ann = p.annotation ? p.annotation.substring(0, 130) + (p.annotation.length > 130 ? '…' : '') : '';
-        return '<a class="rd-card pub-card" href="' + _esc(p.url) + '">' +
-            '<div class="rd-card-pat"></div>' +
+        return '<a class="rd-card pub-card' + (p.cover ? ' has-cover' : '') + '" href="' + _esc(p.url) + '">' +
+            (p.cover ? '<img class="pub-card-cover" src="' + _esc(p.cover) + '" alt="' + _esc(p.title) + '" loading="lazy">' : '<div class="rd-card-pat"></div>') +
             (p.type ? '<div class="rd-card-tags"><span class="rd-tag indigo">' + _esc(p.type) + '</span></div>' : '') +
             '<h4>' + _esc(p.title) + '</h4>' +
             (ann ? '<div class="rd-card-meta">' + _esc(ann) + '</div>' : '') +

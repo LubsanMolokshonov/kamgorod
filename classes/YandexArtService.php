@@ -17,6 +17,7 @@ class YandexArtService
     private string $model;
     private int $timeout;
     private string $uploadsBase;
+    private string $relativePrefix;
 
     private string $generateEndpoint = 'https://llm.api.cloud.yandex.net/foundationModels/v1/imageGenerationAsync';
     private string $operationEndpoint = 'https://llm.api.cloud.yandex.net/operations/';
@@ -28,6 +29,14 @@ class YandexArtService
         $this->model    = defined('YANDEX_ART_MODEL') ? (string)YANDEX_ART_MODEL : 'yandex-art/latest';
         $this->timeout  = defined('YANDEX_ART_TIMEOUT') ? (int)YANDEX_ART_TIMEOUT : 25;
         $this->uploadsBase = $uploadsBase ?? (dirname(__DIR__) . '/uploads/materials');
+
+        // Относительный URL-префикс выводим из uploadsBase относительно корня проекта,
+        // чтобы возвращаемый путь указывал на реальную папку (uploads/materials, uploads/publications, ...).
+        $projectRoot = dirname(__DIR__) . '/';
+        $base = rtrim($this->uploadsBase, '/');
+        $this->relativePrefix = str_starts_with($base, $projectRoot)
+            ? substr($base, strlen($projectRoot))
+            : 'uploads/materials';
     }
 
     public function isEnabled(): bool
@@ -130,7 +139,7 @@ class YandexArtService
 
         $year = date('Y');
         $month = date('m');
-        $dir = $this->uploadsBase . "/{$year}/{$month}";
+        $dir = rtrim($this->uploadsBase, '/') . "/{$year}/{$month}";
         if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
             $this->log('Failed to create dir', ['dir' => $dir]);
             return null;
@@ -148,7 +157,7 @@ class YandexArtService
             return null;
         }
 
-        return "uploads/materials/{$year}/{$month}/{$filename}";
+        return "{$this->relativePrefix}/{$year}/{$month}/{$filename}";
     }
 
     private function aspectRatioParts(string $aspectRatio): array

@@ -53,6 +53,28 @@ $publicationObj->incrementViews($publication['id']);
 $tags = $publicationObj->getTags($publication['id']);
 $related = $publicationObj->getRelated($publication['id'], 4);
 
+// Рекомендуемые курсы по теме статьи (3 точки конверсии: сайдбар, CTA, инлайн)
+$recommendedCourses = $publicationObj->getRecommendedCourses($publication['id'], 3);
+$ctaCourse    = $recommendedCourses[0] ?? null;
+$inlineCourse = $recommendedCourses[1] ?? $ctaCourse;
+
+// HTML карточки курса внутри текста статьи
+$renderInlineCourseCard = function ($course) {
+    if (empty($course)) return '';
+    $url   = '/kursy/' . urlencode($course['slug']) . '/';
+    $title = htmlspecialchars($course['title'], ENT_QUOTES, 'UTF-8');
+    $hours = (int)$course['hours'];
+    $price = number_format((float)$course['price'], 0, '.', ' ');
+    $kind  = $course['program_type'] === 'pp' ? 'Переподготовка' : 'Повышение квалификации';
+    return '<aside class="inline-course-card">'
+        . '<span class="inline-course-kind">' . $kind . ' · ' . $hours . ' ч.</span>'
+        . '<a class="inline-course-title" href="' . $url . '">' . $title . '</a>'
+        . '<div class="inline-course-foot">'
+        . '<span class="inline-course-price">от ' . $price . ' ₽</span>'
+        . '<a class="inline-course-btn" href="' . $url . '">Подробнее о курсе →</a>'
+        . '</div></aside>';
+};
+
 // Рейтинг публикации (кэш-колонки p.rating_avg / p.rating_count)
 $ratingAvg = round((float)($publication['rating_avg'] ?? 0), 1);
 $ratingCount = (int)($publication['rating_count'] ?? 0);
@@ -69,6 +91,24 @@ if ($articleHtml !== '') {
 $tocData = buildArticleToc($articleHtml);
 $articleHtml = $tocData['html'];
 $toc = $tocData['toc'];
+
+// Инлайн-карточка курса после 2-го заголовка (ловит читателя в процессе чтения)
+if ($articleHtml !== '' && !empty($inlineCourse)) {
+    $cardHtml = $renderInlineCourseCard($inlineCourse);
+    $headingCount = 0;
+    $injected = false;
+    $articleHtml = preg_replace_callback('/<\/h[23]>/i', function ($m) use (&$headingCount, &$injected, $cardHtml) {
+        $headingCount++;
+        if (!$injected && $headingCount === 2) {
+            $injected = true;
+            return $m[0] . $cardHtml;
+        }
+        return $m[0];
+    }, $articleHtml);
+    if (!$injected) {
+        $articleHtml .= $cardHtml; // мало заголовков — добавить в конец
+    }
+}
 
 $authorUrl = '/avtor/' . (int)$publication['user_id'] . '/';
 
@@ -96,7 +136,9 @@ $additionalJS = [
 ];
 
 $ogType = 'article';
-$ogImage = SITE_URL . '/og-image/publication/' . $publication['slug'] . '.jpg';
+$ogImage = !empty($publication['cover_image_url'])
+    ? SITE_URL . '/' . ltrim($publication['cover_image_url'], '/')
+    : SITE_URL . '/og-image/publication/' . $publication['slug'] . '.jpg';
 $jsonLd = [
     '@context' => 'https://schema.org',
     '@type' => 'Article',
@@ -164,6 +206,10 @@ include __DIR__ . '/../includes/header-redesign.php';
     <div class="pub-detail-layout">
       <!-- Main article -->
       <article class="pub-article">
+        <?php if (!empty($publication['cover_image_url'])): ?>
+          <img class="pub-cover" src="<?php echo htmlspecialchars($publication['cover_image_url']); ?>"
+               alt="<?php echo htmlspecialchars($publication['title']); ?>" loading="eager">
+        <?php endif; ?>
         <?php if (!empty($publication['type_name'])): ?>
           <span class="pub-type"><?php echo htmlspecialchars($publication['type_name']); ?></span>
         <?php endif; ?>
@@ -242,6 +288,16 @@ include __DIR__ . '/../includes/header-redesign.php';
           <div class="pub-rating-thanks" hidden>Спасибо за вашу оценку!</div>
         </div>
 
+        <?php if (!empty($ctaCourse)): ?>
+        <div class="pub-cta-card pub-cta-course">
+          <span class="cta-course-kind"><?php echo $ctaCourse['program_type'] === 'pp' ? 'Профпереподготовка' : 'Повышение квалификации'; ?> · <?php echo (int)$ctaCourse['hours']; ?> ч.</span>
+          <h3><?php echo htmlspecialchars($ctaCourse['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
+          <p>Курс по теме статьи с&nbsp;удостоверением установленного образца. Стоимость — от&nbsp;<?php echo number_format((float)$ctaCourse['price'], 0, '.', ' '); ?>&nbsp;₽.</p>
+          <a href="/kursy/<?php echo urlencode($ctaCourse['slug']); ?>/" class="rd-btn">Подробнее о&nbsp;курсе
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+          </a>
+        </div>
+        <?php else: ?>
         <div class="pub-cta-card">
           <h3>Хотите опубликовать свой материал?</h3>
           <p>Поделитесь опытом с&nbsp;коллегами и&nbsp;получите официальное свидетельство о&nbsp;публикации.</p>
@@ -249,6 +305,7 @@ include __DIR__ . '/../includes/header-redesign.php';
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
           </a>
         </div>
+        <?php endif; ?>
       </article>
 
       <!-- Sidebar -->
@@ -266,6 +323,23 @@ include __DIR__ . '/../includes/header-redesign.php';
           </div>
           <a class="author-profile-link" href="<?php echo $authorUrl; ?>">Все публикации автора →</a>
         </div>
+
+        <?php if (!empty($recommendedCourses)): ?>
+        <div class="pub-side-card pub-side-courses">
+          <h3>Курсы по теме</h3>
+          <ul class="rec-courses-list">
+            <?php foreach ($recommendedCourses as $course): ?>
+              <li class="rec-course-item">
+                <a href="/kursy/<?php echo urlencode($course['slug']); ?>/">
+                  <span class="rec-course-title"><?php echo htmlspecialchars($course['title'], ENT_QUOTES, 'UTF-8'); ?></span>
+                  <span class="rec-course-meta"><?php echo (int)$course['hours']; ?> ч. · от <?php echo number_format((float)$course['price'], 0, '.', ' '); ?> ₽</span>
+                </a>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+          <a class="rec-courses-all" href="/kursy/">Все курсы →</a>
+        </div>
+        <?php endif; ?>
 
         <?php if (!empty($related)): ?>
         <div class="pub-side-card">

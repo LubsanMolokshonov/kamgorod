@@ -87,6 +87,17 @@
 
 /* ---------- Карточка публикации в каталоге ---------- */
 .rd-card.pub-card { gap: 10px; }
+.rd-card.pub-card.has-cover { padding-top: 0; }
+.rd-card.pub-card .pub-card-cover {
+  display: block;
+  width: calc(100% + 40px);
+  margin: -20px -20px 12px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+@media (max-width: 600px) {
+  .rd-card.pub-card .pub-card-cover { width: calc(100% + 24px); margin: -12px -12px 10px; }
+}
 .rd-card.pub-card .pub-meta-line {
   display: flex;
   justify-content: space-between;
@@ -365,6 +376,73 @@
 .related-list a:hover { border-color: var(--indigo-300); background: var(--indigo-50); }
 .related-list .related-title { font: 600 13.5px/1.35 var(--font-sans); color: var(--ink-900); display: block; margin-bottom: 4px; }
 .related-list .related-author { font-size: 12px; color: var(--ink-500); }
+
+/* Рекомендуемые курсы в сайдбаре */
+.rec-courses-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.rec-courses-list a {
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid var(--ink-100);
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all .2s var(--ease-out);
+}
+.rec-courses-list a:hover { border-color: var(--indigo-300); background: var(--indigo-50); }
+.rec-courses-list .rec-course-title { font: 600 13.5px/1.35 var(--font-sans); color: var(--ink-900); display: block; margin-bottom: 5px; }
+.rec-courses-list .rec-course-meta { font: 600 12px var(--font-sans); color: var(--indigo-700); }
+.rec-courses-all { display: inline-block; margin-top: 12px; font: 600 13px var(--font-sans); color: var(--indigo-700); text-decoration: none; }
+.rec-courses-all:hover { color: var(--indigo-800, #14256e); }
+
+/* CTA-карточка в режиме курса */
+.pub-cta-course .cta-course-kind {
+  display: inline-block;
+  font: 600 12px var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: rgba(255,255,255,.85);
+  margin-bottom: 10px;
+}
+
+/* Инлайн-карточка курса внутри текста статьи */
+.inline-course-card {
+  margin: 28px 0;
+  padding: 20px 22px;
+  border: 1px solid var(--indigo-200, #c7d2fe);
+  border-left: 4px solid var(--indigo-600);
+  border-radius: 14px;
+  background: var(--indigo-50, #eef2ff);
+}
+.inline-course-card .inline-course-kind {
+  display: block;
+  font: 600 12px var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--indigo-700);
+  margin-bottom: 6px;
+}
+.inline-course-card .inline-course-title {
+  display: block;
+  font: 700 18px/1.35 var(--font-sans);
+  color: var(--ink-900);
+  text-decoration: none;
+  margin-bottom: 12px;
+}
+.inline-course-card .inline-course-title:hover { color: var(--indigo-700); }
+.inline-course-card .inline-course-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.inline-course-card .inline-course-price { font: 700 16px var(--font-sans); color: var(--ink-900); }
+.inline-course-card .inline-course-btn {
+  font: 600 14px var(--font-sans);
+  color: var(--indigo-700);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.inline-course-card .inline-course-btn:hover { color: var(--indigo-800, #14256e); }
+@media (max-width: 768px) {
+  .inline-course-card { padding: 16px 18px; }
+  .inline-course-card .inline-course-foot { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
 
 .share-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
 .share-btn {

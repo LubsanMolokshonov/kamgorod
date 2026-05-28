@@ -206,3 +206,13 @@ a.author-avatar { text-decoration: none; }
   .author-hero-avatar { width: 88px; height: 88px; }
   .author-hero-info h1 { font-size: 24px; }
 }
+
+/* AI-обложка статьи */
+.pub-article .pub-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 16px;
+  margin-bottom: 20px;
+}

@@ -241,6 +241,37 @@ if (!defined('COURSE_TYPE_URL_REVERSE')) {
     ]);
 }
 
+// Карта «тег публикации → аудитория курса» для рекомендаций курсов в статьях.
+// Ключ — slug тега (publication_tags.slug). Значение:
+//   'spec'  — ID специализаций курсов (audience_specializations.id), сильный сигнал (предмет);
+//   'type'  — ID типов аудитории (audience_types.id), сигнал ступени образования;
+//   'group' — текст courses.course_group для прямого совпадения по направлению.
+// Используется Publication::getRecommendedCourses(). Теги без записи дают только фолбэк.
+if (!defined('PUBLICATION_TAG_AUDIENCE_MAP')) {
+    define('PUBLICATION_TAG_AUDIENCE_MAP', [
+        // subject-теги → специализации курсов
+        'mathematics'        => ['spec' => [10, 18, 2]],
+        'russian-literature' => ['spec' => [17, 8, 9]],
+        'arts'               => ['spec' => [13, 14, 29, 40, 39]],
+        'natural-sciences'   => ['spec' => [20, 21, 22, 23, 44, 11]],
+        'history-social'     => ['spec' => [24, 25, 45]],
+        'technology'         => ['spec' => [16, 30, 32]],
+        'foreign-languages'  => ['spec' => [12, 26]],
+        'physical-education'  => ['spec' => [15, 27, 42]],
+        'life-safety'        => ['spec' => [28]],
+        'informatics'        => ['spec' => [19, 37, 43]],
+        // direction-теги → типы аудитории и/или course_group
+        'preschool'          => ['type' => [1], 'group' => 'Дошкольное образование'],
+        'primary-school'     => ['type' => [2], 'group' => 'Начальная школа'],
+        'secondary-school'   => ['type' => [3]],
+        'high-school'        => ['type' => [3]],
+        'extra-education'    => ['type' => [5], 'group' => 'Дополнительное образование'],
+        'special-education'  => ['spec' => [58, 48]],
+        'psychology'         => ['spec' => [49]],
+        'educational-work'   => ['spec' => [56], 'group' => 'Воспитательная работа'],
+    ]);
+}
+
 // Audience Categories (Level 0) — основные группы аудитории
 if (!defined('AUDIENCE_CATEGORIES')) {
     define('AUDIENCE_CATEGORIES', [
