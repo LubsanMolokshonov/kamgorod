@@ -109,6 +109,11 @@ $currentAdmin = Admin::verifySession();
                     <span>AI-генератор</span>
                 </a>
 
+                <a href="/admin/materials-analytics/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/materials-analytics/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">📚</span>
+                    <span>Материалы ФОП</span>
+                </a>
+
                 <a href="/admin/rnp/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/rnp/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">💰</span>
                     <span>РНП</span>

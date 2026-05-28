@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
+require_once __DIR__ . '/../classes/MaterialsAnalytics.php';
 
 $pageTitle = 'Дашборд продаж';
 
@@ -101,6 +102,10 @@ $coursesPaidCount = (int)$coursesPaid['paid_count'];
 $coursesRevenue = (float)$coursesPaid['revenue'];
 $coursesConversion = $coursesApps > 0 ? round($coursesPaidCount / $coursesApps * 100, 1) : 0;
 $coursesAvgCheck = $coursesPaidCount > 0 ? round($coursesRevenue / $coursesPaidCount) : 0;
+
+// === МАТЕРИАЛЫ ФОП: сводные KPI за период ===
+$materialsAnalytics = new MaterialsAnalytics($db);
+$materialsTotals = $materialsAnalytics->getTotals($startDate, $endDate);
 
 // === ОБЩИЕ: Итого ===
 $totalOrders = $pedportalOrders + $coursesApps;
@@ -325,6 +330,10 @@ include __DIR__ . '/includes/header.php';
     background: #dbeafe;
     color: #1d4ed8;
 }
+.tag-materials {
+    background: #dcfce7;
+    color: #15803d;
+}
 .kpi-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -480,6 +489,43 @@ include __DIR__ . '/includes/header.php';
                 <div class="kpi-label">Средний чек</div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- KPI: Материалы ФОП -->
+<div class="content-card" style="margin-bottom: 32px;">
+    <div class="kpi-section-header">
+        <h2>Материалы ФОП</h2>
+        <span class="section-tag tag-materials">Генератор учебных материалов (токены)</span>
+    </div>
+    <div class="kpi-grid">
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($materialsTotals['visits'], 0, ',', ' '); ?></div>
+            <div class="kpi-label">Визиты на лендинг</div>
+        </div>
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($materialsTotals['registered'], 0, ',', ' '); ?></div>
+            <div class="kpi-label">Регистрации</div>
+        </div>
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($materialsTotals['generated'], 0, ',', ' '); ?></div>
+            <div class="kpi-label">Сгенерировало</div>
+        </div>
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($materialsTotals['tokens_spent'], 0, ',', ' '); ?></div>
+            <div class="kpi-label">Потрачено токенов</div>
+        </div>
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($materialsTotals['paid'], 0, ',', ' '); ?></div>
+            <div class="kpi-label">Оплаты</div>
+        </div>
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($materialsTotals['revenue'], 0, ',', ' '); ?> &#8381;</div>
+            <div class="kpi-label">Выручка</div>
+        </div>
+    </div>
+    <div style="padding: 12px 0 0; text-align: right;">
+        <a href="/admin/materials-analytics/?month=<?php echo $filterMonth; ?>&year=<?php echo $filterYear; ?>" class="btn btn-secondary btn-sm">Подробная аналитика &rarr;</a>
     </div>
 </div>
 

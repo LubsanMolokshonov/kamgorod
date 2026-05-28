@@ -16,6 +16,29 @@ require_once __DIR__ . '/../classes/TokenPackage.php';
 require_once __DIR__ . '/../classes/UserTokens.php';
 require_once __DIR__ . '/../includes/session.php';
 
+// Логируем уникальный визит на лендинг материалов (одна запись на PHP-сессию)
+try {
+    $sid = session_id();
+    if ($sid) {
+        $stmt = $db->prepare(
+            "INSERT IGNORE INTO material_landing_visits
+             (php_session_id, user_id, ip_address, user_agent, referrer, utm_source, utm_campaign)
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
+        $stmt->execute([
+            $sid,
+            $_SESSION['user_id'] ?? null,
+            $_SERVER['REMOTE_ADDR'] ?? null,
+            substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500) ?: null,
+            substr($_SERVER['HTTP_REFERER'] ?? '', 0, 500) ?: null,
+            isset($_GET['utm_source']) ? substr($_GET['utm_source'], 0, 100) : null,
+            isset($_GET['utm_campaign']) ? substr($_GET['utm_campaign'], 0, 100) : null,
+        ]);
+    }
+} catch (\Throwable $e) {
+    error_log('material_landing_visits log: ' . $e->getMessage());
+}
+
 $materialObj = new Material($db);
 $typeObj     = new MaterialType($db);
 $packageObj  = new TokenPackage($db);
@@ -105,10 +128,42 @@ include __DIR__ . '/../includes/header-redesign.php';
 
     <div class="rd-hero-art rd-hero-art-cat reveal">
       <div class="rd-blob"></div>
-      <div class="mat-hero-doc">
-        <div class="mat-hero-doc-top"><span class="mat-doc-badge">DOCX</span> Технологическая карта урока</div>
-        <div class="mat-hero-doc-lines"><span></span><span></span><span></span><span></span><span></span></div>
-        <div class="mat-hero-doc-foot">Этапы · Цели · УУД · Рефлексия</div>
+      <div class="mat-hero-deck">
+        <div class="mat-hero-doc mat-doc-6">
+          <div class="mat-hero-doc-top"><span class="mat-doc-badge">DOCX</span> Фрагмент КТП</div>
+          <div class="mat-hero-doc-lines"><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="mat-hero-doc-foot">Темы · Часы · УУД · Контроль</div>
+        </div>
+        <div class="mat-hero-doc mat-doc-5">
+          <div class="mat-hero-doc-top"><span class="mat-doc-badge">DOCX</span> Классный час</div>
+          <div class="mat-hero-doc-lines"><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="mat-hero-doc-foot">Сценарий · Игры · Обсуждение</div>
+        </div>
+        <div class="mat-hero-doc mat-doc-4">
+          <div class="mat-hero-doc-top"><span class="mat-doc-badge">PPTX</span> Презентация</div>
+          <div class="mat-hero-doc-lines"><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="mat-hero-doc-foot">10–20 слайдов · Заметки учителя</div>
+        </div>
+        <div class="mat-hero-doc mat-doc-3">
+          <div class="mat-hero-doc-top"><span class="mat-doc-badge">DOCX</span> Тест или контрольная</div>
+          <div class="mat-hero-doc-lines"><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="mat-hero-doc-foot">Вопросы · Варианты · Ключи</div>
+        </div>
+        <div class="mat-hero-doc mat-doc-2">
+          <div class="mat-hero-doc-top"><span class="mat-doc-badge">PDF</span> Рабочий лист</div>
+          <div class="mat-hero-doc-lines"><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="mat-hero-doc-foot">Задания · Печать A4 · Ключи</div>
+        </div>
+        <div class="mat-hero-doc mat-doc-1">
+          <div class="mat-hero-doc-top"><span class="mat-doc-badge">DOCX</span> Конспект урока</div>
+          <div class="mat-hero-doc-lines"><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="mat-hero-doc-foot">Цели · Оборудование · Этапы · ДЗ</div>
+        </div>
+        <div class="mat-hero-doc mat-doc-0">
+          <div class="mat-hero-doc-top"><span class="mat-doc-badge">DOCX</span> Технологическая карта урока</div>
+          <div class="mat-hero-doc-lines"><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="mat-hero-doc-foot">Этапы · Цели · УУД · Рефлексия</div>
+        </div>
       </div>
       <div class="rd-float-card rd-fc-cat-2">
         <div class="rd-fc-icon">⚡</div>
