@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/Database.php';
 require_once __DIR__ . '/EmailDispatcher.php';
+require_once __DIR__ . '/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../includes/magic-link-helper.php';
 
 class EmailJourney {
@@ -198,6 +199,32 @@ class EmailJourney {
                 'touchpoint_code' => $emailData['touchpoint_code']
             ];
 
+            // Поздние касания: закрепляем персональную скидку, которая
+            // применяется в корзине автоматически через EmailCampaignDiscount::getActive().
+            // Скидка обновляется (upsert по uniq campaign_code+user_id), поэтому повторная
+            // отправка/второе касание просто продлевают срок.
+            $discountHoursByTouch = ['touch_3d' => 72, 'touch_7d' => 48];
+            $touchCode = $emailData['touchpoint_code'] ?? '';
+            if (isset($discountHoursByTouch[$touchCode])) {
+                $discountRate = 0.10;
+                $discountHours = $discountHoursByTouch[$touchCode];
+                try {
+                    EmailCampaignDiscount::upsert(
+                        $this->pdo,
+                        'comp_journey_winback',
+                        (int)$emailData['user_id'],
+                        $emailData['email'],
+                        $discountRate,
+                        date('Y-m-d H:i:s', time() + $discountHours * 3600)
+                    );
+                    $templateData['discount_rate'] = $discountRate;
+                    $templateData['discount_hours'] = $discountHours;
+                    $this->log("DISCOUNT_UPSERT | User {$emailData['user_id']} | comp_journey_winback | rate={$discountRate} | +{$discountHours}h");
+                } catch (\Throwable $e) {
+                    $this->log("DISCOUNT_ERROR | User {$emailData['user_id']} | " . $e->getMessage());
+                }
+            }
+
             require_once __DIR__ . '/CourseEmailChain.php';
             $sender = \CourseEmailChain::pickPersonalSender($emailData['email']);
             $templateData['_sender_name'] = \CourseEmailChain::extractFirstName($sender['from_name']);
@@ -211,6 +238,7 @@ class EmailJourney {
                 'to_name'         => $emailData['full_name'],
                 'subject'         => $subject,
                 'html'            => $htmlBody,
+                'text'            => $this->htmlToPlainText($htmlBody),
                 'from_name'       => $sender['from_name'],
                 'reply_to'        => $sender['reply_to'],
                 'reply_to_name'   => $sender['reply_to_name'],
@@ -249,6 +277,24 @@ class EmailJourney {
         ob_start();
         include $templatePath;
         return ob_get_clean();
+    }
+
+    /**
+     * Построить plain-text часть из HTML-тела.
+     * Наличие text-части снижает шанс попасть в Gmail «Промоакции»/спам.
+     */
+    private function htmlToPlainText($html) {
+        // Убираем <style>/<script> вместе с содержимым (иначе CSS попадёт в текст).
+        $text = preg_replace('#<(style|script)[^>]*>.*?</\1>#is', '', $html);
+        // Переводы строк из блочных тегов.
+        $text = preg_replace('#<br\s*/?>#i', "\n", $text);
+        $text = preg_replace('#</(p|div|h[1-6]|li|tr)>#i', "\n", $text);
+        $text = strip_tags($text);
+        $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+        // Схлопываем лишние пробелы/пустые строки.
+        $text = preg_replace('/[ \t]+/', ' ', $text);
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);
+        return trim($text);
     }
 
     /**
@@ -324,7 +370,9 @@ class EmailJourney {
             return $existing['unsubscribe_token'];
         }
 
-        return bin2hex(random_bytes(32));
+        // Детерминированный токен (email:hash) — его умеет декодировать
+        // unsubscribeByToken(). Случайный токен ранее не сохранялся в БД и ломал отписку.
+        return $this->generateUnsubscribeToken($email);
     }
 
     /**

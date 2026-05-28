@@ -1,51 +1,22 @@
 <?php
 /**
- * Touch 1: 1 Hour After Registration
- * Мягкое напоминание о незавершённой регистрации
+ * Touch 1: 1 час после регистрации — личный тон, _personal_layout (anti-«Промоакции»).
  */
-$utm = 'utm_source=email&utm_campaign=competition-pay-1h';
+$utm = 'utm_source=email&utm_medium=chain&utm_campaign=competition-touch-1h';
+$footer_reason = $footer_reason ?? 'оставили заявку на участие в конкурсе на fgos.pro';
+$sender_signature = $sender_signature ?? 'Анна, ФГОС-Практикум';
+
+$pay_link = $payment_url . (strpos($payment_url, '?') !== false ? '&' : '?') . $utm;
+
 ob_start();
 ?>
-<div class="email-header">
-    <div class="email-header-content">
-        <div class="logo" style="text-align: center;">
-            <img src="<?php echo SITE_URL; ?>/assets/images/logo-white.png" alt="ФГОС-Практикум" style="height: 40px;">
-        </div>
-        <h1>Вы почти завершили регистрацию!</h1>
-        <p>Остался один шаг до участия в конкурсе</p>
-    </div>
-</div>
+<p>Здравствуйте, <?php echo htmlspecialchars($user_name); ?>.</p>
 
-<div class="email-content">
-    <p class="greeting">Здравствуйте, <?php echo htmlspecialchars($user_name); ?>!</p>
+<p>Вы оставили заявку на конкурс «<?php echo htmlspecialchars($competition_title); ?>»<?php if (!empty($nomination)): ?> (номинация «<?php echo htmlspecialchars($nomination); ?>»)<?php endif; ?>, но не завершили оформление. Заявка сохранена — её можно дооформить в любой момент.</p>
 
-    <p>Вы начали регистрацию на конкурс, но не завершили оплату. Ваша заявка сохранена, и вы можете продолжить в любой момент.</p>
+<p><a href="<?php echo htmlspecialchars($pay_link); ?>">Дооформить заявку на конкурс</a> — <?php echo number_format($competition_price, 0, ',', ' '); ?> ₽.</p>
 
-    <div class="competition-card">
-        <span class="badge">Ваша заявка</span>
-        <h3><?php echo htmlspecialchars($competition_title); ?></h3>
-        <div class="competition-details">
-            <?php if (!empty($nomination)): ?>
-            <p><strong>Номинация:</strong> <?php echo htmlspecialchars($nomination); ?></p>
-            <?php endif; ?>
-            <?php if (!empty($work_title)): ?>
-            <p><strong>Название работы:</strong> <?php echo htmlspecialchars($work_title); ?></p>
-            <?php endif; ?>
-        </div>
-        <div class="price-tag"><?php echo number_format($competition_price, 0, ',', ' '); ?> &#8381;</div>
-    </div>
-
-    <div class="text-center">
-        <?php $pay_link = $payment_url . (strpos($payment_url, '?') !== false ? '&' : '?') . $utm; ?>
-        <a href="<?php echo htmlspecialchars($pay_link); ?>" class="cta-button">
-            Завершить регистрацию
-        </a>
-    </div>
-
-    <p class="text-muted text-small" style="margin-top: 30px;">
-        Если у вас возникли вопросы по оплате или регистрации, просто ответьте на это письмо — мы с радостью поможем!
-    </p>
-</div>
+<p>Диплом приходит в личный кабинет сразу после оплаты. Если возник вопрос — просто ответьте на это письмо.</p>
 <?php
 $content = ob_get_clean();
-include __DIR__ . '/_base_layout.php';
+include __DIR__ . '/_personal_layout.php';
