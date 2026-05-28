@@ -23,6 +23,7 @@
 
 require_once __DIR__ . '/UnisenderClient.php';
 require_once __DIR__ . '/EmailTracker.php';
+require_once __DIR__ . '/../includes/email-simplify.php';
 
 class EmailDispatcher {
 
@@ -67,6 +68,13 @@ class EmailDispatcher {
 
         $html = $params['html'] ?? null;
         $text = $params['text'] ?? null;
+
+        // Для Яндекс-адресов упрощаем письмо до «живого» вида (без промо-обвязки),
+        // чтобы поднять доставляемость/открываемость на просевшей репутации домена.
+        // Делаем до prepareHtmlBody, чтобы пиксель и rewrite ссылок применились к итогу.
+        if (!empty($html) && emailRecipientIsYandex($params['to_email'])) {
+            $html = emailSimplifyForYandex($html);
+        }
 
         if (!$skipTracking) {
             if (!empty($html)) {
