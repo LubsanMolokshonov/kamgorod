@@ -219,7 +219,7 @@ $installment = calculateInstallment($abPrice);
 
         <div class="cd-hero-cta reveal">
           <button type="button" class="rd-btn rd-btn-primary" onclick="openEnrollmentModal()">
-            Оплатить курс
+            Записаться на курс
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
           </button>
           <button type="button" class="rd-btn rd-btn-ghost" onclick="openConsultationModal()">
@@ -371,11 +371,16 @@ $installment = calculateInstallment($abPrice);
               <div class="price-note">Без скрытых платежей</div>
             <?php endif; ?>
           <?php endif; ?>
+
+          <div class="cd-urgency">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>Запишитесь сейчас — дополнительная скидка <b>−10%</b> действует <b>10 минут</b> после записи в личном кабинете.</span>
+          </div>
         </div>
 
         <div style="grid-column:1 / -1;">
           <button type="button" class="rd-btn rd-btn-primary" onclick="openEnrollmentModal()" style="width:100%;justify-content:center;">
-            Оплатить курс
+            Записаться на курс
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
           </button>
         </div>
@@ -666,10 +671,17 @@ $installment = calculateInstallment($abPrice);
 
 </main>
 
-<!-- Мобильный фиксированный CTA -->
+<!-- Фиксированный CTA (мобильный + десктопный sticky-бар) -->
 <div class="cd-mobile-cta" id="cdMobileCta">
+  <div class="cd-sticky-info">
+    <span class="cd-sticky-title"><?php echo htmlspecialchars(mb_substr($course['title'], 0, 64)); ?></span>
+    <span class="cd-sticky-price">
+      <?php echo $priceFormatted; ?> ₽
+      <?php if ($hasDiscount): ?><span class="cd-sticky-old"><?php echo $basePriceFormatted; ?> ₽</span><?php endif; ?>
+    </span>
+  </div>
   <button type="button" class="rd-btn rd-btn-primary" onclick="openEnrollmentModal()">
-    Оплатить курс
+    Записаться на курс
   </button>
 </div>
 
@@ -679,24 +691,27 @@ $installment = calculateInstallment($abPrice);
     <button class="close-modal" onclick="closeEnrollmentModal()" aria-label="Закрыть">&times;</button>
 
     <div id="enrollmentForm">
-      <h2>Оформить оплату курса</h2>
+      <h2>Запись на курс</h2>
       <p class="modal-subtitle"><?php echo htmlspecialchars(mb_substr($course['title'], 0, 80)); ?></p>
 
-      <form onsubmit="submitEnrollment(event)">
+      <form onsubmit="submitEnrollment(event)" novalidate>
         <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
         <input type="hidden" name="course_title" value="<?php echo htmlspecialchars($course['title'], ENT_QUOTES); ?>">
 
         <div class="form-group">
           <label for="enroll_name">ФИО</label>
           <input type="text" id="enroll_name" name="full_name" required placeholder="Иванова Мария Петровна">
+          <div class="field-error" id="err_enroll_name"></div>
         </div>
         <div class="form-group">
           <label for="enroll_email">Email</label>
           <input type="email" id="enroll_email" name="email" required placeholder="ivanova@mail.ru">
+          <div class="field-error" id="err_enroll_email"></div>
         </div>
         <div class="form-group">
           <label for="enroll_phone">Телефон</label>
-          <input type="tel" id="enroll_phone" name="phone" placeholder="+7 (___) ___-__-__">
+          <input type="tel" id="enroll_phone" name="phone" required placeholder="+7 (___) ___-__-__">
+          <div class="field-error" id="err_enroll_phone"></div>
         </div>
 
         <div class="form-agreement">
@@ -940,6 +955,19 @@ function submitConsultationInline(e) {
         });
 }
 
+// Показ/сброс inline-ошибки поля
+function setFieldError(inputId, message) {
+    var input = document.getElementById(inputId);
+    var box = document.getElementById('err_' + inputId);
+    if (input) input.classList.toggle('has-error', !!message);
+    if (box) { box.textContent = message || ''; box.classList.toggle('active', !!message); }
+}
+function clearFieldErrorOnInput(inputId) {
+    var input = document.getElementById(inputId);
+    if (input) input.addEventListener('input', function() { setFieldError(inputId, ''); });
+}
+['enroll_name', 'enroll_email', 'enroll_phone'].forEach(clearFieldErrorOnInput);
+
 // Enrollment submit
 function submitEnrollment(e) {
     e.preventDefault();
@@ -948,12 +976,19 @@ function submitEnrollment(e) {
 
     var name = form.querySelector('[name="full_name"]').value.trim();
     var email = form.querySelector('[name="email"]').value.trim();
-    if (!name || !email) {
-        alert('Пожалуйста, заполните ФИО и Email');
-        return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        alert('Пожалуйста, введите корректный email');
+    var phoneDigits = form.querySelector('[name="phone"]').value.replace(/\D/g, '');
+
+    var ok = true;
+    setFieldError('enroll_name', '');
+    setFieldError('enroll_email', '');
+    setFieldError('enroll_phone', '');
+    if (!name) { setFieldError('enroll_name', 'Укажите ФИО'); ok = false; }
+    if (!email) { setFieldError('enroll_email', 'Укажите email'); ok = false; }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setFieldError('enroll_email', 'Введите корректный email'); ok = false; }
+    if (phoneDigits.length !== 11) { setFieldError('enroll_phone', 'Введите телефон полностью'); ok = false; }
+    if (!ok) {
+        var firstErr = form.querySelector('.has-error');
+        if (firstErr) firstErr.focus();
         return;
     }
 
@@ -1010,17 +1045,15 @@ function submitEnrollment(e) {
         });
 }
 
-// Mobile fixed CTA
+// Фиксированный CTA-бар (мобильный + десктопный): показываем после ухода hero-CTA из вида
 (function() {
-    if (window.innerWidth <= 768) {
-        var heroCta = document.querySelector('.cd-hero-cta');
-        var fixedCta = document.getElementById('cdMobileCta');
-        if (heroCta && fixedCta) {
-            var obs = new IntersectionObserver(function(entries) {
-                fixedCta.classList.toggle('visible', !entries[0].isIntersecting);
-            }, { threshold: 0 });
-            obs.observe(heroCta);
-        }
+    var heroCta = document.querySelector('.cd-hero-cta');
+    var fixedCta = document.getElementById('cdMobileCta');
+    if (heroCta && fixedCta && 'IntersectionObserver' in window) {
+        var obs = new IntersectionObserver(function(entries) {
+            fixedCta.classList.toggle('visible', !entries[0].isIntersecting);
+        }, { threshold: 0 });
+        obs.observe(heroCta);
     }
 })();
 </script>

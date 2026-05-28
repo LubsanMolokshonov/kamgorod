@@ -868,3 +868,73 @@
     .cd-full-price-line { padding: 10px 16px; font-size: 14px; }
     .cd-full-price-now { font-size: 16px; }
 }
+
+/* === Inline-ошибки формы записи === */
+.cd-form-modal .field-error {
+    display: none;
+    color: #dc2626;
+    font: 500 13px var(--font-sans);
+    margin-top: 6px;
+}
+.cd-form-modal .field-error.active { display: block; }
+.cd-form-modal input.has-error {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, .12);
+}
+
+/* === Срочность на странице: бонус 10% за 10 минут === */
+.cd-urgency {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+    font: 500 13px/1.45 var(--font-sans);
+}
+.cd-urgency svg { flex-shrink: 0; margin-top: 1px; color: #ea580c; }
+.cd-urgency b { font-weight: 700; }
+
+/* === Десктопный sticky-CTA бар === */
+@media (min-width: 769px) {
+    .cd-mobile-cta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 900;
+        padding: 12px 32px;
+        background: rgba(255, 255, 255, .96);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 -4px 24px rgba(20, 28, 80, .10);
+        border-top: 1px solid var(--ink-100);
+        transform: translateY(100%);
+        opacity: 0;
+        transition: opacity .3s, transform .3s;
+        pointer-events: none;
+    }
+    .cd-mobile-cta.visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
+    .cd-mobile-cta .rd-btn { flex-shrink: 0; }
+}
+.cd-sticky-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cd-sticky-title {
+    font: 600 14px var(--font-sans);
+    color: var(--ink-800);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60ch;
+}
+.cd-sticky-price { font: 800 18px var(--font-sans); color: var(--ink-900); }
+.cd-sticky-old {
+    font: 500 14px var(--font-sans);
+    color: var(--ink-400);
+    text-decoration: line-through;
+    margin-left: 8px;
+}
+@media (max-width: 768px) { .cd-sticky-info { display: none; } }
