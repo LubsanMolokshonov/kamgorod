@@ -26,6 +26,14 @@ RewriteCond %{HTTP_HOST} !^localhost [NC]
 RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
 RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
+# ================================================
+# APPLE UNIVERSAL LINKS (iOS-приложения у сайта нет)
+# 410 Gone, чтобы iOS и GSC прекратили запросы.
+# ВАЖНО: правило выше trailing-slash-редиректа — иначе запрос без слэша
+# сначала редиректится на .../ (301) и 410 не срабатывает.
+# ================================================
+RewriteRule ^(\.well-known/)?apple-app-site-association$ - [R=410,L]
+
 # Trailing slash: канонический URL — со слэшем на конце.
 # Применяется только к GET/HEAD, к URL без расширения файла и не к существующим файлам/папкам.
 # Явный https:// в Location — иначе Apache за nginx-прокси теряет схему и отдаёт http://
@@ -45,12 +53,6 @@ RewriteCond %{REQUEST_URI} !\.[a-zA-Z0-9]+$
 RewriteCond %{REQUEST_URI} !/$
 RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1) [NC]
 RewriteRule ^(.+)$ https://%{HTTP_HOST}/$1/ [R=301,L]
-
-# ================================================
-# APPLE UNIVERSAL LINKS (iOS-приложения у сайта нет)
-# Возвращаем 410 Gone, чтобы iOS и GSC прекратили запросы
-# ================================================
-RewriteRule ^(\.well-known/)?apple-app-site-association$ - [R=410,L]
 
 # ================================================
 # OG-КАРТИНКИ ДЛЯ СОЦСЕТЕЙ

@@ -55,7 +55,7 @@
 
     function disable() {
         isEnabled = false;
-        heroContainer.classList.remove('parallax-active');
+        if (heroContainer) heroContainer.classList.remove('parallax-active');
         if (rafId) {
             cancelAnimationFrame(rafId);
             rafId = null;
