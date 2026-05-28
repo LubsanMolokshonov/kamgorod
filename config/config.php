@@ -112,6 +112,9 @@ if (!defined('UNISENDER_WEBHOOK_SECRET')) define('UNISENDER_WEBHOOK_SECRET', $_E
 if (!defined('YANDEX_GPT_API_KEY')) define('YANDEX_GPT_API_KEY', $_ENV['YANDEX_GPT_API_KEY'] ?? '');
 if (!defined('YANDEX_GPT_FOLDER_ID')) define('YANDEX_GPT_FOLDER_ID', $_ENV['YANDEX_GPT_FOLDER_ID'] ?? '');
 if (!defined('YANDEX_GPT_MODEL')) define('YANDEX_GPT_MODEL', $_ENV['YANDEX_GPT_MODEL'] ?? 'yandexgpt-lite');
+// Оформление загруженных публикаций требует точного следования инструкции (сохранить слова,
+// только расставить разметку) — берём pro-модель, lite слишком вольно переписывает текст.
+if (!defined('YANDEX_GPT_FORMAT_MODEL')) define('YANDEX_GPT_FORMAT_MODEL', $_ENV['YANDEX_GPT_FORMAT_MODEL'] ?? 'yandexgpt');
 
 // YandexART — генерация обложек материалов (те же креды Yandex Cloud, что и GPT-модерация).
 if (!defined('YANDEX_ART_ENABLED')) define('YANDEX_ART_ENABLED', ($_ENV['YANDEX_ART_ENABLED'] ?? '1') === '1');

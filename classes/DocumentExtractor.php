@@ -709,6 +709,15 @@ class DocumentExtractor {
     }
 
     /**
+     * Публичная обёртка над allowlist-санитайзером — чтобы внешние потребители
+     * (например, PublicationFormatter) пропускали AI-результат через ту же
+     * фильтрацию тегов, что и извлечённый из файла контент.
+     */
+    public function sanitize(string $html): string {
+        return $this->sanitizeHtml($html);
+    }
+
+    /**
      * Sanitize HTML — allowlist of safe tags and attributes
      */
     private function sanitizeHtml(string $html): string {

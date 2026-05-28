@@ -52,6 +52,7 @@ RUN echo "*/5 * * * * www-data php /var/www/html/cron/process-email-journey.php 
     && echo "*/5 * * * * www-data php /var/www/html/cron/process-autowebinar-emails.php >> /var/log/cron-autowebinar.log 2>&1" >> /etc/cron.d/email-automation \
     && echo "*/5 * * * * www-data php /var/www/html/cron/process-inbound-emails.php >> /var/log/cron-inbound.log 2>&1" >> /etc/cron.d/email-automation \
     && echo "*/5 * * * * www-data php /var/www/html/cron/process-material-emails.php >> /var/log/cron-material.log 2>&1" >> /etc/cron.d/email-automation \
+    && echo "*/5 * * * * www-data php /var/www/html/cron/process-publication-formatting.php >> /var/log/cron-pub-format.log 2>&1" >> /etc/cron.d/email-automation \
     && chmod 0644 /etc/cron.d/email-automation
 
 # Expose port 80
