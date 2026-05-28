@@ -5,6 +5,90 @@ set_time_limit(300);
 
 require_once 'config/config.php';
 
+/**
+ * Разбивает SQL-дамп на отдельные стейтменты по ';'.
+ * Учитывает строковые литералы ('...', "...", `...`), экранирование (\' и '')
+ * и комментарии MySQL (строчные "-- " и "#", а также блочные).
+ * Это нужно, чтобы ';' и '--' внутри строк и комментариев не ломали разбор.
+ */
+function splitSqlStatements(string $sql): array
+{
+    $statements = [];
+    $current = '';
+    $len = strlen($sql);
+    $inSingle = $inDouble = $inBacktick = false;
+    $i = 0;
+
+    while ($i < $len) {
+        $ch = $sql[$i];
+        $next = $i + 1 < $len ? $sql[$i + 1] : '';
+
+        if ($inSingle) {
+            $current .= $ch;
+            if ($ch === '\\' && $next !== '') { $current .= $next; $i += 2; continue; }
+            if ($ch === "'") {
+                if ($next === "'") { $current .= $next; $i += 2; continue; } // экранирование ''
+                $inSingle = false;
+            }
+            $i++; continue;
+        }
+        if ($inDouble) {
+            $current .= $ch;
+            if ($ch === '\\' && $next !== '') { $current .= $next; $i += 2; continue; }
+            if ($ch === '"') {
+                if ($next === '"') { $current .= $next; $i += 2; continue; }
+                $inDouble = false;
+            }
+            $i++; continue;
+        }
+        if ($inBacktick) {
+            $current .= $ch;
+            if ($ch === '`') { $inBacktick = false; }
+            $i++; continue;
+        }
+
+        // Комментарий "-- " (двойное тире + пробел/таб/перевод строки) — по правилам MySQL
+        if ($ch === '-' && $next === '-') {
+            $after = $i + 2 < $len ? $sql[$i + 2] : "\n";
+            if ($after === ' ' || $after === "\t" || $after === "\n" || $after === "\r") {
+                while ($i < $len && $sql[$i] !== "\n") { $i++; }
+                continue;
+            }
+        }
+        // Комментарий '#' до конца строки
+        if ($ch === '#') {
+            while ($i < $len && $sql[$i] !== "\n") { $i++; }
+            continue;
+        }
+        // Блочный комментарий /* ... */
+        if ($ch === '/' && $next === '*') {
+            $i += 2;
+            while ($i < $len && !($sql[$i] === '*' && ($i + 1 < $len) && $sql[$i + 1] === '/')) { $i++; }
+            $i += 2;
+            continue;
+        }
+
+        if ($ch === "'") { $inSingle = true; $current .= $ch; $i++; continue; }
+        if ($ch === '"') { $inDouble = true; $current .= $ch; $i++; continue; }
+        if ($ch === '`') { $inBacktick = true; $current .= $ch; $i++; continue; }
+
+        if ($ch === ';') {
+            $trimmed = trim($current);
+            if ($trimmed !== '') { $statements[] = $trimmed; }
+            $current = '';
+            $i++; continue;
+        }
+
+        $current .= $ch;
+        $i++;
+    }
+
+    $trimmed = trim($current);
+    if ($trimmed !== '') { $statements[] = $trimmed; }
+
+    return $statements;
+}
+
 // Create fresh DB connection with buffered queries
 $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
 $options = [
@@ -46,19 +130,7 @@ foreach ($migrations as $migration) {
     
     try {
         $sql = file_get_contents($filePath);
-        
-        // Clean SQL
-        $lines = explode("\n", $sql);
-        $cleanSql = '';
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (empty($line) || strpos($line, '--') === 0) {
-                continue;
-            }
-            $cleanSql .= $line . " ";
-        }
-        
-        $statements = explode(';', $cleanSql);
+        $statements = splitSqlStatements($sql);
         $executed = 0;
         
         foreach ($statements as $statement) {
