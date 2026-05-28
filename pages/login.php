@@ -9,9 +9,15 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../includes/session.php';
 
-// If user is already logged in, redirect to cabinet
+// Безопасный возврат после входа: только относительный URL внутри сайта
+$returnUrl = $_GET['return'] ?? $_POST['return'] ?? '';
+if (!is_string($returnUrl) || $returnUrl === '' || $returnUrl[0] !== '/' || str_starts_with($returnUrl, '//')) {
+    $returnUrl = '/kabinet/';
+}
+
+// If user is already logged in, redirect to cabinet (или return-параметр)
 if (isset($_SESSION['user_email'])) {
-    header('Location: /pages/cabinet.php');
+    header('Location: ' . $returnUrl);
     exit;
 }
 
@@ -45,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = 'Вход выполнен успешно!';
 
                 // Redirect to cabinet after short delay
-                header('Refresh: 1; URL=/pages/cabinet.php');
+                header('Refresh: 1; URL=' . $returnUrl);
             } else {
                 // Create new user
                 $stmt = $db->prepare("INSERT INTO users (email, full_name) VALUES (?, ?)");
@@ -56,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = 'Регистрация успешна! Перенаправление...';
 
                 // Redirect to cabinet after short delay
-                header('Refresh: 1; URL=/pages/cabinet.php');
+                header('Refresh: 1; URL=' . $returnUrl);
             }
         } catch (PDOException $e) {
             error_log("Login error: " . $e->getMessage());
@@ -97,6 +103,7 @@ include __DIR__ . '/../includes/header.php';
             <?php endif; ?>
 
             <form method="POST" class="login-form">
+                <input type="hidden" name="return" value="<?php echo htmlspecialchars($returnUrl, ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="form-group">
                     <label for="email">Email *</label>
                     <input

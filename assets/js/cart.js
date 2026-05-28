@@ -227,8 +227,21 @@ function handleQuickAdd(btn) {
                         }
                     });
                 }
-                // Reload page to recalculate 2+1 promotion
-                window.location.reload();
+                // Reload (пересчёт акции 2+1) только после того, как Метрика
+                // успела зафиксировать цель и ecommerce-событие. Иначе reload
+                // прерывает асинхронную отправку и «добавление в корзину» теряется.
+                var reloaded = false;
+                function reloadOnce() {
+                    if (reloaded) return;
+                    reloaded = true;
+                    window.location.reload();
+                }
+                if (typeof ym === 'function') {
+                    ym(106465857, 'reachGoal', 'add_to_cart', null, reloadOnce);
+                    setTimeout(reloadOnce, 1000);
+                } else {
+                    setTimeout(reloadOnce, 300);
+                }
             } else {
                 alert(data.message || 'Ошибка при добавлении');
                 btn.prop('disabled', false).text('+ В корзину');
