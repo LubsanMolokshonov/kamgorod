@@ -24,6 +24,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/TokenPackage.php';
+require_once __DIR__ . '/../classes/MaterialTokenEmailChain.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -65,8 +66,22 @@ $userRow = (new Database($db))->queryOne("SELECT email FROM users WHERE id = ?",
 $userEmail = $userRow['email'] ?? '';
 
 $totalTokens = $packageObj->totalTokens($package);
-$priceRub = (float)$package['price_rub'];
-$description = "Покупка пакета «{$package['name']}» — {$totalTokens} токенов на fgos.pro";
+$originalPrice = (float)$package['price_rub'];
+$priceRub = $originalPrice;
+
+// Скидка из письма (HMAC-токен). Влияет только на ЦЕНУ, число токенов не меняется.
+$discountPercent = 0;
+$discountToken = trim((string)($_POST['discount'] ?? ''));
+if ($discountToken !== '') {
+    $discountData = MaterialTokenEmailChain::validateDiscountToken($discountToken);
+    if ($discountData && (int)$discountData['user_id'] === (int)$userId) {
+        $discountPercent = (int)$discountData['percent'];
+        $priceRub = round($originalPrice * (100 - $discountPercent) / 100, 2);
+    }
+}
+
+$description = "Покупка пакета «{$package['name']}» — {$totalTokens} токенов на fgos.pro"
+    . ($discountPercent > 0 ? " (скидка {$discountPercent}%)" : '');
 $idempotencyKey = 'tokens_' . $userId . '_' . $packageId . '_' . substr(uniqid('', true), -10);
 
 try {
@@ -104,6 +119,8 @@ try {
                 'user_id' => (int)$userId,
                 'package_id' => $packageId,
                 'tokens_total' => $totalTokens,
+                'discount_percent' => $discountPercent,
+                'original_price' => number_format($originalPrice, 2, '.', ''),
             ],
         ],
         $idempotencyKey

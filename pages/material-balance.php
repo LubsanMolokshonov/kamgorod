@@ -14,6 +14,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/UserTokens.php';
 require_once __DIR__ . '/../classes/TokenPackage.php';
+require_once __DIR__ . '/../classes/MaterialTokenEmailChain.php';
 require_once __DIR__ . '/../includes/session.php';
 
 $userId = $_SESSION['user_id'] ?? null;
@@ -33,6 +34,20 @@ $history = $tokens->getHistory((int)$userId, 50);
 
 $justPaid = !empty($_GET['paid']);
 $csrf = generateCSRFToken();
+
+// Скидка из письма (HMAC-токен). Влияет только на цену пакета, не на число токенов.
+$discountToken = trim((string)($_GET['discount'] ?? ''));
+$discountPercent = 0;
+$discountDeadline = null;
+if ($discountToken !== '') {
+    $dd = MaterialTokenEmailChain::validateDiscountToken($discountToken);
+    if ($dd && (int)$dd['user_id'] === (int)$userId) {
+        $discountPercent = (int)$dd['percent'];
+        $discountDeadline = date('d.m.Y H:i', (int)$dd['expiry']);
+    } else {
+        $discountToken = ''; // невалиден/просрочен/чужой — игнорируем
+    }
+}
 
 $reasonLabels = [
     'signup_bonus' => 'Стартовый бонус',
@@ -88,10 +103,18 @@ include __DIR__ . '/../includes/header-redesign.php';
     </div>
 
     <h2 class="rd-section-title" style="font-size:24px;margin-top:40px;">Пополнить баланс</h2>
+    <?php if ($discountPercent > 0): ?>
+      <div class="mat-notice" style="background:#fff0f3;border-color:#fbc8d1;color:#a01030;">
+        <strong>Скидка <?= (int)$discountPercent ?>% активна.</strong>
+        Действует до <?= htmlspecialchars($discountDeadline, ENT_QUOTES, 'UTF-8') ?> — применяется автоматически при оплате.
+      </div>
+    <?php endif; ?>
     <div class="mat-packs" style="margin-top:16px;">
       <?php foreach ($packages as $i => $p):
           $totalTokens = (int)$p['tokens'] + (int)$p['bonus_tokens'];
-          $perToken = $totalTokens > 0 ? (float)$p['price_rub'] / $totalTokens : 0;
+          $origPrice = (float)$p['price_rub'];
+          $finalPrice = $discountPercent > 0 ? round($origPrice * (100 - $discountPercent) / 100) : $origPrice;
+          $perToken = $totalTokens > 0 ? $finalPrice / $totalTokens : 0;
           $featured = ($i === 1);
       ?>
         <div class="mat-pack<?= $featured ? ' mat-pack-featured' : '' ?>">
@@ -104,7 +127,14 @@ include __DIR__ . '/../includes/header-redesign.php';
           <?php if (!empty($p['description'])): ?>
             <p class="mat-pack-desc"><?= htmlspecialchars($p['description'], ENT_QUOTES, 'UTF-8') ?></p>
           <?php endif; ?>
-          <div class="mat-pack-price"><?= number_format((float)$p['price_rub'], 0, '', ' ') ?> ₽</div>
+          <?php if ($discountPercent > 0): ?>
+            <div class="mat-pack-price">
+              <span style="text-decoration:line-through;opacity:.5;font-size:.7em;"><?= number_format($origPrice, 0, '', ' ') ?> ₽</span>
+              <?= number_format($finalPrice, 0, '', ' ') ?> ₽
+            </div>
+          <?php else: ?>
+            <div class="mat-pack-price"><?= number_format($origPrice, 0, '', ' ') ?> ₽</div>
+          <?php endif; ?>
           <div class="mat-pack-per">~ <?= number_format($perToken, 2, ',', '') ?> ₽ за токен</div>
           <button type="button" class="buy-tokens-btn rd-btn <?= $featured ? 'rd-btn-primary' : 'rd-btn-ghost' ?>" data-package-id="<?= (int)$p['id'] ?>" style="width:100%;justify-content:center;">Купить</button>
         </div>
@@ -139,12 +169,14 @@ include __DIR__ . '/../includes/header-redesign.php';
     <?php endif; ?>
 
     <input type="hidden" id="csrf-token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+    <input type="hidden" id="discount-token" value="<?= htmlspecialchars($discountToken, ENT_QUOTES, 'UTF-8') ?>">
 
     <script>
     document.querySelectorAll('.buy-tokens-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var packageId = btn.dataset.packageId;
             var csrf = document.getElementById('csrf-token').value;
+            var discount = document.getElementById('discount-token').value;
             btn.disabled = true;
             btn.style.opacity = '0.5';
             btn.textContent = 'Создаём платёж…';
@@ -152,6 +184,7 @@ include __DIR__ . '/../includes/header-redesign.php';
             var fd = new FormData();
             fd.append('csrf', csrf);
             fd.append('package_id', packageId);
+            if (discount) { fd.append('discount', discount); }
 
             fetch('/ajax/buy-tokens.php', { method: 'POST', body: fd, credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })

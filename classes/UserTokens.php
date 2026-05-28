@@ -156,6 +156,15 @@ class UserTokens
             return false;
         }
         $this->credit($userId, self::SIGNUP_BONUS_TOKENS, 'signup_bonus');
+
+        // Запланировать onboarding-цепочку (best-effort — не ломаем выдачу бонуса)
+        try {
+            require_once __DIR__ . '/MaterialTokenEmailChain.php';
+            (new MaterialTokenEmailChain($this->pdo))->scheduleOnboarding($userId);
+        } catch (Throwable $e) {
+            error_log('grantSignupBonusIfNeeded: scheduleOnboarding failed: ' . $e->getMessage());
+        }
+
         return true;
     }
 

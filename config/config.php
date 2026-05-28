@@ -96,6 +96,9 @@ if (!defined('BITRIX24_CDO_STAGE_DOCS_SORT'))   define('BITRIX24_CDO_STAGE_DOCS_
 // Секрет для HMAC-подписи скидочных ссылок в email-цепочке курсов
 if (!defined('COURSE_EMAIL_DISCOUNT_SECRET')) define('COURSE_EMAIL_DISCOUNT_SECRET', $_ENV['COURSE_EMAIL_DISCOUNT_SECRET'] ?? '');
 
+// Секрет для HMAC-подписи скидочных ссылок в email-цепочке материалов ФОП (fallback на MAGIC_LINK_SECRET)
+if (!defined('MATERIAL_EMAIL_DISCOUNT_SECRET')) define('MATERIAL_EMAIL_DISCOUNT_SECRET', $_ENV['MATERIAL_EMAIL_DISCOUNT_SECRET'] ?? '');
+
 // Unisender Go (UniOne) Web API — транзакционный канал для писем олимпиад
 // Документация: https://godocs.unisender.ru/web-api-ref
 if (!defined('UNISENDER_API_KEY'))      define('UNISENDER_API_KEY',      $_ENV['UNISENDER_API_KEY']      ?? '');

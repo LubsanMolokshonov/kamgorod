@@ -158,6 +158,16 @@ try {
             exit;
         }
 
+        // Транзакционное письмо о покупке + гашение pending балансовых писем (non-fatal)
+        try {
+            require_once __DIR__ . '/../../classes/MaterialTokenEmailChain.php';
+            $matChain = new MaterialTokenEmailChain($GLOBALS['db']);
+            $matChain->sendPurchaseConfirmation($tokensUserId, $package, $totalTokens, $paymentId);
+            $matChain->cancelPendingForUser($tokensUserId, ['balance']);
+        } catch (Throwable $e) {
+            logWebhook('WARNING', $paymentId, 'Material purchase email failed (non-fatal): ' . $e->getMessage(), '');
+        }
+
         // Bitrix24: оплаченная сделка в воронке «Курсы» (CATEGORY_ID=108)
         try {
             if (defined('BITRIX24_WEBHOOK_URL') && BITRIX24_WEBHOOK_URL) {
