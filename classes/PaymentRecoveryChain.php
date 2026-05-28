@@ -19,6 +19,7 @@ class PaymentRecoveryChain {
     private const MAX_ATTEMPTS = 3;
     private const BATCH_SIZE = 50;
     private const SCHEDULE_LIMIT = 200;
+    private const TOUCH2_DELAY_HOURS = 48;
 
     public function __construct($pdo) {
         $this->pdo = $pdo;
@@ -179,6 +180,109 @@ class PaymentRecoveryChain {
     }
 
     /**
+     * Второе касание: для заказов, где первое письмо отправлено >= TOUCH2_DELAY_HOURS назад,
+     * заказ всё ещё failed и пользователь не оплатил. Один заказ — одно второе письмо
+     * (трекается колонками touch2_* в той же строке).
+     *
+     * @return array ['sent'=>int, 'failed'=>int, 'skipped'=>int]
+     */
+    public function processSecondTouch(): array {
+        require_once BASE_PATH . '/includes/email-helper.php';
+
+        $pending = $this->db->query(
+            "SELECT prl.*, o.order_number, o.final_amount, o.created_at AS order_created_at,
+                    u.full_name
+             FROM payment_recovery_email_log prl
+             JOIN orders o ON prl.order_id = o.id
+             JOIN users u ON prl.user_id = u.id
+             WHERE prl.status = 'sent'
+               AND prl.touch2_status IS NULL
+               AND prl.touch2_attempts < ?
+               AND prl.sent_at IS NOT NULL
+               AND prl.sent_at <= (NOW() - INTERVAL " . (int)self::TOUCH2_DELAY_HOURS . " HOUR)
+             ORDER BY prl.sent_at ASC
+             LIMIT ?",
+            [self::MAX_ATTEMPTS, self::BATCH_SIZE]
+        );
+
+        $results = ['sent' => 0, 'failed' => 0, 'skipped' => 0];
+        $orderObj = new Order($this->pdo);
+
+        foreach ($pending as $row) {
+            $order = $this->db->queryOne(
+                "SELECT payment_status FROM orders WHERE id = ?",
+                [$row['order_id']]
+            );
+            if (!$order || $order['payment_status'] !== 'failed') {
+                $this->updateTouch2Status($row['order_id'], 'skipped', 'Order no longer failed');
+                $results['skipped']++;
+                continue;
+            }
+
+            $hasSucceeded = $this->db->queryOne(
+                "SELECT 1 AS x FROM orders WHERE user_id = ? AND payment_status = 'succeeded' AND created_at >= ?",
+                [$row['user_id'], $row['order_created_at']]
+            );
+            if (!empty($hasSucceeded)) {
+                $this->updateTouch2Status($row['order_id'], 'skipped', 'User has succeeded order in window');
+                $results['skipped']++;
+                continue;
+            }
+
+            if ($this->isUnsubscribed($row['email'])) {
+                $this->updateTouch2Status($row['order_id'], 'skipped', 'User unsubscribed');
+                $results['skipped']++;
+                continue;
+            }
+
+            if (recipientRecentlyEmailed($this->pdo, $row['email'], CHAIN_MIN_INTERVAL_MINUTES)) {
+                $results['skipped']++;
+                continue;
+            }
+
+            if (recipientReachedDailyCap($this->pdo, $row['email'], CHAIN_DAILY_CAP_PER_RECIPIENT)) {
+                $results['skipped']++;
+                continue;
+            }
+
+            $items = $orderObj->getOrderItems($row['order_id']);
+            $items = $this->filterRestorableItems($items);
+            if (empty($items)) {
+                $this->updateTouch2Status($row['order_id'], 'skipped', 'No restorable items');
+                $results['skipped']++;
+                continue;
+            }
+
+            $orderData = [
+                'order_id'      => (int)$row['order_id'],
+                'order_number'  => $row['order_number'],
+                'final_amount'  => (float)$row['final_amount'],
+                'items'         => $items,
+                'user_id'       => (int)$row['user_id'],
+                'email'         => $row['email'],
+                'full_name'     => $row['full_name'],
+            ];
+
+            $sent = $this->sendRecoveryEmail(
+                $orderData,
+                'payment_recovery_2',
+                'Напоминаю про неоплаченный заказ на fgos.pro',
+                'payment_recovery_2'
+            );
+            if ($sent['ok']) {
+                $this->markTouch2Sent($row['order_id'], $sent['message_id']);
+                $results['sent']++;
+            } else {
+                $this->incrementTouch2Attempts($row['order_id'], $sent['error']);
+                $results['failed']++;
+            }
+        }
+
+        $this->log("PROCESS_TOUCH2 | Sent: {$results['sent']}, Failed: {$results['failed']}, Skipped: {$results['skipped']}");
+        return $results;
+    }
+
+    /**
      * Оставить только те типы позиций, которые умеет восстанавливать cart-restore.
      * Курсы не имеют cart-слота в сессии — для них recovery пока не работает.
      */
@@ -191,7 +295,7 @@ class PaymentRecoveryChain {
         }));
     }
 
-    private function sendRecoveryEmail(array $order): array {
+    private function sendRecoveryEmail(array $order, string $template = 'payment_recovery', ?string $subject = null, string $touchpointCode = 'payment_recovery'): array {
         try {
             $recoveryUrl = generateRecoveryUrl($order['order_id'], $order['user_id']);
 
@@ -210,8 +314,8 @@ class PaymentRecoveryChain {
                 'footer_reason'   => 'у вас остался неоплаченный заказ на портале fgos.pro',
             ];
 
-            $html = $this->renderTemplate('payment_recovery', $templateData);
-            $subject = 'Ваш заказ не был оплачен — давайте завершим';
+            $html = $this->renderTemplate($template, $templateData);
+            $subject = $subject ?: 'Ваш заказ не был оплачен — давайте завершим';
 
             $result = EmailDispatcher::send([
                 'to_email'        => $order['email'],
@@ -223,18 +327,18 @@ class PaymentRecoveryChain {
                 'unsubscribe_url' => $unsubscribeUrl,
                 'meta' => [
                     'email_type'      => 'payment',
-                    'touchpoint_code' => 'payment_recovery',
+                    'touchpoint_code' => $touchpointCode,
                     'chain_log_id'    => $order['order_id'],
                     'chain_log_table' => 'payment_recovery_email_log',
                     'user_id'         => $order['user_id'],
                 ],
             ]);
 
-            $this->log("SENT | order #{$order['order_id']} | {$order['email']}");
+            $this->log("SENT | {$touchpointCode} | order #{$order['order_id']} | {$order['email']}");
             return ['ok' => true, 'message_id' => $result['message_id'] ?? null];
 
         } catch (\Throwable $e) {
-            $this->log("SEND_ERROR | order #{$order['order_id']} | " . $e->getMessage());
+            $this->log("SEND_ERROR | {$touchpointCode} | order #{$order['order_id']} | " . $e->getMessage());
             return ['ok' => false, 'error' => $e->getMessage()];
         }
     }
@@ -261,6 +365,33 @@ class PaymentRecoveryChain {
              SET attempts = attempts + 1,
                  error_message = ?,
                  status = CASE WHEN attempts + 1 >= ? THEN 'failed' ELSE 'pending' END
+             WHERE order_id = ?",
+            [$errorMessage, self::MAX_ATTEMPTS, $orderId]
+        );
+    }
+
+    private function updateTouch2Status(int $orderId, string $status, ?string $errorMessage = null): void {
+        $data = ['touch2_status' => $status];
+        if ($errorMessage !== null) {
+            $data['touch2_error_message'] = $errorMessage;
+        }
+        $this->db->update('payment_recovery_email_log', $data, 'order_id = ?', [$orderId]);
+    }
+
+    private function markTouch2Sent(int $orderId, ?string $messageId): void {
+        $this->db->update('payment_recovery_email_log', [
+            'touch2_status'     => 'sent',
+            'touch2_message_id' => $messageId,
+            'touch2_sent_at'    => date('Y-m-d H:i:s'),
+        ], 'order_id = ?', [$orderId]);
+    }
+
+    private function incrementTouch2Attempts(int $orderId, string $errorMessage): void {
+        $this->db->execute(
+            "UPDATE payment_recovery_email_log
+             SET touch2_attempts = touch2_attempts + 1,
+                 touch2_error_message = ?,
+                 touch2_status = CASE WHEN touch2_attempts + 1 >= ? THEN 'failed' ELSE NULL END
              WHERE order_id = ?",
             [$errorMessage, self::MAX_ATTEMPTS, $orderId]
         );

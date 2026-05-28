@@ -54,7 +54,10 @@ try {
     echo date('Y-m-d H:i:s') . " - Scheduled new: {$scheduled}\n";
 
     $results = $chain->processPending();
-    echo date('Y-m-d H:i:s') . " - Completed. Sent: {$results['sent']}, Failed: {$results['failed']}, Skipped: {$results['skipped']}\n";
+    echo date('Y-m-d H:i:s') . " - Touch1. Sent: {$results['sent']}, Failed: {$results['failed']}, Skipped: {$results['skipped']}\n";
+
+    $results2 = $chain->processSecondTouch();
+    echo date('Y-m-d H:i:s') . " - Touch2. Sent: {$results2['sent']}, Failed: {$results2['failed']}, Skipped: {$results2['skipped']}\n";
 
     TelegramNotifier::instance($db)->checkEmailFailureThreshold(
         'payment_recovery_email_log',
