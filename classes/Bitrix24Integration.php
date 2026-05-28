@@ -10,6 +10,8 @@ class Bitrix24Integration {
 
     private $webhookUrl;
     private $logFile;
+    /** HTTP-код последнего вызова call() — позволяет отличить «сделка удалена» (400) от временного сбоя */
+    private $lastHttpCode = null;
 
     public function __construct() {
         $this->webhookUrl = defined('BITRIX24_WEBHOOK_URL') ? BITRIX24_WEBHOOK_URL : '';
@@ -242,6 +244,17 @@ class Bitrix24Integration {
         }
 
         return null;
+    }
+
+    /**
+     * HTTP-код последнего вызова call() (null при сетевой/CURL-ошибке).
+     * Bitrix отдаёт 400 на crm.deal.get для удалённой сделки — это позволяет
+     * отличить «сделки больше нет» от временного сбоя API.
+     *
+     * @return int|null
+     */
+    public function getLastHttpCode() {
+        return $this->lastHttpCode;
     }
 
     /**
@@ -706,6 +719,8 @@ class Bitrix24Integration {
         $error = curl_error($ch);
 
         curl_close($ch);
+
+        $this->lastHttpCode = $error ? null : (int)$httpCode;
 
         if ($error) {
             $this->log("CURL Error: {$error}", 'error');

@@ -84,11 +84,14 @@ try {
     }
 
     // 2) Выборка enrollments под опрос: те, по которым нет оплаты с сайта.
+    // bitrix_stage = '__deal_deleted__' — сделка удалена в Bitrix (crm.deal.get → 400),
+    // переопрашивать её бесполезно, исключаем из выборки.
     $rows = $dbObj->query(
         "SELECT id, bitrix_lead_id, status, bitrix_stage, bitrix_stage_updated_at
          FROM course_enrollments
          WHERE bitrix_lead_id IS NOT NULL
            AND status IN ('new', 'installment_requested')
+           AND (bitrix_stage IS NULL OR bitrix_stage <> '__deal_deleted__')
            AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
          ORDER BY COALESCE(bitrix_stage_updated_at, '1970-01-01') ASC
          LIMIT ?",
@@ -105,7 +108,20 @@ try {
             $deal = $bitrix->getDeal($r['bitrix_lead_id']);
             if (!$deal) {
                 $errors++;
-                log_line("SYNC_MISS | Enrollment #{$r['id']} | Deal #{$r['bitrix_lead_id']} not found");
+                // HTTP 400 = сделка удалена в Bitrix навсегда → помечаем, чтобы
+                // не переопрашивать каждые 30 минут. Прочие коды (timeout/5xx) —
+                // временный сбой, оставляем для повторной попытки.
+                if ($bitrix->getLastHttpCode() === 400) {
+                    $dbObj->update(
+                        'course_enrollments',
+                        ['bitrix_stage' => '__deal_deleted__', 'bitrix_stage_updated_at' => date('Y-m-d H:i:s')],
+                        'id = ?',
+                        [$r['id']]
+                    );
+                    log_line("DEAL_DELETED | Enrollment #{$r['id']} | Deal #{$r['bitrix_lead_id']} removed in Bitrix, stop polling");
+                } else {
+                    log_line("SYNC_MISS | Enrollment #{$r['id']} | Deal #{$r['bitrix_lead_id']} not retrieved (http=" . var_export($bitrix->getLastHttpCode(), true) . ")");
+                }
                 continue;
             }
 
