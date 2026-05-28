@@ -23,6 +23,11 @@ gcp-key*.json
 /vendor/
 composer.lock
 
+# Node / Playwright (tests/ui)
+node_modules/
+/tests/ui/test-results/
+/tests/ui/playwright-report/
+
 # Uploads
 /uploads/diplomas/*.pdf
 /uploads/diplomas/*.jpg

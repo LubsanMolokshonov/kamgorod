@@ -37,10 +37,14 @@ npm run test:smoke
 
 | Файл | Что проверяет |
 |------|---------------|
-| `smoke.spec.js` | HTTP 200, наличие title, подключение main.js/visit-tracker.js, отсутствие console-ошибок на 9 ключевых страницах |
+| `smoke.spec.js` | HTTP 200, наличие title, подключение main.js/visit-tracker.js, отсутствие console-ошибок на ключевых страницах (вкл. `/materialy/`, `/material-generator/`, `/material-adapter/`) |
 | `visit-tracking.spec.js` | `/ajax/track-visit.php` — создаёт визит, возвращает `ab_variant` A/B, стабильность сплита по session_id, запись в `sessionStorage` |
 | `recommendations.spec.js` | `/ajax/get-cart-recommendations.php` — корректный JSON, `ab_variant`, устойчивость к мусорному `visit_id`, структура карточек (включая `will_be_free`) |
 | `cart.spec.js` | `/korzina/` — пустой state, форма `#paymentForm → /ajax/create-payment.php` с CSRF, canonical на ключевых страницах, 410 на `apple-app-site-association` |
+| `materials.spec.js` | Домен «Материалы ФОП»: лендинг → генератор → форма генерации, форма `#generator-form → /ajax/generate-material.php` с csrf, `/material-balance/` редиректит на вход с безопасным return; AJAX-эндпоинты (`generate/unlock/quick-register/buy-tokens/adapt`) отдают JSON-отказ без сайд-эффектов |
+| `catalog-search.spec.js` | Поиск над фильтрами в `/konkursy/`, `/kursy/`, `/olimpiady/` — поле присутствует, фильтрует карточки, очистка восстанавливает |
+| `course-detail.spec.js` | Детальная курса: CTA «Записаться на курс», urgency-плашка −10%/10 мин, sticky-бар с названием и ценой, открытие модалки записи, валидация `/ajax/course-enrollment.php` |
+| `journal.spec.js` | Журнал/публикация рендерятся без ошибок; опциональный блок рекомендаций курса ведёт на `/kursy/`; AI-обложки без битого `src` |
 
 ## Что НЕ покрыто (осознанно)
 

@@ -15,10 +15,11 @@ test.describe('Cart UX', () => {
 
   test('детальная страница олимпиады имеет кнопку регистрации', async ({ page }) => {
     await page.goto('/olimpiady/');
-    const firstCard = page.locator('a[href*="/olimpiada/"]').first();
+    // детальные страницы олимпиад: /olimpiady/olimpiada-...; /olimpiady/{категория}/ — это фильтры
+    const firstCard = page.locator('a[href*="/olimpiady/olimpiada"]').first();
     await expect(firstCard).toBeVisible();
     await firstCard.click();
-    await expect(page).toHaveURL(/\/olimpiada\//);
+    await expect(page).toHaveURL(/\/olimpiady\/olimpiada/);
     const cta = page.getByRole('button', { name: /участ|регистрац|оплат/i }).first();
     await expect(cta).toBeVisible();
   });

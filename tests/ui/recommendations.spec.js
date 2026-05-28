@@ -9,9 +9,7 @@ test.describe('Cart recommendations API', () => {
     expect(json.success).toBe(true);
     expect(Array.isArray(json.recommendations)).toBe(true);
     expect(json).toHaveProperty('promotionHint');
-    expect(json).toHaveProperty('cartCount');
-    // Регрессия 086: ответ должен содержать ab_variant (после правок от 23.04.2026)
-    expect(['A', 'B']).toContain(json.ab_variant);
+    // A/B-тест рекомендаций выключен (commit bb22097) — legacy-версия без ab_variant/cartCount
   });
 
   test('эндпоинт не падает на несуществующем visit_id', async ({ request }) => {
@@ -19,7 +17,7 @@ test.describe('Cart recommendations API', () => {
     expect(resp.status()).toBe(200);
     const json = await resp.json();
     expect(json.success).toBe(true);
-    expect(json.ab_variant).toBe('B'); // дефолт, если визита нет
+    expect(Array.isArray(json.recommendations)).toBe(true);
   });
 
   test('each recommendation card has required fields', async ({ request }) => {

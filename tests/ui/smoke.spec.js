@@ -1,5 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { collectAppErrors } = require('./helpers');
 
 // Критические публичные страницы — должны отдавать 200 и не падать на клиенте.
 const PAGES = [
@@ -12,15 +13,14 @@ const PAGES = [
   { path: '/kursy/perepodgotovka/', title: /ереподготов/i },
   { path: '/zhurnal/', title: /журнал|публикаци/i },
   { path: '/korzina/', title: /орзин/i },
+  { path: '/materialy/', title: /атериал/i },
+  { path: '/material-generator/', title: /генератор/i },
+  { path: '/material-adapter/', title: /адаптаци/i },
 ];
 
 for (const p of PAGES) {
   test(`page ${p.path} loads without JS errors`, async ({ page }) => {
-    const errors = [];
-    page.on('pageerror', (err) => errors.push(String(err)));
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') errors.push(msg.text());
-    });
+    const errors = collectAppErrors(page);
 
     const resp = await page.goto(p.path, { waitUntil: 'domcontentloaded' });
     expect(resp, `no response for ${p.path}`).toBeTruthy();
