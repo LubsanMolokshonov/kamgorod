@@ -204,6 +204,9 @@ RewriteRule ^vebinary/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nach
 RewriteRule ^vebinary/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ pages/webinars.php?ac=$1&as=$2 [L,QSA]
 RewriteRule ^vebinary/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ pages/webinars.php?ac=$1 [L,QSA]
 
+# 301 со старого slug вебинара 03.06.2026 (смена темы на «полезное лето»)
+RewriteRule ^vebinar/leto-bez-stressa-osobye-deti/?$ /vebinar/poleznoe-leto-osobyj-rebenok/ [R=301,L]
+
 # Детальная страница вебинара
 RewriteRule ^vebinar/([a-z0-9-]+)/?$ pages/webinar.php?slug=$1 [L,QSA]
 
