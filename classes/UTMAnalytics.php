@@ -362,7 +362,8 @@ class UTMAnalytics
         $this->addDateFilter($where, $params, 'ce.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
         $whereSql = implode(' AND ', $where);
         $source = self::COURSE_LEADS_SOURCE;
-        $catSql = $this->referrerCategorySql('rec');
+        // CASE считается ВНУТРИ LATERAL по визиту v; наружу торчит только rec.cat.
+        $catSql = $this->referrerCategorySql('v');
         $fallback = self::NO_UTM_FALLBACK_LABEL;
 
         // Исключаем заявки, у которых ХОТЬ ОДИН визит по ym_uid имеет utm_source —
