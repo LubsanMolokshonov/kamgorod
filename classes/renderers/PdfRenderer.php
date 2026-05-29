@@ -174,6 +174,10 @@ class PdfRenderer
         .content table { font-size: 10pt; width: 100%; border-collapse: collapse; margin: 0 0 12pt; }
         .content th, .content td { border: 0.5pt solid {$ink200}; padding: 5pt 7pt; text-align: left; vertical-align: top; }
         .content th { background: {$indigo50}; color: {$indigo800}; font-weight: bold; }
+        .md-writeline { border-bottom: 0.5pt solid {$ink200}; height: 16pt; margin: 6pt 0; }
+        .md-drawbox { border: 0.5pt dashed {$ink200}; height: 120pt; margin: 6pt 0; text-align: center; color: #b6bccd; }
+        .md-match td { border: none; }
+        .md-questions li, .md-tasks li { margin-bottom: 8pt; }
         .footer { text-align: center; font-size: 9pt; color: #888; margin-top: 14pt; }
     </style>
 </head>
@@ -236,6 +240,10 @@ HTML;
         table { font-size: 10pt; width: 100%; border-collapse: collapse; margin: 0 0 12pt; }
         th, td { border: 0.5pt solid {$ink200}; padding: 5pt 7pt; text-align: left; vertical-align: top; }
         th { background: {$indigo50}; color: {$indigo800}; font-weight: bold; }
+        .md-writeline { border-bottom: 0.5pt solid {$ink200}; height: 16pt; margin: 6pt 0; }
+        .md-drawbox { border: 0.5pt dashed {$ink200}; height: 120pt; margin: 6pt 0; text-align: center; color: #b6bccd; }
+        .md-match td { border: none; }
+        .md-questions li, .md-tasks li { margin-bottom: 8pt; }
         .footer { text-align: center; font-size: 9pt; color: #888; margin-top: 12pt; }
     </style>
 </head>

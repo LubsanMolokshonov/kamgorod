@@ -71,6 +71,7 @@ class DocxRenderer
 
         return [
             'file_path' => $relativePath,
+            'file_abs' => $absolutePath,
             'file_size' => filesize($absolutePath) ?: 0,
             'file_format' => 'docx',
         ];

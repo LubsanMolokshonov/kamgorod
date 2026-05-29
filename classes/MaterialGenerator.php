@@ -127,10 +127,14 @@ class MaterialGenerator
                 ?? ($params['topic'] ?? ($type['name'] . ' — материал')));
             $slug = $this->materialObj->generateSlug($title);
 
-            // 6. Рендерим файл по output_format типа. В preview файл не нужен —
-            //    скачивание формирует PDF из content на лету (material-download.php),
-            //    поэтому экономим время и не пишем файл на диск до оплаты.
+            // 6. Рендерим файл по output_format типа. В preview файл на диск не пишем —
+            //    скачивание формирует нужный формат (DOCX/PPTX/PDF) на лету из ai_output_json
+            //    (material-download.php), поэтому экономим время до оплаты.
             $renderResult = $isPreview ? null : $this->renderFile($type['output_format'], $aiData, $title, $slug);
+
+            // Рабочий лист и тест — это бланки ученика: на странице/в превью показываем БЕЗ
+            //    ключей (они уходят в раздел «Ключи для учителя» только в скачиваемом файле).
+            $studentBlank = in_array($typeSlug, ['rabochiy-list', 'test-kontrolnaya'], true);
 
             // 7. Создаём Material как DRAFT — доступен автору, не публикуется в общий каталог.
             //    preview: is_unlocked=0, unlock_token_cost=цена; full: is_unlocked=1 (оплачено при генерации).
@@ -140,7 +144,8 @@ class MaterialGenerator
                 'title' => $title,
                 'slug' => $slug,
                 'description' => mb_substr(strip_tags((string)($aiData['intro'] ?? $aiData['title'] ?? '')), 0, 500),
-                'content' => (new \MaterialHtmlRenderer())->render($aiData),
+                'content' => (new \MaterialHtmlRenderer())->render($aiData, !$studentBlank),
+                'ai_output' => $aiData,
                 'material_type_id' => $typeId,
                 'file_path' => $renderResult['file_path'] ?? null,
                 'file_size' => $renderResult['file_size'] ?? null,
@@ -166,9 +171,12 @@ class MaterialGenerator
             }
 
             // 7b. Обложка через YandexART — best-effort, НЕ должна валить генерацию.
-            //     Для анонимного превью пропускаем (контроль расходов на ИИ-картинки):
-            //     обложка появится у залогиненных и в full-режиме.
-            $skipCover = ($isPreview && $userId === null);
+            //     Пропускаем для:
+            //       - учительских материалов (techкарта/конспект/тест/КТП/классный час) —
+            //         картинка там не нужна, экономим токены (needs_cover=0);
+            //       - анонимного превью (контроль расходов на ИИ-картинки).
+            $needsCover = !isset($type['needs_cover']) || (int)$type['needs_cover'] === 1;
+            $skipCover = !$needsCover || ($isPreview && $userId === null);
             try {
                 $art = $skipCover ? null : new YandexArtService();
                 if ($art && $art->isEnabled()) {

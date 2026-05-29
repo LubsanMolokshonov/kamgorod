@@ -41,6 +41,11 @@ if ($userId) {
 $csrfToken = generateCSRFToken();
 $cost = (int)$type['token_cost_default'];
 
+// Реальный формат скачиваемого файла (для копий в интерфейсе вместо хардкода «PDF»)
+$formatLabels = ['pdf' => 'PDF', 'docx' => 'Word (DOCX)', 'pptx' => 'PowerPoint (PPTX)'];
+$outFormat = strtolower((string)($type['output_format'] ?? 'pdf'));
+$formatLabel = $formatLabels[$outFormat] ?? strtoupper($outFormat);
+
 // Преимущества под конкретный тип — релевантность лендинга рекламному объявлению
 $typeBenefits = [
     'tehkarta-uroka'   => ['Структура строго по ФГОС: цели, УУД, этапы', 'Готовая таблица — копируйте в свой план', 'Учёт особенностей класса и ОВЗ'],
@@ -67,12 +72,26 @@ $fieldsConfig = [
     'questions_count' => ['label' => 'Количество вопросов',               'placeholder' => '10', 'type' => 'number', 'required' => false],
     'slides_count'    => ['label' => 'Количество слайдов',                'placeholder' => '12', 'type' => 'number', 'required' => false],
     'hours'           => ['label' => 'Количество часов',                  'placeholder' => '4', 'type' => 'number', 'required' => false],
+    'test_mode'       => [
+        'label' => 'Критерии теста', 'type' => 'select', 'required' => false,
+        'options' => [
+            'один правильный ответ в каждом вопросе'        => 'Один правильный ответ',
+            'допускаются вопросы с несколькими правильными ответами' => 'Возможны несколько правильных ответов',
+            'смешанный: тест + открытые вопросы'            => 'Смешанный (тест + открытые вопросы)',
+        ],
+    ],
     'program'         => [
         'label' => 'Программа', 'type' => 'select', 'required' => false,
+        // data-stages: на каких ступенях уместна программа — для фильтрации по классу
         'options' => [
-            '' => '— любая —', 'ФОП ДО' => 'ФОП ДО', 'ФОП НОО' => 'ФОП НОО',
-            'ФОП ООО' => 'ФОП ООО', 'ФОП СОО' => 'ФОП СОО', 'ФАОП (ОВЗ)' => 'ФАОП (ОВЗ)',
-            'ФГОС 2021' => 'ФГОС 2021', 'ФГОС 2026' => 'ФГОС 2026',
+            ''           => ['label' => '— любая —',      'stages' => 'do,noo,ooo,soo'],
+            'ФОП ДО'     => ['label' => 'ФОП ДО',         'stages' => 'do'],
+            'ФОП НОО'    => ['label' => 'ФОП НОО',        'stages' => 'noo'],
+            'ФОП ООО'    => ['label' => 'ФОП ООО',        'stages' => 'ooo'],
+            'ФОП СОО'    => ['label' => 'ФОП СОО',        'stages' => 'soo'],
+            'ФАОП (ОВЗ)' => ['label' => 'ФАОП (ОВЗ)',     'stages' => 'do,noo,ooo,soo'],
+            'ФГОС 2021'  => ['label' => 'ФГОС 2021',      'stages' => 'noo,ooo,soo'],
+            'ФГОС 2026'  => ['label' => 'ФГОС 2026',      'stages' => 'noo,ooo,soo'],
         ],
     ],
 ];
@@ -124,7 +143,7 @@ $presets = [
   <div class="rd-wrap mat-form-wrap">
       <div class="mat-notice">
         <strong>Генерация бесплатна.</strong> Заполните поля → получите готовый материал.
-        Скачивание чистого файла (PDF) — <strong><?= $cost ?> токенов</strong>.
+        Скачивание чистого файла (<?= htmlspecialchars($formatLabel, ENT_QUOTES, 'UTF-8') ?>) — <strong><?= $cost ?> токенов</strong>.
         <?php if ($userId): ?>
           Ваш баланс: <strong><?= number_format((int)$balance, 0, '', ' ') ?></strong> токенов.
         <?php else: ?>
@@ -154,9 +173,14 @@ $presets = [
                         placeholder="<?= htmlspecialchars($cfg['placeholder'], ENT_QUOTES, 'UTF-8') ?>"
                         rows="3" <?= !empty($cfg['required']) ? 'required' : '' ?>></textarea>
             <?php elseif (($cfg['type'] ?? '') === 'select'): ?>
-              <select name="<?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>">
-                <?php foreach (($cfg['options'] ?? []) as $val => $label): ?>
-                  <option value="<?= htmlspecialchars($val, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></option>
+              <select name="<?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>"<?= $name === 'program' ? ' data-program-select' : '' ?>>
+                <?php foreach (($cfg['options'] ?? []) as $val => $opt): ?>
+                  <?php
+                    // Опция может быть строкой (label) или массивом ['label'=>..,'stages'=>..]
+                    $optLabel  = is_array($opt) ? ($opt['label'] ?? $val) : $opt;
+                    $optStages = is_array($opt) ? ($opt['stages'] ?? '') : '';
+                  ?>
+                  <option value="<?= htmlspecialchars($val, ENT_QUOTES, 'UTF-8') ?>"<?= $optStages !== '' ? ' data-stages="' . htmlspecialchars($optStages, ENT_QUOTES, 'UTF-8') . '"' : '' ?>><?= htmlspecialchars($optLabel, ENT_QUOTES, 'UTF-8') ?></option>
                 <?php endforeach; ?>
               </select>
             <?php else: ?>
@@ -189,6 +213,41 @@ $presets = [
           var submitBtn = document.getElementById('generator-submit');
           var presets = <?= json_encode($presets, JSON_UNESCAPED_UNICODE) ?>;
 
+          // Фильтр программ по выбранному классу: для 5 класса не показываем ФОП ДО/НОО и т.п.
+          var classInput = form.querySelector('[name="class"]');
+          var programSelect = form.querySelector('[data-program-select]');
+          function stageFromClass(text) {
+              if (!text) return null;
+              var t = text.toLowerCase();
+              if (/(детс|дошкол|сад|младш|средн|старш|подготов|ясел|групп)/.test(t)) return 'do';
+              var m = t.match(/(\d+)/);
+              if (!m) return null;
+              var n = parseInt(m[1], 10);
+              if (n >= 1 && n <= 4) return 'noo';
+              if (n >= 5 && n <= 9) return 'ooo';
+              if (n >= 10 && n <= 11) return 'soo';
+              return null;
+          }
+          function filterPrograms() {
+              if (!programSelect || !classInput) return;
+              var stage = stageFromClass(classInput.value);
+              Array.prototype.forEach.call(programSelect.options, function (opt) {
+                  var stages = opt.getAttribute('data-stages');
+                  // Без stage-метки или без выбранного класса — показываем всё.
+                  var show = !stage || !stages || stages.split(',').indexOf(stage) !== -1;
+                  opt.hidden = !show;
+                  opt.disabled = !show;
+              });
+              // Если текущий выбор скрылся — сбрасываем на «— любая —»
+              if (programSelect.selectedOptions[0] && programSelect.selectedOptions[0].hidden) {
+                  programSelect.value = '';
+              }
+          }
+          if (classInput && programSelect) {
+              classInput.addEventListener('input', filterPrograms);
+              filterPrograms();
+          }
+
           // Пресеты — заполняют существующие поля формы
           document.querySelectorAll('.mat-preset').forEach(function (btn) {
               btn.addEventListener('click', function () {
@@ -197,6 +256,7 @@ $presets = [
                       var el = form.querySelector('[name="' + f + '"]');
                       if (el && p[f]) el.value = p[f];
                   });
+                  filterPrograms();
               });
           });
 

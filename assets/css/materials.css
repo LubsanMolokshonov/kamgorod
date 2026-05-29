@@ -334,6 +334,13 @@
 }
 .mat-detail-desc { font: 400 16px/1.65 var(--font-text, var(--font-sans)); color: var(--ink-700, #3a3f5c); }
 .mat-detail-content { margin: 24px 0; padding: 22px; background: var(--ink-50); border-radius: var(--r-md, 14px); line-height: 1.65; }
+/* Элементы рабочего листа/теста: место под письмо, рамка для рисунка, сопоставление */
+.mat-detail-content .md-writelines { margin: 8px 0 4px; }
+.mat-detail-content .md-writeline { border-bottom: 1px solid var(--ink-200, #d7dbe8); height: 26px; }
+.mat-detail-content .md-drawbox { border: 1px dashed var(--ink-300, #b6bccd); border-radius: 8px; min-height: 160px; margin: 8px 0; display: flex; align-items: center; justify-content: center; color: var(--ink-400, #8b90a8); font-size: 14px; }
+.mat-detail-content .md-match td { border: none; padding: 6px 12px; }
+.mat-detail-content .md-tasks > li, .mat-detail-content .md-questions > li { margin-bottom: 16px; }
+.mat-detail-content .md-answerkey { color: var(--ink-700, #3a4255); }
 .mat-download {
   margin: 32px 0; padding: 28px; text-align: center;
   background: linear-gradient(135deg, var(--indigo-700, #1a2f8a), var(--indigo-900, #0b1750));

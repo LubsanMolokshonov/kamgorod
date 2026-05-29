@@ -34,6 +34,7 @@ class Material
             'ai_model_used' => $data['ai_model_used'] ?? null,
             'ai_prompt' => $data['ai_prompt'] ?? null,
             'ai_params_json' => isset($data['ai_params']) ? json_encode($data['ai_params'], JSON_UNESCAPED_UNICODE) : null,
+            'ai_output_json' => isset($data['ai_output']) ? json_encode($data['ai_output'], JSON_UNESCAPED_UNICODE) : null,
             'program_compliance' => $data['program_compliance'] ?? null,
             'token_cost' => $data['token_cost'] ?? 0,
             'is_unlocked' => array_key_exists('is_unlocked', $data) ? (int)(bool)$data['is_unlocked'] : 1,

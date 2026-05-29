@@ -87,14 +87,55 @@ if (empty($material['content'])) {
     exit;
 }
 
-$materialObj->incrementDownloads($materialId);
-
 $safeName = preg_replace('/[^\w\-.]+/u', '_', (string)$material['title']);
 $safeName = mb_substr($safeName, 0, 100);
 
-// Скачивание всегда отдаём как PDF, свёрстанный 1-в-1 со страницей материала
-// (обложка + оформление). Генерируется на лету из актуального content, поэтому
-// всегда совпадает с тем, что видно на /material/{slug}/.
+// Формат скачивания определяется типом материала (output_format):
+//   - презентация → .pptx, техкарта/конспект/тест/КТП/классный час → .docx, рабочий лист → .pdf.
+// DOCX/PPTX рендерим из сырого JSON ответа ИИ (ai_output_json). Если его нет
+// (старые материалы) — деградируем до PDF из content.
+$format = strtolower((string)($material['type_format'] ?? $material['file_format'] ?? 'pdf'));
+$aiOutput = !empty($material['ai_output_json'])
+    ? json_decode((string)$material['ai_output_json'], true)
+    : null;
+if (!empty($material['ai_output_json']) && $aiOutput === null) {
+    error_log('material-download: invalid ai_output_json for material=' . $materialId);
+}
+
+if (in_array($format, ['docx', 'pptx'], true) && is_array($aiOutput) && !empty($aiOutput)) {
+    require_once __DIR__ . '/../classes/renderers/DocxRenderer.php';
+    require_once __DIR__ . '/../classes/renderers/PptxRenderer.php';
+    // Рендерим во ВРЕМЕННУЮ директорию: файл собирается на лету из ai_output_json,
+    // отдаётся и удаляется. Постоянное хранилище uploads/ не засоряем.
+    $tmpDir = sys_get_temp_dir() . '/mat-dl';
+    try {
+        $renderer = $format === 'pptx' ? new PptxRenderer($tmpDir) : new DocxRenderer($tmpDir);
+        $result = $renderer->render($aiOutput, (string)$material['title'], (string)$material['slug']);
+        $absPath = $result['file_abs'] ?? (dirname(__DIR__) . '/' . ltrim($result['file_path'], '/'));
+        if (!is_file($absPath)) {
+            throw new RuntimeException('Файл не создан: ' . $absPath);
+        }
+        $mime = $format === 'pptx'
+            ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        $materialObj->incrementDownloads($materialId);
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: attachment; filename="' . $safeName . '.' . $format . '"');
+        header('Content-Length: ' . (filesize($absPath) ?: 0));
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: private, no-store');
+        readfile($absPath);
+        @unlink($absPath); // временный файл — отдали и удалили
+        exit;
+    } catch (Throwable $e) {
+        error_log('material-download: ' . $format . ' render failed for material=' . $materialId . ', fallback to PDF: ' . $e->getMessage());
+        // деградация до PDF ниже
+    }
+}
+
+// PDF — свёрстанный 1-в-1 со страницей материала (обложка + оформление),
+// генерируется на лету из актуального content. Используется для рабочего листа
+// и как fallback, если DOCX/PPTX не удалось собрать.
 
 // Метки соответствия программам — те же, что и на детальной странице
 $programLabels = [
@@ -125,6 +166,14 @@ if (!empty($material['preview_image_url'])) {
 }
 
 require_once __DIR__ . '/../classes/renderers/PdfRenderer.php';
+require_once __DIR__ . '/../classes/renderers/MaterialHtmlRenderer.php';
+
+// Скачиваемый файл — версия для учителя: добавляем «Ключи для учителя», даже если
+// на странице (бланк ученика) они скрыты. Для этого пересобираем content из ai_output.
+if (is_array($aiOutput) && !empty($aiOutput)
+    && (!empty($aiOutput['answer_key']) || !empty($aiOutput['questions']))) {
+    $material['content'] = (new MaterialHtmlRenderer())->render($aiOutput, true);
+}
 
 try {
     $pdfBytes = (new PdfRenderer())->renderPageStyle($material, $programs, $previewAbsPath);
@@ -137,6 +186,7 @@ try {
 
 $downloadName = $safeName . '.pdf';
 
+$materialObj->incrementDownloads($materialId);
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="' . $downloadName . '"');
 header('Content-Length: ' . strlen($pdfBytes));

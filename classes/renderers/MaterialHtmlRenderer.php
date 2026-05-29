@@ -29,7 +29,13 @@
 
 class MaterialHtmlRenderer
 {
-    public function render(array $data): string
+    /**
+     * @param array $data        структурированный ответ ИИ
+     * @param bool  $withAnswers показывать ли ключи/правильные ответы (версия учителя).
+     *                           Для бланка ученика — false: вопросы без отметок,
+     *                           ключи в отдельный раздел «Ключи для учителя» в конце.
+     */
+    public function render(array $data, bool $withAnswers = true): string
     {
         $html = '';
 
@@ -93,13 +99,21 @@ class MaterialHtmlRenderer
         if (!empty($data['tasks']) && is_array($data['tasks'])) {
             $html .= '<h2>Задания</h2>' . $this->renderTasks($data['tasks']);
         }
-        if (!empty($data['answer_key']) && is_array($data['answer_key'])) {
-            $html .= '<h2>Ключи к заданиям</h2>' . $this->renderAnswerKey($data['answer_key']);
-        }
 
-        // Тестовые вопросы
+        // Тестовые вопросы (бланк ученика — без отметок правильных ответов)
         if (!empty($data['questions']) && is_array($data['questions'])) {
             $html .= '<h2>Вопросы</h2>' . $this->renderQuestions($data['questions']);
+        }
+
+        // Ключи и правильные ответы — отдельным разделом в конце (только для версии учителя).
+        // Это позволяет отрезать страницу при выдаче бланка ученику.
+        if ($withAnswers) {
+            $answerKey = $this->buildAnswerKey($data);
+            if ($answerKey !== '') {
+                $html .= '<h2>Ключи для учителя</h2>'
+                      . '<p><em>Этот раздел не печатайте ученику.</em></p>'
+                      . $answerKey;
+            }
         }
 
         // Презентация — слайды (PPTX рендерится отдельно, тут текстовое превью)
@@ -182,58 +196,161 @@ class MaterialHtmlRenderer
         return $html;
     }
 
+    /**
+     * Задания рабочего листа. Тип задания НЕ подписываем (он виден из формулировки),
+     * готовых ответов не показываем (это бланк ученика), а под типы write/draw/match
+     * рисуем место для работы.
+     */
     private function renderTasks(array $tasks): string
     {
-        $html = '<ol>';
+        $html = '<ol class="md-tasks">';
         foreach ($tasks as $t) {
+            $type = strtolower(trim((string)($t['type'] ?? '')));
             $html .= '<li>';
             if (!empty($t['instruction'])) {
                 $html .= '<strong>' . $this->esc($t['instruction']) . '</strong>';
             }
-            if (!empty($t['content'])) {
-                $html .= '<div>' . nl2br($this->esc($t['content'])) . '</div>';
-            }
-            if (!empty($t['type'])) {
-                $html .= '<div style="color:#888; font-size:smaller;">тип: '
-                      . $this->esc($t['type']) . '</div>';
-            }
+            $html .= $this->renderTaskBody($type, $t['content'] ?? null);
             $html .= '</li>';
         }
         return $html . '</ol>';
     }
 
-    private function renderAnswerKey(array $keys): string
+    /**
+     * Тело задания в зависимости от типа: сопоставление — два столбца,
+     * письменный ответ — линии, рисунок — рамка, остальное — текст с пропусками.
+     */
+    private function renderTaskBody(string $type, $content): string
     {
-        $html = '<ol>';
-        foreach ($keys as $k) {
-            $html .= '<li>' . $this->esc((string)($k['answer'] ?? '')) . '</li>';
+        if ($type === 'match') {
+            return $this->renderMatch($content);
         }
-        return $html . '</ol>';
+        if ($type === 'write') {
+            // Несколько линий для письменного ответа
+            return '<div class="md-writelines">'
+                 . str_repeat('<div class="md-writeline"></div>', 4)
+                 . '</div>';
+        }
+        if ($type === 'draw') {
+            return '<div class="md-drawbox"><span>Место для рисунка</span></div>';
+        }
+        // fill / choose / прочее — выводим текст задания (с пропусками "____")
+        if (is_string($content) && $content !== '') {
+            return '<div class="md-taskcontent">' . nl2br($this->esc($content)) . '</div>';
+        }
+        return '';
     }
 
+    /**
+     * Сопоставление: левый столбец (буквы) и правый (цифры), соединять линиями.
+     * content = {left:[...], right:[...]} или (на всякий) массив пар.
+     */
+    private function renderMatch($content): string
+    {
+        $left = [];
+        $right = [];
+        if (is_array($content)) {
+            $left  = array_values((array)($content['left'] ?? []));
+            $right = array_values((array)($content['right'] ?? []));
+        }
+        if (empty($left) && empty($right)) {
+            return '';
+        }
+        $rows = max(count($left), count($right));
+        $html = '<table class="md-match" style="width:100%; border-collapse:collapse; margin:6px 0;">';
+        for ($i = 0; $i < $rows; $i++) {
+            $l = isset($left[$i]) ? ($this->letter($i) . ') ' . $this->esc((string)$left[$i])) : '';
+            $r = isset($right[$i]) ? ($this->esc((string)($i + 1)) . ') ' . $this->esc((string)$right[$i])) : '';
+            $html .= '<tr>'
+                  . '<td style="padding:6px 12px; width:45%;">' . $l . '</td>'
+                  . '<td style="width:10%; text-align:center; color:#94a3b8;">—</td>'
+                  . '<td style="padding:6px 12px; width:45%;">' . $r . '</td>'
+                  . '</tr>';
+        }
+        return $html . '</table>';
+    }
+
+    /**
+     * Вопросы теста — бланк ученика: без отметок правильных ответов и пояснений.
+     * Для open-вопроса (без вариантов) добавляем линии под ответ.
+     */
     private function renderQuestions(array $questions): string
     {
-        $html = '<ol>';
+        $html = '<ol class="md-questions">';
         foreach ($questions as $q) {
+            $type = strtolower(trim((string)($q['type'] ?? '')));
             $html .= '<li>';
             $html .= '<div>' . $this->esc($q['text'] ?? '') . '</div>';
             if (!empty($q['options']) && is_array($q['options'])) {
-                $html .= '<ul>';
+                $marker = ($type === 'multiple') ? '☐' : '○';
+                $html .= '<ul style="list-style:none; padding-left:4px;">';
                 foreach ($q['options'] as $idx => $opt) {
-                    $letter = chr(65 + $idx);
-                    $isCorrect = in_array($idx, (array)($q['correct'] ?? []), true);
-                    $html .= '<li>' . $letter . ') ' . $this->esc((string)$opt)
-                          . ($isCorrect ? ' <strong>[верно]</strong>' : '') . '</li>';
+                    $html .= '<li>' . $marker . ' ' . $this->letter((int)$idx) . ') ' . $this->esc((string)$opt) . '</li>';
                 }
                 $html .= '</ul>';
-            }
-            if (!empty($q['explanation'])) {
-                $html .= '<div style="color:#555; font-size:smaller;"><em>Пояснение:</em> '
-                      . $this->esc($q['explanation']) . '</div>';
+            } elseif ($type === 'open') {
+                $html .= '<div class="md-writelines">'
+                       . str_repeat('<div class="md-writeline"></div>', 3)
+                       . '</div>';
             }
             $html .= '</li>';
         }
         return $html . '</ol>';
+    }
+
+    /**
+     * Собирает раздел «Ключи для учителя» из answer_key и/или правильных ответов вопросов.
+     */
+    private function buildAnswerKey(array $data): string
+    {
+        $items = [];
+
+        // Ключи рабочего листа
+        if (!empty($data['answer_key']) && is_array($data['answer_key'])) {
+            foreach ($data['answer_key'] as $k) {
+                $num = $k['number'] ?? null;
+                $ans = trim((string)($k['answer'] ?? ''));
+                $expl = trim((string)($k['explanation'] ?? ''));
+                if ($ans === '' && $expl === '' && !isset($k['correct'])) {
+                    continue;
+                }
+                $line = ($num !== null ? $this->esc((string)$num) . '. ' : '');
+                if (isset($k['correct'])) {
+                    $line .= $this->correctLetters($k['correct']);
+                }
+                if ($ans !== '') {
+                    $line .= ($line !== '' && !str_ends_with($line, ' ') ? ' — ' : '') . $this->esc($ans);
+                }
+                if ($expl !== '') {
+                    $line .= ' <span style="color:#555;">(' . $this->esc($expl) . ')</span>';
+                }
+                $items[] = $line;
+            }
+        }
+
+        if (empty($items)) {
+            return '';
+        }
+        return '<ol class="md-answerkey">'
+             . implode('', array_map(fn($l) => '<li>' . $l . '</li>', $items))
+             . '</ol>';
+    }
+
+    /**
+     * Переводит индексы правильных вариантов в буквы (0→A, 1→B…).
+     */
+    private function correctLetters($correct): string
+    {
+        $letters = array_map(fn($i) => $this->letter((int)$i), (array)$correct);
+        return 'Верно: ' . $this->esc(implode(', ', $letters));
+    }
+
+    /**
+     * Индекс → буква варианта (0→A … 25→Z), с защитой от выхода за диапазон.
+     */
+    private function letter(int $i): string
+    {
+        return ($i >= 0 && $i < 26) ? chr(65 + $i) : (string)($i + 1);
     }
 
     private function renderSlides(array $slides): string

@@ -59,8 +59,14 @@ if ($typeSlug === '') {
 // Параметры формы — пропускаем только текстовые поля, известные шаблонам
 $allowedParamKeys = [
     'subject', 'class', 'topic', 'duration', 'features',
-    'program', 'questions_count', 'slides_count', 'hours',
+    'program', 'questions_count', 'slides_count', 'hours', 'test_mode',
     'audience_category_ids', 'audience_type_ids', 'specialization_ids',
+];
+// test_mode уходит в промпт ИИ — допускаем только известные значения (анти-инъекция).
+$allowedTestModes = [
+    'один правильный ответ в каждом вопросе',
+    'допускаются вопросы с несколькими правильными ответами',
+    'смешанный: тест + открытые вопросы',
 ];
 $params = [];
 foreach ($allowedParamKeys as $key) {
@@ -73,6 +79,10 @@ foreach ($allowedParamKeys as $key) {
             $params[$key] = $value;
         }
     }
+}
+// Жёсткий whitelist для test_mode: чужое значение → дефолт (один правильный ответ).
+if (isset($params['test_mode']) && !in_array($params['test_mode'], $allowedTestModes, true)) {
+    $params['test_mode'] = $allowedTestModes[0];
 }
 
 // Лимит бесплатных превью-генераций (защита от слива денег на ИИ)

@@ -76,6 +76,11 @@ if (!empty($material['program_compliance'])) {
     }
 }
 
+// Реальный формат скачивания (для копий вместо хардкода «PDF»)
+$formatLabels = ['pdf' => 'PDF', 'docx' => 'Word (DOCX)', 'pptx' => 'PowerPoint (PPTX)'];
+$dlFormat = strtolower((string)($material['type_format'] ?? $material['file_format'] ?? 'pdf'));
+$dlFormatLabel = $formatLabels[$dlFormat] ?? strtoupper($dlFormat);
+
 // schema.org LearningResource — для AI Overviews/SGE и обычной поисковой выдачи
 $schema = [
     '@context' => 'https://schema.org',
@@ -156,7 +161,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           <div class="mat-notice" style="background:#e7f5e7;border-color:#a7d8a7;margin-bottom:16px;">Оплата принята — нажмите «Скачать». Если токены ещё не зачислились, обновите страницу через минуту.</div>
         <?php endif; ?>
         <h3 style="margin:0 0 8px;">Материал готов 🎉</h3>
-        <p style="margin:0 0 16px; color:#475569;">Скачайте полную версию (PDF) — оформлено, с титулом и обложкой.</p>
+        <p style="margin:0 0 16px; color:#475569;">Скачайте полную версию (<?= htmlspecialchars($dlFormatLabel, ENT_QUOTES, 'UTF-8') ?>) — готово к печати и редактированию.</p>
         <button type="button" id="unlock-btn" class="rd-btn rd-btn-primary" data-material="<?= (int)$material['id'] ?>">
           Скачать за <?= $unlockCost ?> токенов
         </button>
@@ -265,7 +270,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           <?php endif; ?>
         </div>
         <a href="/material-download.php?id=<?= (int)$material['id'] ?>" class="rd-btn rd-btn-primary" style="background:#fff;color:var(--indigo-700,#1a2f8a);">
-          Скачать (PDF)
+          Скачать (<?= htmlspecialchars($dlFormatLabel, ENT_QUOTES, 'UTF-8') ?>)
         </a>
       </div>
     <?php endif; ?>
