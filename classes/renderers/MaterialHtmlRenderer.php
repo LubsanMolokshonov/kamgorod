@@ -202,15 +202,54 @@ class MaterialHtmlRenderer
         }
 
         if (!empty($data['homework'])) {
-            $html .= '<h2>Домашнее задание</h2><p>'
-                  . nl2br($this->esc($this->stringifyAnswer($data['homework']))) . '</p>';
+            $html .= '<h2>Домашнее задание</h2>' . $this->renderHomework($data['homework']);
         }
         if (!empty($data['reflection'])) {
             $html .= '<h2>Рефлексия</h2><p>'
                   . nl2br($this->esc($this->stringifyAnswer($data['reflection']))) . '</p>';
         }
 
+        // Встроенный рабочий лист ученика (review-модель иногда добавляет его к конспекту) —
+        // выводим приложением, чтобы материал не терялся.
+        if (!empty($data['student_worksheet']) && is_array($data['student_worksheet'])) {
+            $sw = $data['student_worksheet'];
+            $html .= '<h2>' . $this->esc($sw['title'] ?? 'Рабочий лист ученика') . '</h2>';
+            if (!empty($sw['tasks']) && is_array($sw['tasks'])) {
+                $html .= $this->renderTasks($sw['tasks']);
+            }
+        }
+
         return $html;
+    }
+
+    /**
+     * Домашнее задание: строка, список или дифференцированный объект
+     * ({base_level, advanced_level} и т.п.) — выводим читаемо с подписями уровней.
+     */
+    private function renderHomework($hw): string
+    {
+        if (is_array($hw)) {
+            $labels = [
+                'base_level'     => 'Базовый уровень',
+                'base'           => 'Базовый уровень',
+                'advanced_level' => 'Повышенный уровень',
+                'advanced'       => 'Повышенный уровень',
+                'creative'       => 'Творческое (по желанию)',
+            ];
+            // Ассоциативный объект уровней?
+            $isAssoc = array_keys($hw) !== range(0, count($hw) - 1);
+            if ($isAssoc) {
+                $rows = [];
+                foreach ($hw as $k => $v) {
+                    $label = $labels[$k] ?? ucfirst((string)$k);
+                    $rows[] = '<strong>' . $this->esc($label) . ':</strong> '
+                            . nl2br($this->esc($this->stringifyAnswer($v)));
+                }
+                return '<p>' . implode('<br>', $rows) . '</p>';
+            }
+            return $this->renderList($hw);
+        }
+        return '<p>' . nl2br($this->esc($this->stringifyAnswer($hw))) . '</p>';
     }
 
     /**
@@ -317,10 +356,9 @@ class MaterialHtmlRenderer
         $html = '<ol class="md-tasks">';
         foreach ($tasks as $t) {
             $type = strtolower(trim((string)($t['type'] ?? '')));
-            $level = strtolower(trim((string)($t['level'] ?? '')));
             $html .= '<li>';
             // Пометка повышенного уровня — «звёздочное» задание для сильных учеников
-            $badge = ($level === 'advanced')
+            $badge = $this->isAdvanced($t['level'] ?? '')
                 ? '<span class="md-level md-level-adv" title="Задание повышенного уровня">★</span> '
                 : '';
             if (!empty($t['instruction'])) {
@@ -434,7 +472,7 @@ class MaterialHtmlRenderer
                        . '<ol class="md-questions" start="' . $n . '">';
                 $currentBlock = $block;
             }
-            $star = (strtolower(trim((string)($q['level'] ?? ''))) === 'advanced')
+            $star = $this->isAdvanced($q['level'] ?? '')
                 ? ' <span class="md-level md-level-adv" title="Повышенный уровень">★</span>'
                 : '';
             $html .= '<li value="' . $n . '">';
@@ -606,6 +644,16 @@ class MaterialHtmlRenderer
                   . '</tr>';
         }
         return $html . '</tbody></table>';
+    }
+
+    /**
+     * Признак задания/вопроса повышенного уровня. Терпим к вариантам, которые
+     * иногда возвращает ИИ: advanced / increased / повышенный / high.
+     */
+    private function isAdvanced($level): bool
+    {
+        $l = mb_strtolower(trim((string)$level));
+        return in_array($l, ['advanced', 'increased', 'повышенный', 'high', 'продвинутый'], true);
     }
 
     private function esc($value): string
