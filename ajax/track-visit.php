@@ -66,6 +66,7 @@ try {
     $utmCampaign = mb_substr(trim($_POST['utm_campaign'] ?? ''), 0, 255) ?: null;
     $utmContent = mb_substr(trim($_POST['utm_content'] ?? ''), 0, 255) ?: null;
     $utmTerm = mb_substr(trim($_POST['utm_term'] ?? ''), 0, 255) ?: null;
+    $yclid = mb_substr(trim($_POST['yclid'] ?? ''), 0, 255) ?: null;
     $firstPageUrl = mb_substr(trim($_POST['first_page_url'] ?? ''), 0, 2048) ?: null;
     $referrer = mb_substr(trim($_POST['referrer'] ?? ''), 0, 2048) ?: null;
     $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
@@ -81,6 +82,7 @@ try {
         'utm_campaign' => $utmCampaign,
         'utm_content' => $utmContent,
         'utm_term' => $utmTerm,
+        'yclid' => $yclid,
         'first_page_url' => $firstPageUrl,
         'referrer' => $referrer,
         'user_agent' => mb_substr($userAgent, 0, 512),

@@ -11,6 +11,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Validator.php';
 require_once __DIR__ . '/../classes/Bitrix24Integration.php';
+require_once __DIR__ . '/../includes/utm-attribution.php';
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -30,16 +31,19 @@ try {
     $courseId = !empty($_POST['course_id']) ? intval($_POST['course_id']) : null;
     $courseTitle = !empty($_POST['course_title']) ? mb_substr(trim($_POST['course_title']), 0, 500) : null;
 
-    // UTM-метки, Яндекс.Метрика, страница-источник
-    $utmSource = trim($_POST['utm_source'] ?? '');
-    $utmMedium = trim($_POST['utm_medium'] ?? '');
-    $utmCampaign = trim($_POST['utm_campaign'] ?? '');
-    $utmContent = trim($_POST['utm_content'] ?? '');
-    $utmTerm = trim($_POST['utm_term'] ?? '');
+    $dbObj = new Database($db);
+
+    // UTM-метки: с формы, иначе восстанавливаем из визита по visit_id/ym_uid/cookie
+    $utm = resolveLeadUtm($dbObj, $_POST, $_COOKIE);
+    $utmSource = $utm['utm_source'] ?? '';
+    $utmMedium = $utm['utm_medium'] ?? '';
+    $utmCampaign = $utm['utm_campaign'] ?? '';
+    $utmContent = $utm['utm_content'] ?? '';
+    $utmTerm = $utm['utm_term'] ?? '';
     $ymUid = trim($_POST['ym_uid'] ?? '');
     $sourcePage = trim($_POST['source_page'] ?? '');
-
-    $dbObj = new Database($db);
+    $visitId = intval($_POST['visit_id'] ?? 0) ?: null;
+    $yclid = mb_substr(trim($_POST['yclid'] ?? ''), 0, 255);
 
     // Сохраняем заявку
     $consultationData = [
@@ -55,6 +59,8 @@ try {
     if ($utmTerm) $consultationData['utm_term'] = $utmTerm;
     if ($ymUid) $consultationData['ym_uid'] = $ymUid;
     if ($sourcePage) $consultationData['source_page'] = $sourcePage;
+    if ($visitId) $consultationData['visit_id'] = $visitId;
+    if ($yclid) $consultationData['yclid'] = $yclid;
 
     $consultationId = $dbObj->insert('course_consultations', $consultationData);
 

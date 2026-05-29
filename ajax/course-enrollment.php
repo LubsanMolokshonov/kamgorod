@@ -15,6 +15,7 @@ require_once __DIR__ . '/../classes/Bitrix24Integration.php';
 require_once __DIR__ . '/../classes/Validator.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/utm-attribution.php';
 
 try {
     // Only accept POST requests
@@ -40,14 +41,19 @@ try {
     $email = $data['email'];
     $phone = $data['phone'];
 
-    // UTM-метки, Яндекс.Метрика, страница-источник
-    $utmSource = trim($_POST['utm_source'] ?? '');
-    $utmMedium = trim($_POST['utm_medium'] ?? '');
-    $utmCampaign = trim($_POST['utm_campaign'] ?? '');
-    $utmContent = trim($_POST['utm_content'] ?? '');
-    $utmTerm = trim($_POST['utm_term'] ?? '');
+    // UTM-метки: с формы, иначе восстанавливаем из визита по visit_id/ym_uid/cookie
+    // (иначе прямой/органический/вернувшийся трафик падает в «без источника»).
+    $dbObj = new Database($db);
+    $utm = resolveLeadUtm($dbObj, $_POST, $_COOKIE);
+    $utmSource = $utm['utm_source'] ?? '';
+    $utmMedium = $utm['utm_medium'] ?? '';
+    $utmCampaign = $utm['utm_campaign'] ?? '';
+    $utmContent = $utm['utm_content'] ?? '';
+    $utmTerm = $utm['utm_term'] ?? '';
     $ymUid = trim($_POST['ym_uid'] ?? '');
     $sourcePage = trim($_POST['source_page'] ?? '');
+    $visitId = intval($_POST['visit_id'] ?? 0) ?: null;
+    $yclid = mb_substr(trim($_POST['yclid'] ?? ''), 0, 255);
 
     if (!$courseId) {
         throw new Exception('Курс не указан');
@@ -88,8 +94,7 @@ try {
     $enrollLock = 'course_enroll:' . $courseId . ':' . md5(mb_strtolower($email));
     $db->prepare("SELECT GET_LOCK(?, 10)")->execute([$enrollLock]);
 
-    // Check for duplicate enrollment
-    $dbObj = new Database($db);
+    // Check for duplicate enrollment ($dbObj создан выше при резолве UTM)
     $existing = $dbObj->queryOne(
         "SELECT id FROM course_enrollments WHERE course_id = ? AND email = ? AND status != 'cancelled'",
         [$courseId, $email]
@@ -139,6 +144,8 @@ try {
     if ($utmTerm) $enrollmentData['utm_term'] = $utmTerm;
     if ($ymUid) $enrollmentData['ym_uid'] = $ymUid;
     if ($sourcePage) $enrollmentData['source_page'] = $sourcePage;
+    if ($visitId) $enrollmentData['visit_id'] = $visitId;
+    if ($yclid) $enrollmentData['yclid'] = $yclid;
 
     // Ценообразование (фиксированная скидка / A/B-тест)
     $abVariant = CoursePriceAB::getVariant();

@@ -888,6 +888,8 @@ function appendTrackingData(formData) {
     });
     var visitId = sessionStorage.getItem('_fgos_visit_id');
     if (visitId) formData.append('visit_id', visitId);
+    var yclid = urlParams.get('yclid') || sessionStorage.getItem('_fgos_yclid');
+    if (yclid) formData.append('yclid', yclid);
     var ymUid = document.cookie.match(/_ym_uid=(\d+)/);
     if (ymUid) formData.append('ym_uid', ymUid[1]);
     formData.append('source_page', window.location.pathname);

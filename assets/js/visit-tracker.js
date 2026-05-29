@@ -9,6 +9,8 @@
     if (window.location.pathname.indexOf('/admin/') === 0) return;
 
     var utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+    // yclid (Яндекс.Директ Click ID) храним так же, как UTM — для сверки заявок с Директом
+    var clickKeys = ['yclid'];
 
     function setCookie(name, value, days) {
         var expires = new Date(Date.now() + days * 86400000).toUTCString();
@@ -26,18 +28,25 @@
     // запись на стороне браузера ничего не стоит, а у части реальных пользователей
     // UA подменяется на «бот-подобный» (headless-обёртки, антидетект-расширения).
     var urlParams = new URLSearchParams(window.location.search);
+    // UTM — first-click атрибуция, живёт 90 дней (cookie). yclid привязан к
+    // конкретному клику Директа, поэтому только sessionStorage (без cookie):
+    // иначе старый yclid из cookie ложно приклеится к заявке нового визита.
     utmKeys.forEach(function(key) {
         var val = urlParams.get(key);
         if (val) {
             sessionStorage.setItem('_fgos_' + key, val);
             setCookie('_fgos_' + key, val, 90);
         } else {
-            // Если UTM нет в URL, но есть в cookie (вернулся через сутки) — синхронизируем sessionStorage
+            // Если метки нет в URL, но есть в cookie (вернулся через сутки) — синхронизируем sessionStorage
             var cookieVal = getCookie('_fgos_' + key);
             if (cookieVal && !sessionStorage.getItem('_fgos_' + key)) {
                 sessionStorage.setItem('_fgos_' + key, cookieVal);
             }
         }
+    });
+    clickKeys.forEach(function(key) {
+        var val = urlParams.get(key);
+        if (val) sessionStorage.setItem('_fgos_' + key, val);
     });
 
     // Простая проверка на бота — для серверной записи визита
@@ -108,6 +117,10 @@
 
         utmKeys.forEach(function(key) {
             if (utm[key]) formData.append(key, utm[key]);
+        });
+        clickKeys.forEach(function(key) {
+            var v = sessionStorage.getItem('_fgos_' + key);
+            if (v) formData.append(key, v);
         });
 
         var xhr = new XMLHttpRequest();

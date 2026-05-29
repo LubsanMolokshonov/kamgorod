@@ -123,19 +123,40 @@ class UTMAnalytics
     /**
      * Источник «заявок по курсам» — UNION регистраций на курс и заявок на консультацию.
      * Используется как виртуальная таблица с алиасом ce.
+     *
+     * Тащим ym_uid: по нему восстанавливаем источник заявок без UTM
+     * (join на visits.session_id = CONCAT('ym_', ce.ym_uid) — см. ниже).
+     * Фильтр тестовых/мусорных заявок (testFilterSql) подставляется вызывающим кодом.
      */
     private const COURSE_LEADS_SOURCE = "(
-        SELECT utm_source, utm_medium, utm_campaign, utm_content, utm_term, created_at
+        SELECT utm_source, utm_medium, utm_campaign, utm_content, utm_term, ym_uid, email, created_at
           FROM course_enrollments
         UNION ALL
-        SELECT utm_source, utm_medium, utm_campaign, utm_content, utm_term, created_at
+        SELECT utm_source, utm_medium, utm_campaign, utm_content, utm_term, ym_uid, NULL AS email, created_at
           FROM course_consultations
     ) ce";
+
+    /**
+     * SQL-условие, отсеивающее тестовые/мусорные заявки по email.
+     * У консультаций email нет (NULL) — их не трогаем (NULL проходит).
+     * Записи в БД не удаляются, только не попадают в аналитику.
+     */
+    private function testLeadsFilterSql(string $alias = 'ce'): string
+    {
+        // Якоримся на явный мусор (^test@, клавиатурные наборы, фейк-домены),
+        // чтобы не отсечь реальных учителей (напр. tester@school.ru проходит).
+        return "({$alias}.email IS NULL OR (
+            {$alias}.email LIKE '%@%.%'
+            AND {$alias}.email NOT REGEXP '^(test|asdf|qwer|qwe|dsfsd|sdfsd|sdfsdf|ddfg)@'
+            AND {$alias}.email NOT REGEXP '@(dsfsd|sdfsd|sdfsdf|test)\\\\.'
+            AND {$alias}.email NOT IN ('lubsanmolokshonov@gmail.com', 'naya@gmail.com')
+        ))";
+    }
 
     private function queryCourseApplications(array $filters, array $groupColumns, array $parentUtm): array
     {
         $groupBy = implode(', ', array_map(fn($c) => str_replace('v.', 'ce.', $c), $groupColumns));
-        $where = ['ce.utm_source IS NOT NULL'];
+        $where = ['ce.utm_source IS NOT NULL', $this->testLeadsFilterSql('ce')];
         $params = [];
 
         $this->addDateFilter($where, $params, 'ce.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
@@ -154,12 +175,68 @@ class UTMAnalytics
         );
 
         $lastCol = str_replace('v.', 'ce.', end($groupColumns));
-        return $this->indexByKey($rows, $lastCol);
+        $result = $this->indexByKey($rows, $lastCol);
+
+        // На уровне source (без drill-down) доклеиваем заявки без UTM, у которых
+        // источник восстановлен по ym_uid → visits.utm_source. Так реклама Яндекса,
+        // потерявшая UTM на форме, попадает в строку 'yandex', а не в «без источника».
+        $isSourceLevel = (str_replace('v.', 'ce.', end($groupColumns)) === 'ce.utm_source');
+        if ($isSourceLevel && empty($parentUtm)) {
+            foreach ($this->recoverNoUtmAppsBySource($filters) as $src => $cnt) {
+                if (!isset($result[$src])) {
+                    $result[$src] = ['utm_source' => $src, 'course_applications' => 0];
+                }
+                $result[$src]['course_applications'] += $cnt;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Заявки без utm_source, у которых по ym_uid в visits нашёлся визит С utm_source.
+     * Возвращает [utm_source => count]. Используется для доклейки в source-строки отчёта.
+     * Только такие заявки (с восстановленным реальным источником) — заявки, где визит
+     * без UTM или не найден, остаются в «без UTM» разбивке (buildNoUtmBreakdown).
+     */
+    private function recoverNoUtmAppsBySource(array $filters): array
+    {
+        $where = ['ce.utm_source IS NULL', 'ce.ym_uid IS NOT NULL', $this->testLeadsFilterSql('ce')];
+        $params = [];
+        $this->addDateFilter($where, $params, 'ce.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
+        $whereSql = implode(' AND ', $where);
+        $source = self::COURSE_LEADS_SOURCE;
+
+        // Для каждой заявки берём самый ранний визит с utm_source по её ym_uid.
+        // JOIN (не LEFT) намеренный: заявки, у которых визита с utm_source нет,
+        // сюда не попадают — они остаются в no-UTM разбивке (по referrer-категории).
+        // НЕ менять на LEFT JOIN — иначе сломается дедупликация и сумма != total.
+        $rows = $this->db->query(
+            "SELECT rec.utm_source AS src, COUNT(*) AS cnt
+             FROM {$source}
+             JOIN LATERAL (
+                 SELECT v.utm_source
+                 FROM visits v
+                 WHERE v.session_id = CONCAT('ym_', ce.ym_uid)
+                   AND v.utm_source IS NOT NULL
+                 ORDER BY v.started_at
+                 LIMIT 1
+             ) rec
+             WHERE {$whereSql}
+             GROUP BY rec.utm_source",
+            $params
+        );
+
+        $out = [];
+        foreach ($rows as $r) {
+            $out[$r['src']] = (int)$r['cnt'];
+        }
+        return $out;
     }
 
     private function queryCourseApplicationsTotals(array $filters): array
     {
-        $where = ['1 = 1'];
+        $where = [$this->testLeadsFilterSql('ce')];
         $params = [];
         $this->addDateFilter($where, $params, 'ce.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
 
@@ -272,18 +349,52 @@ class UTMAnalytics
         ) ?: ['visits' => 0, 'avg_duration' => 0];
     }
 
-    private function queryCourseApplicationsNoUtm(array $filters): array
+    /**
+     * Заявки без UTM, разбитые по источнику из referrer визита (по ym_uid).
+     * Заявки, у которых источник восстановлен до реального utm_source, сюда НЕ
+     * попадают — они уже доклеены в source-строки (recoverNoUtmAppsBySource).
+     * Возвращает [категория-referrer => count] + строку-fallback для остального.
+     */
+    private function queryCourseApplicationsNoUtmByCategory(array $filters): array
     {
-        $where = ['ce.utm_source IS NULL'];
+        $where = ['ce.utm_source IS NULL', $this->testLeadsFilterSql('ce')];
         $params = [];
         $this->addDateFilter($where, $params, 'ce.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
         $whereSql = implode(' AND ', $where);
         $source = self::COURSE_LEADS_SOURCE;
+        $catSql = $this->referrerCategorySql('rec');
+        $fallback = self::NO_UTM_FALLBACK_LABEL;
 
-        return $this->db->queryOne(
-            "SELECT COUNT(*) as course_applications FROM {$source} WHERE {$whereSql}",
+        // Исключаем заявки, у которых ХОТЬ ОДИН визит по ym_uid имеет utm_source —
+        // они уже доклеены в source-строку (recoverNoUtmAppsBySource). Так гарантируем,
+        // что сумма по всем строкам = total и нет двойного учёта.
+        // rec — представительный визит для классификации по referrer (с непустым
+        // referrer в приоритете). Если визита нет вовсе — строка-fallback.
+        $rows = $this->db->query(
+            "SELECT COALESCE(rec.cat, '{$fallback}') AS cat, COUNT(*) AS course_applications
+             FROM {$source}
+             LEFT JOIN LATERAL (
+                 SELECT {$catSql} AS cat
+                 FROM visits v
+                 WHERE v.session_id = CONCAT('ym_', ce.ym_uid)
+                 ORDER BY (v.referrer IS NULL OR v.referrer = ''), v.started_at
+                 LIMIT 1
+             ) rec ON TRUE
+             WHERE {$whereSql}
+               AND NOT EXISTS (
+                   SELECT 1 FROM visits v2
+                   WHERE v2.session_id = CONCAT('ym_', ce.ym_uid)
+                     AND v2.utm_source IS NOT NULL
+               )
+             GROUP BY cat",
             $params
-        ) ?: ['course_applications' => 0];
+        );
+
+        $out = [];
+        foreach ($rows as $r) {
+            $out[$r['cat']] = (int)$r['course_applications'];
+        }
+        return $out;
     }
 
     private function queryOrdersNoUtm(array $filters): array
@@ -388,8 +499,9 @@ class UTMAnalytics
             array_merge($oParams, $paidParams, $paidParams)
         );
 
-        // 3. Заявки на курсы без UTM (referrer не хранится) — все в fallback-строку
-        $appsNoUtm = $this->queryCourseApplicationsNoUtm($filters);
+        // 3. Заявки на курсы без UTM — разбиты по категории referrer визита (по ym_uid).
+        // Заявки с восстановленным реальным utm_source сюда не входят (уже в source-строках).
+        $appsNoUtmByCat = $this->queryCourseApplicationsNoUtmByCategory($filters);
 
         // Мержим по категории
         $byCat = [];
@@ -402,7 +514,9 @@ class UTMAnalytics
             $byCat[$r['cat']]['paid_orders'] = (int)$r['paid_orders'];
             $byCat[$r['cat']]['revenue'] = (float)$r['revenue'];
         }
-        $byCat[$fallbackLabel]['course_applications'] = (int)($appsNoUtm['course_applications'] ?? 0);
+        foreach ($appsNoUtmByCat as $cat => $cnt) {
+            $byCat[$cat]['course_applications'] = $cnt;
+        }
 
         $rows = [];
         foreach ($byCat as $label => $m) {
