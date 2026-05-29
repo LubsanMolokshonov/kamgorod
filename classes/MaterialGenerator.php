@@ -122,6 +122,24 @@ class MaterialGenerator
                 throw new OpenRouterAIServiceException('ИИ вернул пустую структуру');
             }
 
+            // 4b. Методическая самопроверка (второй проход) — best-effort.
+            //     ИИ-методист сверяет результат с чек-листом ФГОС/ФОП и исправляет.
+            //     Не должна валить генерацию: при любой ошибке оставляем исходный JSON.
+            $selfCheckTokensIn = 0;
+            $selfCheckTokensOut = 0;
+            if (defined('MATERIAL_SELFCHECK_ENABLED') && MATERIAL_SELFCHECK_ENABLED) {
+                try {
+                    $checked = $this->selfCheck($type, $aiData, $params);
+                    if (!empty($checked['data'])) {
+                        $aiData = $checked['data'];
+                        $selfCheckTokensIn  = (int)($checked['tokens_in'] ?? 0);
+                        $selfCheckTokensOut = (int)($checked['tokens_out'] ?? 0);
+                    }
+                } catch (Throwable $scError) {
+                    error_log('MaterialGenerator: self-check failed (non-fatal): ' . $scError->getMessage());
+                }
+            }
+
             // 5. Заголовок и slug материала
             $title = (string)($aiData['title']
                 ?? ($params['topic'] ?? ($type['name'] . ' — материал')));
@@ -203,8 +221,8 @@ class MaterialGenerator
                 [
                     'status' => 'done',
                     'output_material_id' => $materialId,
-                    'ai_tokens_in' => $aiResponse['tokens_in'] ?? 0,
-                    'ai_tokens_out' => $aiResponse['tokens_out'] ?? 0,
+                    'ai_tokens_in' => ($aiResponse['tokens_in'] ?? 0) + $selfCheckTokensIn,
+                    'ai_tokens_out' => ($aiResponse['tokens_out'] ?? 0) + $selfCheckTokensOut,
                     'ai_model_used' => $aiResponse['model'] ?? null,
                     'finished_at' => date('Y-m-d H:i:s'),
                 ],
@@ -248,6 +266,69 @@ class MaterialGenerator
 
             throw $e;
         }
+    }
+
+    /**
+     * Методическая самопроверка: второй проход ИИ-методиста по чек-листу ФГОС/ФОП.
+     * На вход — сгенерированный JSON, на выход — исправленный JSON в той же структуре.
+     * Если правок не требуется, модель возвращает тот же объект. Возвращает массив
+     * вида ['data' => ..., 'tokens_in' => int, 'tokens_out' => int] или [] при неудаче.
+     */
+    private function selfCheck(array $type, array $aiData, array $params): array
+    {
+        $typeName = (string)($type['name'] ?? 'материал');
+        $program = (string)($params['program'] ?? '—');
+        $stage = MaterialType::deriveStage((string)($params['class'] ?? ''), $program);
+        if ($stage === '') {
+            $stage = '—';
+        }
+
+        $checklist = <<<TXT
+Ты — придирчивый методист-эксперт, проверяющий разработку на соответствие ФГОС/ФОП и принципам дидактики. Тебе дан JSON сгенерированного материала «{$typeName}» (ступень: {$stage}, программа: {$program}). Исправь его строго по чек-листу и верни ИСПРАВЛЕННЫЙ JSON В ТОЙ ЖЕ СТРУКТУРЕ И С ТЕМИ ЖЕ КЛЮЧАМИ (ничего не переименовывай, не удаляй обязательные поля). Если материал уже идеален — верни его без изменений.
+
+ЧЕК-ЛИСТ (исправляй найденное):
+1. Фактические ошибки: проверь корректность фактов (астрономия, климат/времена года, фонетика — различай ЗВУК и БУКВУ, и т.п.). Любую фактическую ошибку исправь.
+2. Бланк ученика НЕ должен содержать готовых ответов/решений: в tasks.content и questions нет правильных ответов; они только в answer_key. Если ответ вписан в задание — убери его в answer_key.
+3. В answer_key и любых полях не должно быть служебных артефактов («Array», пустых заглушек, англоязычных меток типа «fill»/«choose» в видимом тексте). Замени на корректный русский текст.
+4. Планируемые результаты (предметные/метапредметные/личностные) присутствуют, проверяемы и отделены от УУД, соответствуют ступени {$stage}.
+5. Возрастная адекватность для ступени {$stage}: нет заданий не по возрасту, тон и сложность уместны.
+6. Дифференциация: есть задания базового и повышенного уровня (level), критерии оценивания для открытых/творческих заданий.
+7. Нет дословных дублей текста (вводный абзац, повторяющиеся задания).
+8. Для классного часа на острую тему (буллинг, зависимости, насилие) присутствуют правила психологической безопасности (safety_rules).
+
+Верни ТОЛЬКО исправленный JSON, без markdown и без комментариев.
+TXT;
+
+        $aiJson = json_encode($aiData, JSON_UNESCAPED_UNICODE);
+        // Крупные материалы (длинные КТП/презентации) могут не уместиться в окно модели
+        // вместе с инструкцией и ответом → самопроверка тихо пропустится. Логируем, чтобы видеть.
+        if (mb_strlen($aiJson) > 12000) {
+            error_log('MaterialGenerator: self-check skipped/at-risk — большой JSON (' . mb_strlen($aiJson) . ' симв.) для типа ' . ($type['slug'] ?? '?'));
+        }
+
+        $messages = [
+            ['role' => 'system', 'content' => 'Ты — методист-редактор. Возвращаешь строго валидный JSON в исходной структуре, без markdown и пояснений.'],
+            ['role' => 'user', 'content' => $checklist . "\n\nJSON материала:\n" . $aiJson],
+        ];
+
+        // Структурированная модель + низкая температура: задача — аккуратная правка, не творчество.
+        $resp = $this->ai->generateJson('structured', $messages, ['temperature' => 0.2, 'max_tokens' => 6000]);
+        $data = $resp['data'] ?? [];
+        // Защита: не принимаем явно деградировавший ответ. У материала должен остаться
+        // хотя бы один опорный ключ (заголовок/раздел/набор строк/заданий/слайдов).
+        $anchors = ['title', 'section', 'rows', 'tasks', 'questions', 'slides', 'stages', 'structure'];
+        $hasAnchor = false;
+        foreach ($anchors as $a) {
+            if (!empty($data[$a])) { $hasAnchor = true; break; }
+        }
+        if (empty($data) || !$hasAnchor) {
+            return [];
+        }
+        return [
+            'data' => $data,
+            'tokens_in' => $resp['tokens_in'] ?? 0,
+            'tokens_out' => $resp['tokens_out'] ?? 0,
+        ];
     }
 
     private function renderFile(string $outputFormat, array $aiData, string $title, string $slug): array

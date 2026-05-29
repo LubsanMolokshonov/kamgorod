@@ -4,6 +4,10 @@
  * презентация, классный час, КТП-фрагмент). Хранит шаблон промпта для ИИ
  * (плейсхолдеры {subject}, {class}, {topic}, {duration}, {features},
  * {program}, {questions_count}, {slides_count}, {hours}).
+ *
+ * Плейсхолдер {stage} (ступень ДО/НОО/ООО/СОО) — ВЫЧИСЛЯЕМЫЙ: подставляется
+ * автоматически в renderPrompt() через deriveStage() по классу/программе.
+ * В форму как отдельное поле НЕ выводится (см. material-generator-form.php).
  */
 
 class MaterialType
@@ -61,6 +65,13 @@ class MaterialType
         }
         $template = (string)$type['ai_prompt_template'];
 
+        // Вычисляемый плейсхолдер {stage} — ступень образования (ДО/НОО/ООО/СОО).
+        // Промпты адресны по возрасту, поэтому ступень определяем явно, а не оставляем
+        // ИИ угадывать. Источник — поле «Класс/группа» и выбранная программа.
+        if (!isset($params['stage']) || $params['stage'] === '') {
+            $params['stage'] = self::deriveStage($params['class'] ?? '', $params['program'] ?? '');
+        }
+
         $replacements = [];
         preg_match_all('/\{([a-z_]+)\}/i', $template, $matches);
         foreach (array_unique($matches[1]) as $key) {
@@ -68,6 +79,39 @@ class MaterialType
             $replacements['{' . $key . '}'] = ($value === null || $value === '') ? '—' : (string)$value;
         }
         return strtr($template, $replacements);
+    }
+
+    /**
+     * Определяет ступень образования (ДО / НОО / ООО / СОО) по тексту класса/группы
+     * и/или выбранной программе. Используется как плейсхолдер {stage} в промптах.
+     */
+    public static function deriveStage(string $class, string $program = ''): string
+    {
+        $haystack = mb_strtolower($class . ' ' . $program);
+        $prog = mb_strtolower($program);
+
+        // Сначала пробуем по программе — она однозначна (всё в lowercase).
+        if (str_contains($prog, 'фоп до') || str_contains($haystack, 'дошкол') || str_contains($haystack, 'групп')) {
+            return 'ДО (дошкольное образование)';
+        }
+        if (str_contains($prog, 'ноо')) return 'НОО (начальное общее, 1–4 класс)';
+        if (str_contains($prog, 'ооо')) return 'ООО (основное общее, 5–9 класс)';
+        if (str_contains($prog, 'соо')) return 'СОО (среднее общее, 10–11 класс)';
+
+        // Дошкольные маркеры в классе/группе.
+        if (preg_match('/дошкол|младш(ая|яя)\s*групп|старш(ая|яя)\s*групп|подготовит|\bдоо\b|\bдо\b|ясли/u', $haystack)) {
+            return 'ДО (дошкольное образование)';
+        }
+
+        // По номеру класса.
+        if (preg_match('/(\d{1,2})\s*клас/u', $haystack, $m)) {
+            $n = (int)$m[1];
+            if ($n >= 1 && $n <= 4)  return 'НОО (начальное общее, 1–4 класс)';
+            if ($n >= 5 && $n <= 9)  return 'ООО (основное общее, 5–9 класс)';
+            if ($n >= 10 && $n <= 11) return 'СОО (среднее общее, 10–11 класс)';
+        }
+
+        return '';
     }
 
     public function create(array $data): int

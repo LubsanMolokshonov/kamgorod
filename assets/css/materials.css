@@ -341,6 +341,9 @@
 .mat-detail-content .md-match td { border: none; padding: 6px 12px; }
 .mat-detail-content .md-tasks > li, .mat-detail-content .md-questions > li { margin-bottom: 16px; }
 .mat-detail-content .md-answerkey { color: var(--ink-700, #3a4255); }
+.mat-detail-content .md-level-adv { color: #d97706; font-weight: 700; }
+.mat-detail-content .md-block { margin: 22px 0 8px; padding-top: 10px; border-top: 1px solid var(--ink-200, #d7dbe8); color: var(--indigo-700, #1a2f8a); }
+.mat-detail-content .md-note { background: var(--ink-50, #f6f7fb); border-radius: 12px; padding: 4px 16px 12px; margin: 16px 0; }
 .mat-download {
   margin: 32px 0; padding: 28px; text-align: center;
   background: linear-gradient(135deg, var(--indigo-700, #1a2f8a), var(--indigo-900, #0b1750));

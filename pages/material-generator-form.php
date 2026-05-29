@@ -62,13 +62,16 @@ $benefits = $typeBenefits[$type['slug']] ?? [];
 $template = (string)($type['ai_prompt_template'] ?? '');
 preg_match_all('/\{([a-z_]+)\}/i', $template, $matches);
 $placeholders = array_unique($matches[1]);
+// {stage} вычисляется автоматически из класса/программы (MaterialType::deriveStage) —
+// поле для ручного ввода не показываем.
+$placeholders = array_values(array_filter($placeholders, fn($p) => $p !== 'stage'));
 
 $fieldsConfig = [
     'subject'         => ['label' => 'Предмет / образовательная область', 'placeholder' => 'Например: Русский язык', 'required' => true],
     'class'           => ['label' => 'Класс / возрастная группа',         'placeholder' => 'Например: 3 класс или старшая группа', 'required' => true],
     'topic'           => ['label' => 'Тема',                              'placeholder' => 'Например: Имя прилагательное', 'required' => true],
     'duration'        => ['label' => 'Длительность (мин)',                'placeholder' => '45', 'type' => 'number', 'required' => false],
-    'features'        => ['label' => 'Особенности группы',                'placeholder' => 'Например: группа с ОВЗ, есть ребёнок с ЗПР', 'type' => 'textarea', 'required' => false],
+    'features'        => ['label' => 'Особенности группы',                'placeholder' => $type['slug'] === 'klassnyy-chas' ? 'Например: 24 человека, есть конфликты; тема острая — нужен психолог' : 'Например: группа с ОВЗ/ТНР, гиперактивный класс, 24 человека', 'type' => 'textarea', 'required' => false],
     'questions_count' => ['label' => 'Количество вопросов',               'placeholder' => '10', 'type' => 'number', 'required' => false],
     'slides_count'    => ['label' => 'Количество слайдов',                'placeholder' => '12', 'type' => 'number', 'required' => false],
     'hours'           => ['label' => 'Количество часов',                  'placeholder' => '4', 'type' => 'number', 'required' => false],
@@ -81,7 +84,7 @@ $fieldsConfig = [
         ],
     ],
     'program'         => [
-        'label' => 'Программа', 'type' => 'select', 'required' => false,
+        'label' => 'Программа (для адресности по ФГОС/ФОП)', 'type' => 'select', 'required' => true,
         // data-stages: на каких ступенях уместна программа — для фильтрации по классу
         'options' => [
             ''           => ['label' => '— любая —',      'stages' => 'do,noo,ooo,soo'],
@@ -173,7 +176,7 @@ $presets = [
                         placeholder="<?= htmlspecialchars($cfg['placeholder'], ENT_QUOTES, 'UTF-8') ?>"
                         rows="3" <?= !empty($cfg['required']) ? 'required' : '' ?>></textarea>
             <?php elseif (($cfg['type'] ?? '') === 'select'): ?>
-              <select name="<?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>"<?= $name === 'program' ? ' data-program-select' : '' ?>>
+              <select name="<?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>"<?= $name === 'program' ? ' data-program-select' : '' ?><?= !empty($cfg['required']) ? ' required' : '' ?>>
                 <?php foreach (($cfg['options'] ?? []) as $val => $opt): ?>
                   <?php
                     // Опция может быть строкой (label) или массивом ['label'=>..,'stages'=>..]

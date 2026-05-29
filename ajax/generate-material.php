@@ -85,6 +85,17 @@ if (isset($params['test_mode']) && !in_array($params['test_mode'], $allowedTestM
     $params['test_mode'] = $allowedTestModes[0];
 }
 
+// Программа обязательна для типов, чей промпт использует {program} (адресность по ФГОС/ФОП).
+// На фронте поле required — дублируем на сервере (защита от прямого POST).
+// Классный час {program} не использует — для него поле не показывается и не требуется.
+$typeForValidation = (new MaterialType($db))->getBySlug($typeSlug);
+if ($typeForValidation
+    && str_contains((string)($typeForValidation['ai_prompt_template'] ?? ''), '{program}')
+    && trim((string)($params['program'] ?? '')) === ''
+) {
+    respond(['success' => false, 'error' => 'Выберите программу (ФГОС/ФОП)', 'code' => 'program_required'], 400);
+}
+
 // Лимит бесплатных превью-генераций (защита от слива денег на ИИ)
 $rateError = materialPreviewRateLimit($db, $userId, $funnelSessionId, $ip);
 if ($rateError !== null) {

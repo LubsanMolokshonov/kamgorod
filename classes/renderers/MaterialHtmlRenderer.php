@@ -45,8 +45,18 @@ class MaterialHtmlRenderer
         if (!empty($data['section'])) {
             $html .= '<p><strong>Раздел:</strong> ' . $this->esc($data['section']) . '</p>';
         }
+        if (!empty($data['lesson_type'])) {
+            $html .= '<p><strong>Тип урока:</strong> ' . $this->esc($data['lesson_type']) . '</p>';
+        }
+        if (!empty($data['umk'])) {
+            $html .= '<p><strong>УМК:</strong> ' . $this->esc($this->stringifyAnswer($data['umk'])) . '</p>';
+        }
+        if (!empty($data['key_concepts'])) {
+            $html .= '<p><strong>Основные понятия:</strong> '
+                  . $this->esc($this->stringifyAnswer($data['key_concepts'])) . '</p>';
+        }
         if (!empty($data['intro'])) {
-            $html .= '<p>' . $this->esc($data['intro']) . '</p>';
+            $html .= '<p>' . $this->esc($this->dedupeParagraphs((string)$data['intro'])) . '</p>';
         }
         if (!empty($data['goal'])) {
             $html .= '<p><strong>Цель:</strong> ' . $this->esc($data['goal']) . '</p>';
@@ -54,6 +64,25 @@ class MaterialHtmlRenderer
 
         if (!empty($data['goals']) && is_array($data['goals'])) {
             $html .= '<h2>Цели</h2>' . $this->renderList($data['goals']);
+        }
+        if (!empty($data['objectives']) && is_array($data['objectives'])) {
+            $html .= '<h2>Задачи</h2>' . $this->renderList($data['objectives']);
+        }
+
+        // Планируемые результаты по ФГОС: предметные / метапредметные / личностные
+        if (!empty($data['planned_results']) && is_array($data['planned_results'])) {
+            $html .= '<h2>Планируемые результаты</h2>';
+            $prLabels = [
+                'subject'     => 'Предметные',
+                'metasubject' => 'Метапредметные',
+                'personal'    => 'Личностные',
+            ];
+            foreach ($prLabels as $key => $label) {
+                if (!empty($data['planned_results'][$key])) {
+                    $html .= '<p><strong>' . $label . ':</strong></p>'
+                          . $this->renderList((array)$data['planned_results'][$key]);
+                }
+            }
         }
 
         if (!empty($data['uud']) && is_array($data['uud'])) {
@@ -78,6 +107,27 @@ class MaterialHtmlRenderer
 
         if (!empty($data['instructions'])) {
             $html .= '<p><em>' . $this->esc($data['instructions']) . '</em></p>';
+        }
+
+        // Пояснительная записка к контрольной: время, макс. балл, шкала «5/4/3»
+        if (!empty($data['note']) && is_array($data['note'])) {
+            $n = $data['note'];
+            $rows = [];
+            if (!empty($n['time']))      { $rows[] = '<strong>Время выполнения:</strong> ' . $this->esc($this->stringifyAnswer($n['time'])); }
+            if (!empty($n['max_score'])) { $rows[] = '<strong>Максимальный балл:</strong> ' . $this->esc($this->stringifyAnswer($n['max_score'])); }
+            if (!empty($n['scale']))     { $rows[] = '<strong>Шкала оценивания:</strong> ' . $this->esc($this->stringifyAnswer($n['scale'])); }
+            if ($rows) {
+                $html .= '<div class="md-note"><h2>Пояснительная записка</h2><p>'
+                      . implode('<br>', $rows) . '</p></div>';
+            }
+        }
+
+        // Правила психологической безопасности (классный час по острым темам)
+        if (!empty($data['safety_rules'])) {
+            $html .= '<h2>Правила безопасности</h2>';
+            $html .= is_array($data['safety_rules'])
+                ? $this->renderList($data['safety_rules'])
+                : '<p>' . $this->esc((string)$data['safety_rules']) . '</p>';
         }
 
         // Этапы урока — таблица для техкарт, последовательные блоки для конспектов
@@ -123,6 +173,10 @@ class MaterialHtmlRenderer
 
         // КТП
         if (!empty($data['rows']) && is_array($data['rows'])) {
+            if (!empty($data['education_area'])) {
+                $html .= '<p><strong>Образовательная область:</strong> '
+                      . $this->esc($this->stringifyAnswer($data['education_area'])) . '</p>';
+            }
             $html .= '<h2>Тематическое планирование</h2>' . $this->renderKtpRows($data['rows']);
         }
 
@@ -131,21 +185,77 @@ class MaterialHtmlRenderer
             $html .= '<h2>Вопросы для обсуждения</h2>' . $this->renderList($data['discussion_questions']);
         }
 
+        // Критерии оценивания (формирующее оценивание)
+        if (!empty($data['criteria'])) {
+            $html .= '<h2>Критерии оценивания</h2>';
+            $html .= is_array($data['criteria'])
+                ? $this->renderList($data['criteria'])
+                : '<p>' . $this->esc((string)$data['criteria']) . '</p>';
+        }
+
+        // Диагностика эффективности (классный час, внеурочное)
+        if (!empty($data['diagnostics'])) {
+            $html .= '<h2>Диагностика эффективности</h2>';
+            $html .= is_array($data['diagnostics'])
+                ? $this->renderList($data['diagnostics'])
+                : '<p>' . $this->esc((string)$data['diagnostics']) . '</p>';
+        }
+
         if (!empty($data['homework'])) {
-            $html .= '<h2>Домашнее задание</h2><p>' . $this->esc($data['homework']) . '</p>';
+            $html .= '<h2>Домашнее задание</h2><p>'
+                  . nl2br($this->esc($this->stringifyAnswer($data['homework']))) . '</p>';
         }
         if (!empty($data['reflection'])) {
-            $html .= '<h2>Рефлексия</h2><p>' . $this->esc($data['reflection']) . '</p>';
+            $html .= '<h2>Рефлексия</h2><p>'
+                  . nl2br($this->esc($this->stringifyAnswer($data['reflection']))) . '</p>';
         }
 
         return $html;
+    }
+
+    /**
+     * Схлопывает подряд идущие одинаковые абзацы/предложения — защита от
+     * жалобы методистов «вводный абзац продублирован дважды слово в слово».
+     */
+    private function dedupeParagraphs(string $text): string
+    {
+        // Делим по двойному переводу строки или по точке с пробелом-переводом
+        $chunks = preg_split('/\n\s*\n+/', trim($text));
+        if (!$chunks || count($chunks) < 2) {
+            // Возможен дубль одного предложения подряд без переноса
+            $sentences = preg_split('/(?<=[.!?])\s+/', trim($text));
+            $seen = [];
+            $out = [];
+            foreach ($sentences as $s) {
+                $key = mb_strtolower(trim($s));
+                if ($key !== '' && in_array($key, $seen, true)) {
+                    continue;
+                }
+                $seen[] = $key;
+                $out[] = $s;
+            }
+            return implode(' ', $out);
+        }
+        $seen = [];
+        $out = [];
+        foreach ($chunks as $c) {
+            $key = mb_strtolower(trim($c));
+            if ($key === '' || in_array($key, $seen, true)) {
+                continue;
+            }
+            $seen[] = $key;
+            $out[] = trim($c);
+        }
+        return implode("\n\n", $out);
     }
 
     private function renderList(array $items): string
     {
         $html = '<ul>';
         foreach ($items as $item) {
-            $html .= '<li>' . $this->esc((string)$item) . '</li>';
+            // stringifyAnswer — на случай если ИИ вернёт вложенный массив вместо строки
+            // (иначе (string)array даёт «Array»).
+            $html .= '<li>' . $this->esc($this->stringifyAnswer($item)) . '</li>';
         }
         return $html . '</ul>';
     }
@@ -190,7 +300,8 @@ class MaterialHtmlRenderer
             $html .= '<h3>' . $this->esc($title) . '</h3>';
             $body = $s['narrative'] ?? '';
             if ($body) {
-                $html .= '<p>' . nl2br($this->esc($body)) . '</p>';
+                // Дедуп — методисты жаловались на дублирование текста хода урока
+                $html .= '<p>' . nl2br($this->esc($this->dedupeParagraphs((string)$body))) . '</p>';
             }
         }
         return $html;
@@ -206,9 +317,16 @@ class MaterialHtmlRenderer
         $html = '<ol class="md-tasks">';
         foreach ($tasks as $t) {
             $type = strtolower(trim((string)($t['type'] ?? '')));
+            $level = strtolower(trim((string)($t['level'] ?? '')));
             $html .= '<li>';
+            // Пометка повышенного уровня — «звёздочное» задание для сильных учеников
+            $badge = ($level === 'advanced')
+                ? '<span class="md-level md-level-adv" title="Задание повышенного уровня">★</span> '
+                : '';
             if (!empty($t['instruction'])) {
-                $html .= '<strong>' . $this->esc($t['instruction']) . '</strong>';
+                $html .= $badge . '<strong>' . $this->esc($t['instruction']) . '</strong>';
+            } elseif ($badge !== '') {
+                $html .= $badge;
             }
             $html .= $this->renderTaskBody($type, $t['content'] ?? null);
             $html .= '</li>';
@@ -244,6 +362,11 @@ class MaterialHtmlRenderer
     /**
      * Сопоставление: левый столбец (буквы) и правый (цифры), соединять линиями.
      * content = {left:[...], right:[...]} или (на всякий) массив пар.
+     *
+     * Правый столбец перемешиваем детерминированно — иначе при выводе left[i]
+     * напротив right[i] правильное соответствие «подсказано» порядком строк,
+     * и задание оказывается уже решённым (жалоба методистов). Правильный
+     * порядок остаётся только в answer_key.
      */
     private function renderMatch($content): string
     {
@@ -256,6 +379,7 @@ class MaterialHtmlRenderer
         if (empty($left) && empty($right)) {
             return '';
         }
+        $right = $this->deterministicShuffle($right);
         $rows = max(count($left), count($right));
         $html = '<table class="md-match" style="width:100%; border-collapse:collapse; margin:6px 0;">';
         for ($i = 0; $i < $rows; $i++) {
@@ -271,16 +395,50 @@ class MaterialHtmlRenderer
     }
 
     /**
+     * Детерминированное перемешивание: без random, чтобы один и тот же материал
+     * рендерился одинаково при каждом скачивании. Для ≤2 элементов — реверс,
+     * для большего — циклический сдвиг на (n div 2), гарантированно ломающий
+     * исходное построчное соответствие.
+     */
+    private function deterministicShuffle(array $items): array
+    {
+        $n = count($items);
+        if ($n < 2) {
+            return $items;
+        }
+        if ($n === 2) {
+            return array_reverse($items);
+        }
+        $shift = intdiv($n, 2);
+        return array_merge(array_slice($items, $shift), array_slice($items, 0, $shift));
+    }
+
+    /**
      * Вопросы теста — бланк ученика: без отметок правильных ответов и пояснений.
      * Для open-вопроса (без вариантов) добавляем линии под ответ.
      */
     private function renderQuestions(array $questions): string
     {
         $html = '<ol class="md-questions">';
+        $currentBlock = null;
+        $n = 0; // сквозная нумерация, чтобы сохранять её при разрыве списка на блоки
         foreach ($questions as $q) {
+            $n++;
             $type = strtolower(trim((string)($q['type'] ?? '')));
-            $html .= '<li>';
-            $html .= '<div>' . $this->esc($q['text'] ?? '') . '</div>';
+            // Блоки контрольной: от простого к сложному (А — тесты, В — краткий ответ, С — развёрнутый).
+            // Разрываем <ol> и продолжаем нумерацию через <li value> — иначе вложенный </ol>
+            // ломает разметку и mPDF сбрасывает счётчик.
+            $block = trim((string)($q['block'] ?? ''));
+            if ($block !== '' && $block !== $currentBlock) {
+                $html .= '</ol><h3 class="md-block">Блок ' . $this->esc($block) . '</h3>'
+                       . '<ol class="md-questions" start="' . $n . '">';
+                $currentBlock = $block;
+            }
+            $star = (strtolower(trim((string)($q['level'] ?? ''))) === 'advanced')
+                ? ' <span class="md-level md-level-adv" title="Повышенный уровень">★</span>'
+                : '';
+            $html .= '<li value="' . $n . '">';
+            $html .= '<div>' . $this->esc($q['text'] ?? '') . $star . '</div>';
             if (!empty($q['options']) && is_array($q['options'])) {
                 $marker = ($type === 'multiple') ? '☐' : '○';
                 $html .= '<ul style="list-style:none; padding-left:4px;">';
@@ -309,18 +467,26 @@ class MaterialHtmlRenderer
         if (!empty($data['answer_key']) && is_array($data['answer_key'])) {
             foreach ($data['answer_key'] as $k) {
                 $num = $k['number'] ?? null;
-                $ans = trim((string)($k['answer'] ?? ''));
-                $expl = trim((string)($k['explanation'] ?? ''));
+                $ans = trim($this->stringifyAnswer($k['answer'] ?? ''));
+                $expl = trim($this->stringifyAnswer($k['explanation'] ?? ''));
                 if ($ans === '' && $expl === '' && !isset($k['correct'])) {
                     continue;
                 }
-                $line = ($num !== null ? $this->esc((string)$num) . '. ' : '');
+                $prefix = ($num !== null ? $this->esc((string)$num) . '. ' : '');
+                $parts = [];
                 if (isset($k['correct'])) {
-                    $line .= $this->correctLetters($k['correct']);
+                    $letters = $this->correctLetters($k['correct']);
+                    if ($letters !== '') {
+                        $parts[] = $letters;
+                    }
                 }
                 if ($ans !== '') {
-                    $line .= ($line !== '' && !str_ends_with($line, ' ') ? ' — ' : '') . $this->esc($ans);
+                    $parts[] = $this->esc($ans);
                 }
+                if (empty($parts) && $expl === '') {
+                    continue;
+                }
+                $line = $prefix . implode(' — ', $parts);
                 if ($expl !== '') {
                     $line .= ' <span style="color:#555;">(' . $this->esc($expl) . ')</span>';
                 }
@@ -338,11 +504,52 @@ class MaterialHtmlRenderer
 
     /**
      * Переводит индексы правильных вариантов в буквы (0→A, 1→B…).
+     * Устойчив к тому, что ИИ вернёт вложенный массив ([[0],[1]] вместо [0,1])
+     * или нечисловые значения — иначе в ключах появлялось слово «Array».
      */
     private function correctLetters($correct): string
     {
-        $letters = array_map(fn($i) => $this->letter((int)$i), (array)$correct);
+        $flat = [];
+        foreach ((array)$correct as $item) {
+            if (is_array($item)) {
+                foreach ($item as $sub) {
+                    if (is_scalar($sub) && is_numeric($sub)) {
+                        $flat[] = (int)$sub;
+                    }
+                }
+            } elseif (is_scalar($item) && is_numeric($item)) {
+                $flat[] = (int)$item;
+            }
+        }
+        if (empty($flat)) {
+            return '';
+        }
+        $letters = array_map(fn($i) => $this->letter($i), $flat);
         return 'Верно: ' . $this->esc(implode(', ', $letters));
+    }
+
+    /**
+     * Безопасно приводит значение ответа/пояснения к строке.
+     * Массив (плоский или пары [левое, правое]) превращается в читаемый текст,
+     * чтобы в «Ключах для учителя» не выводилось буквальное «Array».
+     */
+    private function stringifyAnswer($value): string
+    {
+        if (is_array($value)) {
+            $parts = [];
+            foreach ($value as $item) {
+                if (is_array($item)) {
+                    // Пара сопоставления [left, right] → «left → right»
+                    $pair = array_map(fn($v) => is_scalar($v) ? (string)$v : '', $item);
+                    $pair = array_values(array_filter($pair, fn($v) => $v !== ''));
+                    $parts[] = implode(' → ', $pair);
+                } elseif (is_scalar($item)) {
+                    $parts[] = (string)$item;
+                }
+            }
+            return implode(', ', array_filter($parts, fn($v) => $v !== ''));
+        }
+        return is_scalar($value) ? (string)$value : '';
     }
 
     /**
@@ -382,16 +589,20 @@ class MaterialHtmlRenderer
 
     private function renderKtpRows(array $rows): string
     {
+        $hasResults = $this->hasField($rows, 'planned_results');
         $html = '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%;">';
-        $html .= '<thead><tr><th>№</th><th>Тема</th><th>Часов</th><th>УУД</th><th>Деятельность</th><th>Контроль</th></tr></thead><tbody>';
+        $html .= '<thead><tr><th>№</th><th>Тема</th><th>Часов</th>'
+              . ($hasResults ? '<th>Планируемые результаты</th>' : '')
+              . '<th>УУД</th><th>Деятельность</th><th>Контроль</th></tr></thead><tbody>';
         foreach ($rows as $r) {
             $html .= '<tr>'
                   . '<td>' . $this->esc((string)($r['lesson_num'] ?? '')) . '</td>'
                   . '<td>' . $this->esc((string)($r['topic'] ?? '')) . '</td>'
                   . '<td>' . $this->esc((string)($r['hours'] ?? '')) . '</td>'
-                  . '<td>' . $this->esc((string)($r['uud'] ?? '')) . '</td>'
-                  . '<td>' . $this->esc((string)($r['activity'] ?? '')) . '</td>'
-                  . '<td>' . $this->esc((string)($r['control'] ?? '')) . '</td>'
+                  . ($hasResults ? '<td>' . $this->esc($this->stringifyAnswer($r['planned_results'] ?? '')) . '</td>' : '')
+                  . '<td>' . $this->esc($this->stringifyAnswer($r['uud'] ?? '')) . '</td>'
+                  . '<td>' . $this->esc($this->stringifyAnswer($r['activity'] ?? '')) . '</td>'
+                  . '<td>' . $this->esc($this->stringifyAnswer($r['control'] ?? '')) . '</td>'
                   . '</tr>';
         }
         return $html . '</tbody></table>';
