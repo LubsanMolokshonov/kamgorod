@@ -106,12 +106,20 @@ class OpenRouterAIService
             $opts['temperature'] = 0.3;
         }
 
-        $result = $this->chat($modelKey, $messages, $opts);
-        $json = $this->extractJson($result['content']);
+        // Первый вызов. Пустой ответ модели (llama иногда отдаёт пустой content) тоже
+        // считаем неудачей и уходим в ретрай, а не падаем сразу.
+        $result = null;
+        $json = null;
+        try {
+            $result = $this->chat($modelKey, $messages, $opts);
+            $json = $this->extractJson($result['content']);
+        } catch (OpenRouterAIServiceException $e) {
+            $json = null; // упадём в ретрай ниже
+        }
 
-        // Ретрай: модель иногда обрывает или портит JSON (особенно на длинных ответах).
-        // Один повтор с явным требованием валидного JSON и увеличенным лимитом токенов
-        // спасает материалы, которые иначе падали с ошибкой парсинга.
+        // Ретрай: модель иногда обрывает/портит JSON или возвращает пустой ответ (особенно
+        // на длинных ответах). Один повтор с явным требованием валидного JSON и увеличенным
+        // лимитом токенов спасает материалы, которые иначе падали с ошибкой.
         if ($json === null) {
             $retryOpts = $opts;
             $retryOpts['temperature'] = 0.2;
@@ -127,7 +135,7 @@ class OpenRouterAIService
 
         if ($json === null) {
             throw new OpenRouterAIServiceException(
-                'Не удалось распарсить JSON-ответ модели (после ретрая): ' . mb_substr($result['content'], 0, 300)
+                'Не удалось распарсить JSON-ответ модели (после ретрая): ' . mb_substr((string)($result['content'] ?? ''), 0, 300)
             );
         }
         $result['data'] = $json;
