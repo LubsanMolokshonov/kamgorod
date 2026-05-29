@@ -18,7 +18,9 @@ class OpenRouterAIServiceException extends RuntimeException {}
 class OpenRouterAIService
 {
     private const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
-    private const DEFAULT_TIMEOUT = 90;
+    // Таймаут поднят до 150с: генерация материала + методическая самопроверка (второй
+    // проход ИИ) на длинных типах (конспект/презентация/КТП) не укладывалась в 90с.
+    private const DEFAULT_TIMEOUT = 150;
 
     private string $apiKey;
     private string $referer;
@@ -105,11 +107,27 @@ class OpenRouterAIService
         }
 
         $result = $this->chat($modelKey, $messages, $opts);
-
         $json = $this->extractJson($result['content']);
+
+        // Ретрай: модель иногда обрывает или портит JSON (особенно на длинных ответах).
+        // Один повтор с явным требованием валидного JSON и увеличенным лимитом токенов
+        // спасает материалы, которые иначе падали с ошибкой парсинга.
+        if ($json === null) {
+            $retryOpts = $opts;
+            $retryOpts['temperature'] = 0.2;
+            $retryOpts['max_tokens'] = max((int)($opts['max_tokens'] ?? 4000), 8000);
+            $retryMessages = $messages;
+            $retryMessages[] = [
+                'role' => 'system',
+                'content' => 'Предыдущий ответ не был валидным JSON или оборвался. Верни ПОЛНЫЙ валидный JSON-объект строго по схеме, без markdown, без обрезки, ничего кроме JSON.',
+            ];
+            $result = $this->chat($modelKey, $retryMessages, $retryOpts);
+            $json = $this->extractJson($result['content']);
+        }
+
         if ($json === null) {
             throw new OpenRouterAIServiceException(
-                'Не удалось распарсить JSON-ответ модели: ' . mb_substr($result['content'], 0, 300)
+                'Не удалось распарсить JSON-ответ модели (после ретрая): ' . mb_substr($result['content'], 0, 300)
             );
         }
         $result['data'] = $json;

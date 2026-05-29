@@ -11,7 +11,7 @@
  *   { success: true, material_id, material_slug, file_format, tokens_left, redirect_url }
  *   { success: false, error: 'message', code: 'not_enough_tokens'|'unauthorized'|'invalid_type'|'ai_error'|'internal' }
  *
- * Timeout: 120 секунд (генерация может занимать 15-60 сек).
+ * Timeout: 300 секунд — генерация (до 150с) + методическая самопроверка (ещё до 150с).
  */
 
 session_start();
@@ -28,7 +28,7 @@ require_once __DIR__ . '/../classes/OpenRouterAIService.php';
 require_once __DIR__ . '/../classes/MaterialGenerator.php';
 require_once __DIR__ . '/../includes/material-tracking.php';
 
-set_time_limit(120);
+set_time_limit(300);
 
 function respond(array $data, int $httpCode = 200): void
 {
