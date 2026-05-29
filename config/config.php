@@ -126,6 +126,10 @@ if (!defined('OPENROUTER_API_KEY'))         define('OPENROUTER_API_KEY',        
 if (!defined('OPENROUTER_MODEL_DEFAULT'))   define('OPENROUTER_MODEL_DEFAULT',   $_ENV['OPENROUTER_MODEL_DEFAULT']   ?? 'meta-llama/llama-3.3-70b-instruct');
 if (!defined('OPENROUTER_MODEL_STRUCTURED'))define('OPENROUTER_MODEL_STRUCTURED',$_ENV['OPENROUTER_MODEL_STRUCTURED']?? 'qwen/qwen-2.5-72b-instruct');
 if (!defined('OPENROUTER_MODEL_FAST'))      define('OPENROUTER_MODEL_FAST',      $_ENV['OPENROUTER_MODEL_FAST']      ?? 'google/gemini-2.0-flash-001');
+// Сильная модель для методической самопроверки (второй проход): ловит фактические
+// ошибки, несоответствие темы классу, неверные ключи. Дороже генерации, но используется
+// только на ревью одного материала.
+if (!defined('OPENROUTER_MODEL_REVIEW'))    define('OPENROUTER_MODEL_REVIEW',    $_ENV['OPENROUTER_MODEL_REVIEW']    ?? 'google/gemini-2.5-pro');
 // Методическая самопроверка материалов (второй проход ИИ-методиста по чек-листу ФГОС/ФОП).
 // Дороже по токенам — отключается значением 0/false/no в .env (по умолчанию включено).
 if (!defined('MATERIAL_SELFCHECK_ENABLED')) define('MATERIAL_SELFCHECK_ENABLED', !in_array(strtolower((string)($_ENV['MATERIAL_SELFCHECK_ENABLED'] ?? '1')), ['0', 'false', 'no', 'off', ''], true));

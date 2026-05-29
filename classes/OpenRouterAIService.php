@@ -48,6 +48,7 @@ class OpenRouterAIService
         return match ($key) {
             'structured' => OPENROUTER_MODEL_STRUCTURED,
             'fast'       => OPENROUTER_MODEL_FAST,
+            'review'     => defined('OPENROUTER_MODEL_REVIEW') ? OPENROUTER_MODEL_REVIEW : OPENROUTER_MODEL_STRUCTURED,
             default      => OPENROUTER_MODEL_DEFAULT,
         };
     }
