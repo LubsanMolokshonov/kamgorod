@@ -47,17 +47,12 @@ class UTMAnalytics
         // Мержим по ключу группировки
         $results = $this->mergeResults($visits, $applications, $orders, $groupByCol);
 
-        // На уровне source добавляем строку "(без UTM)" для записей без меток
+        // На уровне source добавляем разбивку "(без UTM)" для записей без меток.
+        // Вместо одной строки показываем источник, определённый по referrer визита
+        // (органика Яндекс/Google, прямой заход, внутренний переход и т.д.) —
+        // иначе ~20% трафика выглядят как загадочный «безутэмный» блок.
         if ($groupLevel === 'source' && empty($parentUtm)) {
-            $noUtmRow = $this->buildRow(
-                '(без UTM)',
-                $this->queryVisitsNoUtm($filters),
-                $this->queryCourseApplicationsNoUtm($filters),
-                $this->queryOrdersNoUtm($filters)
-            );
-            if ($noUtmRow['visits'] > 0 || $noUtmRow['created_orders'] > 0 || $noUtmRow['course_applications'] > 0) {
-                $results[] = $noUtmRow;
-            }
+            $results = array_merge($results, $this->buildNoUtmBreakdown($filters));
         }
 
         return $results;
@@ -323,6 +318,135 @@ class UTMAnalytics
              WHERE {$whereSql}",
             $allParams
         ) ?: ['created_orders' => 0, 'paid_orders' => 0, 'revenue' => 0];
+    }
+
+    // ========================================
+    // Разбивка трафика без UTM по источнику (referrer)
+    // ========================================
+
+    /**
+     * SQL-выражение, классифицирующее визит по referrer в человекочитаемый источник.
+     * Используется одинаково для визитов и заказов (через JOIN visits).
+     */
+    private function referrerCategorySql(string $alias = 'v'): string
+    {
+        return "CASE
+            WHEN {$alias}.referrer IS NULL OR {$alias}.referrer = '' THEN '(без UTM · прямой / закладки)'
+            WHEN {$alias}.referrer LIKE '%yandex.%' OR {$alias}.referrer LIKE '%ya.ru%' THEN '(без UTM · Яндекс-органика)'
+            WHEN {$alias}.referrer LIKE '%google.%' OR {$alias}.referrer LIKE '%gmail%' THEN '(без UTM · Google/Gmail)'
+            WHEN {$alias}.referrer LIKE '%mail.ru%' THEN '(без UTM · Mail.ru)'
+            WHEN {$alias}.referrer LIKE '%vk.com%' OR {$alias}.referrer LIKE '%vk.ru%' THEN '(без UTM · VK)'
+            WHEN {$alias}.referrer LIKE '%bing.%' OR {$alias}.referrer LIKE '%duckduckgo%' THEN '(без UTM · др. поисковики)'
+            WHEN {$alias}.referrer LIKE '%yoomoney%' OR {$alias}.referrer LIKE '%yookassa%' THEN '(без UTM · возврат с оплаты)'
+            WHEN {$alias}.referrer LIKE '%fgos.pro%' THEN '(без UTM · внутр. переход)'
+            ELSE '(без UTM · внешние сайты)'
+        END";
+    }
+
+    private const NO_UTM_FALLBACK_LABEL = '(без UTM · источник не определён)';
+
+    /**
+     * Строит несколько строк отчёта для трафика без UTM, сгруппированного по
+     * источнику из referrer. Метрики визитов берём из visits, метрики заказов —
+     * из orders с JOIN на их визит. Заказы/заявки без привязки к визиту
+     * сводятся в одну строку-fallback.
+     */
+    private function buildNoUtmBreakdown(array $filters): array
+    {
+        $catSql = $this->referrerCategorySql('v');
+
+        // 1. Визиты без UTM по категориям referrer
+        $vWhere = ['v.is_bot = 0', 'v.utm_source IS NULL'];
+        $vParams = [];
+        $this->addDateFilter($vWhere, $vParams, 'v.started_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
+        $visitRows = $this->db->query(
+            "SELECT {$catSql} AS cat, COUNT(*) AS visits, ROUND(AVG(v.duration_seconds)) AS avg_duration
+             FROM visits v WHERE " . implode(' AND ', $vWhere) . " GROUP BY cat",
+            $vParams
+        );
+
+        // 2. Заказы без UTM по категориям referrer их визита
+        $oWhere = ['(o.utm_source IS NULL OR o.utm_source = \'\')'];
+        $oParams = [];
+        $this->addDateFilter($oWhere, $oParams, 'o.created_at', $filters['date_from'] ?? '', $filters['date_to'] ?? '');
+        $this->addProductTypeFilter($oWhere, $filters['product_type'] ?? 'all');
+
+        [$paidCondition, $paidParams] = $this->buildPaidCondition($filters);
+        $fallbackLabel = self::NO_UTM_FALLBACK_LABEL;
+        $orderCatSql = "COALESCE(NULLIF({$catSql}, ''), '{$fallbackLabel}')";
+        // Заказы без визита (visit_id IS NULL) попадают в строку-fallback
+        $orderCatExpr = "CASE WHEN v.id IS NULL THEN '{$fallbackLabel}' ELSE {$orderCatSql} END";
+
+        $orderRows = $this->db->query(
+            "SELECT {$orderCatExpr} AS cat,
+                    COUNT(DISTINCT o.id) AS created_orders,
+                    COUNT(DISTINCT CASE WHEN {$paidCondition} THEN o.id END) AS paid_orders,
+                    COALESCE(SUM(CASE WHEN {$paidCondition} THEN o.final_amount ELSE 0 END), 0) AS revenue
+             FROM orders o
+             LEFT JOIN visits v ON v.id = o.visit_id
+             WHERE " . implode(' AND ', $oWhere) . " GROUP BY cat",
+            array_merge($oParams, $paidParams, $paidParams)
+        );
+
+        // 3. Заявки на курсы без UTM (referrer не хранится) — все в fallback-строку
+        $appsNoUtm = $this->queryCourseApplicationsNoUtm($filters);
+
+        // Мержим по категории
+        $byCat = [];
+        foreach ($visitRows as $r) {
+            $byCat[$r['cat']]['visits'] = (int)$r['visits'];
+            $byCat[$r['cat']]['avg_duration'] = (int)$r['avg_duration'];
+        }
+        foreach ($orderRows as $r) {
+            $byCat[$r['cat']]['created_orders'] = (int)$r['created_orders'];
+            $byCat[$r['cat']]['paid_orders'] = (int)$r['paid_orders'];
+            $byCat[$r['cat']]['revenue'] = (float)$r['revenue'];
+        }
+        $byCat[$fallbackLabel]['course_applications'] = (int)($appsNoUtm['course_applications'] ?? 0);
+
+        $rows = [];
+        foreach ($byCat as $label => $m) {
+            $row = $this->buildRow(
+                $label,
+                ['visits' => $m['visits'] ?? 0, 'avg_duration' => $m['avg_duration'] ?? 0],
+                ['course_applications' => $m['course_applications'] ?? 0],
+                [
+                    'created_orders' => $m['created_orders'] ?? 0,
+                    'paid_orders' => $m['paid_orders'] ?? 0,
+                    'revenue' => $m['revenue'] ?? 0,
+                ]
+            );
+            $row['is_no_utm'] = true; // фронт не показывает drill-down toggle
+            if ($row['visits'] > 0 || $row['created_orders'] > 0 || $row['course_applications'] > 0) {
+                $rows[] = $row;
+            }
+        }
+
+        // Сортируем по визитам desc
+        usort($rows, fn($a, $b) => $b['visits'] - $a['visits']);
+
+        return $rows;
+    }
+
+    /**
+     * Возвращает [SQL-условие оплаты, параметры] на основе фильтров paid_from/paid_to.
+     */
+    private function buildPaidCondition(array $filters): array
+    {
+        $paidWhere = [];
+        $paidParams = [];
+        if (!empty($filters['paid_from'])) {
+            $paidWhere[] = 'o.paid_at >= ?';
+            $paidParams[] = $filters['paid_from'] . ' 00:00:00';
+        }
+        if (!empty($filters['paid_to'])) {
+            $paidWhere[] = 'o.paid_at <= ?';
+            $paidParams[] = $filters['paid_to'] . ' 23:59:59';
+        }
+        $cond = !empty($paidWhere)
+            ? "o.payment_status = 'succeeded' AND " . implode(' AND ', $paidWhere)
+            : "o.payment_status = 'succeeded'";
+        return [$cond, $paidParams];
     }
 
     // ========================================

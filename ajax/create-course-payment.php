@@ -277,9 +277,19 @@ try {
 
     // Email-атрибуция оплаты: если пользователь пришёл по клику из письма,
     // привязываем message_id к заказу для трекинга конверсий в email_events.
+    // Заодно помечаем источник как email/trigger, если UTM иначе не определились —
+    // иначе курсовой заказ по письму попадёт в отчёте в «(без UTM)».
     $emailMid = $_SESSION['email_mid'] ?? ($_COOKIE['email_mid'] ?? null);
     if ($emailMid && preg_match('~^[a-f0-9]{32}$~', $emailMid)) {
-        (new Database($db))->update('orders', ['email_message_id' => $emailMid], 'id = ?', [$orderId]);
+        $courseAttr = ['email_message_id' => $emailMid];
+        $existingUtm = (new Database($db))->queryOne(
+            'SELECT utm_source FROM orders WHERE id = ?', [$orderId]
+        );
+        if (empty($existingUtm['utm_source'])) {
+            $courseAttr['utm_source'] = 'email';
+            $courseAttr['utm_medium'] = 'trigger';
+        }
+        (new Database($db))->update('orders', $courseAttr, 'id = ?', [$orderId]);
     }
 
     $order = $orderObj->getById($orderId);

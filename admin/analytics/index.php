@@ -126,7 +126,7 @@ include __DIR__ . '/../includes/header.php';
 
                 <!-- Строки UTM Source (свёрнуты) -->
                 <?php foreach ($sourceData as $row): ?>
-                <?php $isNoUtm = $row['label'] === '(без UTM)'; ?>
+                <?php $isNoUtm = !empty($row['is_no_utm']) || $row['label'] === '(без UTM)'; ?>
                 <tr class="utm-row utm-row-source<?php if ($isNoUtm) echo ' utm-row-no-expand'; ?>"
                     data-level="source"
                     data-utm-source="<?php echo htmlspecialchars($row['label']); ?>"

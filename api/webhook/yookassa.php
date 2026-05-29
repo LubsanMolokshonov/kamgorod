@@ -427,8 +427,20 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                 }
                 if ($mid) {
                     EmailTracker::attributeConversion($mid, (int)$orderId, (float)$orderRow['final_amount']);
+                    // Заказ пришёл по письму, но UTM не проставлены (клик из почтового
+                    // клиента без UTM в ссылке, либо session/cookie не дожили до оплаты).
+                    // Помечаем источник синтетически, иначе email-конверсия попадёт в
+                    // отчёте в «(без UTM)». Делаем тем же UPDATE, что и email_message_id.
+                    $attrUpdate = [];
                     if (empty($orderRow['email_message_id'])) {
-                        $dbHelper->update('orders', ['email_message_id' => $mid], 'id = ?', [$orderId]);
+                        $attrUpdate['email_message_id'] = $mid;
+                    }
+                    if (empty($orderRow['utm_source'])) {
+                        $attrUpdate['utm_source'] = 'email';
+                        $attrUpdate['utm_medium'] = 'trigger';
+                    }
+                    if (!empty($attrUpdate)) {
+                        $dbHelper->update('orders', $attrUpdate, 'id = ?', [$orderId]);
                     }
                     logWebhook('INFO', $paymentId, "Email conversion attributed: order {$orderNumber} → mid {$mid}", '');
                 }
