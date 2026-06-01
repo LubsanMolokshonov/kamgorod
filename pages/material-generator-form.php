@@ -202,8 +202,8 @@ $presets = [
 
       <div id="generator-status" class="mat-status">
         <div class="mat-loader"></div>
-        <p>ИИ работает… Обычно занимает 15–40 секунд.</p>
-        <p style="color:var(--ink-400,#8b90a8); font-size:14px;">Не закрывайте вкладку.</p>
+        <p id="gen-status-text">ИИ работает… Обычно 30–90 секунд, иногда до 3 минут.</p>
+        <p style="color:var(--ink-400,#8b90a8); font-size:14px;">Можно не закрывать вкладку — если закроете, материал всё равно сохранится.</p>
       </div>
 
       <div id="generator-error" class="mat-error"></div>
@@ -263,40 +263,88 @@ $presets = [
               });
           });
 
+          var pollTimer = null;
+          var statusTextEl = document.getElementById('gen-status-text');
+
+          function resetUi() {
+              statusEl.style.display = 'none';
+              submitBtn.disabled = false;
+              submitBtn.style.opacity = '1';
+          }
+          function showError(html) {
+              if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+              resetUi();
+              errorEl.innerHTML = html;
+              errorEl.style.display = 'block';
+          }
+
+          // Генерация асинхронна: POST мгновенно ставит задачу в очередь и возвращает
+          // status_url; дальше опрашиваем статус, пока воркер не закончит. Так запрос
+          // не висит и не упирается в таймаут прокси.
           function runGeneration() {
               errorEl.style.display = 'none';
               errorEl.textContent = '';
               statusEl.style.display = 'block';
+              if (statusTextEl) statusTextEl.textContent = 'Отправляем запрос…';
               submitBtn.disabled = true;
               submitBtn.style.opacity = '0.5';
 
               var fd = new FormData(form);
-              fetch('/ajax/generate-material.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+              // POST теперь короткий — короткий таймаут на саму постановку в очередь.
+              var ctrl = new AbortController();
+              var postTimeout = setTimeout(function () { ctrl.abort(); }, 20000);
+
+              fetch('/ajax/generate-material.php', { method: 'POST', body: fd, credentials: 'same-origin', signal: ctrl.signal })
                   .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
                   .then(function (res) {
-                      if (res.data && res.data.success) {
-                          // Единая цель-конверсия для рекламы: «реклама → генерация» (совпадает с material_generations в БД)
-                          if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'material_preview'); }
-                          window.location.href = res.data.redirect_url;
+                      clearTimeout(postTimeout);
+                      var d = res.data || {};
+                      if (d.success && d.status_url) {
+                          startPolling(d.status_url);
                           return;
                       }
-                      statusEl.style.display = 'none';
-                      submitBtn.disabled = false;
-                      submitBtn.style.opacity = '1';
-                      var msg = (res.data && res.data.error) ? res.data.error : 'Ошибка генерации';
-                      if (res.data && res.data.code === 'rate_limited' && !res.data.success) {
+                      var msg = d.error || 'Ошибка генерации';
+                      if (d.code === 'rate_limited') {
                           msg += ' <a href="/vhod?return=' + encodeURIComponent(location.pathname) + '">Зарегистрироваться →</a>';
                       }
-                      errorEl.innerHTML = msg;
-                      errorEl.style.display = 'block';
+                      showError(msg);
                   })
                   .catch(function () {
-                      statusEl.style.display = 'none';
-                      submitBtn.disabled = false;
-                      submitBtn.style.opacity = '1';
-                      errorEl.textContent = 'Сеть прервалась. Попробуйте ещё раз.';
-                      errorEl.style.display = 'block';
+                      clearTimeout(postTimeout);
+                      showError('Не удалось отправить запрос. Проверьте интернет и попробуйте ещё раз.');
                   });
+          }
+
+          function startPolling(statusUrl) {
+              var startedAt = Date.now();
+              pollTimer = setInterval(function () {
+                  var elapsed = Math.round((Date.now() - startedAt) / 1000);
+                  // Предохранитель: 5 минут. Материал всё равно допишется воркером.
+                  if (elapsed > 300) {
+                      showError('Генерация затянулась. Материал может появиться чуть позже — обновите страницу через минуту или попробуйте ещё раз.');
+                      return;
+                  }
+                  if (statusTextEl) {
+                      statusTextEl.textContent = (elapsed < 60)
+                          ? 'ИИ работает… ' + elapsed + ' сек.'
+                          : 'ИИ дорабатывает материал по методике… ' + elapsed + ' сек.';
+                  }
+                  fetch(statusUrl, { credentials: 'same-origin' })
+                      .then(function (r) { return r.json(); })
+                      .then(function (d) {
+                          if (!d || !d.success) { return; } // мягко продолжаем опрос
+                          if (d.status === 'done') {
+                              clearInterval(pollTimer); pollTimer = null;
+                              // Единая цель-конверсия для рекламы: «реклама → генерация».
+                              if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'material_preview'); }
+                              window.location.href = d.redirect_url;
+                          } else if (d.status === 'failed') {
+                              showError(d.error || 'Не удалось сгенерировать материал. Попробуйте ещё раз.');
+                          }
+                          // pending/running — ждём следующего тика
+                      })
+                      .catch(function () { /* единичный сбой опроса — не падаем, ждём следующего тика */ });
+              }, 2500);
           }
 
           // Превью-генерация бесплатна и не требует регистрации — оплата на скачивании.

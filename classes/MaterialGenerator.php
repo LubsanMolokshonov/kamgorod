@@ -84,7 +84,7 @@ class MaterialGenerator
         }
 
         // 2. Создать лог
-        $generationId = $this->db->insert('material_generations', [
+        $generationId = (int)$this->db->insert('material_generations', [
             'user_id' => $userId,
             'funnel_session_id' => $funnelSessionId,
             'ip_address' => $ipAddress,
@@ -95,6 +95,122 @@ class MaterialGenerator
             'tokens_charged' => $isPreview ? 0 : $tokenCost,
             'input_params_json' => json_encode($params, JSON_UNESCAPED_UNICODE),
         ]);
+
+        return $this->executeGeneration($generationId, $type, $params, $mode, $userId, $funnelSessionId, $chargeTxnId, $tokenCost);
+    }
+
+    /**
+     * Поставить генерацию в очередь (async): создаёт строку material_generations со
+     * статусом 'pending' и сразу возвращает её id, не запуская ИИ. Обработку выполняет
+     * фоновый воркер (cron/process-material-generations.php) через runPending().
+     *
+     * В full-режиме токены списываются здесь же (резерв до старта ИИ); id транзакции
+     * сохраняется в input_params_json под ключом '_charge_txn_id', чтобы воркер мог
+     * вернуть токены при сбое (отдельной колонки под txn нет).
+     */
+    public function enqueue(?int $userId, string $typeSlug, array $params, string $mode = 'preview', ?string $funnelSessionId = null, ?string $ipAddress = null): int
+    {
+        $isPreview = ($mode === 'preview');
+        if (!$isPreview && $userId === null) {
+            throw new InvalidArgumentException('Полная генерация требует авторизации');
+        }
+
+        $type = $this->typeObj->getBySlug($typeSlug);
+        if (!$type) {
+            throw new InvalidArgumentException("Тип материала '{$typeSlug}' не найден");
+        }
+        $typeId = (int)$type['id'];
+        $tokenCost = (int)($type['token_cost_default'] ?? 10);
+
+        $chargeTxnId = null;
+        if (!$isPreview) {
+            $chargeTxnId = $this->tokens->charge(
+                $userId,
+                $tokenCost,
+                'generation',
+                ['notes' => 'material_type=' . $typeSlug]
+            );
+        }
+
+        $stored = $params;
+        if ($chargeTxnId !== null) {
+            $stored['_charge_txn_id'] = $chargeTxnId;
+        }
+
+        return (int)$this->db->insert('material_generations', [
+            'user_id' => $userId,
+            'funnel_session_id' => $funnelSessionId,
+            'ip_address' => $ipAddress,
+            'material_type_id' => $typeId,
+            'ai_model_used' => $this->ai->resolveModel($type['ai_model_key'] ?? 'default'),
+            'status' => 'pending',
+            'mode' => $mode,
+            'tokens_charged' => $isPreview ? 0 : $tokenCost,
+            'input_params_json' => json_encode($stored, JSON_UNESCAPED_UNICODE),
+        ]);
+    }
+
+    /**
+     * Обработать одну отложенную задачу (вызывается фоновым воркером).
+     * Атомарно захватывает строку (pending → running): если её уже взял другой
+     * процесс (cron + on-demand spawn одновременно), rowCount()===0 → тихо выходим.
+     */
+    public function runPending(int $generationId): void
+    {
+        // Атомарный захват — защита от двойного запуска. started_at фиксирует момент
+        // СТАРТА обработки (не создания) — по нему recovery отличает реально зависшие.
+        $claimed = $this->db->execute(
+            "UPDATE material_generations SET status = 'running', started_at = NOW() WHERE id = ? AND status = 'pending'",
+            [$generationId]
+        );
+        if ($claimed === 0) {
+            return;
+        }
+
+        $row = $this->db->queryOne('SELECT * FROM material_generations WHERE id = ?', [$generationId]);
+        if (!$row) {
+            return;
+        }
+
+        $type = $this->typeObj->getById((int)$row['material_type_id']);
+        if (!$type) {
+            $this->db->update('material_generations', [
+                'status' => 'failed',
+                'error_message' => 'Тип материала не найден (id=' . (int)$row['material_type_id'] . ')',
+                'finished_at' => date('Y-m-d H:i:s'),
+            ], 'id = ?', [$generationId]);
+            return;
+        }
+
+        $params = json_decode((string)($row['input_params_json'] ?? '[]'), true);
+        if (!is_array($params)) {
+            $params = [];
+        }
+        $chargeTxnId = isset($params['_charge_txn_id']) ? (int)$params['_charge_txn_id'] : null;
+        unset($params['_charge_txn_id']);
+
+        $userId    = $row['user_id'] !== null ? (int)$row['user_id'] : null;
+        $mode      = (string)($row['mode'] ?? 'preview');
+        $funnelSid = $row['funnel_session_id'] ?? null;
+        $tokenCost = (int)($row['tokens_charged'] ?? 0);
+        if ($tokenCost === 0) {
+            $tokenCost = (int)($type['token_cost_default'] ?? 10);
+        }
+
+        // executeGeneration сам ставит done/failed и делает refund при сбое.
+        $this->executeGeneration($generationId, $type, $params, $mode, $userId, $funnelSid, $chargeTxnId, $tokenCost);
+    }
+
+    /**
+     * Ядро генерации: шаги 3–8 (промпт → ИИ → самопроверка → рендер → Material → done).
+     * Лог material_generations уже создан и переведён в 'running' вызывающим кодом.
+     * При любой ошибке после старта — refund токенов (если было списание) + status='failed'.
+     */
+    private function executeGeneration(int $generationId, array $type, array $params, string $mode, ?int $userId, ?string $funnelSessionId, ?int $chargeTxnId, int $tokenCost): array
+    {
+        $isPreview = ($mode === 'preview');
+        $typeId = (int)$type['id'];
+        $typeSlug = (string)($type['slug'] ?? '');
 
         try {
             // 3. Сформировать промпт

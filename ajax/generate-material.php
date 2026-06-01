@@ -7,11 +7,13 @@
  *   - type_slug (slug из material_types)
  *   - params[*] (subject, class, topic, duration, features, questions_count, slides_count, hours, program)
  *
- * Ответ:
- *   { success: true, material_id, material_slug, file_format, tokens_left, redirect_url }
- *   { success: false, error: 'message', code: 'not_enough_tokens'|'unauthorized'|'invalid_type'|'ai_error'|'internal' }
+ * Ответ (async): POST ставит задачу в очередь и сразу возвращает её id —
+ *   { success: true, generation_id, status_url }
+ *   { success: false, error: 'message', code: 'not_enough_tokens'|'invalid_type'|'rate_limited'|'csrf'|'internal' }
  *
- * Timeout: 300 секунд — генерация (до 150с) + методическая самопроверка (ещё до 150с).
+ * Саму генерацию (LLM + методическая самопроверка, 60–200с) выполняет фоновый воркер
+ * cron/process-material-generations.php. Фронт опрашивает status_url до done/failed.
+ * Так запрос не висит и не упирается в таймаут прокси, а сессия не блокируется.
  */
 
 session_start();
@@ -28,7 +30,9 @@ require_once __DIR__ . '/../classes/OpenRouterAIService.php';
 require_once __DIR__ . '/../classes/MaterialGenerator.php';
 require_once __DIR__ . '/../includes/material-tracking.php';
 
-set_time_limit(300);
+// Запрос теперь короткий (только постановка в очередь), но оставляем запас на
+// случай медленного списания токенов / БД.
+set_time_limit(30);
 
 function respond(array $data, int $httpCode = 200): void
 {
@@ -50,6 +54,12 @@ $csrf = $_POST['csrf'] ?? '';
 if (!validateCSRFToken($csrf)) {
     respond(['success' => false, 'error' => 'Сессия истекла, обновите страницу', 'code' => 'csrf'], 403);
 }
+
+// КРИТИЧНО: дальше сессия только на чтение не нужна — закрываем её, чтобы НЕ держать
+// эксклюзивный лок файла сессии. Иначе любой параллельный запрос того же браузера
+// (навигация, открытие других страниц) блокировался бы до конца генерации → 504.
+// user_id уже прочитан выше, funnelSessionId работает через cookie.
+session_write_close();
 
 $typeSlug = trim((string)($_POST['type_slug'] ?? ''));
 if ($typeSlug === '') {
@@ -104,7 +114,8 @@ if ($rateError !== null) {
 
 try {
     $generator = new MaterialGenerator($db);
-    $result = $generator->generate($userId, $typeSlug, $params, 'preview', $funnelSessionId, $ip);
+    // Async: только ставим задачу в очередь — ИИ не вызываем в этом запросе.
+    $generationId = $generator->enqueue($userId, $typeSlug, $params, 'preview', $funnelSessionId, $ip);
 
     // Залогиненному, не оплатившему скачивание, — запланировать дожим preview_abandon
     if ($userId !== null) {
@@ -116,13 +127,28 @@ try {
         }
     }
 
+    // Немедленно запускаем фонового воркера (не ждём 1-минутного cron-fallback).
+    // Lock-файл внутри воркера не даст дублей, атомарный pending→running — тоже.
+    if (function_exists('exec')) {
+        $workerPath = realpath(__DIR__ . '/../cron/process-material-generations.php');
+        if ($workerPath !== false) {
+            $out = [];
+            $rc = 0;
+            @exec('php ' . escapeshellarg($workerPath) . ' > /dev/null 2>&1 &', $out, $rc);
+            // Не критично: при сбое spawn задачу подхватит cron-fallback (раз в минуту).
+            // Логируем для диагностики (например, если exec заблокирован на проде).
+            if ($rc !== 0) {
+                error_log('generate-material: worker spawn failed (rc=' . $rc . '), полагаемся на cron-fallback');
+            }
+        }
+    } else {
+        error_log('generate-material: exec() недоступна — генерацию подхватит cron-fallback');
+    }
+
     respond([
-        'success'           => true,
-        'material_id'       => $result['material_id'],
-        'material_slug'     => $result['material_slug'],
-        'file_format'       => $result['file_format'],
-        'unlock_token_cost' => $result['unlock_token_cost'],
-        'redirect_url'      => '/material/' . rawurlencode($result['material_slug']) . '/',
+        'success'       => true,
+        'generation_id' => $generationId,
+        'status_url'    => '/ajax/material-generation-status.php?id=' . $generationId,
     ]);
 } catch (NotEnoughTokensException $e) {
     respond([
@@ -132,14 +158,6 @@ try {
         'tokens_left' => (new UserTokens($db))->getBalance((int)$userId),
         'buy_url' => '/material-balance/',
     ], 402);
-} catch (OpenRouterAIServiceException $e) {
-    error_log('MaterialGenerator AI error: ' . $e->getMessage());
-    respond([
-        'success' => false,
-        'error' => 'Сервис ИИ временно недоступен. Токены возвращены на счёт.',
-        'code' => 'ai_error',
-        'tokens_left' => (new UserTokens($db))->getBalance((int)$userId),
-    ], 502);
 } catch (InvalidArgumentException $e) {
     respond([
         'success' => false,
@@ -147,7 +165,7 @@ try {
         'code' => 'invalid_type',
     ], 400);
 } catch (Throwable $e) {
-    error_log('MaterialGenerator unexpected error: ' . $e->getMessage());
+    error_log('MaterialGenerator enqueue error: ' . $e->getMessage());
     respond([
         'success' => false,
         'error' => 'Внутренняя ошибка. Если она повторится — напишите в поддержку.',
