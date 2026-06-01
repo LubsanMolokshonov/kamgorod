@@ -35,7 +35,9 @@ $audienceSpecializations = [];
 $selectedSpecData        = null;
 
 if ($selectedCategory) {
-    $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory);
+    // getBySlug может вернуть false для несуществующего слага — нормализуем в null,
+    // иначе false попадёт в строго типизированный buildAudienceSeoPhrase(?array) → TypeError 500.
+    $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory) ?: null;
     if ($selectedCategoryData) {
         $audienceSpecializations = $audienceCatObj->getSpecializations($selectedCategoryData['id']);
         if ($selectedSpec) {
@@ -55,7 +57,9 @@ if ($selectedSpec && !empty($audienceSpecializations)) {
     }
 }
 if ($selectedType) {
-    $selectedTypeData = $audienceTypeObj->getBySlug($selectedType);
+    // ?: null — getBySlug отдаёт false для несуществующего типа (напр. слаг-специализация
+    // в позиции типа), а buildAudienceSeoPhrase ждёт ?array.
+    $selectedTypeData = $audienceTypeObj->getBySlug($selectedType) ?: null;
 }
 
 $olympiadObj = new Olympiad($db);
