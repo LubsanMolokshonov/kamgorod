@@ -294,9 +294,9 @@ include __DIR__ . '/includes/header-redesign.php';
 
     <div class="rd-hero-art rd-hero-art-cat reveal">
       <div class="rd-blob"></div>
-      <div class="rd-skolkovo-doc" data-lightbox="/assets/images/razreshenie-skolkovo-068.png" data-lightbox-group="hero-skolkovo" tabindex="0" role="button" aria-label="Увеличить разрешение Сколково № 068">
+      <div class="rd-skolkovo-doc" data-lightbox="/assets/images/diplom-perepodgotovki.jpg" data-lightbox-group="hero-skolkovo" tabindex="0" role="button" aria-label="Увеличить диплом о профессиональной переподготовке">
         <span class="rd-skolkovo-badge"><img src="/assets/images/skolkovo.webp" alt="" width="20" height="20">Фонд «Сколково» · № 068</span>
-        <img class="rd-skolkovo-img" src="/assets/images/razreshenie-skolkovo-068.png" alt="Разрешение Фонда «Сколково» № 068 на образовательную деятельность" loading="eager" fetchpriority="high">
+        <img class="rd-skolkovo-img" src="/assets/images/diplom-perepodgotovki.jpg" alt="Диплом о профессиональной переподготовке" loading="eager" fetchpriority="high">
         <span class="rd-skolkovo-caption">Нажмите, чтобы увеличить</span>
       </div>
       <div class="rd-float-card rd-fc-cat-2">
