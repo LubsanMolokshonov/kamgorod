@@ -11,6 +11,8 @@
  * вызывающий код обязан её ловить и показать пользователю «купите пакет».
  */
 
+require_once __DIR__ . '/../includes/material-tracking.php'; // isUnlimitedMaterialUser()
+
 class NotEnoughTokensException extends RuntimeException {}
 
 class UserTokens
@@ -67,6 +69,25 @@ class UserTokens
             throw new InvalidArgumentException('charge amount must be positive');
         }
         $this->validateReason($reason, ['generation', 'adaptation', 'download', 'admin_deduct']);
+
+        // Белый список: без ограничений по токенам — не списываем (баланс остаётся
+        // прежним) и не бросаем NotEnoughTokensException. Пишем нулевую транзакцию
+        // для аудита факта генерации; refund() для таких пользователей тоже no-op.
+        if (isUnlimitedMaterialUser($this->pdo, $userId)) {
+            $this->db->beginTransaction();
+            try {
+                $this->ensureRow($userId);
+                $meta['notes'] = trim(($meta['notes'] ?? '') . ' [unlimited: без списания]');
+                $txnId = $this->logTransaction($userId, 0, $reason, $meta);
+                $this->db->commit();
+                return $txnId;
+            } catch (Throwable $e) {
+                if ($this->pdo->inTransaction()) {
+                    $this->db->rollback();
+                }
+                throw $e;
+            }
+        }
 
         $this->db->beginTransaction();
         try {
@@ -143,6 +164,11 @@ class UserTokens
      */
     public function refund(int $userId, int $amount, int $originalTxnId, array $meta = []): int
     {
+        // Белый список: списания не было (charge — нулевая транзакция), поэтому и
+        // возвращать нечего — иначе баланс бы рос на каждой неудачной генерации.
+        if (isUnlimitedMaterialUser($this->pdo, $userId)) {
+            return 0;
+        }
         $meta['notes'] = ($meta['notes'] ?? '') . " refund_of_txn={$originalTxnId}";
         return $this->credit($userId, $amount, 'refund', $meta);
     }

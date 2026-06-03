@@ -116,6 +116,37 @@ if (!function_exists('claimAnonymousMaterials')) {
     }
 }
 
+if (!function_exists('isUnlimitedMaterialUser')) {
+    /**
+     * Пользователь из белого списка MATERIAL_UNLIMITED_EMAILS: без суточного лимита
+     * генераций и без списания токенов. Проверка по e-mail из таблицы users.
+     * Результат кэшируется в рамках запроса (по user_id).
+     */
+    function isUnlimitedMaterialUser(PDO $pdo, ?int $userId): bool
+    {
+        static $cache = [];
+        if ($userId === null) {
+            return false;
+        }
+        if (array_key_exists($userId, $cache)) {
+            return $cache[$userId];
+        }
+        $allowed = defined('MATERIAL_UNLIMITED_EMAILS') ? MATERIAL_UNLIMITED_EMAILS : [];
+        if (empty($allowed)) {
+            return $cache[$userId] = false;
+        }
+        try {
+            $stmt = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            $email = strtolower(trim((string)$stmt->fetchColumn()));
+            return $cache[$userId] = ($email !== '' && in_array($email, $allowed, true));
+        } catch (\Throwable $e) {
+            error_log('isUnlimitedMaterialUser: ' . $e->getMessage());
+            return $cache[$userId] = false;
+        }
+    }
+}
+
 if (!function_exists('materialPreviewRateLimit')) {
     /**
      * Лимит на бесплатные превью-генерации за 24ч (защита от слива денег на ИИ).
@@ -126,6 +157,11 @@ if (!function_exists('materialPreviewRateLimit')) {
      */
     function materialPreviewRateLimit(PDO $pdo, ?int $userId, ?string $funnelSessionId, ?string $ip): ?string
     {
+        // Белый список: лимиты не применяем.
+        if (isUnlimitedMaterialUser($pdo, $userId)) {
+            return null;
+        }
+
         $countSince = function (string $where, array $args) use ($pdo): int {
             $stmt = $pdo->prepare(
                 "SELECT COUNT(*) FROM material_generations

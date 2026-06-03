@@ -134,6 +134,18 @@ if (!defined('OPENROUTER_MODEL_REVIEW'))    define('OPENROUTER_MODEL_REVIEW',   
 // Дороже по токенам — отключается значением 0/false/no в .env (по умолчанию включено).
 if (!defined('MATERIAL_SELFCHECK_ENABLED')) define('MATERIAL_SELFCHECK_ENABLED', !in_array(strtolower((string)($_ENV['MATERIAL_SELFCHECK_ENABLED'] ?? '1')), ['0', 'false', 'no', 'off', ''], true));
 
+// Пользователи без ограничений в генераторе материалов: не упираются в суточный лимит
+// генераций и в баланс токенов (списание не выполняется — баланс остаётся прежним).
+// Список e-mail (нижний регистр), через запятую в .env либо хардкод ниже.
+if (!defined('MATERIAL_UNLIMITED_EMAILS')) {
+    $__matUnlimited = array_filter(array_map(
+        static fn($e) => strtolower(trim($e)),
+        explode(',', (string)($_ENV['MATERIAL_UNLIMITED_EMAILS'] ?? 'es.dippel@gmail.com'))
+    ));
+    define('MATERIAL_UNLIMITED_EMAILS', $__matUnlimited);
+    unset($__matUnlimited);
+}
+
 // Telegram Alerts (тех. уведомления в бот ИИ-консультанта)
 // Тот же бот используется в ai-consultant/src/bootstrap.php (AI_TELEGRAM_BOT_TOKEN)
 // Если TELEGRAM_BOT_TOKEN не задан — TelegramNotifier/AlertService молча отключают отправку.
