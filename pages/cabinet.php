@@ -20,9 +20,12 @@ require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../classes/Material.php';
+require_once __DIR__ . '/../classes/MaterialType.php';
 require_once __DIR__ . '/../classes/UserTokens.php';
+require_once __DIR__ . '/../classes/MaterialGenerator.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/installment-helper.php';
+require_once __DIR__ . '/../includes/text-helper.php';
 
 // Auto-login via cookie if session doesn't exist
 if (!isset($_SESSION['user_email']) && isset($_COOKIE['session_token'])) {
@@ -160,12 +163,17 @@ $materialsData = null;
 if ($activeTab === 'materials') {
     $materialObj = new Material($db);
     $tokensObj = new UserTokens($db);
+    $materialTypeObj = new MaterialType($db);
     // Идемпотентный стартовый бонус — на случай, если юзер не заходил ещё в генератор
     $tokensObj->grantSignupBonusIfNeeded((int)$_SESSION['user_id']);
     $materialsData = [
-        'list'    => $materialObj->getByUser((int)$_SESSION['user_id']),
-        'balance' => $tokensObj->getRecord((int)$_SESSION['user_id']),
-        'history' => $tokensObj->getHistory((int)$_SESSION['user_id'], 30),
+        'list'        => $materialObj->getByUser((int)$_SESSION['user_id']),
+        'balance'     => $tokensObj->getRecord((int)$_SESSION['user_id']),
+        'history'     => $tokensObj->getHistory((int)$_SESSION['user_id'], 30),
+        'types'       => $materialTypeObj->getAll(),
+        // Недавние генерации (в т.ч. незавершённые) — чтобы после закрытия вкладки
+        // было видно, на каком этапе генерация: в очереди / идёт / готово / ошибка.
+        'generations' => MaterialGenerator::getRecentForUser($db, (int)$_SESSION['user_id'], 20),
     ];
 }
 
@@ -678,8 +686,49 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
             <?php else: ?>
+                <?php
+                    // Счётчики по типам для саб-меню
+                    $eventCounts = [
+                        'competition' => count($registrations),
+                        'olympiad'    => count($userOlympiadResults),
+                        'webinar'     => count($userWebinars),
+                        'publication' => count($userPublications),
+                    ];
+                    // Разделы саб-меню (порядок зафиксирован)
+                    $eventSubTabs = [
+                        'competition' => 'Конкурсы',
+                        'olympiad'    => 'Олимпиады',
+                        'webinar'     => 'Вебинары',
+                        'publication' => 'Публикации',
+                    ];
+                    // Активный раздел: из query params либо первый («Конкурсы»)
+                    $activeEventType = $_GET['evtype'] ?? 'competition';
+                    if (!isset($eventSubTabs[$activeEventType])) {
+                        $activeEventType = 'competition';
+                    }
+                ?>
                 <div class="registrations-section">
                     <h2>Ваши мероприятия (<?php echo count($allEvents); ?>)</h2>
+
+                    <nav class="events-subtabs" role="tablist" aria-label="Типы мероприятий">
+                        <?php foreach ($eventSubTabs as $type => $label): ?>
+                            <button type="button"
+                                    class="events-subtab<?php echo $activeEventType === $type ? ' active' : ''; ?>"
+                                    role="tab"
+                                    data-event-tab="<?php echo $type; ?>"
+                                    aria-selected="<?php echo $activeEventType === $type ? 'true' : 'false'; ?>">
+                                <?php echo $label; ?>
+                                <span class="events-subtab-count"><?php echo $eventCounts[$type]; ?></span>
+                            </button>
+                        <?php endforeach; ?>
+                    </nav>
+
+                    <?php foreach ($eventSubTabs as $type => $label): ?>
+                        <div class="events-empty-state" data-empty-for="<?php echo $type; ?>"<?php echo ($activeEventType === $type && $eventCounts[$type] === 0) ? '' : ' style="display:none;"'; ?>>
+                            <div class="empty-icon">🗂️</div>
+                            <p>В разделе «<?php echo $label; ?>» пока нет мероприятий.</p>
+                        </div>
+                    <?php endforeach; ?>
 
                     <div class="registrations-grid">
                         <?php foreach ($allEvents as $event): ?>
@@ -693,7 +742,7 @@ include __DIR__ . '/../includes/header.php';
                                 ];
                                 $statusInfo = $statusMap[$reg['status']] ?? ['name' => 'Неизвестно', 'color' => '#9ca3af'];
                             ?>
-                                <div class="registration-card">
+                                <div class="registration-card" data-event-type="competition">
                                     <div class="card-header">
                                         <h3><?php echo htmlspecialchars($reg['competition_name']); ?></h3>
                                         <div class="card-badges">
@@ -756,7 +805,7 @@ include __DIR__ . '/../includes/header.php';
                                     $statusInfo = ['name' => 'Завершен', 'color' => '#9ca3af'];
                                 }
                             ?>
-                                <div class="registration-card">
+                                <div class="registration-card" data-event-type="webinar">
                                     <div class="card-header">
                                         <h3><?php echo htmlspecialchars($webinar['webinar_title']); ?></h3>
                                         <div class="card-badges">
@@ -860,7 +909,7 @@ include __DIR__ . '/../includes/header.php';
                                 ];
                                 $certStatusInfo = $certStatusMap[$pub['certificate_status']] ?? ['name' => 'Не оформлено', 'color' => '#9ca3af'];
                             ?>
-                                <div class="registration-card">
+                                <div class="registration-card" data-event-type="publication">
                                     <div class="card-header">
                                         <h3><?php echo htmlspecialchars($pub['title']); ?></h3>
                                         <div class="card-badges">
@@ -941,7 +990,7 @@ include __DIR__ . '/../includes/header.php';
                                 $diplomaPaid = $olympReg && in_array($olympReg['status'], ['paid', 'diploma_ready']);
                                 $diplomaPending = $olympReg && ($olympReg['status'] ?? '') === 'pending';
                             ?>
-                                <div class="registration-card">
+                                <div class="registration-card" data-event-type="olympiad">
                                     <div class="card-header">
                                         <h3><?php echo htmlspecialchars($result['olympiad_title']); ?></h3>
                                         <div class="card-badges">
@@ -1019,6 +1068,62 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
 
+                <style>
+                    .events-subtabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 24px; border-bottom: 1px solid #e5e7eb; padding-bottom: 0; }
+                    .events-subtab { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 14px; margin-bottom: -1px; font-size: 15px; font-weight: 500; color: #6b7280; cursor: pointer; transition: color .15s, border-color .15s; }
+                    .events-subtab:hover { color: #111827; }
+                    .events-subtab.active { color: #2563eb; border-bottom-color: #2563eb; }
+                    .events-subtab-count { font-size: 12px; font-weight: 600; line-height: 1; padding: 2px 7px; border-radius: 999px; background: #f3f4f6; color: #6b7280; }
+                    .events-subtab.active .events-subtab-count { background: #dbeafe; color: #2563eb; }
+                    .events-empty-state { text-align: center; padding: 40px 20px; color: #6b7280; }
+                    .events-empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+                    .events-empty-state p { margin: 0; font-size: 15px; }
+                </style>
+                <script>
+                    (function () {
+                        var subtabs = document.querySelectorAll('.events-subtab');
+                        if (!subtabs.length) return;
+                        var cards = document.querySelectorAll('.registrations-grid .registration-card');
+                        var emptyStates = document.querySelectorAll('.events-empty-state');
+
+                        function applyFilter(type) {
+                            var visible = 0;
+                            cards.forEach(function (card) {
+                                var match = card.getAttribute('data-event-type') === type;
+                                card.style.display = match ? '' : 'none';
+                                if (match) visible++;
+                            });
+                            subtabs.forEach(function (tab) {
+                                var isActive = tab.getAttribute('data-event-tab') === type;
+                                tab.classList.toggle('active', isActive);
+                                tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                            });
+                            emptyStates.forEach(function (es) {
+                                es.style.display = (es.getAttribute('data-empty-for') === type && visible === 0) ? '' : 'none';
+                            });
+                        }
+
+                        subtabs.forEach(function (tab) {
+                            tab.addEventListener('click', function () {
+                                var type = tab.getAttribute('data-event-tab');
+                                applyFilter(type);
+                                // Синхронизируем URL без перезагрузки
+                                var url = new URL(window.location.href);
+                                url.searchParams.set('tab', 'events');
+                                url.searchParams.set('evtype', type);
+                                window.history.replaceState({}, '', url);
+                            });
+                        });
+
+                        // Стартовый раздел: из query params либо «Конкурсы»
+                        var params = new URLSearchParams(window.location.search);
+                        var initial = params.get('evtype');
+                        var allowed = Array.prototype.map.call(subtabs, function (t) { return t.getAttribute('data-event-tab'); });
+                        if (allowed.indexOf(initial) === -1) initial = 'competition';
+                        applyFilter(initial);
+                    })();
+                </script>
+
                 <!-- Actions -->
                 <div class="cabinet-actions">
                     <a href="/konkursy/" class="btn btn-primary">Конкурсы</a>
@@ -1034,6 +1139,36 @@ include __DIR__ . '/../includes/header.php';
             $mSpent   = (int)($materialsData['balance']['lifetime_spent'] ?? 0);
             $mList    = $materialsData['list'];
             $mHistory = $materialsData['history'];
+            $mTypes   = $materialsData['types'] ?? [];
+            $mGenerations = $materialsData['generations'] ?? [];
+            // В панель «процесс генерации» выносим только незавершённые/сбойные задачи:
+            // успешные (done) уже видны в списке материалов ниже.
+            $mActiveGenerations = array_values(array_filter(
+                $mGenerations,
+                fn($g) => in_array($g['status'], ['pending', 'running', 'failed'], true)
+            ));
+            $mHasRunning = (bool)array_filter(
+                $mActiveGenerations,
+                fn($g) => in_array($g['status'], ['pending', 'running'], true)
+            );
+            // Саб-меню: «Все» + категории материалов ИИ-генератора (по справочнику типов).
+            // Счётчики берём из материалов пользователя по slug типа.
+            $mTypeCounts = [];
+            foreach ($mList as $m) {
+                $slug = $m['type_slug'] ?? '';
+                if ($slug !== '') {
+                    $mTypeCounts[$slug] = ($mTypeCounts[$slug] ?? 0) + 1;
+                }
+            }
+            $mSubTabs = ['' => 'Все'];
+            foreach ($mTypes as $mt) {
+                $mSubTabs[$mt['slug']] = $mt['name'];
+            }
+            // Активный раздел из query params (mtype), по умолчанию «Все»
+            $activeMaterialType = $_GET['mtype'] ?? '';
+            if (!isset($mSubTabs[$activeMaterialType])) {
+                $activeMaterialType = '';
+            }
             $reasonLabels = [
                 'signup_bonus' => 'Стартовый бонус',
                 'purchase'     => 'Покупка пакета',
@@ -1051,6 +1186,34 @@ include __DIR__ . '/../includes/header.php';
                 'rejected'  => ['Отклонён',      '#ef4444'],
                 'archived'  => ['В архиве',      '#6b7280'],
             ];
+            // Карта material_id → slug типа (для детализации операций «Скачивание»).
+            $mIdToSlug = [];
+            foreach ($mList as $m) {
+                if (!empty($m['id']) && !empty($m['type_slug'])) {
+                    $mIdToSlug[(int)$m['id']] = $m['type_slug'];
+                }
+            }
+            // Родительный падеж названия типа → «Скачивание презентации» и т.п.
+            $downloadGenitiveByType = [
+                'tehkarta-uroka'   => 'технологической карты урока',
+                'konspekt-uroka'   => 'конспекта урока',
+                'rabochiy-list'    => 'рабочего листа',
+                'test-kontrolnaya' => 'теста',
+                'prezentatsiya'    => 'презентации',
+                'klassnyy-chas'    => 'сценария классного часа',
+                'ktp-fragment'     => 'фрагмента КТП',
+            ];
+            // Формирует подпись операции с детализацией типа скачанного материала.
+            $operationLabel = static function (array $h) use ($reasonLabels, $mIdToSlug, $downloadGenitiveByType): string {
+                $base = $reasonLabels[$h['reason']] ?? $h['reason'];
+                if ($h['reason'] === 'download' && !empty($h['material_id'])) {
+                    $slug = $mIdToSlug[(int)$h['material_id']] ?? '';
+                    if ($slug !== '' && isset($downloadGenitiveByType[$slug])) {
+                        return 'Скачивание ' . $downloadGenitiveByType[$slug];
+                    }
+                }
+                return $base;
+            };
         ?>
             <!-- Materials Tab -->
             <div class="materials-balance-card" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; padding:24px; background:#1f2937; color:#fff; border-radius:12px; margin-bottom:24px;">
@@ -1062,10 +1225,84 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <a href="/material-generator/" class="btn btn-primary" style="background:#fff; color:#1f2937;">Сгенерировать новый</a>
-                    <a href="/material-balance/" class="btn btn-outline" style="border-color:#fff; color:#fff;">Пополнить</a>
+                    <a href="/material-generator/" class="btn btn-primary mbc-btn-light">Сгенерировать новый</a>
+                    <a href="/material-balance/" class="btn btn-outline mbc-btn-outline">Пополнить</a>
                 </div>
             </div>
+
+            <?php if (!empty($mActiveGenerations)):
+                // Метаданные статусов для панели процесса генерации
+                $genStatusMeta = [
+                    'pending' => ['label' => 'В очереди',     'color' => '#d97706', 'bg' => '#fffbeb', 'border' => '#fde68a'],
+                    'running' => ['label' => 'Генерируется',  'color' => '#2563eb', 'bg' => '#eff6ff', 'border' => '#bfdbfe'],
+                    'failed'  => ['label' => 'Ошибка',        'color' => '#dc2626', 'bg' => '#fef2f2', 'border' => '#fecaca'],
+                ];
+            ?>
+                <div class="gen-status-panel" data-has-running="<?php echo $mHasRunning ? '1' : '0'; ?>">
+                    <h2 style="font-size:18px; margin:0 0 4px;">Процесс генерации</h2>
+                    <p style="font-size:13px; color:#6b7280; margin:0 0 16px;">
+                        Здесь видно, что происходит с вашими генерациями. Готовые материалы появляются в списке ниже.
+                    </p>
+                    <div class="gen-status-list">
+                        <?php foreach ($mActiveGenerations as $g):
+                            $meta = $genStatusMeta[$g['status']];
+                            $isActive = in_array($g['status'], ['pending', 'running'], true);
+                        ?>
+                            <div class="gen-status-item" style="border-left:4px solid <?php echo $meta['color']; ?>; background:<?php echo $meta['bg']; ?>; border:1px solid <?php echo $meta['border']; ?>; border-left-width:4px;">
+                                <div class="gen-status-main">
+                                    <div class="gen-status-head">
+                                        <?php if ($isActive): ?><span class="gen-spinner" aria-hidden="true"></span><?php endif; ?>
+                                        <span class="gen-status-badge" style="color:<?php echo $meta['color']; ?>;"><?php echo $meta['label']; ?></span>
+                                        <span class="gen-status-type"><?php echo htmlspecialchars($g['type_name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                    </div>
+                                    <div class="gen-status-topic"><?php echo htmlspecialchars($g['topic'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <div class="gen-status-meta">
+                                        Начато: <?php echo date('d.m.Y H:i', strtotime($g['created_at'])); ?>
+                                        <?php if ($g['status'] === 'pending'): ?>
+                                            · ожидает обработки — обычно начинается в течение минуты
+                                        <?php elseif ($g['status'] === 'running'): ?>
+                                            · ИИ создаёт материал, обычно 30–90 секунд (иногда до 3 минут)
+                                        <?php elseif ($g['status'] === 'failed'): ?>
+                                            · сбой<?php if (!empty($g['finished_at'])): ?> в <?php echo date('H:i', strtotime($g['finished_at'])); ?><?php endif; ?>. Токены за неудачную генерацию возвращены на баланс.
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php if ($g['status'] === 'failed'): ?>
+                                    <div class="gen-status-actions">
+                                        <a href="/material-generator/" class="btn btn-primary btn-sm">Попробовать снова</a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <style>
+                    .gen-status-panel { background:#fff; border-radius:12px; padding:20px 24px; margin-bottom:24px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+                    .gen-status-list { display:flex; flex-direction:column; gap:12px; }
+                    .gen-status-item { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 16px; border-radius:8px; }
+                    .gen-status-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+                    .gen-status-badge { font-size:13px; font-weight:700; }
+                    .gen-status-type { font-size:12px; color:#6b7280; background:#fff; border:1px solid #e5e7eb; border-radius:999px; padding:1px 8px; }
+                    .gen-status-topic { font-size:15px; font-weight:600; color:#111827; }
+                    .gen-status-meta { font-size:12px; color:#6b7280; margin-top:4px; }
+                    .gen-status-actions { flex:0 0 auto; }
+                    .gen-status-actions .btn-sm { padding:6px 14px; font-size:13px; }
+                    .gen-spinner { width:14px; height:14px; border:2px solid #cbd5e1; border-top-color:#2563eb; border-radius:50%; display:inline-block; animation:genspin .8s linear infinite; }
+                    @keyframes genspin { to { transform:rotate(360deg); } }
+                </style>
+                <?php if ($mHasRunning): ?>
+                <script>
+                    // Пока есть незавершённые генерации — мягко обновляем страницу,
+                    // чтобы пользователь увидел готовый материал или ошибку без ручного F5.
+                    (function () {
+                        var panel = document.querySelector('.gen-status-panel[data-has-running="1"]');
+                        if (!panel) return;
+                        setTimeout(function () { window.location.reload(); }, 12000);
+                    })();
+                </script>
+                <?php endif; ?>
+            <?php endif; ?>
 
             <?php if (empty($mList)): ?>
                 <div class="empty-cabinet">
@@ -1077,12 +1314,39 @@ include __DIR__ . '/../includes/header.php';
             <?php else: ?>
                 <div class="registrations-section">
                     <h2>Мои материалы (<?php echo count($mList); ?>)</h2>
+
+                    <nav class="events-subtabs materials-subtabs" role="tablist" aria-label="Категории материалов">
+                        <?php foreach ($mSubTabs as $slug => $label):
+                            $cnt = $slug === '' ? count($mList) : ($mTypeCounts[$slug] ?? 0);
+                        ?>
+                            <button type="button"
+                                    class="events-subtab<?php echo $activeMaterialType === $slug ? ' active' : ''; ?>"
+                                    role="tab"
+                                    data-material-tab="<?php echo htmlspecialchars($slug, ENT_QUOTES, 'UTF-8'); ?>"
+                                    aria-selected="<?php echo $activeMaterialType === $slug ? 'true' : 'false'; ?>">
+                                <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
+                                <span class="events-subtab-count"><?php echo $cnt; ?></span>
+                            </button>
+                        <?php endforeach; ?>
+                    </nav>
+
+                    <?php foreach ($mSubTabs as $slug => $label):
+                        if ($slug === '') continue; // у «Все» empty state не нужен — иначе блок не пуст
+                        $cnt = $mTypeCounts[$slug] ?? 0;
+                    ?>
+                        <div class="events-empty-state" data-material-empty-for="<?php echo htmlspecialchars($slug, ENT_QUOTES, 'UTF-8'); ?>"<?php echo ($activeMaterialType === $slug && $cnt === 0) ? '' : ' style="display:none;"'; ?>>
+                            <div class="empty-icon">🤖</div>
+                            <p>В категории «<?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>» пока нет материалов.</p>
+                            <a href="/material-generator/" class="btn btn-primary">Сгенерировать</a>
+                        </div>
+                    <?php endforeach; ?>
+
                     <div class="registrations-grid">
                         <?php foreach ($mList as $m):
                             [$stLabel, $stColor] = $statusLabels[$m['status']] ?? ['—', '#9ca3af'];
                             $detailUrl = !empty($m['slug']) ? '/material/' . rawurlencode($m['slug']) . '/' : null;
                         ?>
-                            <div class="registration-card">
+                            <div class="registration-card" data-material-type="<?php echo htmlspecialchars($m['type_slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                 <div class="card-header">
                                     <h3><?php echo htmlspecialchars($m['title'] ?? 'Без названия', ENT_QUOTES, 'UTF-8'); ?></h3>
                                     <div class="card-badges">
@@ -1103,9 +1367,19 @@ include __DIR__ . '/../includes/header.php';
                                     <?php endif; ?>
                                 </div>
                                 <div class="card-actions">
+                                    <?php
+                                        // Сгенерированное превью без оплаты скачать нельзя — прямая ссылка на
+                                        // material-download.php вернёт 403 «Материал не разблокирован». Поэтому для
+                                        // заблокированных превью ведём на детальную страницу (там кнопка разблокировки).
+                                        $mLocked = (int)($m['is_generated'] ?? 0) === 1 && (int)($m['is_unlocked'] ?? 1) === 0;
+                                    ?>
                                     <?php if ($detailUrl && in_array($m['status'], ['draft', 'review', 'published'], true)): ?>
                                         <a href="<?php echo $detailUrl; ?>" class="btn btn-primary" target="_blank">Открыть</a>
-                                        <a href="/material-download.php?id=<?php echo (int)$m['id']; ?>" class="btn btn-success">Скачать</a>
+                                        <?php if ($mLocked): ?>
+                                            <a href="<?php echo $detailUrl; ?>" class="btn btn-success" target="_blank">Разблокировать и скачать</a>
+                                        <?php else: ?>
+                                            <a href="/material-download.php?id=<?php echo (int)$m['id']; ?>" class="btn btn-success">Скачать</a>
+                                        <?php endif; ?>
                                     <?php elseif ($m['status'] === 'rejected'): ?>
                                         <span style="color:#991b1b; font-size:13px;">Отклонён модератором<?php echo !empty($m['moderation_comment']) ? ': ' . htmlspecialchars($m['moderation_comment'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
                                     <?php endif; ?>
@@ -1114,6 +1388,73 @@ include __DIR__ . '/../includes/header.php';
                         <?php endforeach; ?>
                     </div>
                 </div>
+
+                <style>
+                    /* Базовые стили саб-меню (на вкладке «Материалы» инлайн-стили events-таба недоступны) */
+                    .events-subtabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 24px; border-bottom: 1px solid #e5e7eb; padding-bottom: 0; }
+                    .events-subtab { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 14px; margin-bottom: -1px; font-size: 15px; font-weight: 500; color: #6b7280; cursor: pointer; transition: color .15s, border-color .15s; }
+                    .events-subtab:hover { color: #111827; }
+                    .events-subtab.active { color: #2563eb; border-bottom-color: #2563eb; }
+                    .events-subtab-count { font-size: 12px; font-weight: 600; line-height: 1; padding: 2px 7px; border-radius: 999px; background: #f3f4f6; color: #6b7280; }
+                    .events-subtab.active .events-subtab-count { background: #dbeafe; color: #2563eb; }
+                    .events-empty-state { text-align: center; padding: 40px 20px; color: #6b7280; }
+                    .events-empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+                    .events-empty-state p { margin: 0 0 12px; font-size: 15px; }
+                    /* Горизонтальное саб-меню адаптируется на мобильных: прокрутка по горизонтали */
+                    .materials-subtabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+                    .materials-subtabs .events-subtab { white-space: nowrap; flex: 0 0 auto; }
+                    @media (min-width: 768px) {
+                        .materials-subtabs { flex-wrap: wrap; overflow-x: visible; }
+                    }
+                </style>
+                <script>
+                    (function () {
+                        var subtabs = document.querySelectorAll('.materials-subtabs .events-subtab');
+                        if (!subtabs.length) return;
+                        var cards = document.querySelectorAll('.registrations-grid .registration-card[data-material-type]');
+                        var emptyStates = document.querySelectorAll('[data-material-empty-for]');
+
+                        function applyFilter(type) {
+                            var visible = 0;
+                            cards.forEach(function (card) {
+                                var match = (type === '') || (card.getAttribute('data-material-type') === type);
+                                card.style.display = match ? '' : 'none';
+                                if (match) visible++;
+                            });
+                            subtabs.forEach(function (tab) {
+                                var isActive = tab.getAttribute('data-material-tab') === type;
+                                tab.classList.toggle('active', isActive);
+                                tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                            });
+                            emptyStates.forEach(function (es) {
+                                es.style.display = (es.getAttribute('data-material-empty-for') === type && visible === 0) ? '' : 'none';
+                            });
+                        }
+
+                        subtabs.forEach(function (tab) {
+                            tab.addEventListener('click', function () {
+                                var type = tab.getAttribute('data-material-tab');
+                                applyFilter(type);
+                                // Синхронизируем URL без перезагрузки
+                                var url = new URL(window.location.href);
+                                url.searchParams.set('tab', 'materials');
+                                if (type === '') {
+                                    url.searchParams.delete('mtype');
+                                } else {
+                                    url.searchParams.set('mtype', type);
+                                }
+                                window.history.replaceState({}, '', url);
+                            });
+                        });
+
+                        // Стартовый раздел: из query params либо «Все»
+                        var params = new URLSearchParams(window.location.search);
+                        var initial = params.get('mtype') || '';
+                        var allowed = Array.prototype.map.call(subtabs, function (t) { return t.getAttribute('data-material-tab'); });
+                        if (allowed.indexOf(initial) === -1) initial = '';
+                        applyFilter(initial);
+                    })();
+                </script>
             <?php endif; ?>
 
             <?php if (!empty($mHistory)): ?>
@@ -1134,9 +1475,9 @@ include __DIR__ . '/../includes/header.php';
                                         <?php echo date('d.m.Y H:i', strtotime($h['created_at'])); ?>
                                     </td>
                                     <td style="padding:10px;">
-                                        <?php echo htmlspecialchars($reasonLabels[$h['reason']] ?? $h['reason'], ENT_QUOTES, 'UTF-8'); ?>
+                                        <?php echo htmlspecialchars($operationLabel($h), ENT_QUOTES, 'UTF-8'); ?>
                                         <?php if (!empty($h['notes'])): ?>
-                                            <div style="font-size:11px; color:#9ca3af;"><?php echo htmlspecialchars($h['notes'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                            <div style="font-size:11px; color:#9ca3af;"><?php echo htmlspecialchars(fix_mojibake($h['notes']), ENT_QUOTES, 'UTF-8'); ?></div>
                                         <?php endif; ?>
                                     </td>
                                     <td style="padding:10px; text-align:right; font-weight:600;

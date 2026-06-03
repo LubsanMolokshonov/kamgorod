@@ -380,7 +380,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <div class="rd-chip-list">
           <div class="rd-chip-row<?php echo $programType === 'all' ? ' active' : ''; ?>">
             <label>
-              <a href="<?php echo buildKursyUrl(['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>" style="text-decoration:none;color:inherit;">Все курсы</a>
+              <a href="/kursy/" style="text-decoration:none;color:inherit;">Все курсы</a>
             </label>
           </div>
           <?php foreach (COURSE_PROGRAM_TYPES as $pt => $label): ?>
@@ -434,7 +434,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <div class="rd-catalog-toolbar">
           <div class="rd-applied-tags">
             <?php if ($programType !== 'all'): ?>
-              <a class="rd-applied-tag" href="<?php echo buildKursyUrl(['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]); ?>">
+              <a class="rd-applied-tag" href="/kursy/">
                 <?php echo htmlspecialchars(COURSE_PROGRAM_TYPES[$programType] ?? $programType, ENT_QUOTES, 'UTF-8'); ?> ×
               </a>
             <?php endif; ?>

@@ -148,6 +148,16 @@ class PptxRenderer
                 ->getFont()->setSize(12)->setName($font);
         }
 
+        // Фирменный логотип портала внизу слева (на светлом фоне слайда)
+        $logoPath = MaterialTheme::logoColorPath();
+        if ($logoPath !== '') {
+            $logo = $slide->createDrawingShape();
+            $logo->setPath($logoPath)
+                ->setWidth(150)
+                ->setOffsetX(46)
+                ->setOffsetY(self::SLIDE_H - 52);
+        }
+
         // Чип номера слайда внизу справа
         $footer = $slide->createRichTextShape()
             ->setHeight(30)

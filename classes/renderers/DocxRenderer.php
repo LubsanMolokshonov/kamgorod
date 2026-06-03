@@ -43,26 +43,48 @@ class DocxRenderer
         $phpWord->addTitleStyle(3, ['name' => MaterialTheme::DOC_FONT, 'size' => 12, 'bold' => true, 'color' => MaterialTheme::INK_900], ['spaceBefore' => 180, 'spaceAfter' => 80]);
 
         $section = $phpWord->addSection([
-            'marginTop'    => 1100,
-            'marginBottom' => 1100,
+            'marginTop'    => 1500,
+            'marginBottom' => 1300,
             'marginLeft'   => 1100,
             'marginRight'  => 1100,
+            'headerHeight' => 700,
+            'footerHeight' => 700,
         ]);
+
+        // Фирменный колонтитул: логотип портала сверху каждой страницы.
+        $header = $section->addHeader();
+        $logoPath = MaterialTheme::logoColorPath();
+        if ($logoPath !== '') {
+            $header->addImage($logoPath, [
+                'width'         => 150,
+                'height'        => 41,
+                'alignment'     => \PhpOffice\PhpWord\SimpleType\Jc::START,
+                'wrappingStyle' => 'inline',
+            ]);
+        } else {
+            $header->addText(MaterialTheme::BRAND_LABEL, ['bold' => true, 'size' => 11, 'color' => MaterialTheme::INDIGO_700]);
+        }
+
+        // Фирменный подвал: название портала + номер страницы.
+        $footer = $section->addFooter();
+        $footerTable = $footer->addTable();
+        $footerTable->addRow();
+        $footerTable->addCell(7000)->addText(
+            'Сгенерировано на ' . MaterialTheme::BRAND_SITE . ' · ' . MaterialTheme::BRAND_LABEL,
+            ['size' => 8, 'color' => '8b90a8']
+        );
+        $footerTable->addCell(2000)->addPreserveText(
+            'стр. {PAGE} из {NUMPAGES}',
+            ['size' => 8, 'color' => '8b90a8'],
+            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::END]
+        );
 
         $body = $this->html->render($data);
         // PHPWord HtmlConverter ожидает корневой блок-элемент.
-        $wrapped = '<div>' . $body . '</div>';
+        $wrapped = '<div>' . $this->normalizeVoidTags($body) . '</div>';
 
         // addHtml сам разберёт h1/h2/h3, ul/ol, table, p, strong, em
         \PhpOffice\PhpWord\Shared\Html::addHtml($section, $wrapped, false, false);
-
-        $section->addTextBreak(1);
-        $siteName = defined('SITE_NAME') ? SITE_NAME : 'fgos.pro';
-        $section->addText(
-            'Сгенерировано на ' . $siteName . ' · ' . date('Y'),
-            ['size' => 9, 'color' => '888888'],
-            ['alignment' => 'center']
-        );
 
         [$relativePath, $absolutePath] = $this->ensureOutputPath($slug, 'docx');
 
@@ -75,6 +97,22 @@ class DocxRenderer
             'file_size' => filesize($absolutePath) ?: 0,
             'file_format' => 'docx',
         ];
+    }
+
+    /**
+     * PHPWord\Shared\Html парсит HTML строго как XML (DOMDocument::loadXML).
+     * Незакрытый void-тег (`<br>`, `<hr>`, `<img>`) ломает разбор всего документа,
+     * и в .docx молча попадает только колонтитул — тело теряется. Поэтому перед
+     * передачей в addHtml приводим void-теги к XML-форме `<br/>`. Шаблоны и так
+     * должны отдавать корректную разметку — это защитная сетка от регрессий.
+     */
+    private function normalizeVoidTags(string $html): string
+    {
+        return preg_replace(
+            '/<(br|hr|img|input|col|wbr)((?:\s[^<>]*?)?)\s*(?<!\/)>/i',
+            '<$1$2/>',
+            $html
+        ) ?? $html;
     }
 
     private function ensureOutputPath(string $slug, string $ext): array

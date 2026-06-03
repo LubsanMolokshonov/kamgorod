@@ -203,7 +203,7 @@ $presets = [
       <div id="generator-status" class="mat-status">
         <div class="mat-loader"></div>
         <p id="gen-status-text">ИИ работает… Обычно 30–90 секунд, иногда до 3 минут.</p>
-        <p style="color:var(--ink-400,#8b90a8); font-size:14px;">Можно не закрывать вкладку — если закроете, материал всё равно сохранится.</p>
+        <p style="color:var(--ink-400,#8b90a8); font-size:14px;">Можно не закрывать вкладку — если закроете, генерация продолжится в фоне. Статус и готовый материал всегда видны в <a href="/kabinet/?tab=materials" style="color:var(--indigo-600,#4f46e5);">личном кабинете → «Материалы ФОП»</a>.</p>
       </div>
 
       <div id="generator-error" class="mat-error"></div>
@@ -215,6 +215,8 @@ $presets = [
           var errorEl = document.getElementById('generator-error');
           var submitBtn = document.getElementById('generator-submit');
           var presets = <?= json_encode($presets, JSON_UNESCAPED_UNICODE) ?>;
+          var IS_LOGGED_IN = <?= $userId ? 'true' : 'false' ?>;
+          var CSRF_TOKEN = <?= json_encode($csrfToken, JSON_UNESCAPED_UNICODE) ?>;
 
           // Фильтр программ по выбранному классу: для 5 класса не показываем ФОП ДО/НОО и т.п.
           var classInput = form.querySelector('[name="class"]');
@@ -278,6 +280,32 @@ $presets = [
               errorEl.style.display = 'block';
           }
 
+          // Кнопка «Увеличить лимит»: поднимает персональный суточный лимит и сразу
+          // повторяет генерацию. Доступна только залогиненным.
+          function bindIncreaseLimit() {
+              var link = document.getElementById('increase-limit-link');
+              if (!link) return;
+              link.addEventListener('click', function (e) {
+                  e.preventDefault();
+                  link.textContent = 'Увеличиваем лимит…';
+                  var fd = new FormData();
+                  fd.append('csrf', CSRF_TOKEN);
+                  fetch('/ajax/increase-material-limit.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                      .then(function (r) { return r.json(); })
+                      .then(function (d) {
+                          if (d && d.success) {
+                              errorEl.style.display = 'none';
+                              runGeneration();
+                          } else {
+                              showError((d && d.error) || 'Не удалось увеличить лимит, попробуйте позже.');
+                          }
+                      })
+                      .catch(function () {
+                          showError('Не удалось увеличить лимит. Проверьте интернет и попробуйте ещё раз.');
+                      });
+              });
+          }
+
           // Генерация асинхронна: POST мгновенно ставит задачу в очередь и возвращает
           // status_url; дальше опрашиваем статус, пока воркер не закончит. Так запрос
           // не висит и не упирается в таймаут прокси.
@@ -305,6 +333,13 @@ $presets = [
                       }
                       var msg = d.error || 'Ошибка генерации';
                       if (d.code === 'rate_limited') {
+                          // Залогиненному не предлагаем регистрацию — даём поднять лимит.
+                          // Анониму — приглашение зарегистрироваться (бонусные токены, выше лимит).
+                          if (IS_LOGGED_IN) {
+                              showError(msg + ' <a href="#" id="increase-limit-link">Увеличить лимит →</a>');
+                              bindIncreaseLimit();
+                              return;
+                          }
                           msg += ' <a href="/vhod?return=' + encodeURIComponent(location.pathname) + '">Зарегистрироваться →</a>';
                       }
                       showError(msg);
@@ -315,19 +350,32 @@ $presets = [
                   });
           }
 
+          // Ориентир обратного отсчёта: типичная генерация укладывается в это время.
+          // Если воркер не успел — таймер замирает на 0:00 с пометкой «почти готово».
+          var COUNTDOWN_TARGET = 120; // сек
+
+          function fmtMMSS(sec) {
+              if (sec < 0) sec = 0;
+              var m = Math.floor(sec / 60);
+              var s = sec % 60;
+              return m + ':' + (s < 10 ? '0' + s : s);
+          }
+
           function startPolling(statusUrl) {
               var startedAt = Date.now();
               pollTimer = setInterval(function () {
                   var elapsed = Math.round((Date.now() - startedAt) / 1000);
                   // Предохранитель: 5 минут. Материал всё равно допишется воркером.
                   if (elapsed > 300) {
-                      showError('Генерация затянулась. Материал может появиться чуть позже — обновите страницу через минуту или попробуйте ещё раз.');
+                      clearInterval(pollTimer); pollTimer = null;
+                      showError('Генерация затянулась, но продолжается в фоне. Материал появится в <a href="/kabinet/?tab=materials">личном кабинете → «Материалы ФОП»</a> через пару минут — там же будет видно, если произошла ошибка.');
                       return;
                   }
                   if (statusTextEl) {
-                      statusTextEl.textContent = (elapsed < 60)
-                          ? 'ИИ работает… ' + elapsed + ' сек.'
-                          : 'ИИ дорабатывает материал по методике… ' + elapsed + ' сек.';
+                      var remaining = COUNTDOWN_TARGET - elapsed;
+                      statusTextEl.textContent = (remaining > 0)
+                          ? 'ИИ готовит материал по методике… осталось ~' + fmtMMSS(remaining)
+                          : 'Почти готово, дорабатываем последние детали…';
                   }
                   fetch(statusUrl, { credentials: 'same-origin' })
                       .then(function (r) { return r.json(); })
@@ -339,7 +387,8 @@ $presets = [
                               if (typeof ym === 'function') { ym(106465857, 'reachGoal', 'material_preview'); }
                               window.location.href = d.redirect_url;
                           } else if (d.status === 'failed') {
-                              showError(d.error || 'Не удалось сгенерировать материал. Попробуйте ещё раз.');
+                              clearInterval(pollTimer); pollTimer = null;
+                              showError((d.error || 'Не удалось сгенерировать материал.') + ' Токены за неудачную генерацию возвращены. Попробуйте ещё раз — статус всегда виден в <a href="/kabinet/?tab=materials">личном кабинете</a>.');
                           }
                           // pending/running — ждём следующего тика
                       })

@@ -118,7 +118,7 @@ class MaterialHtmlRenderer
             if (!empty($n['scale']))     { $rows[] = '<strong>Шкала оценивания:</strong> ' . $this->esc($this->stringifyAnswer($n['scale'])); }
             if ($rows) {
                 $html .= '<div class="md-note"><h2>Пояснительная записка</h2><p>'
-                      . implode('<br>', $rows) . '</p></div>';
+                      . implode('<br/>', $rows) . '</p></div>';
             }
         }
 
@@ -223,6 +223,62 @@ class MaterialHtmlRenderer
     }
 
     /**
+     * Рабочий лист для печати — две ЧЁТКО разделённые части:
+     *   1) «Материалы для учителя»: вводная часть, критерии и ключи/ответы;
+     *   2) «Материалы для ученика»: задания — с НОВОЙ страницы и с местом для ФИО.
+     * Учитель распечатывает обе части себе, ученику выдаёт лист со второй части.
+     * Используется PdfRenderer для типа «рабочий лист» (rabochiy-list); в отличие от
+     * общего render(), где блок «Ключи для учителя» просто шёл в конце за заданиями,
+     * здесь разделение явное — заголовками-баннерами и разрывом страницы.
+     */
+    public function renderWorksheet(array $data): string
+    {
+        $html = '';
+
+        if (!empty($data['title'])) {
+            $html .= '<h1>' . $this->esc($data['title']) . '</h1>';
+        }
+
+        // ── Часть 1. Материалы для учителя ──────────────────────────────
+        $html .= '<h2 class="md-part md-part-teacher">Материалы для учителя</h2>';
+
+        if (!empty($data['intro'])) {
+            $html .= '<p>' . $this->esc($this->dedupeParagraphs((string)$data['intro'])) . '</p>';
+        }
+        if (!empty($data['instructions'])) {
+            $html .= '<p><em>' . $this->esc($this->stringifyAnswer($data['instructions'])) . '</em></p>';
+        }
+
+        // Критерии оценивания — методический ориентир учителя.
+        if (!empty($data['criteria'])) {
+            $html .= '<h3>Критерии оценивания</h3>';
+            $html .= is_array($data['criteria'])
+                ? $this->renderList($data['criteria'])
+                : '<p>' . $this->esc((string)$data['criteria']) . '</p>';
+        }
+
+        // Ключи и правильные ответы.
+        $answerKey = $this->buildAnswerKey($data);
+        if ($answerKey !== '') {
+            $html .= '<h3>Ключи и ответы</h3>' . $answerKey;
+        }
+
+        // ── Часть 2. Материалы для ученика (с новой страницы) ───────────
+        $html .= '<h2 class="md-part md-part-student">Материалы для ученика</h2>';
+        $html .= '<table class="md-signbar"><tr>'
+              . '<td class="md-signlabel" style="width:23%;">Фамилия, имя:</td><td class="md-signline" style="width:40%;"></td>'
+              . '<td class="md-signlabel" style="width:9%;">Класс:</td><td class="md-signline" style="width:9%;"></td>'
+              . '<td class="md-signlabel" style="width:8%;">Дата:</td><td class="md-signline" style="width:11%;"></td>'
+              . '</tr></table>';
+
+        if (!empty($data['tasks']) && is_array($data['tasks'])) {
+            $html .= '<h3>Задания</h3>' . $this->renderTasks($data['tasks']);
+        }
+
+        return $html;
+    }
+
+    /**
      * Домашнее задание: строка, список или дифференцированный объект
      * ({base_level, advanced_level} и т.п.) — выводим читаемо с подписями уровней.
      */
@@ -245,7 +301,7 @@ class MaterialHtmlRenderer
                     $rows[] = '<strong>' . $this->esc($label) . ':</strong> '
                             . nl2br($this->esc($this->stringifyAnswer($v)));
                 }
-                return '<p>' . implode('<br>', $rows) . '</p>';
+                return '<p>' . implode('<br/>', $rows) . '</p>';
             }
             return $this->renderList($hw);
         }
@@ -382,9 +438,10 @@ class MaterialHtmlRenderer
             return $this->renderMatch($content);
         }
         if ($type === 'write') {
-            // Несколько линий для письменного ответа
+            // Линии для развёрнутого письменного ответа — с запасом, чтобы
+            // ученику хватило места написать несколько предложений от руки.
             return '<div class="md-writelines">'
-                 . str_repeat('<div class="md-writeline"></div>', 4)
+                 . str_repeat('<div class="md-writeline"></div>', 7)
                  . '</div>';
         }
         if ($type === 'draw') {
@@ -486,7 +543,7 @@ class MaterialHtmlRenderer
                 $html .= '</ul>';
             } elseif ($type === 'open') {
                 $html .= '<div class="md-writelines">'
-                       . str_repeat('<div class="md-writeline"></div>', 3)
+                       . str_repeat('<div class="md-writeline"></div>', 5)
                        . '</div>';
             }
             $html .= '</li>';
@@ -535,9 +592,11 @@ class MaterialHtmlRenderer
         if (empty($items)) {
             return '';
         }
-        return '<ol class="md-answerkey">'
+        // Список без авто-нумерации: номер вопроса уже есть в начале каждой строки
+        // ($num. …). Иначе <ol> добавлял свой счётчик и номер задваивался («5. 5.»).
+        return '<ul class="md-answerkey" style="list-style:none; padding-left:0; margin-left:0;">'
              . implode('', array_map(fn($l) => '<li>' . $l . '</li>', $items))
-             . '</ol>';
+             . '</ul>';
     }
 
     /**

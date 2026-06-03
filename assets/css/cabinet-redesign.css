@@ -838,3 +838,32 @@
   .pending-olymp-banner .btn { width: 100%; }
   .empty-cabinet { padding: 36px 20px; }
 }
+
+/* ---------- Кнопки в блоке баланса токенов (тёмная карточка) ---------- */
+/* Левая кнопка — сплошная белая на тёмном фоне */
+.materials-balance-card .mbc-btn-light,
+.cab-main .materials-balance-card .mbc-btn-light {
+  background: #fff;
+  color: #1f2937;
+  border-color: #fff;
+}
+.materials-balance-card .mbc-btn-light:hover,
+.cab-main .materials-balance-card .mbc-btn-light:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+  border-color: #e5e7eb;
+}
+/* «Пополнить» — контурная: прозрачный фон, белый текст и рамка */
+.materials-balance-card .mbc-btn-outline,
+.cab-main .materials-balance-card .mbc-btn-outline {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, .65);
+}
+/* При наведении — заливка белым, тёмный читаемый текст */
+.materials-balance-card .mbc-btn-outline:hover,
+.cab-main .materials-balance-card .mbc-btn-outline:hover {
+  background: #fff;
+  color: #1f2937;
+  border-color: #fff;
+}

@@ -147,6 +147,31 @@ if (!function_exists('isUnlimitedMaterialUser')) {
     }
 }
 
+if (!function_exists('materialDailyLimitBonus')) {
+    /**
+     * Персональная прибавка к суточному лимиту превью-генераций (поле
+     * users.material_daily_limit_bonus). Кэшируется в рамках запроса.
+     * Колонка может отсутствовать (до миграции 137) — тогда 0.
+     */
+    function materialDailyLimitBonus(PDO $pdo, ?int $userId): int
+    {
+        static $cache = [];
+        if ($userId === null) {
+            return 0;
+        }
+        if (array_key_exists($userId, $cache)) {
+            return $cache[$userId];
+        }
+        try {
+            $stmt = $pdo->prepare("SELECT material_daily_limit_bonus FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            return $cache[$userId] = (int)$stmt->fetchColumn();
+        } catch (\Throwable $e) {
+            return $cache[$userId] = 0;
+        }
+    }
+}
+
 if (!function_exists('materialPreviewRateLimit')) {
     /**
      * Лимит на бесплатные превью-генерации за 24ч (защита от слива денег на ИИ).
@@ -172,7 +197,9 @@ if (!function_exists('materialPreviewRateLimit')) {
         };
 
         if ($userId !== null) {
-            if ($countSince('user_id = ?', [$userId]) >= 10) {
+            // Базовый лимит + персональная прибавка (кнопка «Увеличить лимит»).
+            $limit = 10 + materialDailyLimitBonus($pdo, $userId);
+            if ($countSince('user_id = ?', [$userId]) >= $limit) {
                 return 'Вы создали много материалов за сутки. Попробуйте завтра или напишите в поддержку.';
             }
             return null;

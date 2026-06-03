@@ -24,14 +24,17 @@ class PdfRenderer
             ?? (dirname(__DIR__, 2) . '/uploads/materials');
     }
 
-    public function render(array $data, string $title, string $slug): array
+    public function render(array $data, string $title, string $slug, string $typeSlug = ''): array
     {
         if (!class_exists('\\Mpdf\\Mpdf')) {
             require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
         }
 
-        $body = $this->html->render($data);
-        $fullHtml = $this->buildDocument($title, $body);
+        // Рабочий лист — печатаем бланком с явным делением «для учителя / для ученика».
+        $body = $typeSlug === 'rabochiy-list'
+            ? $this->html->renderWorksheet($data)
+            : $this->html->render($data);
+        $fullHtml = $this->sanitizeGlyphsForPdf($this->buildDocument($title, $body));
 
         $mpdf = new \Mpdf\Mpdf([
             'mode' => 'utf-8',
@@ -39,11 +42,14 @@ class PdfRenderer
             'default_font' => 'freesans',
             'margin_left' => 18,
             'margin_right' => 18,
-            'margin_top' => 22,
-            'margin_bottom' => 18,
+            'margin_top' => 30,
+            'margin_bottom' => 22,
+            'margin_header' => 9,
+            'margin_footer' => 9,
         ]);
         $mpdf->SetTitle($title);
         $mpdf->SetCreator('fgos.pro');
+        $this->applyBranding($mpdf);
         $mpdf->WriteHTML($fullHtml);
 
         [$relativePath, $absolutePath] = $this->ensureOutputPath($slug, 'pdf');
@@ -71,7 +77,7 @@ class PdfRenderer
         }
 
         $title = (string)($material['title'] ?? 'Материал');
-        $fullHtml = $this->buildPageDocument($material, $programs, $previewAbsPath);
+        $fullHtml = $this->sanitizeGlyphsForPdf($this->buildPageDocument($material, $programs, $previewAbsPath));
 
         $mpdf = new \Mpdf\Mpdf([
             'mode' => 'utf-8',
@@ -79,14 +85,81 @@ class PdfRenderer
             'default_font' => 'freesans',
             'margin_left' => 18,
             'margin_right' => 18,
-            'margin_top' => 20,
-            'margin_bottom' => 18,
+            'margin_top' => 30,
+            'margin_bottom' => 22,
+            'margin_header' => 9,
+            'margin_footer' => 9,
         ]);
         $mpdf->SetTitle($title);
         $mpdf->SetCreator('fgos.pro');
+        $this->applyBranding($mpdf);
         $mpdf->WriteHTML($fullHtml);
 
         return $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+    }
+
+    /**
+     * Подменяет символы, которых нет в шрифте FreeSans: mPDF рисует их пустым
+     * «тофу»-квадратом со знаком вопроса (жалоба про квадратики у № вопросов).
+     * Рабочие глифы (★ повышенного уровня, ☐/☑ чек-боксы) заменяем на
+     * отображаемые аналоги, decorative-эмодзи из текста ИИ убираем.
+     * Делается только на этапе PDF — в вебе эти символы рендерятся штатно.
+     */
+    private function sanitizeGlyphsForPdf(string $html): string
+    {
+        $map = [
+            "\u{2605}" => '*',          // ★ бейдж повышенного уровня → *
+            "\u{2606}" => '*',          // ☆
+            "\u{2B50}" => '*',          // ⭐
+            "\u{2610}" => "\u{25A1}",  // ☐ → □ (множественный выбор)
+            "\u{2611}" => "\u{25A0}",  // ☑ → ■
+            "\u{2612}" => "\u{25A0}",  // ☒ → ■
+        ];
+        $html = strtr($html, $map);
+
+        // Остальные неподдерживаемые пиктограммы/эмодзи (включая ✓, ✏, ❓ и весь
+        // блок SMP-эмодзи) убираем вместе с висящим за ними пробелом. Геометрические
+        // фигуры (○ ■ □), стрелки (→), тире (—) и пунктуация остаются — они вне диапазонов.
+        $html = preg_replace(
+            '/[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{FE00}-\x{FE0F}\x{200D}\x{2049}\x{203C}]\x{0020}?/u',
+            '',
+            $html
+        );
+
+        return $html ?? '';
+    }
+
+    /**
+     * Брендирование mPDF: фирменный колонтитул с логотипом и подвал с
+     * названием портала и номером страницы — повторяются на каждой странице.
+     */
+    private function applyBranding(\Mpdf\Mpdf $mpdf): void
+    {
+        $indigo700 = MaterialTheme::css(MaterialTheme::INDIGO_700);
+        $ink200    = MaterialTheme::css(MaterialTheme::INK_200);
+        $brand     = htmlspecialchars(MaterialTheme::BRAND_LABEL, ENT_QUOTES, 'UTF-8');
+        $site      = htmlspecialchars(MaterialTheme::BRAND_SITE, ENT_QUOTES, 'UTF-8');
+
+        $logoPath = MaterialTheme::logoColorPath();
+        $logoCell = $logoPath !== ''
+            ? '<img src="' . htmlspecialchars($logoPath, ENT_QUOTES, 'UTF-8') . '" style="width:42mm;">'
+            : '<span style="font-weight:bold;color:' . $indigo700 . ';font-size:12pt;">' . $brand . '</span>';
+
+        $header = '<table width="100%"><tr>'
+            . '<td style="padding-bottom:3pt;border:none;">' . $logoCell . '</td>'
+            . '<td style="padding-bottom:3pt;border:none;text-align:right;font-size:8pt;color:#8b90a8;vertical-align:bottom;">'
+            . $brand . '</td>'
+            . '</tr></table>'
+            . '<div style="border-bottom:0.6pt solid ' . $ink200 . ';"></div>';
+
+        $footer = '<div style="border-top:0.6pt solid ' . $ink200 . ';"></div>'
+            . '<table width="100%" style="font-size:8pt;color:#8b90a8;"><tr>'
+            . '<td style="padding-top:3pt;border:none;">Сгенерировано на ' . $site . '</td>'
+            . '<td style="padding-top:3pt;border:none;text-align:right;">стр. {PAGENO} из {nbpg}</td>'
+            . '</tr></table>';
+
+        $mpdf->SetHTMLHeader($header);
+        $mpdf->SetHTMLFooter($footer);
     }
 
     private function buildPageDocument(array $material, array $programs, string $previewAbsPath): string
@@ -128,9 +201,6 @@ class PdfRenderer
             $imgHtml = '<div class="cover"><img src="' . $src . '"></div>';
         }
 
-        $siteName = defined('SITE_NAME') ? SITE_NAME : 'fgos.pro';
-        $year = date('Y');
-
         $indigo50  = MaterialTheme::css(MaterialTheme::INDIGO_50);
         $indigo700 = MaterialTheme::css(MaterialTheme::INDIGO_700);
         $indigo800 = MaterialTheme::css(MaterialTheme::INDIGO_800);
@@ -167,6 +237,16 @@ class PdfRenderer
             border-bottom: 2px solid {$indigo100}; padding-bottom: 4pt;
         }
         .content h2:first-child { margin-top: 0; }
+        .content h2.md-part {
+            font-size: 15pt; margin: 18pt 0 12pt; padding: 8pt 12pt;
+            background: {$indigo50}; color: {$indigo800};
+            border-left: 5pt solid {$indigo700}; border-bottom: none; border-radius: 4pt;
+        }
+        .content h2.md-part-student { page-break-before: always; }
+        .md-signbar { width: 100%; border-collapse: collapse; margin: 4pt 0 14pt; }
+        .md-signbar td { border: none; padding: 12pt 4pt 2pt; vertical-align: bottom; font-size: 11pt; }
+        .md-signlabel { color: {$ink700}; padding-right: 6pt; }
+        .md-signline { border-bottom: 0.7pt solid {$ink900}; }
         .content h3 { font-size: 12pt; margin: 12pt 0 6pt; color: {$ink900}; }
         .content p { margin: 0 0 8pt; }
         .content ul, .content ol { margin: 0 0 8pt; }
@@ -174,8 +254,9 @@ class PdfRenderer
         .content table { font-size: 10pt; width: 100%; border-collapse: collapse; margin: 0 0 12pt; }
         .content th, .content td { border: 0.5pt solid {$ink200}; padding: 5pt 7pt; text-align: left; vertical-align: top; }
         .content th { background: {$indigo50}; color: {$indigo800}; font-weight: bold; }
-        .md-writeline { border-bottom: 0.5pt solid {$ink200}; height: 16pt; margin: 6pt 0; }
-        .md-drawbox { border: 0.5pt dashed {$ink200}; height: 120pt; margin: 6pt 0; text-align: center; color: #b6bccd; }
+        .md-writelines { margin: 8pt 0 4pt; }
+        .md-writeline { border-bottom: 0.5pt solid {$ink200}; height: 24pt; margin: 0 0 4pt; }
+        .md-drawbox { border: 0.5pt dashed {$ink200}; height: 240pt; margin: 8pt 0; text-align: center; color: #b6bccd; }
         .md-match td { border: none; }
         .md-questions li, .md-tasks li { margin-bottom: 8pt; }
         .footer { text-align: center; font-size: 9pt; color: #888; margin-top: 14pt; }
@@ -188,8 +269,6 @@ class PdfRenderer
     {$imgHtml}
     {$descHtml}
     <div class="content">{$content}</div>
-    <hr>
-    <p class="footer">Сгенерировано на {$siteName} · {$year}</p>
 </body>
 </html>
 HTML;
@@ -198,8 +277,6 @@ HTML;
     private function buildDocument(string $title, string $body): string
     {
         $titleEsc = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
-        $siteName = defined('SITE_NAME') ? SITE_NAME : 'fgos.pro';
-        $year = date('Y');
 
         $indigo600 = MaterialTheme::css(MaterialTheme::INDIGO_600);
         $indigo800 = MaterialTheme::css(MaterialTheme::INDIGO_800);
@@ -233,6 +310,16 @@ HTML;
             border-bottom: 2px solid {$indigo100};
             padding-bottom: 4pt;
         }
+        h2.md-part {
+            font-size: 15pt; margin: 18pt 0 12pt; padding: 8pt 12pt;
+            background: {$indigo50}; color: {$indigo800};
+            border-left: 5pt solid {$indigo600}; border-bottom: none; border-radius: 4pt;
+        }
+        h2.md-part-student { page-break-before: always; }
+        .md-signbar { width: 100%; border-collapse: collapse; margin: 4pt 0 14pt; }
+        .md-signbar td { border: none; padding: 12pt 4pt 2pt; vertical-align: bottom; font-size: 11pt; }
+        .md-signlabel { color: {$ink700}; padding-right: 6pt; }
+        .md-signline { border-bottom: 0.7pt solid {$ink900}; }
         h3 { font-size: 12pt; margin: 12pt 0 6pt; color: {$ink900}; }
         p { margin: 0 0 8pt; }
         ul, ol { margin: 0 0 8pt; }
@@ -240,8 +327,9 @@ HTML;
         table { font-size: 10pt; width: 100%; border-collapse: collapse; margin: 0 0 12pt; }
         th, td { border: 0.5pt solid {$ink200}; padding: 5pt 7pt; text-align: left; vertical-align: top; }
         th { background: {$indigo50}; color: {$indigo800}; font-weight: bold; }
-        .md-writeline { border-bottom: 0.5pt solid {$ink200}; height: 16pt; margin: 6pt 0; }
-        .md-drawbox { border: 0.5pt dashed {$ink200}; height: 120pt; margin: 6pt 0; text-align: center; color: #b6bccd; }
+        .md-writelines { margin: 8pt 0 4pt; }
+        .md-writeline { border-bottom: 0.5pt solid {$ink200}; height: 24pt; margin: 0 0 4pt; }
+        .md-drawbox { border: 0.5pt dashed {$ink200}; height: 240pt; margin: 8pt 0; text-align: center; color: #b6bccd; }
         .md-match td { border: none; }
         .md-questions li, .md-tasks li { margin-bottom: 8pt; }
         .footer { text-align: center; font-size: 9pt; color: #888; margin-top: 12pt; }
@@ -249,8 +337,6 @@ HTML;
 </head>
 <body>
     {$body}
-    <hr>
-    <p class="footer">Сгенерировано на {$siteName} · {$year}</p>
 </body>
 </html>
 HTML;

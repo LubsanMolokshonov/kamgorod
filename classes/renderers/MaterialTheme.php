@@ -37,9 +37,23 @@ class MaterialTheme
     const PDF_FONT  = 'freesans';
     const DOC_FONT  = 'Calibri';
 
+    // Бренд-метка для колонтитулов/подвалов скачиваемых файлов.
+    const BRAND_LABEL = 'Педагогический портал «ФГОС-Практикум»';
+    const BRAND_SITE  = 'fgos.pro';
+
     /** Hex с решёткой для CSS (mPDF). */
     public static function css(string $hex): string
     {
         return '#' . ltrim($hex, '#');
+    }
+
+    /**
+     * Абсолютный путь к цветному логотипу портала (PNG) — для светлых фонов
+     * (шапка PDF/DOCX, светлая область слайда PPTX). Пустая строка, если файла нет.
+     */
+    public static function logoColorPath(): string
+    {
+        $p = dirname(__DIR__, 2) . '/assets/images/material-brand/logo-color.png';
+        return is_file($p) ? $p : '';
     }
 }

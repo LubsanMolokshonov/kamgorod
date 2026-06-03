@@ -170,9 +170,14 @@ require_once __DIR__ . '/../classes/renderers/MaterialHtmlRenderer.php';
 
 // Скачиваемый файл — версия для учителя: добавляем «Ключи для учителя», даже если
 // на странице (бланк ученика) они скрыты. Для этого пересобираем content из ai_output.
-if (is_array($aiOutput) && !empty($aiOutput)
-    && (!empty($aiOutput['answer_key']) || !empty($aiOutput['questions']))) {
-    $material['content'] = (new MaterialHtmlRenderer())->render($aiOutput, true);
+if (is_array($aiOutput) && !empty($aiOutput)) {
+    if (($material['type_slug'] ?? '') === 'rabochiy-list') {
+        // Рабочий лист печатаем бланком: явное деление «для учителя / для ученика»,
+        // часть ученика — с новой страницы и с местом для ФИО.
+        $material['content'] = (new MaterialHtmlRenderer())->renderWorksheet($aiOutput);
+    } elseif (!empty($aiOutput['answer_key']) || !empty($aiOutput['questions'])) {
+        $material['content'] = (new MaterialHtmlRenderer())->render($aiOutput, true);
+    }
 }
 
 try {

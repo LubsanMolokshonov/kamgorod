@@ -21,6 +21,7 @@ require_once __DIR__ . '/renderers/PdfRenderer.php';
 require_once __DIR__ . '/renderers/DocxRenderer.php';
 require_once __DIR__ . '/renderers/PptxRenderer.php';
 require_once __DIR__ . '/YandexArtService.php';
+require_once __DIR__ . '/../includes/text-helper.php';
 
 class MaterialGenerator
 {
@@ -222,7 +223,7 @@ class MaterialGenerator
             $messages = [
                 [
                     'role' => 'system',
-                    'content' => 'Ты — опытный российский методист. Отвечай строго JSON по схеме из задания, без markdown-обёрток и пояснений.',
+                    'content' => 'Ты — опытный российский методист. Отвечай строго JSON по схеме из задания, без markdown-обёрток и пояснений. ВЕСЬ текст пиши ИСКЛЮЧИТЕЛЬНО на русском языке кириллицей. КАТЕГОРИЧЕСКИ запрещены иероглифы и любые символы китайского, японского, корейского и других нелатинских/некириллических алфавитов — даже единичные. Латиница допустима только для общепринятых терминов и аббревиатур.',
                 ],
                 ['role' => 'user', 'content' => $prompt],
             ];
@@ -259,6 +260,12 @@ class MaterialGenerator
                 }
             }
 
+            // 4c. Жёсткая страховка: убираем чужие письменности (иероглифы и т.п.),
+            //     которые ИИ-модель иногда «протекает» в русский текст
+            //     (напр. «Оценить自己的 работу»). Промпт это запрещает, но гарантию
+            //     даёт только детерминированная пост-обработка по всему JSON.
+            $aiData = strip_foreign_scripts_deep($aiData);
+
             // 5. Заголовок и slug материала
             $title = (string)($aiData['title']
                 ?? ($params['topic'] ?? ($type['name'] . ' — материал')));
@@ -267,14 +274,17 @@ class MaterialGenerator
             // 6. Рендерим файл по output_format типа. В preview файл на диск не пишем —
             //    скачивание формирует нужный формат (DOCX/PPTX/PDF) на лету из ai_output_json
             //    (material-download.php), поэтому экономим время до оплаты.
-            $renderResult = $isPreview ? null : $this->renderFile($type['output_format'], $aiData, $title, $slug);
+            $renderResult = $isPreview ? null : $this->renderFile($type['output_format'], $aiData, $title, $slug, $typeSlug);
 
             // Рабочий лист и тест — это бланки ученика: на странице/в превью показываем БЕЗ
             //    ключей (они уходят в раздел «Ключи для учителя» только в скачиваемом файле).
             $studentBlank = in_array($typeSlug, ['rabochiy-list', 'test-kontrolnaya'], true);
 
-            // 7. Создаём Material как DRAFT — доступен автору, не публикуется в общий каталог.
-            //    preview: is_unlocked=0, unlock_token_cost=цена; full: is_unlocked=1 (оплачено при генерации).
+            // 7. Создаём Material.
+            //    full: сразу PUBLISHED — материал автоматически попадает в общий каталог
+            //          (/materialy/katalog/) без действий пользователя, is_unlocked=1 (оплачено при генерации).
+            //    preview: остаётся DRAFT — анонимный тизер до регистрации/оплаты в каталог не выносим,
+            //             is_unlocked=0, unlock_token_cost=цена.
             $materialId = $this->materialObj->create([
                 'user_id' => $userId,
                 'funnel_session_id' => $isPreview ? $funnelSessionId : null,
@@ -294,7 +304,7 @@ class MaterialGenerator
                 'token_cost' => 0,
                 'is_unlocked' => $isPreview ? 0 : 1,
                 'unlock_token_cost' => $isPreview ? $tokenCost : 0,
-                'status' => 'draft',
+                'status' => $isPreview ? 'draft' : 'published',
             ]);
 
             // Привязка к аудитории, если передана в params
@@ -307,7 +317,25 @@ class MaterialGenerator
                 );
             }
 
-            // 7b. Обложка через YandexART — best-effort, НЕ должна валить генерацию.
+            // 7b. Финализируем лог СРАЗУ, как только готов контент материала.
+            //     Обложку (YandexART, +10–40с) генерируем уже ПОСЛЕ done — иначе её
+            //     задержка раздувала общее время и фронт ловил ложный 5-минутный таймаут
+            //     на длинных презентациях. Материал доступен сразу; обложка дорисуется фоном.
+            $this->db->update(
+                'material_generations',
+                [
+                    'status' => 'done',
+                    'output_material_id' => $materialId,
+                    'ai_tokens_in' => ($aiResponse['tokens_in'] ?? 0) + $selfCheckTokensIn,
+                    'ai_tokens_out' => ($aiResponse['tokens_out'] ?? 0) + $selfCheckTokensOut,
+                    'ai_model_used' => $aiResponse['model'] ?? null,
+                    'finished_at' => date('Y-m-d H:i:s'),
+                ],
+                'id = ?',
+                [$generationId]
+            );
+
+            // 8. Обложка через YandexART — best-effort, НЕ должна валить генерацию.
             //     Пропускаем для:
             //       - учительских материалов (techкарта/конспект/тест/КТП/классный час) —
             //         картинка там не нужна, экономим токены (needs_cover=0);
@@ -333,21 +361,6 @@ class MaterialGenerator
             } catch (Throwable $imgError) {
                 error_log('MaterialGenerator: cover image failed (non-fatal): ' . $imgError->getMessage());
             }
-
-            // 8. Финализируем лог
-            $this->db->update(
-                'material_generations',
-                [
-                    'status' => 'done',
-                    'output_material_id' => $materialId,
-                    'ai_tokens_in' => ($aiResponse['tokens_in'] ?? 0) + $selfCheckTokensIn,
-                    'ai_tokens_out' => ($aiResponse['tokens_out'] ?? 0) + $selfCheckTokensOut,
-                    'ai_model_used' => $aiResponse['model'] ?? null,
-                    'finished_at' => date('Y-m-d H:i:s'),
-                ],
-                'id = ?',
-                [$generationId]
-            );
 
             return [
                 'material_id'       => $materialId,
@@ -439,7 +452,7 @@ TXT;
         }
 
         $messages = [
-            ['role' => 'system', 'content' => 'Ты — методист-редактор. Возвращаешь строго валидный JSON в исходной структуре, без markdown и пояснений.'],
+            ['role' => 'system', 'content' => 'Ты — методист-редактор. Возвращаешь строго валидный JSON в исходной структуре, без markdown и пояснений. Весь текст — только на русском языке кириллицей; иероглифы и символы китайского/японского/корейского и прочих нелатинских/некириллических алфавитов запрещены.'],
             ['role' => 'user', 'content' => $checklist . "\n\nJSON материала:\n" . $aiJson],
         ];
 
@@ -464,12 +477,68 @@ TXT;
         ];
     }
 
-    private function renderFile(string $outputFormat, array $aiData, string $title, string $slug): array
+    private function renderFile(string $outputFormat, array $aiData, string $title, string $slug, string $typeSlug = ''): array
     {
         return match ($outputFormat) {
             'pptx' => (new PptxRenderer())->render($aiData, $title, $slug),
             'docx' => (new DocxRenderer())->render($aiData, $title, $slug),
-            default => (new PdfRenderer())->render($aiData, $title, $slug),
+            default => (new PdfRenderer())->render($aiData, $title, $slug, $typeSlug),
         };
+    }
+
+    /**
+     * Недавние генерации пользователя для личного кабинета — чтобы после закрытия
+     * вкладки было видно, что с генерацией: в очереди / идёт / готово / ошибка.
+     *
+     * Возвращает строки material_generations с человекочитаемым заголовком (тема из
+     * input_params_json), названием типа и slug готового материала (если done).
+     *
+     * @return array<int,array{
+     *   id:int, status:string, mode:string, created_at:string, finished_at:?string,
+     *   error_message:?string, type_name:string, type_slug:string,
+     *   topic:string, material_slug:?string, material_id:?int
+     * }>
+     */
+    public static function getRecentForUser($pdo, int $userId, int $limit = 20): array
+    {
+        $db = new Database($pdo);
+        $limit = max(1, min(100, $limit));
+        $rows = $db->query(
+            "SELECT g.id, g.status, g.mode, g.created_at, g.finished_at, g.error_message,
+                    g.input_params_json, g.output_material_id,
+                    mt.name AS type_name, mt.slug AS type_slug,
+                    m.slug AS material_slug
+             FROM material_generations g
+             LEFT JOIN material_types mt ON mt.id = g.material_type_id
+             LEFT JOIN materials m ON m.id = g.output_material_id
+             WHERE g.user_id = ?
+             ORDER BY g.created_at DESC
+             LIMIT {$limit}",
+            [$userId]
+        );
+
+        $out = [];
+        foreach ($rows as $r) {
+            $params = json_decode((string)($r['input_params_json'] ?? '[]'), true);
+            $params = is_array($params) ? $params : [];
+            $topic = trim((string)($params['topic'] ?? ''));
+            if ($topic === '') {
+                $topic = trim((string)($params['subject'] ?? ''));
+            }
+            $out[] = [
+                'id'            => (int)$r['id'],
+                'status'        => (string)$r['status'],
+                'mode'          => (string)$r['mode'],
+                'created_at'    => (string)$r['created_at'],
+                'finished_at'   => $r['finished_at'] !== null ? (string)$r['finished_at'] : null,
+                'error_message' => $r['error_message'] !== null ? (string)$r['error_message'] : null,
+                'type_name'     => (string)($r['type_name'] ?? 'Материал'),
+                'type_slug'     => (string)($r['type_slug'] ?? ''),
+                'topic'         => $topic !== '' ? $topic : (string)($r['type_name'] ?? 'Материал'),
+                'material_slug' => $r['material_slug'] !== null ? (string)$r['material_slug'] : null,
+                'material_id'   => $r['output_material_id'] !== null ? (int)$r['output_material_id'] : null,
+            ];
+        }
+        return $out;
     }
 }
