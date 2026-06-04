@@ -10,11 +10,11 @@ SET CHARACTER SET utf8mb4;
 --    description дополняем идемпотентно (повторный накат не задублирует блок).
 UPDATE webinars
 SET status = 'videolecture',
-    video_url = 'https://clck.ru/3TxwFa',
-    materials_url = 'https://clck.ru/3Txvx4',
+    video_url = 'https://kinescope.io/9sL1Tb4kAe6XTE81ZUpsgV',
+    materials_url = 'https://disk.360.yandex.ru/i/rXf_NsFU8wHVrA',
     description = CASE
-        WHEN description NOT LIKE '%clck.ru/3TxwFa%'
-        THEN CONCAT(description, '\n\n<h3>Запись и материалы</h3>\n<p>Смотрите <a href=\"https://clck.ru/3TxwFa\" target=\"_blank\">запись вебинара</a> и скачайте <a href=\"https://clck.ru/3Txvx4\" target=\"_blank\">презентацию эксперта</a> для работы.</p>')
+        WHEN description NOT LIKE '%kinescope.io/9sL1Tb4kAe6XTE81ZUpsgV%'
+        THEN CONCAT(description, '\n\n<h3>Запись и материалы</h3>\n<p>Смотрите <a href=\"https://kinescope.io/9sL1Tb4kAe6XTE81ZUpsgV\" target=\"_blank\">запись вебинара</a> и скачайте <a href=\"https://disk.360.yandex.ru/i/rXf_NsFU8wHVrA\" target=\"_blank\">презентацию эксперта</a> для работы.</p>')
         ELSE description
     END
 WHERE slug = 'poleznoe-leto-osobyj-rebenok';

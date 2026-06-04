@@ -38,9 +38,9 @@ require_once BASE_PATH . '/includes/email-helper.php';
 set_time_limit(0);
 
 // === материалы вебинара (ссылки от организатора) ===
-const PRESENTATION_URL = 'https://clck.ru/3Txvx4'; // презентация эксперта
-const FEEDBACK_URL     = 'https://clck.ru/3TcR6n'; // анкета обратной связи (подарок)
-const RECORDING_URL    = 'https://clck.ru/3TxwFa'; // запись вебинара
+const PRESENTATION_URL = 'https://disk.360.yandex.ru/i/rXf_NsFU8wHVrA';       // презентация эксперта
+const FEEDBACK_URL     = 'https://forms.yandex.ru/cloud/6a02d3ad068ff00fe80d59eb/'; // анкета обратной связи (подарок)
+const RECORDING_URL    = 'https://kinescope.io/9sL1Tb4kAe6XTE81ZUpsgV';       // запись вебинара
 
 // === CLI args ===
 $args = [];
