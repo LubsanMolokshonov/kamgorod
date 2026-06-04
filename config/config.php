@@ -400,6 +400,7 @@ if (!defined('EMAIL_TRACK_ALLOWED_HOSTS')) {
         'bizon365.ru',
         'bizon365.com',
         'yandex.ru',
+        'kinescope.io',
         '2gis.ru',
     ]);
 }
