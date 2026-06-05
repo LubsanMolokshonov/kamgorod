@@ -119,6 +119,11 @@ $currentAdmin = Admin::verifySession();
                     <span>РНП</span>
                 </a>
 
+                <a href="/admin/directions/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/directions/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">📊</span>
+                    <span>Экономика направлений</span>
+                </a>
+
                 <div class="nav-divider"></div>
 
                 <a href="/index.php" class="nav-item" target="_blank">
