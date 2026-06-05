@@ -20,5 +20,9 @@ ob_start();
 
 <p>Удачи. Если возникнут вопросы — ответьте на это письмо.</p>
 <?php
+$course_block_style = 'personal';
+include __DIR__ . '/partials/_course_recommendation.php';
+?>
+<?php
 $content = ob_get_clean();
 include __DIR__ . '/_personal_layout.php';

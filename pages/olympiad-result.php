@@ -39,6 +39,13 @@ $olympiadId = $result['olympiad_id'];
 $fullName = $result['full_name'];
 $diplomaPrice = $result['diploma_price'] ?? 229;
 
+// Кросс-сейл «2+1»: родственные олимпиады (та же аудитория/предмет).
+// Показываем только тем, кто заработал диплом (есть мотивация добрать до 3).
+$relatedOlympiads = [];
+if (!empty($placement)) {
+    $relatedOlympiads = (new Olympiad($db))->getRelatedOlympiads((int)$olympiadId, 3);
+}
+
 // Determine display data based on placement
 $placementData = [
     '1' => [
@@ -628,6 +635,143 @@ include __DIR__ . '/../includes/header.php';
     100% { background-position: -200% 0; }
 }
 
+/* ---------- Cross-sell 2+1 ---------- */
+.olympiad-upsell {
+    margin-top: 24px;
+    background: linear-gradient(135deg, #FFF7ED, #FFEFD9);
+    border: 1px solid #FFD9A8;
+    border-radius: 24px;
+    padding: 28px 28px 24px;
+}
+
+.olympiad-upsell-head {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.olympiad-upsell-badge {
+    display: inline-block;
+    background: #FB923C;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 14px;
+    border-radius: 50px;
+    margin-bottom: 10px;
+}
+
+.olympiad-upsell-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #7C2D12;
+    margin: 0 0 8px;
+}
+
+.olympiad-upsell-sub {
+    font-size: 14px;
+    color: #9A5B2C;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 460px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.olympiad-upsell-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.olympiad-upsell-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid #FFE3BF;
+    border-radius: 14px;
+    padding: 14px 16px;
+    text-decoration: none;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.olympiad-upsell-card:hover {
+    border-color: #FB923C;
+    box-shadow: 0 4px 16px rgba(251, 146, 60, 0.18);
+    text-decoration: none;
+}
+
+.olympiad-upsell-card:active {
+    transform: scale(0.99);
+}
+
+.olympiad-upsell-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #B45309;
+    background: #FEF3C7;
+    padding: 3px 9px;
+    border-radius: 50px;
+    margin-bottom: 8px;
+}
+
+.olympiad-upsell-card h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1E293B;
+    margin: 0;
+    line-height: 1.35;
+}
+
+.olympiad-upsell-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.olympiad-upsell-free {
+    font-size: 13px;
+    font-weight: 600;
+    color: #16A34A;
+}
+
+.olympiad-upsell-go {
+    font-size: 14px;
+    font-weight: 700;
+    color: #EA580C;
+    white-space: nowrap;
+}
+
+.olympiad-upsell-cross {
+    text-align: center;
+    font-size: 13px;
+    color: #9A5B2C;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.olympiad-upsell-cross a {
+    color: #EA580C;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.olympiad-upsell-cross a:hover {
+    text-decoration: underline;
+}
+
+@media (min-width: 560px) {
+    .olympiad-upsell-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+    .olympiad-upsell-card {
+        min-height: 130px;
+    }
+}
+
 /* ---------- Sticky CTA (A4) ---------- */
 .olympiad-sticky-cta {
     display: none;
@@ -776,6 +920,42 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
         </div>
+
+        <?php if ($placement && !empty($relatedOlympiads)): ?>
+        <!-- Cross-sell 2+1 (рычаги 1 и 3) -->
+        <div class="olympiad-upsell">
+            <div class="olympiad-upsell-head">
+                <span class="olympiad-upsell-badge">🎁 Акция «2+1»</span>
+                <h2 class="olympiad-upsell-title">Третий диплом — бесплатно</h2>
+                <p class="olympiad-upsell-sub">
+                    Пройдите ещё 2 олимпиады по своим темам — за два оплаченных диплома
+                    третий мы оформим бесплатно. Тесты бесплатные, по 10 вопросов.
+                </p>
+            </div>
+
+            <div class="olympiad-upsell-grid">
+                <?php foreach ($relatedOlympiads as $rel): ?>
+                    <a class="olympiad-upsell-card" href="/olimpiada-test/<?php echo (int)$rel['id']; ?>">
+                        <div class="olympiad-upsell-card-body">
+                            <?php if (!empty($rel['subject'])): ?>
+                                <span class="olympiad-upsell-tag"><?php echo htmlspecialchars($rel['subject']); ?></span>
+                            <?php endif; ?>
+                            <h3><?php echo htmlspecialchars($rel['title']); ?></h3>
+                        </div>
+                        <div class="olympiad-upsell-card-foot">
+                            <span class="olympiad-upsell-free">Тест бесплатно</span>
+                            <span class="olympiad-upsell-go">Пройти&nbsp;→</span>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+
+            <p class="olympiad-upsell-cross">
+                Или соберите комплект из <a href="/konkursy/">конкурсов</a> и
+                <a href="/vebinary/">вебинаров</a> — акция «2+1» действует на всё в корзине.
+            </p>
+        </div>
+        <?php endif; ?>
 
     </div>
 </div>

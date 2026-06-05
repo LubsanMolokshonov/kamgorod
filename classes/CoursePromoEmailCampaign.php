@@ -416,7 +416,7 @@ class CoursePromoEmailCampaign {
                     'email_type'      => 'course_promo',
                     'touchpoint_code' => $emailData['touchpoint_code'] ?? 'course_promo',
                     'chain_log_id'    => $emailData['id'] ?? null,
-                    'chain_log_table' => 'course_promo_email_log',
+                    'chain_log_table' => 'course_promo_emails',
                     'user_id'         => $emailData['user_id'] ?? null,
                 ],
             ]);

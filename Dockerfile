@@ -54,6 +54,7 @@ RUN echo "*/5 * * * * www-data php /var/www/html/cron/process-email-journey.php 
     && echo "*/5 * * * * www-data php /var/www/html/cron/process-material-emails.php >> /var/log/cron-material.log 2>&1" >> /etc/cron.d/email-automation \
     && echo "*/5 * * * * www-data php /var/www/html/cron/process-publication-formatting.php >> /var/log/cron-pub-format.log 2>&1" >> /etc/cron.d/email-automation \
     && echo "*/5 * * * * www-data php /var/www/html/cron/process-publication-images.php >> /var/log/cron-pub-images.log 2>&1" >> /etc/cron.d/email-automation \
+    && echo "*/5 * * * * www-data php /var/www/html/cron/process-course-emails.php >> /var/log/cron-course.log 2>&1" >> /etc/cron.d/email-automation \
     && echo "*/15 * * * * www-data php /var/www/html/cron/payment-recovery.php >> /var/log/cron-payment-recovery.log 2>&1" >> /etc/cron.d/email-automation \
     && echo "* * * * * www-data php /var/www/html/cron/process-material-generations.php >> /var/log/cron-material-gen.log 2>&1" >> /etc/cron.d/email-automation \
     && chmod 0644 /etc/cron.d/email-automation

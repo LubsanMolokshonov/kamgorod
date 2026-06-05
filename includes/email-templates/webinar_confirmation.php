@@ -79,6 +79,8 @@ ob_start();
             Перейти в личный кабинет
         </a>
     </div>
+
+    <?php $course_block_style = 'card'; include __DIR__ . '/partials/_course_recommendation.php'; ?>
 </div>
 <?php
 $content = ob_get_clean();

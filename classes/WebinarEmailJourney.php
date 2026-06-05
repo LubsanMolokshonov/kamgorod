@@ -316,7 +316,7 @@ class WebinarEmailJourney {
 
         $userId = $emailData['user_id'] ?? null;
 
-        return [
+        $templateData = [
             'user_name' => $emailData['full_name'],
             'user_first_name' => $firstName,
             'user_email' => $emailData['email'],
@@ -355,6 +355,20 @@ class WebinarEmailJourney {
             'site_name' => 'ФГОС-Практикум',
             'touchpoint_code' => $emailData['touchpoint_code']
         ];
+
+        // Рекомендация курсов (ПП → КПК) — только в первом письме цепочки (подтверждение).
+        if (($emailData['touchpoint_code'] ?? '') === 'webinar_confirmation') {
+            require_once BASE_PATH . '/includes/email-course-recommendation.php';
+            $reco = getCourseRecommendationsForEmail(
+                $this->pdo,
+                !empty($userId) ? (int)$userId : null,
+                'webinar'
+            );
+            $templateData['pp_course']  = $reco['pp'];
+            $templateData['kpk_course'] = $reco['kpk'];
+        }
+
+        return $templateData;
     }
 
     /**

@@ -85,6 +85,8 @@ ob_start();
         </div>
     </div>
     <?php endif; ?>
+
+    <?php $course_block_style = 'card'; include __DIR__ . '/partials/_course_recommendation.php'; ?>
 </div>
 <?php
 $content = ob_get_clean();

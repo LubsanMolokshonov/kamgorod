@@ -18,5 +18,9 @@ ob_start();
 
 <p>Диплом приходит в личный кабинет сразу после оплаты. Если возник вопрос — просто ответьте на это письмо.</p>
 <?php
+$course_block_style = 'personal';
+include __DIR__ . '/partials/_course_recommendation.php';
+?>
+<?php
 $content = ob_get_clean();
 include __DIR__ . '/_personal_layout.php';

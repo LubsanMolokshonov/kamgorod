@@ -386,4 +386,30 @@ class Olympiad {
             [$limit]
         );
     }
+
+    /**
+     * Родственные олимпиады для кросс-сейла (акция 2+1).
+     * Ранжируем по релевантности: та же аудитория + тот же предмет → выше.
+     * `<=>` (null-safe equal) возвращает 1 при совпадении, 0 иначе.
+     */
+    public function getRelatedOlympiads(int $olympiadId, int $limit = 3): array
+    {
+        $current = $this->getById($olympiadId);
+        if (!$current) {
+            return [];
+        }
+        $audience = $current['target_audience'] ?? null;
+        $subject  = $current['subject'] ?? null;
+
+        return $this->db->query(
+            "SELECT * FROM olympiads
+             WHERE is_active = 1 AND id != ?
+             ORDER BY
+               (target_audience <=> ?) DESC,
+               (subject <=> ?) DESC,
+               display_order ASC, created_at DESC
+             LIMIT ?",
+            [$olympiadId, $audience, $subject, $limit]
+        );
+    }
 }

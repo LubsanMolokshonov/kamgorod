@@ -255,6 +255,69 @@ include __DIR__ . '/includes/header-redesign.php';
   </div>
 </div>
 
+<!-- Промо-баннер «2+1» (рычаг 2: фрейм для рекламного трафика) -->
+<style>
+.ol-promo-2plus1 {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: linear-gradient(135deg, #FFF7ED, #FFE7C7);
+  border: 1px solid #FFD9A8;
+  border-radius: 20px;
+  padding: 20px 24px;
+  margin-top: 16px;
+}
+.ol-promo-2plus1 .ol-promo-ic {
+  font-size: 38px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.ol-promo-2plus1 .ol-promo-t {
+  font-size: 19px;
+  font-weight: 800;
+  color: #7C2D12;
+  margin-bottom: 4px;
+}
+.ol-promo-2plus1 .ol-promo-s {
+  font-size: 14px;
+  color: #9A5B2C;
+  line-height: 1.5;
+}
+.ol-promo-2plus1 .ol-promo-txt {
+  flex: 1;
+}
+.ol-promo-2plus1 .rd-btn {
+  flex-shrink: 0;
+  background: #EA580C;
+  border-color: #EA580C;
+  color: #fff;
+}
+.ol-promo-2plus1 .rd-btn:hover {
+  background: #C2410C;
+  border-color: #C2410C;
+}
+@media (max-width: 768px) {
+  .ol-promo-2plus1 {
+    flex-direction: column;
+    text-align: center;
+    gap: 14px;
+    padding: 20px;
+  }
+}
+</style>
+<div class="rd-wrap">
+  <div class="ol-promo-2plus1 reveal">
+    <div class="ol-promo-ic">🎁</div>
+    <div class="ol-promo-txt">
+      <div class="ol-promo-t">Акция «2+1»: три диплома по цене двух</div>
+      <div class="ol-promo-s">Пройдите три олимпиады — за третий диплом платить не нужно. Акция применяется в корзине автоматически и действует на всё вместе: олимпиады, конкурсы и вебинары можно комбинировать.</div>
+    </div>
+    <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать&nbsp;3&nbsp;олимпиады
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+    </a>
+  </div>
+</div>
+
 <!-- Каталог -->
 <section class="rd-section" id="catalog">
   <div class="rd-wrap">

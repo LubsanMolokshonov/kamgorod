@@ -199,6 +199,18 @@ class EmailJourney {
                 'touchpoint_code' => $emailData['touchpoint_code']
             ];
 
+            // Рекомендация курсов (ПП → КПК) — только в первом письме цепочки.
+            if (($emailData['touchpoint_code'] ?? '') === 'touch_1h') {
+                require_once BASE_PATH . '/includes/email-course-recommendation.php';
+                $reco = getCourseRecommendationsForEmail(
+                    $this->pdo,
+                    !empty($emailData['user_id']) ? (int)$emailData['user_id'] : null,
+                    'competition'
+                );
+                $templateData['pp_course']  = $reco['pp'];
+                $templateData['kpk_course'] = $reco['kpk'];
+            }
+
             // Поздние касания: закрепляем персональную скидку, которая
             // применяется в корзине автоматически через EmailCampaignDiscount::getActive().
             // Скидка обновляется (upsert по uniq campaign_code+user_id), поэтому повторная

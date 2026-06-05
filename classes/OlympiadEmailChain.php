@@ -654,6 +654,18 @@ class OlympiadEmailChain {
                 'site_name' => 'ФГОС-Практикум',
             ];
 
+            // Рекомендация курсов (ПП → КПК) — только в первом письме цепочки (регистрация).
+            if ($emailType === 'reg_welcome') {
+                require_once BASE_PATH . '/includes/email-course-recommendation.php';
+                $reco = getCourseRecommendationsForEmail(
+                    $this->pdo,
+                    !empty($emailData['user_id']) ? (int)$emailData['user_id'] : null,
+                    'olympiad'
+                );
+                $templateData['pp_course']  = $reco['pp'];
+                $templateData['kpk_course'] = $reco['kpk'];
+            }
+
             require_once __DIR__ . '/CourseEmailChain.php';
             $sender = \CourseEmailChain::pickPersonalSender($emailData['email']);
             $templateData['_sender_name'] = \CourseEmailChain::extractFirstName($sender['from_name']);
