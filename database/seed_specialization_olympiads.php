@@ -41,7 +41,7 @@ function seo($title, $intro, $whatAwaits, $audience, $adv1, $adv2) {
         '<h3>Кому подойдёт</h3><ul>' . $lis . '</ul>' .
         '<h3>Преимущества участия</h3><ul>' .
         '<li>Участие <strong>полностью бесплатное</strong> — проходите тест в удобное время</li>' .
-        '<li>Диплом I, II или III степени для портфолио при аттестации — 169 руб.</li>' .
+        '<li>Диплом I, II или III степени для портфолио при аттестации — 229 руб.</li>' .
         '<li>' . $adv1 . '</li>' .
         '<li>' . $adv2 . '</li></ul>';
 }
@@ -58,7 +58,7 @@ function insertOlympiad($db, $o, &$order) {
         return null;
     }
 
-    $stmt = $db->prepare("INSERT INTO olympiads (title, slug, description, seo_content, target_audience, subject, grade, diploma_price, is_active, display_order) VALUES (?,?,?,?,?,?,NULL,169.00,1,?)");
+    $stmt = $db->prepare("INSERT INTO olympiads (title, slug, description, seo_content, target_audience, subject, grade, diploma_price, is_active, display_order) VALUES (?,?,?,?,?,?,NULL,229.00,1,?)");
     $stmt->execute([$o['title'], $slug, $o['desc'], $o['seo'], $o['ta'], $o['subj'], $order]);
     $id = $db->lastInsertId();
     $order++;

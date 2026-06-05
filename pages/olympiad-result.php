@@ -37,7 +37,7 @@ $olympiadTitle = $result['olympiad_title'];
 $olympiadSlug = $result['olympiad_slug'];
 $olympiadId = $result['olympiad_id'];
 $fullName = $result['full_name'];
-$diplomaPrice = $result['diploma_price'] ?? 169;
+$diplomaPrice = $result['diploma_price'] ?? 229;
 
 // Determine display data based on placement
 $placementData = [

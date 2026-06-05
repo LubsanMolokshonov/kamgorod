@@ -91,7 +91,7 @@ try {
             $allItems[] = [
                 'type' => 'olympiad_registration',
                 'id' => $olympReg['id'],
-                'price' => (float)($olympReg['diploma_price'] ?? 169),
+                'price' => (float)($olympReg['diploma_price'] ?? 229),
                 'raw_data' => $olympReg,
             ];
         }

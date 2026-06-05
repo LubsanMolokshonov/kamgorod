@@ -384,12 +384,12 @@ class YmlFeedGenerator
             $xml .= $this->buildOfferXml([
                 'id'          => 'oly-' . $oly['id'],
                 'url'         => $this->baseUrl . '/olimpiady/' . $oly['slug'] . '/',
-                'price'       => $oly['diploma_price'] ?? '169',
+                'price'       => $oly['diploma_price'] ?? '229',
                 'categoryId'  => $firstCatId,
                 'picture'     => $this->baseUrl . '/og-image/ad/olympiad/' . $oly['slug'] . '.jpg',
                 'name'        => $oly['title'],
                 'description' => $description,
-                'sales_notes' => 'Участие бесплатное. Диплом — ' . ($oly['diploma_price'] ?? '169') . ' ₽',
+                'sales_notes' => 'Участие бесплатное. Диплом — ' . ($oly['diploma_price'] ?? '229') . ' ₽',
                 'params'      => [
                     ['name' => 'Тип', 'value' => 'Олимпиада'],
                     ['name' => 'Уровень', 'value' => 'Всероссийский'],
@@ -417,7 +417,7 @@ class YmlFeedGenerator
             $desc .= $this->extractSentences($oly['description'], 2) . ' ';
         }
 
-        $desc .= 'Участие бесплатное! Именной диплом — ' . ($oly['diploma_price'] ?? '169') . ' ₽. Результат — сразу после прохождения.';
+        $desc .= 'Участие бесплатное! Именной диплом — ' . ($oly['diploma_price'] ?? '229') . ' ₽. Результат — сразу после прохождения.';
 
         return $this->cleanText($desc);
     }
@@ -453,7 +453,7 @@ class YmlFeedGenerator
 
             $headline = $this->buildOlympiadAdHeadline($oly);
             $description = $this->buildOlympiadAdDescription($oly);
-            $price = $oly['diploma_price'] ?? '169';
+            $price = $oly['diploma_price'] ?? '229';
             $subject = $oly['subject'] ?? '';
             $audienceLabel = self::OLYMPIAD_SUBJECT_AUDIENCE_MAP[$subject] ?? 'педагогов';
 
@@ -588,7 +588,7 @@ class YmlFeedGenerator
      */
     private function buildOlympiadAdDescription(array $oly): string
     {
-        $price = $oly['diploma_price'] ?? '169';
+        $price = $oly['diploma_price'] ?? '229';
 
         return 'Дистанционный формат. Результат сразу. Именной диплом ' . intval($price) . ' руб.';
     }

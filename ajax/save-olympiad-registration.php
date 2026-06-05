@@ -246,7 +246,7 @@ try {
     // 8. Build e-commerce tracking payload and respond
     // ------------------------------------------------------------------
 
-    $diplomaPrice = floatval($result['diploma_price'] ?? 169);
+    $diplomaPrice = floatval($result['diploma_price'] ?? 229);
 
     echo json_encode([
         'success'         => true,

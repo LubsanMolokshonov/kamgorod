@@ -42,7 +42,7 @@ if (!$olympiad) {
 }
 
 $audienceLabel = Olympiad::getAudienceLabel($olympiad['target_audience']);
-$diplomaPrice  = (int)($olympiad['diploma_price'] ?? 169);
+$diplomaPrice  = (int)($olympiad['diploma_price'] ?? 229);
 $academicYear  = $olympiad['academic_year'] ?? '2025-2026';
 
 $pageTitle       = htmlspecialchars($olympiad['title']) . ' | Олимпиады | ' . SITE_NAME;

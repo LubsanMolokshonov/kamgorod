@@ -75,7 +75,7 @@ $placementLabels = [
 $placementLabel = $placementLabels[$result['placement']] ?? $result['placement'] . ' место';
 
 // Diploma price (from olympiad or fallback)
-$diplomaPrice = (int)($result['diploma_price'] ?? 169);
+$diplomaPrice = (int)($result['diploma_price'] ?? 229);
 
 // CSRF token
 $csrfToken = generateCSRFToken();

@@ -132,7 +132,7 @@ foreach ($allOlympiads as $o) {
         'description'    => $o['description'] ?? '',
         'audience_label' => $audienceLabel,
         'subject'        => $o['subject'] ?? '',
-        'price'          => (float)($o['diploma_price'] ?? 169),
+        'price'          => (float)($o['diploma_price'] ?? 229),
         'url'            => '/olimpiady/' . urlencode($o['slug']) . '/',
     ];
 }
@@ -216,7 +216,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать олимпиаду
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
-        <span style="font-size:13px;color:var(--ink-500);">диплом от 169 ₽ · оплата ЮКассой</span>
+        <span style="font-size:13px;color:var(--ink-500);">диплом от 229 ₽ · оплата ЮКассой</span>
       </div>
     </div>
 
@@ -345,7 +345,7 @@ include __DIR__ . '/includes/header-redesign.php';
             <?php foreach ($olympiads as $olympiad):
                 $audLabel = Olympiad::getAudienceLabel($olympiad['target_audience'] ?? '');
                 $oUrl     = '/olimpiady/' . urlencode($olympiad['slug']) . '/';
-                $oPrice   = (int)($olympiad['diploma_price'] ?? 169);
+                $oPrice   = (int)($olympiad['diploma_price'] ?? 229);
             ?>
               <a class="rd-card" href="<?php echo $oUrl; ?>">
                 <div class="rd-card-pat"></div>
@@ -362,7 +362,7 @@ include __DIR__ . '/includes/header-redesign.php';
                   <?php echo htmlspecialchars(mb_substr(strip_tags($olympiad['description'] ?? ''), 0, 120), ENT_QUOTES, 'UTF-8'); ?>…
                 </div>
                 <div class="rd-card-foot">
-                  <div class="rd-price-now">диплом <?php echo number_format($oPrice, 0, ',', ' '); ?> ₽</div>
+                  <div class="rd-price-now">Бесплатное участие</div>
                   <span class="rd-join-btn">Пройти →</span>
                 </div>
               </a>
@@ -411,7 +411,7 @@ include __DIR__ . '/includes/header-redesign.php';
       <div class="rd-step">
         <div class="rd-step-n">4</div>
         <h4>Оформите диплом</h4>
-        <p>По желанию: именной диплом за 169&nbsp;₽ — сразу в кабинет.</p>
+        <p>По желанию: именной диплом за 229&nbsp;₽ — сразу в кабинет.</p>
       </div>
     </div>
   </div>
@@ -452,7 +452,7 @@ include __DIR__ . '/includes/header-redesign.php';
       <div class="rd-faq-list reveal-stagger">
         <div class="rd-faq-item">
           <button class="rd-faq-q">Участие действительно бесплатное? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Да. Прохождение теста олимпиады — полностью бесплатное. Оплата требуется только если вы захотите получить именной диплом (от 169 ₽).</div></div>
+          <div class="rd-faq-a"><div>Да. Прохождение теста олимпиады — полностью бесплатное. Оплата требуется только если вы захотите получить именной диплом (от 229 ₽).</div></div>
         </div>
         <div class="rd-faq-item">
           <button class="rd-faq-q">Сколько вопросов в олимпиаде? <span class="pm">+</span></button>
@@ -515,7 +515,7 @@ function renderOlympiadCard(o) {
         '<h4>' + _olEsc(o.title) + '</h4>' +
         '<div class="rd-card-meta">' + _olEsc(desc) + '</div>' +
         '<div class="rd-card-foot">' +
-          '<div class="rd-price-now">диплом ' + _olFmtPrice(Math.round(o.price)) + ' ₽</div>' +
+          '<div class="rd-price-now">Бесплатное участие</div>' +
           '<span class="rd-join-btn">Пройти →</span>' +
         '</div>' +
       '</a>';

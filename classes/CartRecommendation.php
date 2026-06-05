@@ -110,7 +110,7 @@ class CartRecommendation {
         $expectedPrice = [
             'publication' => 299.0,
             'webinar'     => 200.0,
-            'olympiad'    => 169.0,
+            'olympiad'    => 229.0,
             'competition' => 150.0,
         ];
         $categoryAvailable = [
@@ -963,7 +963,7 @@ class CartRecommendation {
                 'id' => (int)$row['id'],
                 'title' => $row['title'],
                 'slug' => $row['slug'],
-                'price' => (float)($row['diploma_price'] ?? 169),
+                'price' => (float)($row['diploma_price'] ?? 229),
                 'meta' => $this->getOlympiadAudienceLabel($row['target_audience'] ?? '') . ' • 3 минуты',
                 'quick_add' => false,
                 'add_data' => null,

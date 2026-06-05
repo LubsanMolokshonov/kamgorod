@@ -334,7 +334,7 @@ if (!defined('OLYMPIAD_AUDIENCES')) {
 }
 
 // Olympiad Diploma Price
-if (!defined('OLYMPIAD_DIPLOMA_PRICE')) define('OLYMPIAD_DIPLOMA_PRICE', 169);
+if (!defined('OLYMPIAD_DIPLOMA_PRICE')) define('OLYMPIAD_DIPLOMA_PRICE', 229);
 
 // Publication Certificate Price
 if (!defined('PUBLICATION_CERTIFICATE_PRICE')) define('PUBLICATION_CERTIFICATE_PRICE', 299);

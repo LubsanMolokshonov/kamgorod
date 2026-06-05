@@ -31,7 +31,7 @@ if ($olympiadRegistrationId) {
         $olympEcommerce = [
             'id' => 'olymp-' . $olympData['olympiad_id'],
             'name' => $olympData['olympiad_title'],
-            'price' => $olympData['diploma_price'] ?? 169,
+            'price' => $olympData['diploma_price'] ?? 229,
             'category' => 'Олимпиады'
         ];
     }
