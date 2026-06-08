@@ -519,7 +519,7 @@ function getCartTotal() {
         foreach ($certificates as $certId) {
             $cert = $certObj->getById($certId);
             if ($cert) {
-                $total += (float)($cert['price'] ?? 299);
+                $total += (float)($cert['price'] ?? 499);
             }
         }
     }

@@ -58,7 +58,7 @@ include __DIR__ . '/../includes/header-redesign.php';
   <div class="rd-wrap" style="margin-top:24px;text-align:center;">
     <div class="rd-pill-row reveal-stagger" style="justify-content:center;">
       <span class="rd-pill"><span class="dot"></span><?php echo number_format($totalPublications + 1250, 0, '', ' '); ?>+ публикаций</span>
-      <span class="rd-pill indigo">Свидетельство 299&nbsp;₽</span>
+      <span class="rd-pill indigo">Свидетельство 499&nbsp;₽</span>
       <span class="rd-pill">5&nbsp;минут оформление</span>
     </div>
     <h1 class="rd-hero-title rd-hero-title-sm reveal" style="max-width:880px;margin:0 auto;">Опубликуйте статью и&nbsp;получите <span class="accent">свидетельство о&nbsp;публикации</span></h1>
@@ -253,7 +253,7 @@ include __DIR__ . '/../includes/header-redesign.php';
                   Загрузка...
                 </span>
               </button>
-              <p class="submit-hint">После загрузки вы&nbsp;перейдёте к&nbsp;оформлению свидетельства (299&nbsp;₽)</p>
+              <p class="submit-hint">После загрузки вы&nbsp;перейдёте к&nbsp;оформлению свидетельства (499&nbsp;₽)</p>
             </div>
           </form>
         </div>

@@ -108,7 +108,7 @@ class CartRecommendation {
         // Ценность слота = ожидаемая цена карточки (publication > webinar > olympiad > competition)
         // Бонус +30 за диверсификацию (категории нет в корзине)
         $expectedPrice = [
-            'publication' => 299.0,
+            'publication' => 499.0,
             'webinar'     => 200.0,
             'olympiad'    => 229.0,
             'competition' => 150.0,
@@ -876,7 +876,7 @@ class CartRecommendation {
                 'id' => (int)$row['id'],
                 'title' => $row['title'],
                 'slug' => $row['slug'],
-                'price' => 299.0,
+                'price' => 499.0,
                 'meta' => 'Свидетельство о публикации',
                 'quick_add' => true,
                 'add_data' => [
@@ -1129,8 +1129,8 @@ class CartRecommendation {
             'id' => 0,
             'title' => 'Опубликуйте свою работу',
             'slug' => '',
-            'price' => 299.0,
-            'meta' => 'Бесплатная публикация + свидетельство за 299 ₽',
+            'price' => 499.0,
+            'meta' => 'Бесплатная публикация + свидетельство за 499 ₽',
             'quick_add' => false,
             'add_data' => null,
         ]];

@@ -333,7 +333,7 @@ PROMPT;
                 'author_name' => $session['author_name'],
                 'organization' => $session['organization'],
                 'position' => $session['position'] ?? '',
-                'price' => 299.00,
+                'price' => 499.00,
             ]);
 
             // Обновить сессию

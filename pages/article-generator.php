@@ -78,7 +78,7 @@ include __DIR__ . '/../includes/header-redesign.php';
     <div class="rd-pill-row reveal-stagger" style="justify-content:center;">
       <span class="rd-pill"><span class="dot"></span>ИИ‑генератор</span>
       <span class="rd-pill indigo">3 минуты до статьи</span>
-      <span class="rd-pill">Свидетельство СМИ 299&nbsp;₽</span>
+      <span class="rd-pill">Свидетельство СМИ 499&nbsp;₽</span>
     </div>
     <h1 class="rd-hero-title rd-hero-title-sm reveal" style="max-width:920px;margin:0 auto;">
       Сгенерируйте педагогическую статью за&nbsp;<span class="accent">3&nbsp;минуты</span>
@@ -117,7 +117,7 @@ include __DIR__ . '/../includes/header-redesign.php';
       <div class="ic">📜</div>
       <div>
         <div class="t">Свидетельство СМИ</div>
-        <div class="s">Эл. №ФС 77‑74524 · 299&nbsp;₽</div>
+        <div class="s">Эл. №ФС 77‑74524 · 499&nbsp;₽</div>
       </div>
     </div>
   </div>
@@ -436,7 +436,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           <div class="success-actions">
             <a href="#" class="rd-btn rd-btn-ghost" id="viewPublicationLink" target="_blank">Посмотреть публикацию</a>
             <a href="#" class="rd-btn rd-btn-primary" id="getCertificateLink">
-              Оформить свидетельство за&nbsp;299&nbsp;₽
+              Оформить свидетельство за&nbsp;499&nbsp;₽
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
             </a>
           </div>
