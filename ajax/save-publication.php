@@ -57,6 +57,35 @@ if (empty($tagIds)) {
     exit;
 }
 
+// Idempotency guard: защита от дублей (двойной сабмит / повторная отправка той же
+// статьи). Если этот же пользователь за последние 30 минут уже отправил публикацию
+// с тем же названием — не создаём дубль, а возвращаем существующую (UX без ошибки).
+try {
+    $dedupDb = new Database($db);
+    $dedupUser = $dedupDb->queryOne("SELECT id FROM users WHERE email = ?", [$email]);
+    if ($dedupUser) {
+        $dup = $dedupDb->queryOne(
+            "SELECT id FROM publications
+              WHERE user_id = ? AND title = ? AND created_at > (NOW() - INTERVAL 30 MINUTE)
+              ORDER BY id DESC LIMIT 1",
+            [$dedupUser['id'], trim($_POST['title'])]
+        );
+        if ($dup) {
+            echo json_encode([
+                'success'        => true,
+                'duplicate'      => true,
+                'publication_id' => (int)$dup['id'],
+                'redirect_url'   => '/pages/publication-certificate.php?id=' . (int)$dup['id'],
+                'message'        => 'Эта публикация уже была отправлена.',
+            ]);
+            exit;
+        }
+    }
+} catch (Exception $dedupError) {
+    // Не блокируем основной путь, если проверка дублей сама упала
+    error_log("Publication dedup check failed: " . $dedupError->getMessage());
+}
+
 try {
     $database = new Database($db);
     $userObj = new User($db);
