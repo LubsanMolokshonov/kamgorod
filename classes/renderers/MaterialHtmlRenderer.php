@@ -201,7 +201,10 @@ class MaterialHtmlRenderer
                 : '<p>' . $this->esc((string)$data['diagnostics']) . '</p>';
         }
 
-        if (!empty($data['homework'])) {
+        // Домашнее задание не выводим для ДОО: в детском саду домашних заданий нет (СанПиН),
+        // даже если модель его всё-таки вернула.
+        $isDo = str_contains((string)($data['_stage'] ?? ''), 'ДО');
+        if (!empty($data['homework']) && !$isDo) {
             $html .= '<h2>Домашнее задание</h2>' . $this->renderHomework($data['homework']);
         }
         if (!empty($data['reflection'])) {
@@ -219,7 +222,84 @@ class MaterialHtmlRenderer
             }
         }
 
+        // Фолбэк: если ИИ вернул содержание под нераспознанными ключами (частый случай у
+        // КТП/материалов ДОО), оно иначе потерялось бы и файл скачивался бы пустым.
+        // Выводим неизвестные непустые поля парами «ключ: значение», чтобы контент уцелел.
+        $html .= $this->renderUnknownFields($data);
+
         return $html;
+    }
+
+    /**
+     * Известные верхнеуровневые ключи, которые render() уже обрабатывает явно.
+     * Всё, чего здесь нет (и что не является внутренним полем вида _image_abs или
+     * технической подсказкой image_prompt/slug), дампится как «ключ: значение».
+     */
+    private const KNOWN_KEYS = [
+        'title', 'section', 'lesson_type', 'umk', 'key_concepts', 'intro', 'goal',
+        'goals', 'objectives', 'planned_results', 'uud', 'equipment', 'instructions',
+        'note', 'safety_rules', 'stages', 'structure', 'tasks', 'questions', 'answer_key',
+        'slides', 'rows', 'education_area', 'discussion_questions', 'criteria',
+        'diagnostics', 'homework', 'reflection', 'student_worksheet',
+    ];
+
+    /**
+     * Человекочитаемые подписи для типовых нераспознанных полей (чтобы дамп не выглядел
+     * техническим). Неизвестные ключи показываем как есть.
+     */
+    private function renderUnknownFields(array $data): string
+    {
+        $skip = array_flip(self::KNOWN_KEYS);
+        $labels = [
+            'stage'            => 'Ступень',
+            'age'             => 'Возраст',
+            'age_group'        => 'Возрастная группа',
+            'group'            => 'Группа',
+            'target_results'   => 'Целевые ориентиры',
+            'integration'      => 'Интеграция образовательных областей',
+            'materials'        => 'Материалы',
+            'preliminary_work' => 'Предварительная работа',
+            'vocabulary'       => 'Словарная работа',
+            'subject'          => 'Предмет',
+            'topic'            => 'Тема',
+            'duration'         => 'Длительность',
+            'description'      => 'Описание',
+            'summary'          => 'Краткое содержание',
+            'content'          => 'Содержание',
+            'course'           => 'Ход занятия',
+            'plan'             => 'План',
+        ];
+        $rows = '';
+        foreach ($data as $key => $value) {
+            if (isset($skip[$key]) || (is_string($key) && $key !== '' && $key[0] === '_')) {
+                continue;
+            }
+            if ($key === 'image_prompt' || $key === 'slug') {
+                continue;
+            }
+            $label = $labels[$key] ?? ucfirst((string)$key);
+            if (is_array($value)) {
+                // Список значений или объект — выводим как подзаголовок + список/текст.
+                $str = $this->stringifyAnswer($value);
+                if (trim($str) === '') {
+                    // Возможно, это массив объектов-этапов с narrative — выводим повествованием.
+                    if ($this->hasField($value, 'narrative') || $this->hasField($value, 'name')) {
+                        $rows .= '<h3>' . $this->esc($label) . '</h3>' . $this->renderStagesNarrative($value);
+                        continue;
+                    }
+                    continue;
+                }
+                $rows .= '<p><strong>' . $this->esc($label) . ':</strong> ' . $this->esc($str) . '</p>';
+            } else {
+                $str = trim((string)$value);
+                if ($str === '') {
+                    continue;
+                }
+                $rows .= '<p><strong>' . $this->esc($label) . ':</strong> '
+                       . nl2br($this->esc($str)) . '</p>';
+            }
+        }
+        return $rows;
     }
 
     /**
@@ -242,6 +322,9 @@ class MaterialHtmlRenderer
         // ── Часть 1. Материалы для учителя ──────────────────────────────
         $html .= '<h2 class="md-part md-part-teacher">Материалы для учителя</h2>';
 
+        if (!empty($data['umk'])) {
+            $html .= '<p><strong>УМК:</strong> ' . $this->esc($this->stringifyAnswer($data['umk'])) . '</p>';
+        }
         if (!empty($data['intro'])) {
             $html .= '<p>' . $this->esc($this->dedupeParagraphs((string)$data['intro'])) . '</p>';
         }
@@ -447,9 +530,16 @@ class MaterialHtmlRenderer
         if ($type === 'draw') {
             return '<div class="md-drawbox"><span>Место для рисунка</span></div>';
         }
-        // fill / choose / прочее — выводим текст задания (с пропусками "____")
-        if (is_string($content) && $content !== '') {
+        // fill / choose / прочее — выводим текст задания (с пропусками "____" / вариантами).
+        if (is_string($content) && trim($content) !== '') {
             return '<div class="md-taskcontent">' . nl2br($this->esc($content)) . '</div>';
+        }
+        // Если у choose/fill пусто содержимое (модель не вернула варианты/текст) — даём линии
+        // под ответ, чтобы задание не осталось без поля для работы ученика.
+        if ($type === 'choose' || $type === 'fill') {
+            return '<div class="md-writelines">'
+                 . str_repeat('<div class="md-writeline"></div>', 3)
+                 . '</div>';
         }
         return '';
     }
@@ -534,14 +624,25 @@ class MaterialHtmlRenderer
                 : '';
             $html .= '<li value="' . $n . '">';
             $html .= '<div>' . $this->esc($q['text'] ?? '') . $star . '</div>';
-            if (!empty($q['options']) && is_array($q['options'])) {
-                $marker = ($type === 'multiple') ? '☐' : '○';
+            // Маркеры выбора — ASCII-безопасные «[ ]» (множественный) / «( )» (одиночный):
+            // символы ☐/○ отсутствуют в шрифте freesans, и mPDF рисовал их пустым «тофу»-квадратом.
+            $hasOptions = !empty($q['options']) && is_array($q['options'])
+                && count(array_filter($q['options'], fn($o) => trim((string)$o) !== '')) > 0;
+            if ($hasOptions) {
+                $marker = ($type === 'multiple') ? '[ ]' : '( )';
                 $html .= '<ul style="list-style:none; padding-left:4px;">';
-                foreach ($q['options'] as $idx => $opt) {
-                    $html .= '<li>' . $marker . ' ' . $this->letter((int)$idx) . ') ' . $this->esc((string)$opt) . '</li>';
+                $li = 0;
+                foreach ($q['options'] as $opt) {
+                    if (trim((string)$opt) === '') {
+                        continue; // пропускаем пустые варианты, чтобы не было «висящих» строк
+                    }
+                    $html .= '<li>' . $marker . ' ' . $this->letter($li) . ') ' . $this->esc((string)$opt) . '</li>';
+                    $li++;
                 }
                 $html .= '</ul>';
-            } elseif ($type === 'open') {
+            } else {
+                // open ИЛИ вопрос выбора, у которого модель не вернула варианты —
+                // даём линии под ответ, чтобы вопрос не остался без поля для ответа.
                 $html .= '<div class="md-writelines">'
                        . str_repeat('<div class="md-writeline"></div>', 5)
                        . '</div>';
@@ -668,6 +769,12 @@ class MaterialHtmlRenderer
                   . '<h3 class="md-slide__title">' . $this->esc($s['title'] ?? '') . '</h3>'
                   . '</div>';
             $html .= '<div class="md-slide__body">';
+            // Иллюстрация слайда (если сгенерирована) — слева текст, справа картинка.
+            $imgUrl = trim((string)($s['_image_url'] ?? ''));
+            if ($imgUrl !== '') {
+                $html .= '<div class="md-slide__media"><img src="' . $this->esc($imgUrl)
+                       . '" alt="" style="max-width:280px; width:100%; border-radius:8px;"></div>';
+            }
             if (!empty($s['bullets']) && is_array($s['bullets'])) {
                 $html .= '<ul class="md-slide__bullets">';
                 foreach ($s['bullets'] as $b) {

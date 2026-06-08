@@ -106,8 +106,17 @@ class PptxRenderer
         $titleRun = $bar->createTextRun($titleText);
         $titleRun->getFont()->setBold(true)->setSize(26)->setName($font)->setColor($colorWhite);
 
-        // Есть ли картинка для этого слайда
-        $imageAbs = !empty($data['_image_abs']) && is_file($data['_image_abs']) ? $data['_image_abs'] : null;
+        // Есть ли картинка для этого слайда. Предпочитаем абсолютный путь; если он устарел
+        // (материал пересобирается из ai_output_json), восстанавливаем из относительного _image_url.
+        $imageAbs = null;
+        if (!empty($data['_image_abs']) && is_file($data['_image_abs'])) {
+            $imageAbs = $data['_image_abs'];
+        } elseif (!empty($data['_image_url'])) {
+            $candidate = dirname(__DIR__, 2) . '/' . ltrim((string)$data['_image_url'], '/');
+            if (is_file($candidate)) {
+                $imageAbs = $candidate;
+            }
+        }
         $bodyWidth = $imageAbs ? 470 : 860;
 
         // Буллеты

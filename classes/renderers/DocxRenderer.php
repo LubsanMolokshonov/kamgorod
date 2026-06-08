@@ -79,12 +79,25 @@ class DocxRenderer
             ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::END]
         );
 
-        $body = $this->html->render($data);
+        $body = trim($this->html->render($data));
         // PHPWord HtmlConverter ожидает корневой блок-элемент.
         $wrapped = '<div>' . $this->normalizeVoidTags($body) . '</div>';
 
-        // addHtml сам разберёт h1/h2/h3, ul/ol, table, p, strong, em
-        \PhpOffice\PhpWord\Shared\Html::addHtml($section, $wrapped, false, false);
+        // addHtml сам разберёт h1/h2/h3, ul/ol, table, p, strong, em. Если разметка всё же
+        // не разобралась (DOMDocument::loadXML строгий) — НЕ оставляем .docx с одним
+        // колонтитулом: добавляем текстовый фолбэк, чтобы файл не скачивался пустым.
+        $bodyOk = false;
+        if ($body !== '') {
+            try {
+                \PhpOffice\PhpWord\Shared\Html::addHtml($section, $wrapped, false, false);
+                $bodyOk = true;
+            } catch (\Throwable $e) {
+                error_log('DocxRenderer: addHtml failed, fallback to plain text: ' . $e->getMessage());
+            }
+        }
+        if (!$bodyOk) {
+            $this->addPlainTextFallback($section, $body, $data, $title);
+        }
 
         [$relativePath, $absolutePath] = $this->ensureOutputPath($slug, 'docx');
 
@@ -97,6 +110,55 @@ class DocxRenderer
             'file_size' => filesize($absolutePath) ?: 0,
             'file_format' => 'docx',
         ];
+    }
+
+    /**
+     * Текстовый фолбэк: когда HtmlConverter не смог разобрать разметку или тело пустое,
+     * наполняем секцию хотя бы текстом — иначе .docx скачивается «пустым» (одни колонтитулы).
+     * Берём текст из уже отрендеренного HTML (срезаем теги), а если и он пуст — линейно
+     * дампим JSON-ответ ИИ парами «ключ: значение».
+     */
+    private function addPlainTextFallback($section, string $body, array $data, string $title): void
+    {
+        $section->addTitle($title !== '' ? $title : (string)($data['title'] ?? 'Материал'), 1);
+
+        // 1) Пытаемся восстановить текст из HTML-тела (срезаем теги, восстанавливаем абзацы).
+        if ($body !== '') {
+            $text = preg_replace('~<(h[1-3]|p|li|tr|div|br)\b[^>]*>~i', "\n", $body);
+            $text = html_entity_decode(strip_tags($text), ENT_QUOTES, 'UTF-8');
+            $lines = array_values(array_filter(array_map('trim', explode("\n", $text)), fn($l) => $l !== ''));
+            if ($lines) {
+                foreach ($lines as $line) {
+                    $section->addText($line, ['size' => 11], ['spaceAfter' => 80]);
+                }
+                return;
+            }
+        }
+
+        // 2) Крайний случай: HTML пуст — дампим сам JSON ответа ИИ.
+        $this->dumpArray($section, $data, 0);
+    }
+
+    /** Рекурсивный текстовый дамп массива в DOCX-секцию (крайний фолбэк). */
+    private function dumpArray($section, array $data, int $depth): void
+    {
+        foreach ($data as $key => $value) {
+            if (is_string($key) && $key !== '' && $key[0] === '_') {
+                continue; // внутренние поля (_image_abs и т.п.)
+            }
+            $label = is_string($key) ? $key : ('#' . ((int)$key + 1));
+            if (is_array($value)) {
+                if ($depth < 3) {
+                    $section->addText((string)$label . ':', ['bold' => true, 'size' => 11], ['spaceBefore' => 80]);
+                    $this->dumpArray($section, $value, $depth + 1);
+                }
+            } else {
+                $str = trim((string)$value);
+                if ($str !== '') {
+                    $section->addText($label . ': ' . $str, ['size' => 11], ['spaceAfter' => 60]);
+                }
+            }
+        }
     }
 
     /**
