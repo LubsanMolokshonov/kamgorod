@@ -283,13 +283,30 @@ function normalize_message(Message $msg): ?array
 function decode_mime_header(string $value): string
 {
     if ($value === '') return '';
+    $decoded = $value;
     if (function_exists('mb_decode_mimeheader')) {
-        $decoded = @mb_decode_mimeheader($value);
-        if ($decoded !== false && $decoded !== '') return $decoded;
+        $d = @mb_decode_mimeheader($value);
+        if ($d !== false && $d !== '') $decoded = $d;
+    } elseif (function_exists('iconv_mime_decode')) {
+        $d = @iconv_mime_decode($value, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
+        if ($d !== false && $d !== '') $decoded = $d;
     }
-    if (function_exists('iconv_mime_decode')) {
-        $decoded = @iconv_mime_decode($value, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
-        if ($decoded !== false && $decoded !== '') return $decoded;
+    return fix_double_encoded_utf8($decoded);
+}
+
+/**
+ * Чинит «двойную кодировку» UTF-8, ошибочно прочитанного как Windows-1252 и снова
+ * сохранённого в UTF-8: «Ð—Ð°Ð²ÐµÑ€ÑˆÐ¸Ñ‚Ðµ Ð¾Ð¿Ð»Ð°Ñ‚Ñƒ â€” 149 â‚½» → «Завершите оплату — 149 ₽».
+ * Реверс применяется ТОЛЬКО если после него кириллицы становится больше — поэтому
+ * корректные строки (обычный UTF-8, латиница) остаются нетронутыми.
+ */
+function fix_double_encoded_utf8(string $s): string
+{
+    if ($s === '' || !mb_check_encoding($s, 'UTF-8')) return $s;
+    $reversed = @mb_convert_encoding($s, 'Windows-1252', 'UTF-8');
+    if ($reversed === false || $reversed === '' || !mb_check_encoding($reversed, 'UTF-8')) {
+        return $s;
     }
-    return $value;
+    $cyr = static fn(string $x): int => (int)preg_match_all('/\p{Cyrillic}/u', $x);
+    return $cyr($reversed) > $cyr($s) ? $reversed : $s;
 }

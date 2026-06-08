@@ -200,12 +200,36 @@ document.addEventListener('DOMContentLoaded', function() {
         analysisAbortController = null;
     }
 
+    // Поле, заполненное подсказкой ИИ, при первом фокусе выделяем целиком — чтобы
+    // правка ЗАМЕНЯЛА текст, а не вставлялась в середину. Иначе при ручной правке
+    // ИИ-варианта названия две строки слипаются («...англ«официальное название»ийского
+    // языка») — именно так появлялись битые заголовки публикаций.
+    function enableReplaceOnFirstFocus(field) {
+        if (!field || field.dataset.aiReplaceBound === '1') return;
+        field.dataset.aiReplaceBound = '1';
+        field.dataset.aiFilled = '1';
+        field.classList.add('ai-filled');
+        field.addEventListener('focus', function() {
+            if (field.dataset.aiFilled === '1') {
+                // setTimeout(0) — чтобы select() сработал ПОСЛЕ установки каретки кликом
+                setTimeout(function() {
+                    if (field.dataset.aiFilled === '1') { try { field.select(); } catch (e) {} }
+                }, 0);
+            }
+        });
+        field.addEventListener('input', function() {
+            field.dataset.aiFilled = '';
+            field.classList.remove('ai-filled');
+        }, { once: true });
+    }
+
     function fillFormWithSuggestions(suggestions) {
         // Title — fill only if empty
         var titleField = document.getElementById('title');
         if (titleField && !titleField.value.trim() && suggestions.title) {
             titleField.value = suggestions.title;
             clearError(titleField);
+            enableReplaceOnFirstFocus(titleField);
         }
 
         // Annotation — fill only if empty
