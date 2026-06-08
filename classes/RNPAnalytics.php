@@ -9,10 +9,16 @@
  *
  * Направления (по наличию order_items.course_enrollment_id):
  *   - course  — позиция курса
- *   - portal  — конкурс/олимпиада/вебинар/публикация
+ *   - portal  — конкурс/олимпиада/вебинар/публикация + материалы ФОП (токены)
  *
  * Выручка смешанных заказов делится пропорционально сумме price позиций каждого направления.
  * База расчётов выручки — orders.paid_at. Созданные заказы — orders.created_at.
+ *
+ * Материалы ФОП (покупка токенов) идут мимо orders — отдельной веткой через
+ * token_transactions (reason='purchase'). Их выручка/платежи доклеиваются в
+ * направление portal по каналу из token_transactions.utm_source (миграция 140).
+ * База времени — token_transactions.created_at (= момент успешной оплаты), поэтому
+ * покупка токенов учитывается и как «создано», и как «оплачено» в одном периоде.
  */
 
 class RNPAnalytics
@@ -61,6 +67,7 @@ class RNPAnalytics
         $createdRows = $this->fetchOrderSplit($dateFrom, $dateTo, 'created_at', $granularity);
         $costs = $this->fetchCosts($dateFrom, $dateTo, $granularity);
         $leadRows = $this->fetchCourseLeads($dateFrom, $dateTo, $granularity);
+        $tokenRows = $this->fetchTokenSplit($dateFrom, $dateTo, $granularity);
         $periods = $this->buildPeriods($dateFrom, $dateTo, $granularity);
 
         // Индексы для быстрого слияния
@@ -80,6 +87,11 @@ class RNPAnalytics
         foreach ($leadRows as $l) {
             $leadsIdx[$l['period_key']][$l['channel']] = (float)$l['leads'];
         }
+        // Материалы ФОП (токены) — доклеиваются в portal по каналу.
+        $tokenIdx = [];
+        foreach ($tokenRows as $t) {
+            $tokenIdx[$t['period_key']][$t['channel']] = $t;
+        }
 
         $report = [];
         $grandRows = $this->blankCellMatrix();
@@ -97,14 +109,20 @@ class RNPAnalytics
                         $leadsVal = $leadsIdx[$period['key']][$channel] ?? 0.0;
                     }
 
+                    // Материалы ФОП доклеиваются только в portal. Покупка токенов
+                    // фиксируется по факту оплаты, поэтому одинаково идёт в created и paid.
+                    $token = ($section === 'portal') ? ($tokenIdx[$period['key']][$channel] ?? null) : null;
+                    $tokenRevenue  = $token ? (float)$token['revenue'] : 0.0;
+                    $tokenPayments = $token ? (float)$token['payments'] : 0.0;
+
                     $cell = [
                         'channel' => $channel,
                         'section' => $section,
                         'cost' => 0.0,
-                        'revenue' => $paid['revenue'] ?? 0.0,
-                        'payments' => $paid['payments'] ?? 0.0,
-                        'created_orders' => $created['orders_count'] ?? 0.0,
-                        'paid_orders' => $paid['orders_count'] ?? 0.0,
+                        'revenue' => ($paid['revenue'] ?? 0.0) + $tokenRevenue,
+                        'payments' => ($paid['payments'] ?? 0.0) + $tokenPayments,
+                        'created_orders' => ($created['orders_count'] ?? 0.0) + $tokenPayments,
+                        'paid_orders' => ($paid['orders_count'] ?? 0.0) + $tokenPayments,
                         'leads' => $leadsVal,
                     ];
                     $rows[$channel][$section] = $cell;
@@ -364,6 +382,32 @@ class RNPAnalytics
             GROUP BY period_key, channel
         ";
         return $this->db->query($sql, [$dateFrom, $dateTo, $dateFrom, $dateTo]);
+    }
+
+    /**
+     * Выручка от материалов ФОП (покупка токенов) по периодам и каналам.
+     * Order на токены не создаётся — данные берём из token_transactions
+     * (reason='purchase'). Канал — по utm_source транзакции (миграция 140).
+     * revenue — фактически оплаченная сумма (amount_paid); для исторических строк
+     * без неё — fallback на прайс пакета. База времени — created_at (момент оплаты).
+     */
+    private function fetchTokenSplit(string $dateFrom, string $dateTo, string $granularity): array
+    {
+        $periodExpr = $this->periodExpr('tt.created_at', $granularity);
+        $channelExpr = $this->channelExpr('tt.utm_source');
+        $sql = "
+            SELECT
+                {$periodExpr} AS period_key,
+                {$channelExpr} AS channel,
+                COALESCE(SUM(COALESCE(tt.amount_paid, tp.price_rub)), 0) AS revenue,
+                COUNT(*) AS payments
+            FROM token_transactions tt
+            LEFT JOIN token_packages tp ON tp.id = tt.package_id
+            WHERE tt.reason = 'purchase'
+              AND DATE(tt.created_at) BETWEEN ? AND ?
+            GROUP BY period_key, channel
+        ";
+        return $this->db->query($sql, [$dateFrom, $dateTo]);
     }
 
     /**

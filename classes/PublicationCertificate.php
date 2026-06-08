@@ -52,6 +52,18 @@ class PublicationCertificate {
             $insertData['publication_date'] = $data['publication_date'];
         }
 
+        // UTM-атрибуция канала продаж (миграция 140). Фиксируем источник на момент
+        // создания сертификата — first-click переживает истечение cookie/сессии к
+        // моменту оплаты. Источник — cookie _fgos_utm_*, которые ставит visit-tracker.js.
+        // Используется как fallback в create-payment.php, чтобы продажи публикаций
+        // не сваливались в канал «Другое» в РНП.
+        foreach (['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as $utmKey) {
+            $cookieVal = $_COOKIE['_fgos_' . $utmKey] ?? '';
+            if ($cookieVal !== '') {
+                $insertData[$utmKey] = mb_substr(trim((string)$cookieVal), 0, 255);
+            }
+        }
+
         return $this->db->insert('publication_certificates', $insertData);
     }
 

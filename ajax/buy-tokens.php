@@ -91,6 +91,33 @@ $description = "Покупка пакета «{$package['name']}» — {$totalTo
     . ($discountPercent > 0 ? " (скидка {$discountPercent}%)" : '');
 $idempotencyKey = 'tokens_' . $userId . '_' . $packageId . '_' . substr(uniqid('', true), -10);
 
+// UTM-атрибуция канала для РНП. Order на токены не создаётся, поэтому источник
+// фиксируем здесь и прокидываем в metadata — webhook сохранит его в token_transactions.
+// Приоритет: cookie _fgos_utm_* (visit-tracker.js) → первый визит пользователя с utm.
+$utm = ['utm_source' => null, 'utm_medium' => null, 'utm_campaign' => null, 'utm_content' => null, 'utm_term' => null];
+foreach ($utm as $utmKey => $_) {
+    $cookieVal = $_COOKIE['_fgos_' . $utmKey] ?? '';
+    if ($cookieVal !== '') {
+        $utm[$utmKey] = mb_substr(trim((string)$cookieVal), 0, 255);
+    }
+}
+if (empty($utm['utm_source'])) {
+    $firstVisit = (new Database($db))->queryOne(
+        "SELECT utm_source, utm_medium, utm_campaign, utm_content, utm_term
+         FROM visits WHERE user_id = ? AND utm_source IS NOT NULL AND utm_source != ''
+         ORDER BY started_at ASC LIMIT 1",
+        [$userId]
+    );
+    if ($firstVisit) {
+        foreach ($utm as $utmKey => $_) {
+            if (!empty($firstVisit[$utmKey])) {
+                $utm[$utmKey] = mb_substr(trim((string)$firstVisit[$utmKey]), 0, 255);
+            }
+        }
+    }
+}
+$utmMetadata = array_filter($utm, fn($v) => $v !== null && $v !== '');
+
 try {
     $client = new Client();
     $client->setAuth(YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY);
@@ -121,14 +148,14 @@ try {
                     'payment_subject' => 'service',
                 ]],
             ] : null,
-            'metadata' => [
+            'metadata' => array_merge([
                 'payment_type' => 'tokens',
                 'user_id' => (int)$userId,
                 'package_id' => $packageId,
                 'tokens_total' => $totalTokens,
                 'discount_percent' => $discountPercent,
                 'original_price' => number_format($originalPrice, 2, '.', ''),
-            ],
+            ], $utmMetadata),
         ],
         $idempotencyKey
     );

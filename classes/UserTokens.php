@@ -231,6 +231,13 @@ class UserTokens
             'payment_id' => $meta['payment_id'] ?? null,
             'package_id' => $meta['package_id'] ?? null,
             'notes' => $meta['notes'] ?? null,
+            // Сумма оплаты и UTM-атрибуция (миграция 140) — для выручки ФОП в РНП.
+            'amount_paid' => $meta['amount_paid'] ?? null,
+            'utm_source'   => $meta['utm_source']   ?? null,
+            'utm_medium'   => $meta['utm_medium']   ?? null,
+            'utm_campaign' => $meta['utm_campaign'] ?? null,
+            'utm_content'  => $meta['utm_content']  ?? null,
+            'utm_term'     => $meta['utm_term']     ?? null,
         ]);
     }
 

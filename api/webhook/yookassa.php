@@ -149,6 +149,13 @@ try {
                 'package_id' => $tokensPackage,
                 'payment_id' => $paymentId,
                 'notes' => 'Yookassa ' . $payment->getAmount()->getValue() . ' ' . $payment->getAmount()->getCurrency(),
+                // Сумма и UTM для атрибуции выручки ФОП в РНП (миграция 140).
+                'amount_paid' => $amountRub,
+                'utm_source'   => $metaArray['utm_source']   ?? null,
+                'utm_medium'   => $metaArray['utm_medium']   ?? null,
+                'utm_campaign' => $metaArray['utm_campaign'] ?? null,
+                'utm_content'  => $metaArray['utm_content']  ?? null,
+                'utm_term'     => $metaArray['utm_term']     ?? null,
             ]);
             logWebhook('INFO', $paymentId, "Tokens credited: user={$tokensUserId} amount={$totalTokens} package={$tokensPackage} txn={$txnId}", '');
         } catch (Throwable $e) {

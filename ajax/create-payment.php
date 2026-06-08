@@ -605,6 +605,19 @@ try {
             );
         }
 
+        // 2b. Сертификаты публикаций (utm фиксируется при создании сертификата,
+        // см. PublicationCertificate::create). $certificatesData содержит pc.*,
+        // поэтому utm-колонки уже загружены — без отдельного запроса.
+        if (!$fallbackUtm && !empty($certificatesData) && !empty($certificatesData[0]['utm_source'])) {
+            $fallbackUtm = [
+                'utm_source'   => $certificatesData[0]['utm_source'],
+                'utm_medium'   => $certificatesData[0]['utm_medium'] ?? null,
+                'utm_campaign' => $certificatesData[0]['utm_campaign'] ?? null,
+                'utm_content'  => $certificatesData[0]['utm_content'] ?? null,
+                'utm_term'     => $certificatesData[0]['utm_term'] ?? null,
+            ];
+        }
+
         // 3. Записи на курсы (course_enrollments уже сохраняют UTM)
         if (!$fallbackUtm && $userId) {
             $fallbackUtm = $dbFallback->queryOne(
