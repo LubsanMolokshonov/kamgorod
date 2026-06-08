@@ -89,6 +89,9 @@ Thumbs.db
 *_backup_*
 *.backup_*
 
+# Разовые ad-hoc скрипты ответов на support_alerts (содержат ПДн клиентов — не коммитить)
+/scripts/reply_alerts_batch_*.php
+
 # Personal root-level materials (non-code)
 /Дипломы/
 /Сертификат/
