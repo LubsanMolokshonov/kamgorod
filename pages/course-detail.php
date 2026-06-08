@@ -233,14 +233,14 @@ $installment = calculateInstallment($abPrice);
         </div>
       </div>
 
-      <!-- Hero art: диплом о профессиональной переподготовке -->
+      <!-- Hero art: разрешение Сколково -->
       <div class="cd-skolkovo-art reveal" onclick="openSkolkovoModal()">
         <div class="cd-skolkovo-frame">
-          <img src="/assets/images/diplom-perepodgotovki.jpg"
-               alt="Диплом о профессиональной переподготовке"
+          <img src="/assets/images/razreshenie-skolkovo-068.png"
+               alt="Разрешение Сколково № 068 на образовательную деятельность"
                loading="eager">
         </div>
-        <div class="cd-skolkovo-caption">Диплом о профессиональной переподготовке — нажмите, чтобы увеличить</div>
+        <div class="cd-skolkovo-caption">Разрешение Сколково № 068 — нажмите, чтобы увеличить</div>
       </div>
     </div>
   </div>
@@ -788,8 +788,8 @@ $installment = calculateInstallment($abPrice);
 <div class="cd-skolkovo-modal" id="skolkovoModal">
   <div class="modal-box">
     <button class="close-modal" onclick="closeSkolkovoModal()" aria-label="Закрыть">&times;</button>
-    <img src="/assets/images/diplom-perepodgotovki.jpg" alt="Диплом о профессиональной переподготовке">
-    <p>Образец диплома о профессиональной переподготовке. Легитимность подтверждена разрешением № 068 от 16.03.2026 на осуществление образовательной деятельности.</p>
+    <img src="/assets/images/razreshenie-skolkovo-068.png" alt="Разрешение Сколково № 068">
+    <p>Разрешение № 068 от 16.03.2026 на осуществление образовательной деятельности.</p>
   </div>
 </div>
 
