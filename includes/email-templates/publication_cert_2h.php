@@ -36,6 +36,23 @@ ob_start();
         </p>
     </div>
 
+    <?php
+    // Блок «поделитесь» — мотивируем автора рассказать о публикации в соцсетях.
+    $share_enc_url   = urlencode($publication_url);
+    $share_enc_title = urlencode($publication_title);
+    $share_enc_text  = urlencode('Моя статья «' . $publication_title . '» опубликована в журнале «ФГОС‑Практикум». Читайте и оцените: ' . $publication_url);
+    ?>
+    <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 14px; padding: 22px; margin: 24px 0; text-align: center;">
+        <h3 style="margin: 0 0 8px; color: #0c4a6e; font-size: 17px;">Расскажите коллегам о публикации</h3>
+        <p style="margin: 0 0 16px; color: #475569; font-size: 14px;">Поделитесь ссылкой в соцсетях — о вашей работе узнают коллеги, а у статьи станет больше читателей.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;"><tr>
+            <td style="padding: 0 5px;"><a href="https://vk.com/share.php?url=<?php echo $share_enc_url; ?>&title=<?php echo $share_enc_title; ?>" style="display: inline-block; padding: 10px 18px; background: #07f; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600;">ВКонтакте</a></td>
+            <td style="padding: 0 5px;"><a href="https://t.me/share/url?url=<?php echo $share_enc_url; ?>&text=<?php echo $share_enc_text; ?>" style="display: inline-block; padding: 10px 18px; background: #2ca5e0; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600;">Telegram</a></td>
+            <td style="padding: 0 5px;"><a href="https://api.whatsapp.com/send?text=<?php echo $share_enc_text; ?>" style="display: inline-block; padding: 10px 18px; background: #25D366; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600;">WhatsApp</a></td>
+            <td style="padding: 0 5px;"><a href="https://connect.ok.ru/offer?url=<?php echo $share_enc_url; ?>&title=<?php echo $share_enc_title; ?>" style="display: inline-block; padding: 10px 18px; background: #ee8208; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600;">Одноклассники</a></td>
+        </tr></table>
+    </div>
+
     <p>Теперь вы можете оформить <strong>именное свидетельство о публикации</strong> — официальный документ для вашего профессионального портфолио.</p>
 
     <div class="certificate-card">

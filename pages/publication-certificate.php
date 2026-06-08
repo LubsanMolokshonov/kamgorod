@@ -82,11 +82,27 @@ $previewData = [
 $initialPreview = new CertificatePreview(1, $previewData);
 $initialPreviewUri = $initialPreview->getDataUri();
 
+// Социальное доказательство для блока «поделитесь» на success-экране
+$shareViews = (int)($publication['views_count'] ?? 0);
+$shareViewsWord = (function ($n) {
+    $n = abs($n) % 100; $n1 = $n % 10;
+    if ($n > 10 && $n < 20) return 'просмотров';
+    if ($n1 > 1 && $n1 < 5) return 'просмотра';
+    if ($n1 === 1) return 'просмотр';
+    return 'просмотров';
+})($shareViews);
+
 // Page metadata
 $pageTitle = 'Оформление свидетельства о публикации | ' . SITE_NAME;
 $pageDescription = 'Оформите свидетельство о публикации в электронном журнале';
-$additionalCSS = ['/assets/css/form.css?v=' . filemtime(__DIR__ . '/../assets/css/form.css')];
-$additionalJS = ['/assets/js/certificate-form.js?v=' . filemtime(__DIR__ . '/../assets/js/certificate-form.js')];
+$additionalCSS = [
+    '/assets/css/form.css?v=' . filemtime(__DIR__ . '/../assets/css/form.css'),
+    '/assets/css/share-publication.css?v=' . filemtime(__DIR__ . '/../assets/css/share-publication.css'),
+];
+$additionalJS = [
+    '/assets/js/certificate-form.js?v=' . filemtime(__DIR__ . '/../assets/js/certificate-form.js'),
+    '/assets/js/share-publication.js?v=' . filemtime(__DIR__ . '/../assets/js/share-publication.js'),
+];
 $noindex = true;
 
 include __DIR__ . '/../includes/header.php';
@@ -111,6 +127,18 @@ include __DIR__ . '/../includes/header.php';
                         <h3>Свидетельство готово!</h3>
                         <p>Вы можете скачать его в личном кабинете</p>
                         <a href="/pages/cabinet.php" class="btn btn-submit">Перейти в личный кабинет</a>
+
+                        <div class="share-cta-block">
+                            <div class="share-cta-title">Поделитесь своей публикацией с коллегами</div>
+                            <div class="share-cta-proof">
+                                <?php if ($shareViews > 0): ?>
+                                    Ваша работа уже набрала <strong><?php echo number_format($shareViews, 0, '', ' '); ?></strong> <?php echo $shareViewsWord; ?> — поделитесь, и читателей станет больше.
+                                <?php else: ?>
+                                    Расскажите о ней в соцсетях — и о вашей работе узнают коллеги.
+                                <?php endif; ?>
+                            </div>
+                            <?php include __DIR__ . '/../includes/share-publication.php'; ?>
+                        </div>
                     </div>
                 <?php elseif ($existingCert && $existingCert['status'] === 'paid'): ?>
                     <!-- Certificate paid, generating -->
@@ -121,6 +149,18 @@ include __DIR__ . '/../includes/header.php';
                         <h3>Свидетельство формируется</h3>
                         <p>Оплата прошла успешно. Свидетельство будет готово в ближайшее время.</p>
                         <a href="/pages/cabinet.php" class="btn btn-submit">Проверить в личном кабинете</a>
+
+                        <div class="share-cta-block">
+                            <div class="share-cta-title">А пока — поделитесь публикацией с коллегами</div>
+                            <div class="share-cta-proof">
+                                <?php if ($shareViews > 0): ?>
+                                    Ваша работа уже набрала <strong><?php echo number_format($shareViews, 0, '', ' '); ?></strong> <?php echo $shareViewsWord; ?> — поделитесь, и читателей станет больше.
+                                <?php else: ?>
+                                    Расскажите о ней в соцсетях — и о вашей работе узнают коллеги.
+                                <?php endif; ?>
+                            </div>
+                            <?php include __DIR__ . '/../includes/share-publication.php'; ?>
+                        </div>
                     </div>
                 <?php else: ?>
                     <!-- Publication info card -->
