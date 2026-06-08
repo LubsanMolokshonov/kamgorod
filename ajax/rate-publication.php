@@ -58,6 +58,16 @@ try {
     $ratingObj = new PublicationRating($db);
     $result = $ratingObj->vote($publicationId, $rating, $voteToken, $_SERVER['REMOTE_ADDR'] ?? null);
 
+    // Зеркалируем оценку в единую систему reviews — она источник рейтинга для
+    // микроразметки и виджета на странице публикации (review_stats). Без этого
+    // прямой вызов legacy-эндпоинта расходился бы с отображаемым рейтингом.
+    try {
+        require_once __DIR__ . '/../classes/Review.php';
+        (new Review($db))->submit('publication', $publicationId, $rating, '', 'Читатель', getUserId(), $voteToken, $_SERVER['REMOTE_ADDR'] ?? null);
+    } catch (Exception $e) {
+        error_log('Rate publication mirror error: ' . $e->getMessage());
+    }
+
     echo json_encode([
         'success' => true,
         'already_voted' => $result['already_voted'],

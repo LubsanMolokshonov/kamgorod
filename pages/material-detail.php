@@ -105,6 +105,19 @@ if (!empty($programs)) {
         'targetName' => $p,
     ], $programs);
 }
+// Отзывы продукта + микроразметка рейтинга (aggregateRating/review)
+require_once __DIR__ . '/../classes/Review.php';
+require_once __DIR__ . '/../includes/review-schema-helper.php';
+$reviewEntityType = 'material';
+$reviewEntityId   = (int)$material['id'];
+$reviewObj   = new Review($db);
+$reviewStats = $reviewObj->getStats($reviewEntityType, $reviewEntityId);
+$reviewList  = $reviewObj->getApproved($reviewEntityType, $reviewEntityId, 20);
+$schema = applyReviewSchema($schema, $reviewStats, $reviewList);
+$additionalCSS[] = '/assets/css/reviews.css?v=' . filemtime(__DIR__ . '/../assets/css/reviews.css');
+$additionalJS = $additionalJS ?? [];
+$additionalJS[] = '/assets/js/reviews.js?v=' . filemtime(__DIR__ . '/../assets/js/reviews.js');
+
 $schemaJson = json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
 
 include __DIR__ . '/../includes/header-redesign.php';
@@ -292,5 +305,7 @@ include __DIR__ . '/../includes/header-redesign.php';
     <?php endif; ?>
   </div>
 </section>
+
+<?php if ($isPublished) { include __DIR__ . '/../includes/review-section.php'; } ?>
 
 <?php include __DIR__ . '/../includes/footer-redesign.php'; ?>

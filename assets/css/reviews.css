@@ -1,0 +1,183 @@
+/* Блок отзывов продукта (универсальный для всех деталок) */
+
+.rs-section {
+    margin: 48px 0;
+    font-family: inherit;
+}
+.rs-container {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+.rs-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    margin-bottom: 24px;
+}
+.rs-title {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Сводка рейтинга */
+.rs-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+.rs-summary-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+.rs-summary-count {
+    color: #6b7280;
+    font-size: 15px;
+}
+.rs-empty {
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Звёзды (статичный индикатор) */
+.rs-stars { display: inline-flex; line-height: 1; }
+.rs-star { color: #d1d5db; font-size: 18px; }
+.rs-star--on { color: #f59e0b; }
+.rs-stars--summary .rs-star { font-size: 20px; }
+
+/* Форма */
+.rs-form {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 32px;
+}
+.rs-form--sent { opacity: .85; }
+.rs-field { margin-bottom: 18px; }
+.rs-field:last-of-type { margin-bottom: 0; }
+.rs-label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: #374151;
+}
+.rs-optional { color: #9ca3af; font-weight: 400; }
+
+.rs-form input[type="text"],
+.rs-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 15px;
+    font-family: inherit;
+    background: #fff;
+    transition: border-color .15s;
+}
+.rs-form input[type="text"]:focus,
+.rs-form textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+.rs-form textarea { resize: vertical; min-height: 90px; }
+
+/* Звёздный пикер */
+.rs-rating-picker { display: inline-flex; gap: 4px; }
+.rs-rating-star {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 30px;
+    line-height: 1;
+    color: #d1d5db;
+    padding: 0 2px;
+    transition: color .1s, transform .1s;
+}
+.rs-rating-star:hover { transform: scale(1.1); }
+.rs-rating-star--on { color: #f59e0b; }
+
+/* honeypot — спрятать вне экрана */
+.rs-hp {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px; height: 1px;
+    overflow: hidden;
+}
+
+.rs-form-footer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+}
+.rs-submit {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+}
+.rs-submit:hover { background: #1d4ed8; }
+.rs-submit:disabled { background: #9ca3af; cursor: default; }
+
+.rs-message { margin: 0; font-size: 14px; }
+.rs-message--ok { color: #059669; }
+.rs-message--err { color: #dc2626; }
+
+/* Список отзывов */
+.rs-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+.rs-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 18px 20px;
+}
+.rs-item--hidden { display: none; }
+.rs-item-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin-bottom: 8px;
+}
+.rs-item-author { font-weight: 600; color: #111827; }
+.rs-item-date { color: #9ca3af; font-size: 13px; margin-left: auto; }
+.rs-item-text { margin: 0; color: #374151; line-height: 1.55; }
+
+.rs-more {
+    display: block;
+    margin: 20px auto 0;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: background .15s;
+}
+.rs-more:hover { background: #f3f4f6; }
+
+@media (max-width: 600px) {
+    .rs-form { padding: 18px; }
+    .rs-title { font-size: 22px; }
+    .rs-rating-star { font-size: 26px; }
+}

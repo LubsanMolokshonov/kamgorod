@@ -8,7 +8,6 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Publication.php';
 require_once __DIR__ . '/../classes/PublicationTag.php';
-require_once __DIR__ . '/../classes/PublicationRating.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/article-toc.php';
 
@@ -75,9 +74,14 @@ $renderInlineCourseCard = function ($course) {
         . '</div></aside>';
 };
 
-// Рейтинг публикации (кэш-колонки p.rating_avg / p.rating_count)
-$ratingAvg = round((float)($publication['rating_avg'] ?? 0), 1);
-$ratingCount = (int)($publication['rating_count'] ?? 0);
+// Отзывы + рейтинг публикации (единая система reviews / review_stats).
+require_once __DIR__ . '/../classes/Review.php';
+require_once __DIR__ . '/../includes/review-schema-helper.php';
+$reviewEntityType = 'publication';
+$reviewEntityId   = (int)$publication['id'];
+$reviewObj   = new Review($db);
+$reviewStats = $reviewObj->getStats($reviewEntityType, $reviewEntityId);
+$reviewList  = $reviewObj->getApproved($reviewEntityType, $reviewEntityId, 20);
 
 // Тело статьи: чистка br-артефактов + автоматическое оглавление по <h2>/<h3>
 $articleHtml = $publication['content'] ?? '';
@@ -112,16 +116,6 @@ if ($articleHtml !== '' && !empty($inlineCourse)) {
 
 $authorUrl = '/avtor/' . (int)$publication['user_id'] . '/';
 
-// Русское склонение слова «оценка» для счётчика голосов
-$ratingCountWord = (function ($n) {
-    $n = abs($n) % 100;
-    $n1 = $n % 10;
-    if ($n > 10 && $n < 20) return 'оценок';
-    if ($n1 > 1 && $n1 < 5) return 'оценки';
-    if ($n1 === 1) return 'оценка';
-    return 'оценок';
-})($ratingCount);
-
 $pageTitle = htmlspecialchars($publication['title']) . ' | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr($publication['annotation'], 0, 160));
 
@@ -130,9 +124,12 @@ $additionalCSS = [
     '/assets/css/competition-detail.css?v=' . filemtime(__DIR__ . '/../assets/css/competition-detail.css'),
     '/assets/css/journal-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/journal-redesign.css'),
     '/assets/css/publication-extras.css?v=' . filemtime(__DIR__ . '/../assets/css/publication-extras.css'),
+    '/assets/css/share-publication.css?v=' . filemtime(__DIR__ . '/../assets/css/share-publication.css'),
+    '/assets/css/reviews.css?v=' . filemtime(__DIR__ . '/../assets/css/reviews.css'),
 ];
 $additionalJS = [
-    '/assets/js/publication-rating.js?v=' . filemtime(__DIR__ . '/../assets/js/publication-rating.js'),
+    '/assets/js/share-publication.js?v=' . filemtime(__DIR__ . '/../assets/js/share-publication.js'),
+    '/assets/js/reviews.js?v=' . filemtime(__DIR__ . '/../assets/js/reviews.js'),
 ];
 
 $ogType = 'article';
@@ -166,15 +163,7 @@ if (!empty($tags)) {
 if ($articleHtml !== '') {
     $jsonLd['articleBody'] = mb_substr(trim(strip_tags($articleHtml)), 0, 5000);
 }
-if ($ratingCount > 0) {
-    $jsonLd['aggregateRating'] = [
-        '@type' => 'AggregateRating',
-        'ratingValue' => number_format($ratingAvg, 1, '.', ''),
-        'ratingCount' => $ratingCount,
-        'bestRating' => 5,
-        'worstRating' => 1,
-    ];
-}
+$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList);
 
 $breadcrumbs = [
     ['label' => 'Главная', 'url' => '/'],
@@ -270,23 +259,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           <div class="pub-body pub-body--empty"><p>Содержание публикации недоступно для просмотра.</p></div>
         <?php endif; ?>
 
-        <div class="pub-rating" id="pubRating"
-             data-pub-id="<?php echo (int)$publication['id']; ?>"
-             data-csrf="<?php echo htmlspecialchars(generateCSRFToken()); ?>">
-          <div class="pub-rating-title">Оцените статью</div>
-          <div class="pub-rating-stars" role="radiogroup" aria-label="Оценка статьи">
-            <?php for ($s = 1; $s <= 5; $s++): ?>
-              <button type="button" class="pub-star" data-value="<?php echo $s; ?>" role="radio" aria-checked="false" aria-label="<?php echo $s; ?> из 5">
-                <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-              </button>
-            <?php endfor; ?>
-          </div>
-          <div class="pub-rating-summary">
-            <span class="pub-rating-avg"<?php echo $ratingCount > 0 ? '' : ' hidden'; ?>><?php echo number_format($ratingAvg, 1, '.', ''); ?></span>
-            <span class="pub-rating-count"><?php echo $ratingCount > 0 ? $ratingCount . ' ' . $ratingCountWord : 'Оценок пока нет'; ?></span>
-          </div>
-          <div class="pub-rating-thanks" hidden>Спасибо за вашу оценку!</div>
-        </div>
+        <?php include __DIR__ . '/../includes/review-section.php'; ?>
 
         <?php if (!empty($ctaCourse)): ?>
         <div class="pub-cta-card pub-cta-course">
@@ -359,18 +332,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 
         <div class="pub-side-card">
           <h3>Поделиться</h3>
-          <div class="share-buttons">
-            <?php
-            $shareUrl = urlencode(SITE_URL . '/publikaciya/' . $publication['slug'] . '/');
-            $shareTitle = urlencode($publication['title']);
-            ?>
-            <a href="https://vk.com/share.php?url=<?php echo $shareUrl; ?>&title=<?php echo $shareTitle; ?>" target="_blank" class="share-btn vk" title="ВКонтакте">VK</a>
-            <a href="https://t.me/share/url?url=<?php echo $shareUrl; ?>&text=<?php echo $shareTitle; ?>" target="_blank" class="share-btn telegram" title="Telegram">TG</a>
-            <a href="https://connect.ok.ru/offer?url=<?php echo $shareUrl; ?>&title=<?php echo $shareTitle; ?>" target="_blank" class="share-btn ok" title="Одноклассники">OK</a>
-            <button class="share-btn copy" onclick="copyLink()" title="Копировать ссылку">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            </button>
-          </div>
+          <?php include __DIR__ . '/../includes/share-publication.php'; ?>
         </div>
       </aside>
     </div>
@@ -393,17 +355,5 @@ include __DIR__ . '/../includes/header-redesign.php';
     </div>
   </div>
 </section>
-
-<script>
-function copyLink() {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url).then(() => {
-        const btn = document.querySelector('.share-btn.copy');
-        const original = btn.innerHTML;
-        btn.innerHTML = '✓';
-        setTimeout(() => { btn.innerHTML = original; }, 2000);
-    });
-}
-</script>
 
 <?php include __DIR__ . '/../includes/footer-redesign.php'; ?>

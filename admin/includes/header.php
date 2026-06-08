@@ -79,6 +79,20 @@ $currentAdmin = Admin::verifySession();
                     <span>Алерты<?php if ($newAlertsCount > 0): ?> <span class="nav-badge"><?php echo $newAlertsCount; ?></span><?php endif; ?></span>
                 </a>
 
+                <?php
+                $pendingReviewsCount = 0;
+                try {
+                    global $db;
+                    if (isset($db)) {
+                        $pendingReviewsCount = (int)$db->query("SELECT COUNT(*) FROM reviews WHERE status='pending'")->fetchColumn();
+                    }
+                } catch (\Throwable $e) { /* таблицы может не быть до миграции 145 */ }
+                ?>
+                <a href="/admin/reviews/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/reviews/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">⭐</span>
+                    <span>Отзывы<?php if ($pendingReviewsCount > 0): ?> <span class="nav-badge"><?php echo $pendingReviewsCount; ?></span><?php endif; ?></span>
+                </a>
+
                 <a href="/admin/users/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/users/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">👥</span>
                     <span>Пользователи</span>

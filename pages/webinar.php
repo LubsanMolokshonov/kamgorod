@@ -89,6 +89,19 @@ if (!$isAutowebinar) {
 }
 $faqItems[] = ['q' => 'Что нужно для участия?',
     'a' => 'Компьютер, планшет или смартфон с интернетом. Платформа работает в браузере — установка не нужна.'];
+// Отзывы продукта + микроразметка рейтинга (aggregateRating/review)
+require_once __DIR__ . '/../classes/Review.php';
+require_once __DIR__ . '/../includes/review-schema-helper.php';
+$reviewEntityType = 'webinar';
+$reviewEntityId   = (int)$webinar['id'];
+$reviewObj   = new Review($db);
+$reviewStats = $reviewObj->getStats($reviewEntityType, $reviewEntityId);
+$reviewList  = $reviewObj->getApproved($reviewEntityType, $reviewEntityId, 20);
+$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList);
+$additionalCSS[] = '/assets/css/reviews.css?v=' . filemtime(__DIR__ . '/../assets/css/reviews.css');
+$additionalJS = $additionalJS ?? [];
+$additionalJS[] = '/assets/js/reviews.js?v=' . filemtime(__DIR__ . '/../assets/js/reviews.js');
+
 $jsonLdArray = [$jsonLd, buildFaqJsonLd($faqItems)];
 
 include __DIR__ . '/../includes/header-redesign.php';
@@ -318,6 +331,8 @@ include __DIR__ . '/../includes/header-redesign.php';
 <div class="rd-mobile-cta" id="mobileFixedCta">
   <a href="#registration-form"><?php echo $isAutowebinar ? 'Получить доступ бесплатно' : 'Принять бесплатное участие'; ?></a>
 </div>
+
+<?php include __DIR__ . '/../includes/review-section.php'; ?>
 
 <?php include __DIR__ . '/../includes/social-links.php'; ?>
 

@@ -81,6 +81,7 @@ $rdActivePage = 'konkursy';
 $additionalCSS = ['/assets/css/competition-detail.css?v=' . filemtime(__DIR__ . '/../assets/css/competition-detail.css')];
 
 $registrationUrl = '/pages/registration.php?competition_id=' . (int)$competition['id'];
+$groupRegistrationUrl = '/pages/group-registration.php?product_type=competition&product_id=' . (int)$competition['id'];
 
 // FAQ-блок + микроразметка Schema.org/FAQPage
 require_once __DIR__ . '/../includes/faq-helper.php';
@@ -94,6 +95,19 @@ $faqItems = [
     ['q' => 'Вы выдаёте официальные дипломы?', 'a' => 'Да, все наши дипломы являются официальными документами. Мы работаем на основании свидетельства о регистрации СМИ: Эл. №ФС 77-74524.'],
     ['q' => 'Можно ли выбрать дизайн диплома?', 'a' => 'Да, при оформлении участия вы можете выбрать один из предложенных шаблонов дизайна диплома.'],
 ];
+// Отзывы продукта + микроразметка рейтинга (aggregateRating/review)
+require_once __DIR__ . '/../classes/Review.php';
+require_once __DIR__ . '/../includes/review-schema-helper.php';
+$reviewEntityType = 'competition';
+$reviewEntityId   = (int)$competition['id'];
+$reviewObj   = new Review($db);
+$reviewStats = $reviewObj->getStats($reviewEntityType, $reviewEntityId);
+$reviewList  = $reviewObj->getApproved($reviewEntityType, $reviewEntityId, 20);
+$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList);
+$additionalCSS[] = '/assets/css/reviews.css?v=' . filemtime(__DIR__ . '/../assets/css/reviews.css');
+$additionalJS = $additionalJS ?? [];
+$additionalJS[] = '/assets/js/reviews.js?v=' . filemtime(__DIR__ . '/../assets/js/reviews.js');
+
 $jsonLdArray = [$jsonLd, buildFaqJsonLd($faqItems)];
 
 include __DIR__ . '/../includes/header-redesign.php';
@@ -134,6 +148,9 @@ $priceFormatted = number_format($competition['price'], 0, ',', ' ');
           <a href="<?php echo $registrationUrl; ?>" class="rd-btn rd-btn-primary">
             Принять участие
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+          </a>
+          <a href="<?php echo $groupRegistrationUrl; ?>" class="rd-btn rd-btn-ghost cd-group-cta">
+            Оформить на группу / весь класс
           </a>
           <div class="cd-skolkovo">
             <img src="/assets/images/skolkovo.webp" alt="Резидент Сколково">
@@ -290,10 +307,13 @@ $priceFormatted = number_format($competition['price'], 0, ',', ' ');
     <div class="cd-price-band reveal">
       <div class="label">Стоимость участия</div>
       <div class="amount"><?php echo $priceFormatted; ?> ₽</div>
-      <div class="note">При оплате двух конкурсов третий — бесплатно</div>
+      <div class="note">При оплате двух конкурсов третий — бесплатно. Для группы — скидка до 30%.</div>
       <a href="<?php echo $registrationUrl; ?>" class="rd-btn rd-btn-primary">
         Принять участие
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+      </a>
+      <a href="<?php echo $groupRegistrationUrl; ?>" class="rd-btn rd-btn-ghost cd-group-cta">
+        Оформить на группу / весь класс
       </a>
     </div>
   </div>
@@ -577,6 +597,8 @@ window.dataLayer.push({
     }
 });
 </script>
+
+<?php include __DIR__ . '/../includes/review-section.php'; ?>
 
 <?php include __DIR__ . '/../includes/social-links.php'; ?>
 

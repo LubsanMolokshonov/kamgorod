@@ -148,6 +148,16 @@ $faqItems = [
     ['q' => 'Увижу ли я документ на Госуслугах?', 'a' => 'Да. Данные вносятся в ФИС ФРДО в течение 30 дней после завершения обучения. После этого вы сможете увидеть запись в личном кабинете на Госуслугах.'],
     ['q' => 'Когда можно начать обучение?', 'a' => 'Начать обучение можно сразу после оплаты. Все материалы доступны онлайн 24/7.'],
 ];
+// Отзывы продукта + микроразметка рейтинга (aggregateRating/review)
+require_once __DIR__ . '/../classes/Review.php';
+require_once __DIR__ . '/../includes/review-schema-helper.php';
+$reviewEntityType = 'course';
+$reviewEntityId   = (int)$course['id'];
+$reviewObj   = new Review($db);
+$reviewStats = $reviewObj->getStats($reviewEntityType, $reviewEntityId);
+$reviewList  = $reviewObj->getApproved($reviewEntityType, $reviewEntityId, 20);
+$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList);
+
 $jsonLdArray = [$jsonLd, buildFaqJsonLd($faqItems)];
 
 // Хлебные крошки
@@ -159,7 +169,10 @@ $rdActivePage = 'kursy';
 $additionalCSS = [
     '/assets/css/competition-detail.css?v=' . filemtime(__DIR__ . '/../assets/css/competition-detail.css'),
     '/assets/css/course-detail.css?v=' . filemtime(__DIR__ . '/../assets/css/course-detail.css'),
+    '/assets/css/reviews.css?v=' . filemtime(__DIR__ . '/../assets/css/reviews.css'),
 ];
+$additionalJS = $additionalJS ?? [];
+$additionalJS[] = '/assets/js/reviews.js?v=' . filemtime(__DIR__ . '/../assets/js/reviews.js');
 
 include __DIR__ . '/../includes/header-redesign.php';
 
@@ -1080,6 +1093,8 @@ window.dataLayer.push({
 });
 if (typeof ym === 'function') ym(106465857, 'params', {course_discount: '<?= $discountPercent ?>'});
 </script>
+
+<?php include __DIR__ . '/../includes/review-section.php'; ?>
 
 <?php include __DIR__ . '/../includes/social-links-redesign.php'; ?>
 

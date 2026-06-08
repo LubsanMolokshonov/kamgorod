@@ -63,6 +63,77 @@ class YandexGPTModerator {
     }
 
     /**
+     * Moderate a user review text (звёзды + текст отзыва на продукт).
+     * Проверяет на спам, оскорбления, рекламу, бессмысленный/нерелевантный текст.
+     * Fail-open отключён: при сбое API/парсинга возвращает ok=false (в ручную очередь),
+     * чтобы потенциальный спам не публиковался автоматически.
+     *
+     * @param string $text Текст отзыва
+     * @return array {ok: bool, reason: string}
+     */
+    public function moderateReview(string $text): array {
+        $text = trim($text);
+        if ($text === '') {
+            return ['ok' => true, 'reason' => 'Пустой текст'];
+        }
+
+        $systemPrompt = <<<PROMPT
+Ты — модератор отзывов образовательного портала для педагогов. Оцени, можно ли опубликовать отзыв пользователя.
+
+ПУБЛИКОВАТЬ (ok=true):
+- Осмысленный отзыв о продукте (конкурсе, курсе, вебинаре, олимпиаде, публикации, материале)
+- Как положительные, так и отрицательные, но конструктивные мнения
+- Нейтральные короткие отзывы («Всё понравилось», «Спасибо за организацию»)
+
+НЕ ПУБЛИКОВАТЬ (ok=false):
+- Мат, оскорбления, разжигание вражды
+- Спам, реклама сторонних товаров/услуг, ссылки, номера телефонов
+- Бессмысленный набор символов, тест («asdf», «проверка»)
+- Контент 18+, политическая агитация
+- Персональные данные третьих лиц
+
+Ответь СТРОГО в формате JSON без лишнего текста:
+{"ok": true, "reason": "краткое объяснение на русском"}
+PROMPT;
+
+        $payload = [
+            'modelUri' => "gpt://{$this->folderId}/{$this->model}/latest",
+            'completionOptions' => [
+                'stream' => false,
+                'temperature' => 0.1,
+                'maxTokens' => '300',
+            ],
+            'messages' => [
+                ['role' => 'system', 'text' => $systemPrompt],
+                ['role' => 'user', 'text' => "Оцени отзыв:\n\n" . mb_substr($text, 0, 2000)],
+            ],
+        ];
+
+        $response = $this->sendRequest($payload);
+        if ($response === null) {
+            // API недоступен — fail-safe: в ручную очередь.
+            return ['ok' => false, 'reason' => 'Модерация недоступна, отправлено на ручную проверку'];
+        }
+
+        $gptText = $response['result']['alternatives'][0]['message']['text'] ?? '';
+        if (preg_match('/\{[\s\S]*\}/', trim($gptText), $m)) {
+            $parsed = json_decode($m[0], true);
+            if ($parsed !== null && isset($parsed['ok'])) {
+                $result = [
+                    'ok' => (bool) $parsed['ok'],
+                    'reason' => mb_substr((string)($parsed['reason'] ?? 'Без комментария'), 0, 255),
+                ];
+                $this->log('Review moderation', ['ok' => $result['ok'], 'text' => mb_substr($text, 0, 100)]);
+                return $result;
+            }
+        }
+
+        // Не удалось распарсить — fail-safe в ручную очередь.
+        $this->log('Failed to parse review moderation response', ['raw' => mb_substr($gptText, 0, 300)]);
+        return ['ok' => false, 'reason' => 'Не удалось проверить автоматически, отправлено на ручную проверку'];
+    }
+
+    /**
      * Build messages for the GPT prompt
      */
     private function buildMessages(string $title, string $annotation): array {

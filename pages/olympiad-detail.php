@@ -68,6 +68,7 @@ $additionalCSS = [
 ];
 
 $testUrl = '/olimpiada-test/' . (int)$olympiad['id'];
+$groupRegistrationUrl = '/pages/group-registration.php?product_type=olympiad&product_id=' . (int)$olympiad['id'];
 
 // FAQ-блок + микроразметка Schema.org/FAQPage
 require_once __DIR__ . '/../includes/faq-helper.php';
@@ -80,6 +81,19 @@ $faqItems = [
     ['q' => 'Можно ли пройти олимпиаду повторно?', 'a' => 'Да, вы можете пройти олимпиаду повторно для улучшения результата. Каждая попытка генерирует новый набор вопросов. При оформлении диплома используется лучший из результатов.'],
     ['q' => 'Какие документы подтверждают легитимность?', 'a' => 'Портал работает на основании лицензии на образовательную деятельность № Л035-01212-59/00203856 и свидетельства о регистрации СМИ Эл. №ФС 77-74524. Также мы — резидент «Сколково». Все дипломы являются официальными документами.'],
 ];
+// Отзывы продукта + микроразметка рейтинга (aggregateRating/review)
+require_once __DIR__ . '/../classes/Review.php';
+require_once __DIR__ . '/../includes/review-schema-helper.php';
+$reviewEntityType = 'olympiad';
+$reviewEntityId   = (int)$olympiad['id'];
+$reviewObj   = new Review($db);
+$reviewStats = $reviewObj->getStats($reviewEntityType, $reviewEntityId);
+$reviewList  = $reviewObj->getApproved($reviewEntityType, $reviewEntityId, 20);
+$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList);
+$additionalCSS[] = '/assets/css/reviews.css?v=' . filemtime(__DIR__ . '/../assets/css/reviews.css');
+$additionalJS = $additionalJS ?? [];
+$additionalJS[] = '/assets/js/reviews.js?v=' . filemtime(__DIR__ . '/../assets/js/reviews.js');
+
 $jsonLdArray = [$jsonLd, buildFaqJsonLd($faqItems)];
 
 include __DIR__ . '/../includes/header-redesign.php';
@@ -128,6 +142,9 @@ include __DIR__ . '/../includes/header-redesign.php';
           <a href="<?php echo $testUrl; ?>" class="rd-btn rd-btn-primary">
             Пройти олимпиаду бесплатно
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+          </a>
+          <a href="<?php echo $groupRegistrationUrl; ?>" class="rd-btn rd-btn-ghost cd-group-cta">
+            Оформить на группу / весь класс
           </a>
           <div class="cd-skolkovo">
             <img src="/assets/images/skolkovo.webp" alt="Резидент Сколково">
@@ -329,10 +346,13 @@ include __DIR__ . '/../includes/header-redesign.php';
     <div class="cd-price-band reveal">
       <div class="label">Участие в олимпиаде</div>
       <div class="amount">Бесплатно</div>
-      <div class="note">Диплом за <?php echo $diplomaPrice; ?>&nbsp;₽ — оформляется по желанию после прохождения теста. По акции «2+1» при оплате двух дипломов третий&nbsp;— бесплатно.</div>
+      <div class="note">Диплом за <?php echo $diplomaPrice; ?>&nbsp;₽ — оформляется по желанию после прохождения теста. По акции «2+1» при оплате двух дипломов третий&nbsp;— бесплатно. Для группы&nbsp;— скидка до&nbsp;30%.</div>
       <a href="<?php echo $testUrl; ?>" class="rd-btn rd-btn-primary">
         Пройти олимпиаду
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+      </a>
+      <a href="<?php echo $groupRegistrationUrl; ?>" class="rd-btn rd-btn-ghost cd-group-cta">
+        Оформить на группу / весь класс
       </a>
     </div>
   </div>
@@ -415,5 +435,7 @@ window.dataLayer.push({
     }
 });
 </script>
+
+<?php include __DIR__ . '/../includes/review-section.php'; ?>
 
 <?php include __DIR__ . '/../includes/footer-redesign.php'; ?>
