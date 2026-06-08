@@ -48,6 +48,7 @@ class Order {
         // Use totals from cartData (already includes all items with unified 2+1 promotion)
         $subtotal = $cartData['subtotal'] ?? 0;
         $discount = $cartData['discount'] ?? 0;
+        $groupDiscount = $cartData['group_discount'] ?? 0;
         $loyaltyDiscount = $cartData['loyalty_discount'] ?? 0;
         $finalAmount = $grandTotal ?? ($cartData['total'] ?? 0);
 
@@ -65,6 +66,11 @@ class Order {
         // чтобы создание заказа не ломалось, если миграция ещё не применена.
         if ($loyaltyDiscount > 0 && $this->hasColumn('orders', 'loyalty_discount_amount')) {
             $insertData['loyalty_discount_amount'] = $loyaltyDiscount;
+        }
+
+        // group_discount_amount добавлен миграцией 142 (объёмная скидка группы).
+        if ($groupDiscount > 0 && $this->hasColumn('orders', 'group_discount_amount')) {
+            $insertData['group_discount_amount'] = $groupDiscount;
         }
 
         $orderId = $this->db->insert('orders', $insertData);
@@ -87,7 +93,7 @@ class Order {
                 $this->db->insert('order_items', [
                     'order_id' => $orderId,
                     'certificate_id' => $cert['id'],
-                    'price' => $cert['price'] ?? 299,
+                    'price' => $cert['price'] ?? 499,
                     'is_free_promotion' => !empty($cert['is_free']) ? 1 : 0
                 ]);
             }
@@ -111,7 +117,9 @@ class Order {
                 $this->db->insert('order_items', [
                     'order_id' => $orderId,
                     'olympiad_registration_id' => $olympReg['id'],
-                    'price' => $olympReg['diploma_price'] ?? OLYMPIAD_DIPLOMA_PRICE,
+                    // price — со скидкой группы, если задана (см. create-payment.php);
+                    // иначе исходная цена диплома.
+                    'price' => $olympReg['price'] ?? $olympReg['diploma_price'] ?? OLYMPIAD_DIPLOMA_PRICE,
                     'is_free_promotion' => !empty($olympReg['is_free']) ? 1 : 0
                 ]);
             }

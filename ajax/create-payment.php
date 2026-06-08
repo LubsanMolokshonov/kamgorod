@@ -19,6 +19,8 @@ require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../classes/EmailCampaignDiscount.php';
+require_once __DIR__ . '/../classes/ParticipantGroup.php';
+require_once __DIR__ . '/../includes/group-pricing.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -85,7 +87,7 @@ try {
                 'type' => 'certificate',
                 'id' => $cert['id'],
                 'name' => $cert['publication_title'],
-                'price' => (float)($cert['price'] ?? 299),
+                'price' => (float)($cert['price'] ?? 499),
                 'is_free' => false,
                 'raw_data' => $cert
             ];
@@ -175,32 +177,61 @@ try {
         $subtotal += $item['price'];
     }
 
-    // Apply 2+1 promotion to ALL items combined
+    // Объёмная скидка по группам (групповое участие). Тариф зафиксирован в
+    // participant_groups при создании группы — НЕ пересчитывается по числу позиций
+    // в корзине. Групповые позиции исключаются из акции «2+1».
+    $groupDiscount = 0;
+    $groupObj = new ParticipantGroup($db);
+    $groupPercentCache = [];
+    foreach ($allItems as $idx => $item) {
+        $batchId = $item['raw_data']['group_batch_id'] ?? null;
+        if (empty($batchId)) {
+            continue;
+        }
+        if (!array_key_exists($batchId, $groupPercentCache)) {
+            $grp = $groupObj->getByBatchId($batchId);
+            $groupPercentCache[$batchId] = $grp ? (int)$grp['discount_percent'] : 0;
+        }
+        $percent = $groupPercentCache[$batchId];
+        if ($percent > 0) {
+            $orig = (float)$item['price'];
+            $reduced = round($orig * (100 - $percent) / 100, 2);
+            $allItems[$idx]['price'] = $reduced;
+            $groupDiscount += ($orig - $reduced);
+        }
+        $allItems[$idx]['in_group'] = true; // вне акции «2+1»
+    }
+
+    // Акция «2+1»: только для одиночных (негрупповых) позиций — каждая 3-я бесплатно.
     $discount = 0;
-    $itemCount = count($allItems);
     $promotionApplied = false;
 
-    if ($itemCount >= 3) {
-        // Sort by price descending to make cheapest items free
-        usort($allItems, function($a, $b) {
+    $singleItems = [];
+    foreach ($allItems as $idx => $item) {
+        if (empty($item['in_group'])) {
+            $singleItems[] = ['idx' => $idx, 'price' => (float)$item['price']];
+        }
+    }
+
+    if (count($singleItems) >= 3) {
+        // Самые дешёвые делаем бесплатными
+        usort($singleItems, function($a, $b) {
             return $b['price'] <=> $a['price'];
         });
 
-        // Calculate free items (every 3rd item)
-        $freeItemCount = floor($itemCount / 3);
-
+        $freeItemCount = floor(count($singleItems) / 3);
         for ($i = 0; $i < $freeItemCount; $i++) {
-            $freeIndex = ($i + 1) * 3 - 1; // Indices: 2, 5, 8, ...
-            if (isset($allItems[$freeIndex])) {
-                $allItems[$freeIndex]['is_free'] = true;
-                $discount += $allItems[$freeIndex]['price'];
+            $freePos = ($i + 1) * 3 - 1; // позиции 2, 5, 8, ... среди одиночных
+            if (isset($singleItems[$freePos])) {
+                $origIdx = $singleItems[$freePos]['idx'];
+                $allItems[$origIdx]['is_free'] = true;
+                $discount += $allItems[$origIdx]['price'];
             }
         }
-
         $promotionApplied = true;
     }
 
-    $grandTotal = $subtotal - $discount;
+    $grandTotal = $subtotal - $discount - $groupDiscount;
 
     // Пожизненная скидка лояльности (25%) для постоянных клиентов — стакается поверх 2+1.
     // Определяем userId заранее (из сессии/корзины), чтобы применить скидку до создания заказа.
@@ -249,6 +280,7 @@ try {
         'items' => [],
         'subtotal' => $subtotal,
         'discount' => $discount,
+        'group_discount' => $groupDiscount,
         'loyalty_discount' => $loyaltyDiscount,
         'total' => $grandTotal,
         'promotion_applied' => $promotionApplied
@@ -540,6 +572,8 @@ try {
         if ($item['type'] === 'olympiad_registration') {
             $oData = $item['raw_data'];
             $oData['is_free'] = $item['is_free'];
+            // Цена со скидкой группы (если применялась) — для order_items.price.
+            $oData['price'] = $item['price'];
             $olympiadRegsWithPromotion[] = $oData;
         }
     }

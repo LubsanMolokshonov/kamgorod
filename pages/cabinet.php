@@ -50,6 +50,9 @@ if (!isset($_SESSION['user_email'])) {
 $stmt = $db->prepare("
     SELECT
         r.id,
+        r.group_batch_id,
+        r.competition_id,
+        r.placement,
         r.nomination,
         r.work_title,
         r.diploma_template_id,
@@ -121,6 +124,11 @@ $olympRegsByResultId = [];
 $olympStatusPriority = ['diploma_ready' => 3, 'paid' => 2, 'pending' => 1];
 foreach ($userOlympiadRegs as $reg) {
     $rid = $reg['olympiad_result_id'];
+    // Групповые регистрации (без прохождения теста) не привязаны к результату —
+    // показываем их отдельной групповой карточкой, в индекс по result_id не кладём.
+    if ($rid === null) {
+        continue;
+    }
     if (!isset($olympRegsByResultId[$rid])) {
         $olympRegsByResultId[$rid] = ['primary' => null, 'paid' => []];
     }
@@ -177,12 +185,58 @@ if ($activeTab === 'materials') {
     ];
 }
 
+// Группировка групповых регистраций (групповое участие) в одну карточку «Группа из N».
+// Партиционируем конкурсные и олимпиадные регистрации: с group_batch_id → групповые
+// карточки, остальные → как раньше (индивидуальные).
+$groupBatches = []; // batch_id => ['type','title','product_id','created_at','regs'=>[]]
+
+foreach ($registrations as $r) {
+    if (!empty($r['group_batch_id'])) {
+        $bid = $r['group_batch_id'];
+        if (!isset($groupBatches[$bid])) {
+            $groupBatches[$bid] = [
+                '_type'        => 'group',
+                '_product'     => 'competition',
+                'title'        => $r['competition_name'],
+                'download_url' => '/ajax/download-diploma.php',
+                'created_at'   => $r['created_at'],
+                'regs'         => [],
+            ];
+        }
+        $groupBatches[$bid]['regs'][] = $r;
+    }
+}
+foreach ($userOlympiadRegs as $reg) {
+    if (!empty($reg['group_batch_id']) && in_array($reg['status'] ?? '', ['paid', 'diploma_ready'], true)) {
+        $bid = $reg['group_batch_id'];
+        if (!isset($groupBatches[$bid])) {
+            $groupBatches[$bid] = [
+                '_type'        => 'group',
+                '_product'     => 'olympiad',
+                'title'        => $reg['olympiad_title'],
+                'download_url' => '/ajax/download-olympiad-diploma.php',
+                'created_at'   => $reg['created_at'],
+                'regs'         => [],
+            ];
+        }
+        $groupBatches[$bid]['regs'][] = $reg;
+    }
+}
+
 // Собираем единый хронологический список мероприятий
 $allEvents = [];
 foreach ($registrations as $r) {
+    if (!empty($r['group_batch_id'])) {
+        continue; // групповые показываем отдельной карточкой
+    }
     $r['_type'] = 'competition';
     $r['_sort_date'] = $r['created_at'];
     $allEvents[] = $r;
+}
+foreach ($groupBatches as $bid => $batch) {
+    $batch['_sort_date'] = $batch['created_at'];
+    $batch['_batch_id'] = $bid;
+    $allEvents[] = $batch;
 }
 foreach ($userPublications as $p) {
     $p['_type'] = 'publication';
@@ -204,8 +258,13 @@ usort($allEvents, fn($a, $b) => strtotime($b['_sort_date']) - strtotime($a['_sor
 // Page metadata
 $pageTitle = 'Личный кабинет | ' . SITE_NAME;
 $pageDescription = 'Ваши регистрации и дипломы';
-$additionalCSS = ['/assets/css/cabinet-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/cabinet-redesign.css')];
-$additionalJS = [];
+$additionalCSS = [
+    '/assets/css/cabinet-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/cabinet-redesign.css'),
+    '/assets/css/share-publication.css?v=' . filemtime(__DIR__ . '/../assets/css/share-publication.css'),
+];
+$additionalJS = [
+    '/assets/js/share-publication.js?v=' . filemtime(__DIR__ . '/../assets/js/share-publication.js'),
+];
 if ($activeTab === 'courses') {
     $additionalCSS[] = '/assets/css/max-cta.css?v=' . filemtime(__DIR__ . '/../assets/css/max-cta.css');
     $additionalJS[] = '/assets/js/course-cabinet.js?v=' . filemtime(__DIR__ . '/../assets/js/course-cabinet.js');
@@ -687,13 +746,19 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             <?php else: ?>
                 <?php
-                    // Счётчики по типам для саб-меню
-                    $eventCounts = [
-                        'competition' => count($registrations),
-                        'olympiad'    => count($userOlympiadResults),
-                        'webinar'     => count($userWebinars),
-                        'publication' => count($userPublications),
-                    ];
+                    // Счётчики по типам для саб-меню — считаем по реально показываемым
+                    // карточкам $allEvents. Групповые карточки относим к продукту
+                    // (конкурс/олимпиада), под которым они отображаются.
+                    $eventCounts = ['competition' => 0, 'olympiad' => 0, 'webinar' => 0, 'publication' => 0];
+                    foreach ($allEvents as $ev) {
+                        $t = $ev['_type'];
+                        if ($t === 'group') {
+                            $t = (($ev['_product'] ?? '') === 'olympiad') ? 'olympiad' : 'competition';
+                        }
+                        if (isset($eventCounts[$t])) {
+                            $eventCounts[$t]++;
+                        }
+                    }
                     // Разделы саб-меню (порядок зафиксирован)
                     $eventSubTabs = [
                         'competition' => 'Конкурсы',
@@ -930,6 +995,12 @@ include __DIR__ . '/../includes/header.php';
                                             <span class="label">Дата:</span>
                                             <span class="value"><?php echo date('d.m.Y', strtotime($pub['created_at'])); ?></span>
                                         </div>
+                                        <?php if ($pub['status'] === 'published'): ?>
+                                        <div class="info-row">
+                                            <span class="label">Просмотры:</span>
+                                            <span class="value" style="font-weight: 600; color: #10b981;"><?php echo number_format((int)($pub['views_count'] ?? 0), 0, '', ' '); ?></span>
+                                        </div>
+                                        <?php endif; ?>
                                         <div class="info-row">
                                             <span class="label">Свидетельство:</span>
                                             <span class="value" style="color: <?php echo $certStatusInfo['color']; ?>">
@@ -975,6 +1046,12 @@ include __DIR__ . '/../includes/header.php';
                                             </a>
                                         <?php endif; ?>
                                     </div>
+                                    <?php if ($pub['status'] === 'published'): ?>
+                                        <div class="share-inline">
+                                            <div class="share-label">Поделитесь публикацией с коллегами:</div>
+                                            <?php $publication = $pub; include __DIR__ . '/../includes/share-publication.php'; ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
 
                             <?php elseif ($event['_type'] === 'olympiad'):
@@ -1062,6 +1139,52 @@ include __DIR__ . '/../includes/header.php';
                                         </a>
                                     </div>
                                 </div>
+
+                            <?php elseif ($event['_type'] === 'group'):
+                                $grpRegs = $event['regs'] ?? [];
+                                $grpSize = count($grpRegs);
+                                $isOlympiadGroup = ($event['_product'] ?? '') === 'olympiad';
+                                $grpParam = $isOlympiadGroup ? 'id' : 'registration_id';
+                                $grpDownloadBase = $event['download_url'];
+                                $grpPlacementLabels = ['1' => '1 место', '2' => '2 место', '3' => '3 место', 'участник' => 'Участник'];
+                            ?>
+                                <div class="registration-card" data-event-type="<?php echo $isOlympiadGroup ? 'olympiad' : 'competition'; ?>">
+                                    <div class="card-header">
+                                        <h3><?php echo htmlspecialchars($event['title']); ?></h3>
+                                        <div class="card-badges">
+                                            <span class="event-type-badge badge-<?php echo $isOlympiadGroup ? 'olympiad' : 'competition'; ?>">
+                                                <?php echo $isOlympiadGroup ? 'Олимпиада' : 'Конкурс'; ?>
+                                            </span>
+                                            <span class="status-badge" style="background-color:#2563eb;">Группа из <?php echo $grpSize; ?></span>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="info-row">
+                                            <span class="label">Участников:</span>
+                                            <span class="value"><?php echo $grpSize; ?></span>
+                                        </div>
+                                        <div class="group-diplomas-list">
+                                            <?php foreach ($grpRegs as $gi => $gReg):
+                                                $gPlace = $grpPlacementLabels[$gReg['placement'] ?? ''] ?? 'Участник';
+                                                $gUrl = $grpDownloadBase . '?' . $grpParam . '=' . (int)$gReg['id'] . '&type=participant';
+                                            ?>
+                                                <div class="group-diploma-row">
+                                                    <span class="gd-name"><?php echo ($gi + 1) . '. ' . htmlspecialchars($gReg['participant_name'] ?? ''); ?> <small style="color:#6b7280;">(<?php echo $gPlace; ?>)</small></span>
+                                                    <a href="<?php echo htmlspecialchars($gUrl); ?>" class="btn btn-success btn-sm btn-download group-diploma-link">Скачать</a>
+                                                </div>
+                                                <?php if (!empty($gReg['has_supervisor']) && !empty($gReg['supervisor_name'])): ?>
+                                                    <div class="group-diploma-row">
+                                                        <span class="gd-name">Диплом руководителя — <?php echo htmlspecialchars($gReg['supervisor_name']); ?></span>
+                                                        <a href="<?php echo htmlspecialchars($grpDownloadBase . '?' . $grpParam . '=' . (int)$gReg['id'] . '&type=supervisor'); ?>" class="btn btn-success btn-sm btn-download group-diploma-link">Скачать</a>
+                                                    </div>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                    <div class="card-actions">
+                                        <button type="button" class="btn btn-primary group-download-all">Скачать все дипломы</button>
+                                    </div>
+                                </div>
                             <?php endif; ?>
 
                         <?php endforeach; ?>
@@ -1078,6 +1201,10 @@ include __DIR__ . '/../includes/header.php';
                     .events-empty-state { text-align: center; padding: 40px 20px; color: #6b7280; }
                     .events-empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
                     .events-empty-state p { margin: 0; font-size: 15px; }
+                    .group-diplomas-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+                    .group-diploma-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f1f3f5; }
+                    .group-diploma-row .gd-name { font-size: 14px; color: #374151; }
+                    .btn-sm { padding: 5px 12px; font-size: 13px; }
                 </style>
                 <script>
                     (function () {
@@ -1121,6 +1248,24 @@ include __DIR__ . '/../includes/header.php';
                         var allowed = Array.prototype.map.call(subtabs, function (t) { return t.getAttribute('data-event-tab'); });
                         if (allowed.indexOf(initial) === -1) initial = 'competition';
                         applyFilter(initial);
+
+                        // «Скачать все дипломы» для групповой карточки — последовательно
+                        // открываем каждую ссылку скачивания внутри карточки.
+                        document.querySelectorAll('.group-download-all').forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                var card = btn.closest('.registration-card');
+                                if (!card) return;
+                                var links = card.querySelectorAll('.group-diploma-link');
+                                links.forEach(function (a, i) {
+                                    setTimeout(function () {
+                                        var fr = document.createElement('iframe');
+                                        fr.style.display = 'none';
+                                        fr.src = a.getAttribute('href');
+                                        document.body.appendChild(fr);
+                                    }, i * 800);
+                                });
+                            });
+                        });
                     })();
                 </script>
 

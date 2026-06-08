@@ -18,6 +18,7 @@ class Registration {
     public function create($data) {
         $insertData = [
             'user_id' => $data['user_id'],
+            'group_batch_id' => $data['group_batch_id'] ?? null,
             'participant_name' => $data['participant_name'] ?? '',
             'competition_id' => $data['competition_id'],
             'nomination' => $data['nomination'],

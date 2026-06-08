@@ -15,6 +15,8 @@ require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../classes/EmailCampaignDiscount.php';
+require_once __DIR__ . '/../classes/ParticipantGroup.php';
+require_once __DIR__ . '/../includes/group-pricing.php';
 require_once __DIR__ . '/../includes/session.php';
 
 // Check if cart exists
@@ -61,6 +63,7 @@ if (isCartEmpty()) {
     $allItems = [];
     $subtotal = 0;
     $discount = 0;
+    $groupDiscount = 0;
     $grandTotal = 0;
     $promotionApplied = false;
 } else {
@@ -96,7 +99,7 @@ if (isCartEmpty()) {
                 'id' => $cert['id'],
                 'name' => $cert['publication_title'],
                 'meta' => 'Свидетельство о публикации • ' . $cert['author_name'],
-                'price' => (float)($cert['price'] ?? 299),
+                'price' => (float)($cert['price'] ?? 499),
                 'is_free' => false,
                 'raw_data' => $cert
             ];
@@ -145,32 +148,58 @@ if (isCartEmpty()) {
         $subtotal += $item['price'];
     }
 
-    // Apply 2+1 promotion to ALL items combined
+    // Объёмная скидка по группам (групповое участие). Зеркалит create-payment.php:
+    // тариф зафиксирован в participant_groups, групповые позиции вне акции «2+1».
+    $groupDiscount = 0;
+    $groupObjCart = new ParticipantGroup($db);
+    $groupPercentCacheCart = [];
+    foreach ($allItems as $cIdx => $cItem) {
+        $bId = $cItem['raw_data']['group_batch_id'] ?? null;
+        if (empty($bId)) {
+            continue;
+        }
+        if (!array_key_exists($bId, $groupPercentCacheCart)) {
+            $g = $groupObjCart->getByBatchId($bId);
+            $groupPercentCacheCart[$bId] = $g ? (int)$g['discount_percent'] : 0;
+        }
+        $pc = $groupPercentCacheCart[$bId];
+        if ($pc > 0) {
+            $origP = (float)$cItem['price'];
+            $redP = round($origP * (100 - $pc) / 100, 2);
+            $allItems[$cIdx]['price'] = $redP;
+            $groupDiscount += ($origP - $redP);
+        }
+        $allItems[$cIdx]['in_group'] = true;
+    }
+
+    // Акция «2+1»: только для одиночных (негрупповых) позиций.
     $discount = 0;
-    $itemCount = count($allItems);
     $promotionApplied = false;
 
-    if ($itemCount >= 3) {
-        // Sort by price descending to make cheapest items free
-        usort($allItems, function($a, $b) {
+    $singleCartItems = [];
+    foreach ($allItems as $cIdx => $cItem) {
+        if (empty($cItem['in_group'])) {
+            $singleCartItems[] = ['idx' => $cIdx, 'price' => (float)$cItem['price']];
+        }
+    }
+
+    if (count($singleCartItems) >= 3) {
+        usort($singleCartItems, function($a, $b) {
             return $b['price'] <=> $a['price'];
         });
-
-        // Calculate free items (every 3rd item)
-        $freeItemCount = floor($itemCount / 3);
-
+        $freeItemCount = floor(count($singleCartItems) / 3);
         for ($i = 0; $i < $freeItemCount; $i++) {
-            $freeIndex = ($i + 1) * 3 - 1; // Indices: 2, 5, 8, ...
-            if (isset($allItems[$freeIndex])) {
-                $allItems[$freeIndex]['is_free'] = true;
-                $discount += $allItems[$freeIndex]['price'];
+            $freePos = ($i + 1) * 3 - 1;
+            if (isset($singleCartItems[$freePos])) {
+                $origIdx = $singleCartItems[$freePos]['idx'];
+                $allItems[$origIdx]['is_free'] = true;
+                $discount += $allItems[$origIdx]['price'];
             }
         }
-
         $promotionApplied = true;
     }
 
-    $grandTotal = $subtotal - $discount;
+    $grandTotal = $subtotal - $discount - $groupDiscount;
 
     // Пожизненная скидка 25% для постоянных клиентов — стакается поверх 2+1.
     $currentUserId = $_SESSION['user_id'] ?? null;
@@ -348,6 +377,13 @@ include __DIR__ . '/../includes/header.php';
                     <div class="summary-row discount">
                         <span>Скидка (акция 2+1):</span>
                         <span>-<?php echo number_format($discount, 0, ',', ' '); ?> ₽</span>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($groupDiscount > 0): ?>
+                    <div class="summary-row discount">
+                        <span>Скидка за группу:</span>
+                        <span>-<?php echo number_format($groupDiscount, 0, ',', ' '); ?> ₽</span>
                     </div>
                 <?php endif; ?>
 

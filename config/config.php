@@ -120,6 +120,8 @@ if (!defined('YANDEX_GPT_FORMAT_MODEL')) define('YANDEX_GPT_FORMAT_MODEL', $_ENV
 if (!defined('YANDEX_ART_ENABLED')) define('YANDEX_ART_ENABLED', ($_ENV['YANDEX_ART_ENABLED'] ?? '1') === '1');
 if (!defined('YANDEX_ART_MODEL'))   define('YANDEX_ART_MODEL',   $_ENV['YANDEX_ART_MODEL'] ?? 'yandex-art/latest');
 if (!defined('YANDEX_ART_TIMEOUT')) define('YANDEX_ART_TIMEOUT', (int)($_ENV['YANDEX_ART_TIMEOUT'] ?? 25));
+// Максимум ИИ-иллюстраций на одну презентацию (генерируются для слайдов с image_prompt).
+if (!defined('MATERIAL_SLIDE_IMAGES_MAX')) define('MATERIAL_SLIDE_IMAGES_MAX', (int)($_ENV['MATERIAL_SLIDE_IMAGES_MAX'] ?? 6));
 
 // OpenRouter — генератор материалов ФОП. Используются дешёвые open-source модели.
 if (!defined('OPENROUTER_API_KEY'))         define('OPENROUTER_API_KEY',         $_ENV['OPENROUTER_API_KEY']         ?? '');
@@ -337,7 +339,17 @@ if (!defined('OLYMPIAD_AUDIENCES')) {
 if (!defined('OLYMPIAD_DIPLOMA_PRICE')) define('OLYMPIAD_DIPLOMA_PRICE', 229);
 
 // Publication Certificate Price
-if (!defined('PUBLICATION_CERTIFICATE_PRICE')) define('PUBLICATION_CERTIFICATE_PRICE', 299);
+if (!defined('PUBLICATION_CERTIFICATE_PRICE')) define('PUBLICATION_CERTIFICATE_PRICE', 499);
+
+// Групповое участие: лимиты и прогрессивная скидка по размеру группы.
+// Тарифы — массив {min, max, percent}; проценты легко менять здесь.
+if (!defined('GROUP_MIN_PARTICIPANTS')) define('GROUP_MIN_PARTICIPANTS', 2);
+if (!defined('GROUP_MAX_PARTICIPANTS')) define('GROUP_MAX_PARTICIPANTS', 30);
+if (!defined('GROUP_DISCOUNT_TIERS')) define('GROUP_DISCOUNT_TIERS', json_encode([
+    ['min' => 2,  'max' => 4,  'percent' => 10],
+    ['min' => 5,  'max' => 9,  'percent' => 20],
+    ['min' => 10, 'max' => 30, 'percent' => 30],
+]));
 
 // File Upload Paths
 if (!defined('UPLOADS_DIR')) define('UPLOADS_DIR', BASE_PATH . '/uploads/diplomas/');

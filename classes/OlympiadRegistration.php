@@ -17,9 +17,10 @@ class OlympiadRegistration {
     public function create($data) {
         return $this->db->insert('olympiad_registrations', [
             'user_id' => $data['user_id'],
+            'group_batch_id' => $data['group_batch_id'] ?? null,
             'participant_name' => $data['participant_name'] ?? null,
             'olympiad_id' => $data['olympiad_id'],
-            'olympiad_result_id' => $data['olympiad_result_id'],
+            'olympiad_result_id' => $data['olympiad_result_id'] ?? null,
             'diploma_template_id' => $data['diploma_template_id'] ?? 1,
             'placement' => $data['placement'],
             'score' => $data['score'],
