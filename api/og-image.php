@@ -79,7 +79,7 @@ if ($mode === 'ad') {
     // Курсы: шаблон с дипломом + динамическая аудитория
     if ($type === 'course') {
         $specializations = $obj->getSpecializations($item['id']);
-        $audienceLabel = OgImageGenerator::buildAudienceLabel($specializations);
+        $audienceLabel = OgImageGenerator::buildAudienceLabel($specializations, $slug);
         $programType = $item['program_type'] ?? 'kpk';
         $filePath = $generator->getOrGenerateCourseAd($cacheKey, $audienceLabel, $programType);
         $generator->serve($filePath);

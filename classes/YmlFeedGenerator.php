@@ -27,37 +27,88 @@ class YmlFeedGenerator
         'videolecture' => ['id' => 43, 'name' => 'Видеолекции'],
     ];
 
-    // Маппинг специализаций → короткие ярлыки для рекламных заголовков (дательный падеж)
-    private const SPECIALIZATION_HEADLINE_MAP = [
-        'Логопедия'                       => 'логопедов',
-        'Инструктор по физкультуре'       => 'инструкторов физкультуры',
-        'Педагог-психолог'                => 'психологов',
-        'Работа с детьми с ОВЗ'           => 'педагогов ОВЗ',
-        'Социальная педагогика'           => 'соц. педагогов',
-        'Классное руководство'            => 'кл. руководителей',
-        'Младший воспитатель'             => 'мл. воспитателей',
-        'Педагог дополнительного образования' => 'педагогов доп. образования',
-        'Администрация и управление'      => 'руководителей ОО',
-        'Старший воспитатель'             => 'ст. воспитателей',
-        'Учитель'                         => 'учителей',
-        'Воспитатель'                     => 'воспитателей',
+    // Точечные переопределения специальности по slug курса:
+    // когда специализация в БД слишком общая, а реальная профессия — в названии курса
+    private const COURSE_SPECIALTY_OVERRIDE = [
+        'spetsialist-po-pozharnoy-profilaktike'                                                                          => 'специалист по пожарной профилактике',
+        'gosudarstvennoe-i-munitsipalnoe-upravlenie'                                                                     => 'специалист ГМУ',
+        'menedzhment-v-sfere-obrazovaniya'                                                                               => 'руководитель в образовании',
+        'muzykalnoe-obrazovanie-v-doshkolnoy-obrazovatelnoy-organizatsii-v-usloviyah-realizatsii-fgos-doshkolnogo-obrazovaniya' => 'музыкальный руководитель',
+        'pedagog-predshkolnoy-podgotovki'                                                                                => 'педагог предшкольной подготовки',
+        'prakticheskaya-psihologiya-psihologicheskoe-konsultirovanie-v-sfere-seksualnyh-otnosheniy'                       => 'психолог-консультант',
+        'psiholog-konsultant-v-oblasti-semeynyh-i-detsko-roditelskih-otnosheniy-semeynyy-psiholog'                        => 'семейный психолог',
+        'pedagogicheskaya-deyatelnost-sovetnika-direktora-po-vospitaniyu-i-vzaimodeystviyu-s-detskimi-obschestvennymi-obedineniyami-v-obrazovatelnoy-organizatsii' => 'советник директора по воспитанию',
+        'pedagogika-i-metodika-fizicheskoy-kultury-i-sporta-trener-prepodavatel'                                          => 'тренер-преподаватель',
     ];
 
-    // Приоритет специализаций: чем меньше индекс, тем выше приоритет (узкие — первыми)
-    // Воспитатель выше Старшего — более широкая аудитория для рекламы
-    private const SPECIALIZATION_PRIORITY = [
+    // Предмет → родительный падеж для заголовка «учитель {предмета}»
+    private const SUBJECT_GENITIVE_MAP = [
+        'Русский язык и литература'        => 'русского языка',
+        'Математика'                       => 'математики',
+        'Математика (алгебра, геометрия)'  => 'математики',
+        'История'                          => 'истории',
+        'Обществознание'                   => 'обществознания',
+        'География'                        => 'географии',
+        'Музыка'                           => 'музыки',
+        'Английский язык'                  => 'английского языка',
+        'Иностранные языки'                => 'иностранного языка',
+        'Технология'                       => 'технологии',
+        'Физическая культура'              => 'физкультуры',
+    ];
+
+    // Порядок выбора предмета (узкие/значимые — первыми)
+    private const SUBJECT_PRIORITY = [
+        'Русский язык и литература',
+        'Математика',
+        'Математика (алгебра, геометрия)',
+        'История',
+        'Обществознание',
+        'География',
+        'Музыка',
+        'Английский язык',
+        'Иностранные языки',
+        'Технология',
+        'Физическая культура',
+    ];
+
+    // Role-специализация → название профессии в именительном падеже
+    private const SPECIALTY_NOMINATIVE_MAP = [
+        'Логопедия'                          => 'учитель-логопед',
+        'Дефектология'                       => 'учитель-дефектолог',
+        'Педагог-психолог'                   => 'педагог-психолог',
+        'Работа с детьми с ОВЗ'              => 'педагог по работе с ОВЗ',
+        'Социальная педагогика'              => 'социальный педагог',
+        'Тьюторство'                         => 'тьютор',
+        'Методист'                           => 'методист',
+        'Педагог-организатор'                => 'педагог-организатор',
+        'Инструктор по физкультуре'          => 'инструктор по физкультуре',
+        'Младший воспитатель'                => 'младший воспитатель',
+        'Старший воспитатель'                => 'старший воспитатель',
+        'Педагог дополнительного образования'=> 'педагог доп. образования',
+        'Классное руководство'               => 'классный руководитель',
+        'Воспитатель'                        => 'воспитатель',
+        'Учитель'                            => 'учитель',
+        'Администрация и управление'         => 'руководитель образования',
+    ];
+
+    // Приоритет role-специализаций (узкие — первыми)
+    private const SPECIALTY_ROLE_PRIORITY = [
         'Логопедия',
-        'Инструктор по физкультуре',
+        'Дефектология',
         'Педагог-психолог',
         'Работа с детьми с ОВЗ',
         'Социальная педагогика',
-        'Классное руководство',
+        'Тьюторство',
+        'Методист',
+        'Педагог-организатор',
+        'Инструктор по физкультуре',
         'Младший воспитатель',
+        'Старший воспитатель',
         'Педагог дополнительного образования',
+        'Классное руководство',
         'Воспитатель',
         'Учитель',
         'Администрация и управление',
-        'Старший воспитатель',
     ];
 
     public function __construct($pdo)
@@ -662,7 +713,7 @@ class YmlFeedGenerator
     {
         $courses = $this->db->query(
             "SELECT c.*,
-                    GROUP_CONCAT(DISTINCT asp.name ORDER BY asp.name) as specializations
+                    GROUP_CONCAT(DISTINCT asp.name ORDER BY asp.name SEPARATOR '|') as specializations
              FROM courses c
              LEFT JOIN course_specializations cs ON c.id = cs.course_id
              LEFT JOIN audience_specializations asp ON cs.specialization_id = asp.id
@@ -675,10 +726,10 @@ class YmlFeedGenerator
         foreach ($courses as $course) {
             $categoryId = self::COURSE_CATEGORIES[$course['program_type']]['id'] ?? 32;
             $docLabel = $course['program_type'] === 'pp' ? 'Диплом' : 'Удостоверение';
-            $specs = !empty($course['specializations']) ? explode(',', $course['specializations']) : [];
-            $primarySpec = $this->getPrimarySpecialization($specs);
+            $specs = !empty($course['specializations']) ? explode('|', $course['specializations']) : [];
+            $specialty = $this->resolveCourseSpecialty($course, $specs);
 
-            $headline = $this->buildCourseAdHeadline($course, $primarySpec);
+            $headline = $this->buildCourseAdHeadline($course, $specialty);
             $description = $this->buildCourseAdDescription($course);
 
             $hours = $course['hours'] ?? '';
@@ -690,7 +741,7 @@ class YmlFeedGenerator
                 ['name' => 'Документ', 'value' => $docLabel . ' установленного образца'],
                 ['name' => 'Формат', 'value' => 'Дистанционный'],
                 ['name' => 'Уровень', 'value' => 'Всероссийский'],
-                ['name' => 'Аудитория', 'value' => $primarySpec ?: 'Педагоги'],
+                ['name' => 'Аудитория', 'value' => $specialty ?: 'Педагоги'],
             ];
 
             $xml .= $this->buildOfferXml([
@@ -698,7 +749,7 @@ class YmlFeedGenerator
                 'url'         => $this->baseUrl . '/kursy/' . $course['slug'] . '/',
                 'price'       => $course['price'] ?? '',
                 'categoryId'  => $categoryId,
-                'picture'     => $this->baseUrl . '/og-image/ad/course/' . $course['slug'] . '.jpg',
+                'picture'     => $this->baseUrl . '/og-image/ad/course/' . $course['slug'] . '.jpg?v=2',
                 'name'        => $headline,
                 'description' => $description,
                 'sales_notes' => $salesNotes,
@@ -710,89 +761,90 @@ class YmlFeedGenerator
     }
 
     /**
-     * Выбрать наиболее приоритетную (узкую) специализацию
+     * Определить чистое название специальности в именительном падеже
+     * для рекламного заголовка «Переподготовка: {специальность}».
+     * Приоритет: slug-override → предметник (учитель {предмета}) → role-специализация → фолбэк.
      */
-    private function getPrimarySpecialization(array $specs): string
+    private function resolveCourseSpecialty(array $course, array $specs): string
     {
-        if (empty($specs)) {
-            return '';
+        $slug = $course['slug'] ?? '';
+
+        // 1. Точечное переопределение по slug (специализация в БД слишком общая)
+        if (isset(self::COURSE_SPECIALTY_OVERRIDE[$slug])) {
+            return self::COURSE_SPECIALTY_OVERRIDE[$slug];
         }
 
         $specs = array_map('trim', $specs);
-        $bestIndex = PHP_INT_MAX;
-        $bestSpec = $specs[0];
 
-        foreach ($specs as $spec) {
-            $index = array_search($spec, self::SPECIALIZATION_PRIORITY, true);
-            if ($index !== false && $index < $bestIndex) {
-                $bestIndex = $index;
-                $bestSpec = $spec;
+        // 2. Предметник: «Учитель» + предметная специализация → «учитель {предмета}»
+        if (in_array('Учитель', $specs, true)) {
+            // Начальные классы (литературное чтение / окружающий мир)
+            if (in_array('Литературное чтение', $specs, true) || in_array('Окружающий мир', $specs, true)) {
+                return 'учитель начальных классов';
+            }
+
+            $matched = [];
+            foreach (self::SUBJECT_PRIORITY as $subject) {
+                if (in_array($subject, $specs, true) && isset(self::SUBJECT_GENITIVE_MAP[$subject])) {
+                    $genitive = self::SUBJECT_GENITIVE_MAP[$subject];
+                    if (!in_array($genitive, $matched, true)) {
+                        $matched[] = $genitive;
+                    }
+                }
+            }
+
+            if (!empty($matched)) {
+                // История + обществознание объединяем, иначе берём один предмет
+                if (in_array('истории', $matched, true) && in_array('обществознания', $matched, true)) {
+                    return 'учитель истории и обществознания';
+                }
+                return 'учитель ' . $matched[0];
             }
         }
 
-        return $bestSpec;
+        // 3. Role-специализация (узкие — первыми)
+        foreach (self::SPECIALTY_ROLE_PRIORITY as $role) {
+            if (in_array($role, $specs, true) && isset(self::SPECIALTY_NOMINATIVE_MAP[$role])) {
+                return self::SPECIALTY_NOMINATIVE_MAP[$role];
+            }
+        }
+
+        // 4. Фолбэк
+        return 'педагог';
     }
 
     /**
-     * Построить рекламный заголовок для курса (до 56 символов)
+     * Построить рекламный заголовок для курса переподготовки:
+     * «Переподготовка: {специальность} · {часы} ч · Сколково» (с лесенкой фолбэков, ~75 символов)
      */
-    private function buildCourseAdHeadline(array $course, string $primarySpec): string
+    private function buildCourseAdHeadline(array $course, string $specialty): string
     {
-        $label = self::SPECIALIZATION_HEADLINE_MAP[$primarySpec] ?? 'педагогов';
         $hours = $course['hours'] ?? '';
-        $programPrefix = $course['program_type'] === 'pp' ? 'ПП' : 'КПК';
+        $base = 'Переподготовка: ' . $specialty;
 
-        // Вариант 1: полный — "КПК для логопедов. 72 ч. Сколково + ФРДО"
-        $headline = $programPrefix . ' для ' . $label . '. ' . $hours . ' ч. Сколково + ФРДО';
-        if (mb_strlen($headline) <= 56) {
+        // Вариант 1: полный — «Переподготовка: учитель музыки · 520 ч · Сколково»
+        $headline = $base . ' · ' . $hours . ' ч · Сколково';
+        if (mb_strlen($headline) <= 75) {
             return $headline;
         }
 
-        // Вариант 2: без Сколково — "КПК для логопедов. 72 ч. ФРДО"
-        $headline = $programPrefix . ' для ' . $label . '. ' . $hours . ' ч. ФРДО';
-        if (mb_strlen($headline) <= 56) {
+        // Вариант 2: без Сколково — «Переподготовка: учитель музыки · 520 ч»
+        $headline = $base . ' · ' . $hours . ' ч';
+        if (mb_strlen($headline) <= 75) {
             return $headline;
         }
 
-        // Вариант 3: минимальный — "КПК для логопедов. 72 ч"
-        $headline = $programPrefix . ' для ' . $label . '. ' . $hours . ' ч';
-        if (mb_strlen($headline) <= 56) {
-            return $headline;
-        }
-
-        // Вариант 4: обрезка
-        return mb_substr($headline, 0, 56);
+        // Вариант 3: минимальный — «Переподготовка: учитель музыки»
+        return $base;
     }
 
     /**
-     * Построить рекламное описание для курса
-     * Первые 81 символ — видимая часть в объявлении Яндекс Директ
+     * Рекламное описание для курса переподготовки — максимально короткое,
+     * чтобы поместиться в товарную карточку Яндекс Директа.
      */
     private function buildCourseAdDescription(array $course): string
     {
-        $programLabel = $course['program_type'] === 'pp' ? 'Профессиональная переподготовка' : 'Повышение квалификации';
-        $docLabel = $course['program_type'] === 'pp' ? 'Диплом' : 'Удостоверение';
-        $hours = $course['hours'] ?? '';
-
-        // Видимая часть (до 81 символа) — ключевые преимущества
-        $desc = $docLabel . ' гос. образца · Сколково · ФИС ФРДО. Для аттестации! ';
-
-        // Развёрнутая часть для алгоритма Яндекса
-        $desc .= $programLabel . ' «' . $course['title'] . '»';
-
-        if (!empty($hours)) {
-            $desc .= ', ' . $hours . ' часов';
-        }
-
-        $desc .= '. ';
-
-        if (!empty($course['description'])) {
-            $desc .= $this->extractSentences($course['description'], 2) . ' ';
-        }
-
-        $desc .= 'Дистанционно. Лицензия на образовательную деятельность. Данные вносятся в ФИС ФРДО. Начните обучение в любое время.';
-
-        return $this->cleanText($desc);
+        return 'Разрешение Сколково, ФРДО и диплом государственного образца.';
     }
 
     // =============================================
@@ -803,7 +855,7 @@ class YmlFeedGenerator
     {
         $courses = $this->db->query(
             "SELECT c.*,
-                    GROUP_CONCAT(DISTINCT asp.name ORDER BY asp.name) as specializations
+                    GROUP_CONCAT(DISTINCT asp.name ORDER BY asp.name SEPARATOR '|') as specializations
              FROM courses c
              LEFT JOIN course_specializations cs ON c.id = cs.course_id
              LEFT JOIN audience_specializations asp ON cs.specialization_id = asp.id
@@ -815,10 +867,10 @@ class YmlFeedGenerator
         $xml = '';
         foreach ($courses as $course) {
             $categoryId = self::COURSE_CATEGORIES['pp']['id'];
-            $specs = !empty($course['specializations']) ? explode(',', $course['specializations']) : [];
-            $primarySpec = $this->getPrimarySpecialization($specs);
+            $specs = !empty($course['specializations']) ? explode('|', $course['specializations']) : [];
+            $specialty = $this->resolveCourseSpecialty($course, $specs);
 
-            $headline = $this->buildCourseAdHeadline($course, $primarySpec);
+            $headline = $this->buildCourseAdHeadline($course, $specialty);
             $description = $this->buildCourseAdDescription($course);
 
             $hours = $course['hours'] ?? '';
@@ -830,7 +882,7 @@ class YmlFeedGenerator
                 ['name' => 'Документ', 'value' => 'Диплом установленного образца'],
                 ['name' => 'Формат', 'value' => 'Дистанционный'],
                 ['name' => 'Уровень', 'value' => 'Всероссийский'],
-                ['name' => 'Аудитория', 'value' => $primarySpec ?: 'Педагоги'],
+                ['name' => 'Аудитория', 'value' => $specialty ?: 'Педагоги'],
             ];
 
             $xml .= $this->buildOfferXml([
@@ -838,7 +890,7 @@ class YmlFeedGenerator
                 'url'         => $this->baseUrl . '/kursy/' . $course['slug'] . '/',
                 'price'       => $course['price'] ?? '',
                 'categoryId'  => $categoryId,
-                'picture'     => $this->baseUrl . '/og-image/ad/course/' . $course['slug'] . '.jpg',
+                'picture'     => $this->baseUrl . '/og-image/ad/course/' . $course['slug'] . '.jpg?v=2',
                 'name'        => $headline,
                 'description' => $description,
                 'sales_notes' => $salesNotes,
