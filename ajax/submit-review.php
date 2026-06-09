@@ -14,6 +14,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Validator.php';
 require_once __DIR__ . '/../classes/Review.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/review-entity.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -120,29 +121,4 @@ try {
 } catch (Exception $e) {
     error_log('Submit review error: ' . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Ошибка при сохранении отзыва']);
-}
-
-/**
- * Существует ли продукт и доступен ли он публично.
- * Таблица и условие выбираются из фиксированного whitelist'а — инъекция типа невозможна.
- */
-function reviewEntityIsPublic($pdo, string $entityType, int $entityId): bool {
-    // [таблица, доп. условие публичности]
-    $map = [
-        'competition' => ['competitions', ''],
-        'olympiad'    => ['olympiads', " AND is_active = 1"],
-        'webinar'     => ['webinars', " AND status <> 'draft'"],
-        'course'      => ['courses', " AND is_active = 1"],
-        'publication' => ['publications', " AND status = 'published'"],
-        'material'    => ['materials', " AND status = 'published'"],
-    ];
-    if (!isset($map[$entityType])) {
-        return false;
-    }
-    [$table, $cond] = $map[$entityType];
-    $row = (new Database($pdo))->queryOne(
-        "SELECT id FROM {$table} WHERE id = ?{$cond} LIMIT 1",
-        [$entityId]
-    );
-    return (bool)$row;
 }
