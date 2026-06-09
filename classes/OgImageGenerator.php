@@ -137,6 +137,7 @@ class OgImageGenerator
     private string $diplomaFanTemplatePath;
     private string $skolkovoLogoPath;
     private string $razreshenieSkolkovoPath;
+    private string $logoColorPath;
 
     public function __construct()
     {
@@ -150,6 +151,7 @@ class OgImageGenerator
         $this->diplomaFanTemplatePath = __DIR__ . '/../assets/images/diploma-fan-template.png';
         $this->skolkovoLogoPath = __DIR__ . '/../assets/images/skolkovo-logo-white.png';
         $this->razreshenieSkolkovoPath = __DIR__ . '/../assets/images/razreshenie-skolkovo-068.png';
+        $this->logoColorPath = __DIR__ . '/../assets/images/logo-color.png';
 
         if (!is_dir($this->cacheDir)) {
             mkdir($this->cacheDir, 0755, true);
@@ -752,11 +754,13 @@ class OgImageGenerator
 
     /**
      * Сгенерировать рекламный баннер курса переподготовки (квадрат 1:1).
-     * Композиция по принципу safe-zone РСЯ: всё важное в центральных 60–70%.
-     *   — брендовый градиентный фон;
-     *   — подпись аудитории сверху по центру («ПЕРЕПОДГОТОВКА» + «ДЛЯ …»);
-     *   — главный объект: скан разрешения Сколково в белой рамке с тенью, по центру;
-     *   — строка доверия снизу («Разрешение Сколково · ФРДО · диплом гос. образца»).
+     * Дизайн повторяет главную страницу fgos.pro: светлый сине-белый фон с сеткой,
+     * индиго-типографика, белые карточки со скруглением и мягкой тенью, пилюли.
+     * Safe-zone РСЯ: всё важное в центральных 60–70%.
+     *   — логотип «ФГОС-Практикум» сверху;
+     *   — пилюля «Профессиональная переподготовка» + крупная подпись аудитории (индиго);
+     *   — главный объект: скан разрешения Сколково в белой карточке с тенью, по центру;
+     *   — пилюля доверия снизу (Сколково · ФРДО · диплом гос. образца).
      * @return string Путь к файлу
      */
     public function generateCourseAd(string $outputPath, string $programTypeLabel, string $audienceLabel): string
@@ -774,94 +778,92 @@ class OgImageGenerator
         imagealphablending($img, true);
         imagesavealpha($img, true);
 
-        // Брендовый диагональный градиент (тёмно-синий → синий)
-        $this->drawBrandGradient($img, $size, $size, 13, 35, 84, 30, 84, 166);
+        // Палитра главной страницы
+        $indigo600 = imagecolorallocate($img, 30, 58, 168);   // #1e3aa8
+        $indigo700 = imagecolorallocate($img, 24, 47, 138);   // #182f8a
+        $ink700    = imagecolorallocate($img, 42, 48, 86);    // #2a3056
+        $white     = imagecolorallocate($img, 255, 255, 255);
+
+        // Светлый вертикальный градиент #edf0ff → #fbfbfd + тонкая сетка
+        $this->drawVerticalGradient($img, $size, $size, 237, 240, 255, 251, 251, 253);
+        $this->drawDecorGrid($img, $size, $size);
 
         $fontBold = file_exists($this->fontMontserratBold) ? $this->fontMontserratBold : $this->fontBold;
-        $white  = imagecolorallocate($img, 255, 255, 255);
-        $gold   = imagecolorallocate($img, 255, 201, 77); // #FFC94D
+        $maxTextW = (int)($size * 0.84);
 
-        $maxTextW = (int)($size * 0.80);
+        // --- Замеры для вертикального центрирования всего блока ---
+        // Логотип
+        $logo = file_exists($this->logoColorPath) ? imagecreatefrompng($this->logoColorPath) : false;
+        $logoH = 64;
+        $logoW = 0;
+        if ($logo) {
+            $logoW = (int)(imagesx($logo) * ($logoH / imagesy($logo)));
+        }
 
-        // --- Подбираем кегли/строки заранее, чтобы центрировать весь блок по вертикали ---
-        $eyebrow = 'ПРОФЕССИОНАЛЬНАЯ ПЕРЕПОДГОТОВКА';
-        $eyebrowFs = 26;
-        $eyebrowLines = $this->wrapText($eyebrow, $eyebrowFs, $maxTextW, $fontBold);
-
-        $audFs = 30; $audLines = [];
-        foreach ([56, 48, 40, 34, 30] as $fs) {
+        // Подпись аудитории (крупно, авто-подбор кегля)
+        $audFs = 32; $audLines = [];
+        foreach ([58, 50, 42, 36, 32] as $fs) {
             $lines = $this->wrapText($audienceLabel, $fs, $maxTextW, $fontBold);
             if (count($lines) <= 2) { $audFs = $fs; $audLines = $lines; break; }
         }
-        if (empty($audLines)) { $audFs = 30; $audLines = $this->wrapText($audienceLabel, 30, $maxTextW, $fontBold); }
+        if (empty($audLines)) { $audFs = 32; $audLines = $this->wrapText($audienceLabel, 32, $maxTextW, $fontBold); }
+        $audLh = (int)($audFs * 1.16);
 
-        // Размеры скана (главный объект) — высота ~46% холста
+        // Скан (главный объект) в белой карточке
         $scanOrigW = imagesx($scan); $scanOrigH = imagesy($scan);
-        $scanH = (int)($size * 0.46);
+        $scanH = (int)($size * 0.42);
         $scanW = (int)($scanOrigW * ($scanH / $scanOrigH));
-        $mat = 16; // белое паспарту вокруг скана
-        $matW = $scanW + $mat * 2;
-        $matH = $scanH + $mat * 2;
+        $cardPad = 18;
+        $cardW = $scanW + $cardPad * 2;
+        $cardH = $scanH + $cardPad * 2;
 
-        $trust = 'Сколково · ФРДО · диплом гос. образца';
-        $trustFs = 24;
-        $trustLines = $this->wrapText($trust, $trustFs, $maxTextW, $fontBold);
+        // Высоты пилюль
+        $eyebrowFs = 21; $eyebrowH = $eyebrowFs + 26;
+        $trustFs   = 23; $trustH   = $trustFs + 30;
 
-        $lh = fn($fs) => (int)($fs * 1.32);
-        $gapEyebrow = 22;   // между eyebrow и аудиторией
-        $gapToScan  = 40;   // между текстом и сканом
-        $gapToTrust = 34;   // между сканом и строкой доверия
+        $gAfterLogo = 30; $gAfterEyebrow = 26; $gAfterAud = 38; $gAfterCard = 34;
 
-        $blockH = count($eyebrowLines) * $lh($eyebrowFs)
-            + $gapEyebrow
-            + count($audLines) * $lh($audFs)
-            + $gapToScan
-            + $matH
-            + $gapToTrust
-            + count($trustLines) * $lh($trustFs);
+        $blockH = ($logo ? $logoH + $gAfterLogo : 0)
+            + $eyebrowH + $gAfterEyebrow
+            + count($audLines) * $audLh + $gAfterAud
+            + $cardH + $gAfterCard
+            + $trustH;
 
         $y = (int)(($size - $blockH) / 2);
-        if ($y < 40) { $y = 40; }
+        if ($y < 46) { $y = 46; }
+        $cx = (int)($size / 2);
 
-        // --- 1) Eyebrow (золотой) ---
-        $y += $eyebrowFs;
-        foreach ($eyebrowLines as $line) {
-            $this->drawCenteredText($img, $line, $eyebrowFs, $y, $gold, $fontBold, $size);
-            $y += $lh($eyebrowFs);
+        // --- 1) Логотип ---
+        if ($logo) {
+            imagecopyresampled($img, $logo, $cx - (int)($logoW / 2), $y, 0, 0, $logoW, $logoH, imagesx($logo), imagesy($logo));
+            imagedestroy($logo);
+            $y += $logoH + $gAfterLogo;
         }
-        $y += $gapEyebrow - $eyebrowFs;
 
-        // --- 2) Аудитория (белый, крупно) ---
+        // --- 2) Пилюля «Профессиональная переподготовка» (индиго-50 фон, индиго-700 текст) ---
+        $this->drawPill($img, $cx, $y, 'ПРОФЕССИОНАЛЬНАЯ ПЕРЕПОДГОТОВКА', $eyebrowFs, $fontBold,
+            [236, 239, 255], $indigo700, null, false);
+        $y += $eyebrowH + $gAfterEyebrow;
+
+        // --- 3) Подпись аудитории (индиго, крупно) ---
         $y += $audFs;
         foreach ($audLines as $line) {
-            $this->drawCenteredText($img, $line, $audFs, $y, $white, $fontBold, $size);
-            $y += $lh($audFs);
+            $this->drawCenteredText($img, $line, $audFs, $y, $indigo600, $fontBold, $size);
+            $y += $audLh;
         }
-        $y += $gapToScan - $audFs;
+        $y += $gAfterAud - $audFs;
 
-        // --- 3) Скан разрешения Сколково в белой рамке с тенью (главный объект, по центру) ---
-        $matX = (int)(($size - $matW) / 2);
-        $matY = $y;
-        // мягкая тень — несколько полупрозрачных смещённых прямоугольников
-        for ($s = 18; $s >= 4; $s -= 2) {
-            $alpha = 110 - $s * 3;
-            if ($alpha < 0) { $alpha = 0; }
-            $shadow = imagecolorallocatealpha($img, 0, 0, 0, 127 - (int)($alpha / 2));
-            imagefilledrectangle($img, $matX - $s + 10, $matY - $s + 14, $matX + $matW + $s + 10, $matY + $matH + $s + 14, $shadow);
-        }
-        // белое паспарту
-        imagefilledrectangle($img, $matX, $matY, $matX + $matW, $matY + $matH, $white);
-        // сам скан
-        imagecopyresampled($img, $scan, $matX + $mat, $matY + $mat, 0, 0, $scanW, $scanH, $scanOrigW, $scanOrigH);
+        // --- 4) Скан Сколково в белой карточке (скругление + мягкая индиго-тень) ---
+        $cardX = $cx - (int)($cardW / 2);
+        $cardY = $y;
+        $this->drawCardShadow($img, $cardX, $cardY, $cardX + $cardW, $cardY + $cardH, 24);
+        $this->drawRoundedRect($img, $cardX, $cardY, $cardX + $cardW, $cardY + $cardH, 24, $white);
+        imagecopyresampled($img, $scan, $cardX + $cardPad, $cardY + $cardPad, 0, 0, $scanW, $scanH, $scanOrigW, $scanOrigH);
         imagedestroy($scan);
-        $y = $matY + $matH + $gapToTrust;
+        $y = $cardY + $cardH + $gAfterCard;
 
-        // --- 4) Строка доверия (золотой) ---
-        $y += $trustFs;
-        foreach ($trustLines as $line) {
-            $this->drawCenteredText($img, $line, $trustFs, $y, $gold, $fontBold, $size);
-            $y += $lh($trustFs);
-        }
+        // --- 5) Пилюля доверия (белая, с бордером, тенью и бирюзовыми точками) ---
+        $this->drawTrustPill($img, $cx, $y, ['Сколково', 'ФРДО', 'диплом гос. образца'], $trustFs, $fontBold, $ink700);
 
         imagejpeg($img, $outputPath, 92);
         imagedestroy($img);
@@ -881,18 +883,145 @@ class OgImageGenerator
     }
 
     /**
-     * Диагональный градиент произвольного размера (от верхнего левого к нижнему правому).
+     * Вертикальный градиент (сверху вниз).
      */
-    private function drawBrandGradient(\GdImage $img, int $w, int $h, int $r1, int $g1, int $b1, int $r2, int $g2, int $b2): void
+    private function drawVerticalGradient(\GdImage $img, int $w, int $h, int $r1, int $g1, int $b1, int $r2, int $g2, int $b2): void
     {
-        $maxDist = $w + $h;
         for ($y = 0; $y < $h; $y++) {
-            $ratio = ($w / 2 + $y) / $maxDist;
-            $r = (int)($r1 + $ratio * ($r2 - $r1));
-            $g = (int)($g1 + $ratio * ($g2 - $g1));
-            $b = (int)($b1 + $ratio * ($b2 - $b1));
-            $color = imagecolorallocate($img, $r, $g, $b);
+            $t = $y / $h;
+            $color = imagecolorallocate($img,
+                (int)($r1 + $t * ($r2 - $r1)),
+                (int)($g1 + $t * ($g2 - $g1)),
+                (int)($b1 + $t * ($b2 - $b1)));
             imageline($img, 0, $y, $w, $y, $color);
+        }
+    }
+
+    /**
+     * Тонкая декоративная сетка (как .rd-grid-bg на главной), затухающая книзу.
+     */
+    private function drawDecorGrid(\GdImage $img, int $w, int $h): void
+    {
+        $step = 46;
+        for ($x = $step; $x < $w; $x += $step) {
+            $alpha = 108; // полупрозрачная линия (0 — непрозр., 127 — прозр.)
+            $c = imagecolorallocatealpha($img, 205, 212, 240, $alpha);
+            imageline($img, $x, 0, $x, $h, $c);
+        }
+        for ($y = $step; $y < $h; $y += $step) {
+            $alpha = 108 + (int)(($y / $h) * 18); // книзу чуть прозрачнее
+            if ($alpha > 127) { $alpha = 127; }
+            $c = imagecolorallocatealpha($img, 205, 212, 240, $alpha);
+            imageline($img, 0, $y, $w, $y, $c);
+        }
+    }
+
+    /**
+     * Закруглённый прямоугольник (заливка).
+     */
+    private function drawRoundedRect(\GdImage $img, int $x1, int $y1, int $x2, int $y2, int $r, int $color): void
+    {
+        imagefilledrectangle($img, $x1 + $r, $y1, $x2 - $r, $y2, $color);
+        imagefilledrectangle($img, $x1, $y1 + $r, $x2, $y2 - $r, $color);
+        $d = $r * 2;
+        imagefilledellipse($img, $x1 + $r, $y1 + $r, $d, $d, $color);
+        imagefilledellipse($img, $x2 - $r, $y1 + $r, $d, $d, $color);
+        imagefilledellipse($img, $x1 + $r, $y2 - $r, $d, $d, $color);
+        imagefilledellipse($img, $x2 - $r, $y2 - $r, $d, $d, $color);
+    }
+
+    /**
+     * Мягкая тень под карточкой (несколько расширяющихся полупрозрачных индиго-слоёв).
+     */
+    private function drawCardShadow(\GdImage $img, int $x1, int $y1, int $x2, int $y2, int $r): void
+    {
+        // Мягкая тень со смещением вниз (без ореола сверху)
+        for ($s = 28; $s >= 6; $s -= 4) {
+            $col = imagecolorallocatealpha($img, 40, 64, 150, 123); // приглушённый индиго, очень прозрачный
+            $top = $y1 - (int)($s * 0.30) + 20;
+            $this->drawRoundedRect($img, $x1 - $s, $top, $x2 + $s, $y2 + $s + 22, $r + $s, $col);
+        }
+    }
+
+    /**
+     * Пилюля с текстом по центру (фон + опц. бордер). Возвращает ширину пилюли.
+     */
+    private function drawPill(\GdImage $img, int $cx, int $y, string $text, int $fontSize, string $font,
+        array $bgRgb, int $textColor, ?array $borderRgb, bool $shadow): int
+    {
+        $bbox = imagettfbbox($fontSize, 0, $font, $text);
+        $textW = abs($bbox[2] - $bbox[0]);
+        $padX = (int)($fontSize * 1.5);
+        $padY = 13;
+        $pillW = $textW + $padX * 2;
+        $pillH = $fontSize + $padY * 2;
+        $x1 = $cx - (int)($pillW / 2);
+        $x2 = $x1 + $pillW;
+        $r = (int)($pillH / 2);
+
+        if ($shadow) {
+            for ($s = 14; $s >= 4; $s -= 3) {
+                $a = 120; if ($a > 127) { $a = 127; }
+                $sc = imagecolorallocatealpha($img, 46, 77, 217, $a);
+                $this->drawRoundedRect($img, $x1 - $s, $y - $s + 8, $x2 + $s, $y + $pillH + $s + 8, $r + $s, $sc);
+            }
+        }
+        if ($borderRgb !== null) {
+            $bc = imagecolorallocate($img, $borderRgb[0], $borderRgb[1], $borderRgb[2]);
+            $this->drawRoundedRect($img, $x1 - 2, $y - 2, $x2 + 2, $y + $pillH + 2, $r + 2, $bc);
+        }
+        $bg = imagecolorallocate($img, $bgRgb[0], $bgRgb[1], $bgRgb[2]);
+        $this->drawRoundedRect($img, $x1, $y, $x2, $y + $pillH, $r, $bg);
+
+        $ty = $y + $padY + $fontSize - 2;
+        imagettftext($img, $fontSize, 0, $cx - (int)($textW / 2), $ty, $textColor, $font, $text);
+
+        return $pillW;
+    }
+
+    /**
+     * Белая пилюля доверия с бирюзовыми точками: «• Сколково  • ФРДО  • диплом гос. образца».
+     */
+    private function drawTrustPill(\GdImage $img, int $cx, int $y, array $items, int $fontSize, string $font, int $textColor): void
+    {
+        $dot = 12; $dotGap = 12; $itemGap = 34;
+
+        // Замеряем ширину контента
+        $contentW = 0; $widths = [];
+        foreach ($items as $i => $it) {
+            $bb = imagettfbbox($fontSize, 0, $font, $it);
+            $w = abs($bb[2] - $bb[0]);
+            $widths[$i] = $w;
+            $contentW += $dot + $dotGap + $w;
+            if ($i < count($items) - 1) { $contentW += $itemGap; }
+        }
+        $padX = 38; $padY = 15;
+        $pillW = $contentW + $padX * 2;
+        $pillH = $fontSize + $padY * 2;
+        $x1 = $cx - (int)($pillW / 2);
+        $x2 = $x1 + $pillW;
+        $r  = (int)($pillH / 2);
+
+        // тень + бордер + белый фон
+        for ($s = 14; $s >= 4; $s -= 3) {
+            $sc = imagecolorallocatealpha($img, 46, 77, 217, 122);
+            $this->drawRoundedRect($img, $x1 - $s, $y - $s + 8, $x2 + $s, $y + $pillH + $s + 8, $r + $s, $sc);
+        }
+        $border = imagecolorallocate($img, 221, 224, 236); // #dde0ec
+        $this->drawRoundedRect($img, $x1 - 2, $y - 2, $x2 + 2, $y + $pillH + 2, $r + 2, $border);
+        $white = imagecolorallocate($img, 255, 255, 255);
+        $this->drawRoundedRect($img, $x1, $y, $x2, $y + $pillH, $r, $white);
+
+        // контент
+        $teal = imagecolorallocate($img, 24, 184, 154); // #18b89a
+        $cyMid = $y + (int)($pillH / 2);
+        $ty = $y + $padY + $fontSize - 2;
+        $x = $x1 + $padX;
+        foreach ($items as $i => $it) {
+            imagefilledellipse($img, $x + (int)($dot / 2), $cyMid, $dot, $dot, $teal);
+            $x += $dot + $dotGap;
+            imagettftext($img, $fontSize, 0, $x, $ty, $textColor, $font, $it);
+            $x += $widths[$i] + $itemGap;
         }
     }
 
