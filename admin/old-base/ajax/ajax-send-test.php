@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/auth.php'; // admin auth guard
 /**
  * AJAX: тестовая отправка одного письма (по теме/телу/CTA кампании).
  * Не использует old_base_campaign_recipients и не меняет статистику.

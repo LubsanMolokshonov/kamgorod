@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php'; // admin auth guard
 /**
  * Admin: модерация отзывов на продукты.
  *

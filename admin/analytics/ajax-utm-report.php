@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php'; // admin auth guard
 /**
  * AJAX-эндпоинт для подгрузки уровней UTM-отчёта
  * GET: level, utm_source, utm_campaign, utm_content, date_from, date_to, paid_from, paid_to, product_type

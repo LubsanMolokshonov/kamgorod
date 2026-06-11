@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/includes/auth.php'; // admin auth guard
 /**
  * Admin Dashboard - Sales Analytics
  * Разделение: Педпортал (конкурсы, олимпиады, вебинары, публикации) и Курсы

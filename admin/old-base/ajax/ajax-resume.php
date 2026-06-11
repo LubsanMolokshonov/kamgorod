@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/auth.php'; // admin auth guard
 /**
  * AJAX: запустить / возобновить кампанию. При первом запуске также планирует получателей.
  */

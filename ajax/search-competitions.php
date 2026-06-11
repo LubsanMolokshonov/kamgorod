@@ -15,18 +15,24 @@ header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-// CORS для локальной разработки
-if (isset($_SERVER['HTTP_ORIGIN'])) {
-    header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
-    header('Access-Control-Allow-Credentials: true');
-}
-
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Competition.php';
 require_once __DIR__ . '/../classes/Olympiad.php';
 require_once __DIR__ . '/../classes/SearchService.php';
+
+// CORS: только доверенные источники, без credentials (данные поиска публичные).
+$allowedOrigins = array_values(array_filter([
+    defined('SITE_URL') ? SITE_URL : null,
+    'https://fgos.pro',
+    'https://www.fgos.pro',
+]));
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin !== '' && in_array($origin, $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Vary: Origin');
+}
 
 try {
     $query = isset($_GET['q']) ? trim($_GET['q']) : '';

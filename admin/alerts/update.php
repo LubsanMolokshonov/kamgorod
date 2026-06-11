@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php'; // admin auth guard
 /**
  * Админ: смена статуса / добавление заметки к алерту
  */

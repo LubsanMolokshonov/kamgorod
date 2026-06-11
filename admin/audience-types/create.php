@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php'; // admin auth guard
 /**
  * Audience Types Management - Create New Type
  */
@@ -12,6 +13,10 @@ $pageTitle = 'Создать тип аудитории';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!validateCSRFToken($_POST['csrf_token'] ?? '')) {
+        http_response_code(403);
+        exit('Недействительный токен безопасности');
+    }
     $audienceTypeObj = new AudienceType($db);
 
     $data = [
@@ -74,6 +79,7 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="content-card">
     <form method="POST" action="" class="form">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(generateCSRFToken(), ENT_QUOTES, 'UTF-8'); ?>">
         <div class="form-group">
             <label for="name" class="form-label required">Название типа</label>
             <input type="text"

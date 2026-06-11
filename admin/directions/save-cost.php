@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php'; // admin auth guard
 /**
  * AJAX-эндпоинт: сохранение понедельного расхода направления в direction_weekly_costs.
  * Метод: POST

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php'; // admin auth guard
 /**
  * UTM-аналитика — отчёт по UTM-меткам
  * Иерархия: Source → Campaign → Content → Term

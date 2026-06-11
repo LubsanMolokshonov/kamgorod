@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php'; // admin auth guard
 /**
  * AJAX-эндпоинт: сохранение значения расхода в rnp_ad_costs
  * Метод: POST

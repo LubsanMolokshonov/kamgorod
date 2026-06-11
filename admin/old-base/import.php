@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php'; // admin auth guard
 /**
  * Импорт CSV в old_base_subscribers — для последующих пополнений базы.
  */

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php'; // admin auth guard
 /**
  * Audience Types Management - Manage Specializations
  */
@@ -42,6 +43,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['spec_
     } catch (Exception $e) {
         $errorMessage = 'Ошибка при удалении: ' . $e->getMessage();
     }
+}
+
+// CSRF для всех POST-действий (create/update)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !validateCSRFToken($_POST['csrf_token'] ?? '')) {
+    http_response_code(403);
+    exit('Недействительный токен безопасности');
 }
 
 // Add new specialization
@@ -234,6 +241,7 @@ include __DIR__ . '/../includes/header.php';
             <button class="modal-close" onclick="closeModal()">✕</button>
         </div>
         <form id="specForm" method="POST" action="">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(generateCSRFToken(), ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="action" id="formAction" value="create">
             <input type="hidden" name="spec_id" id="specId" value="">
 

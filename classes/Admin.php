@@ -157,7 +157,9 @@ class Admin {
      * Verify admin session
      */
     public static function verifySession() {
-        session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
 
         if (!isset($_SESSION['admin_id']) || !isset($_SESSION['admin_username'])) {
             header('Location: /admin/login.php');

@@ -3,6 +3,14 @@
  * Admin Login Page
  */
 
+// config/database.php тянет config.php (session cookie params: httponly/secure/samesite).
+// Требуется ДО session_start, иначе SameSite/secure не применятся к admin-сессии.
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../classes/Database.php';
+require_once __DIR__ . '/../classes/Admin.php';
+require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/rate-limit.php';
+
 session_start();
 
 // If already logged in, redirect to dashboard
@@ -11,36 +19,44 @@ if (isset($_SESSION['admin_id'])) {
     exit;
 }
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../classes/Database.php';
-require_once __DIR__ . '/../classes/Admin.php';
-
 $error = '';
 $success = '';
 
 // Handle login form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $rlKey = 'admin_login_' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
 
-    if (empty($username) || empty($password)) {
-        $error = 'Пожалуйста, заполните все поля';
+    if (!validateCSRFToken($_POST['csrf_token'] ?? '')) {
+        $error = 'Сессия истекла, обновите страницу и попробуйте снова';
+    } elseif (rateLimitTooMany($rlKey, 5, 900)) {
+        $error = 'Слишком много попыток входа. Повторите через 15 минут.';
     } else {
-        $admin = new Admin($db);
-        $adminData = $admin->authenticate($username, $password);
+        $username = trim($_POST['username'] ?? '');
+        $password = $_POST['password'] ?? '';
 
-        if ($adminData) {
-            // Set session
-            $_SESSION['admin_id'] = $adminData['id'];
-            $_SESSION['admin_username'] = $adminData['username'];
-            $_SESSION['admin_role'] = $adminData['role'];
-            $_SESSION['admin_email'] = $adminData['email'];
-
-            // Redirect to dashboard
-            header('Location: /admin/index.php');
-            exit;
+        if (empty($username) || empty($password)) {
+            $error = 'Пожалуйста, заполните все поля';
         } else {
-            $error = 'Неверное имя пользователя или пароль';
+            $admin = new Admin($db);
+            $adminData = $admin->authenticate($username, $password);
+
+            if ($adminData) {
+                // Защита от session fixation — новый ID после успешного входа.
+                session_regenerate_id(true);
+                $_SESSION['admin_id'] = $adminData['id'];
+                $_SESSION['admin_username'] = $adminData['username'];
+                $_SESSION['admin_role'] = $adminData['role'];
+                $_SESSION['admin_email'] = $adminData['email'];
+
+                rateLimitReset($rlKey);
+
+                // Redirect to dashboard
+                header('Location: /admin/index.php');
+                exit;
+            } else {
+                rateLimitRegisterFailure($rlKey, 900);
+                $error = 'Неверное имя пользователя или пароль';
+            }
         }
     }
 }
@@ -190,6 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="POST" action="">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(generateCSRFToken(), ENT_QUOTES, 'UTF-8'); ?>">
             <div class="form-group">
                 <label for="username">Имя пользователя</label>
                 <input
