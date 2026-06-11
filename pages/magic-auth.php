@@ -67,6 +67,26 @@ if (!empty($utmParams)) {
 // поэтому email_mid выставляем здесь — иначе атрибуция письмо→оплата потеряется.
 $mid = $_GET['mid'] ?? '';
 if ($mid && preg_match('~^[a-f0-9]{32}$~', $mid)) {
+    // Регистрируем клик (зеркало api/email-track/click.php): magic-ссылки не
+    // оборачиваются в click-tracker, иначе клики по ним невидимы в email_events.
+    try {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+        $ua = mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 500);
+        $db->prepare(
+            "INSERT INTO email_click_events (message_id, url, clicked_at, ip_address, user_agent)
+             VALUES (?, ?, NOW(), ?, ?)"
+        )->execute([$mid, SITE_URL . $redirect, $ip, $ua]);
+        $db->prepare(
+            "UPDATE email_events
+                SET clicks_count = clicks_count + 1,
+                    first_clicked_at = IFNULL(first_clicked_at, NOW()),
+                    last_clicked_at = NOW(),
+                    opened_at = IFNULL(opened_at, NOW())
+              WHERE message_id = ?"
+        )->execute([$mid]);
+    } catch (\Throwable $e) {
+        error_log('magic-auth click log: ' . $e->getMessage());
+    }
     $_SESSION['email_mid'] = $mid;
     setcookie('email_mid', $mid, [
         'expires'  => time() + 30 * 24 * 3600,

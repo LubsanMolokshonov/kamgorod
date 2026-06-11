@@ -92,7 +92,26 @@ class OlympiadEmailChain {
             [$olympiadRegistrationId]
         );
 
-        $this->log("CANCEL | OlympiadRegistration {$olympiadRegistrationId} | Cancelled {$result} pending emails");
+        // Также гасим продающие quiz-письма («диплом готов к оформлению»):
+        // после оплаты они только путают — человек уже получил payment_success
+        // со ссылкой на кабинет, а quiz_success ведёт обратно в воронку оплаты.
+        $quizCancelled = 0;
+        $reg = $this->db->queryOne(
+            "SELECT user_id, olympiad_id FROM olympiad_registrations WHERE id = ?",
+            [$olympiadRegistrationId]
+        );
+        if ($reg) {
+            $quizCancelled = $this->db->execute(
+                "UPDATE olympiad_quiz_email_log
+                 SET status = 'skipped', updated_at = NOW()
+                 WHERE user_id = ? AND olympiad_id = ?
+                   AND email_type IN ('quiz_success', 'quiz_success_reminder_24h')
+                   AND status = 'pending'",
+                [$reg['user_id'], $reg['olympiad_id']]
+            );
+        }
+
+        $this->log("CANCEL | OlympiadRegistration {$olympiadRegistrationId} | Cancelled {$result} pending emails + {$quizCancelled} quiz emails");
         return $result;
     }
 

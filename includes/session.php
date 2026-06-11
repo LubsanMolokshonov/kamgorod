@@ -16,6 +16,39 @@ const CART_TYPES = [
     'olympiad_reg'     => 'cart_olympiad_registrations',
 ];
 
+// item_type → таблица и статусы, при которых позиция считается оплаченной
+// и не должна попадать в корзину (защита от «воскрешения» оплаченного товара).
+const CART_PAID_STATUSES = [
+    'registration'     => ['table' => 'registrations',            'statuses' => ['paid', 'diploma_ready']],
+    'publication_cert' => ['table' => 'publication_certificates', 'statuses' => ['paid', 'ready']],
+    'webinar_cert'     => ['table' => 'webinar_certificates',     'statuses' => ['paid', 'ready']],
+    'olympiad_reg'     => ['table' => 'olympiad_registrations',   'statuses' => ['paid', 'diploma_ready']],
+];
+
+/**
+ * Отфильтровать из списка id позиции, которые уже оплачены (см. CART_PAID_STATUSES).
+ */
+function filterUnpaidCartIds(string $itemType, array $ids): array {
+    global $db;
+    if (empty($ids) || !isset($db) || !isset(CART_PAID_STATUSES[$itemType])) {
+        return $ids;
+    }
+    $cfg = CART_PAID_STATUSES[$itemType];
+    try {
+        $idPh     = implode(',', array_fill(0, count($ids), '?'));
+        $statusPh = implode(',', array_fill(0, count($cfg['statuses']), '?'));
+        $stmt = $db->prepare(
+            "SELECT id FROM {$cfg['table']} WHERE id IN ({$idPh}) AND status IN ({$statusPh})"
+        );
+        $stmt->execute(array_merge(array_map('intval', $ids), $cfg['statuses']));
+        $paid = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+        return array_values(array_diff($ids, $paid));
+    } catch (Exception $e) {
+        error_log("filterUnpaidCartIds({$itemType}) error: " . $e->getMessage());
+        return $ids;
+    }
+}
+
 /**
  * Initialize session if not started
  */
@@ -71,8 +104,13 @@ function syncSessionCartWithDb(int $userId): void {
                 $id = (int)$itemId;
                 if ($id > 0 && !in_array($id, $normalized, true)) {
                     $normalized[] = $id;
-                    $insertStmt->execute([$userId, $type, $id]);
                 }
+            }
+            // Оплаченные позиции в корзину не пушим (и выкидываем из сессии):
+            // гостевая сессия может пережить оплату и «воскресить» товар.
+            $normalized = filterUnpaidCartIds($type, $normalized);
+            foreach ($normalized as $id) {
+                $insertStmt->execute([$userId, $type, $id]);
             }
             $_SESSION[$sessKey] = $normalized;
         }
@@ -466,7 +504,13 @@ function removeFromCart($registrationId) {
  * removeCartItemsByOrderId(), для снятия резерва — releaseCartItemsReservation().
  */
 function clearCart() {
-    initSession();
+    // НЕ через initSession(): тот зовёт cartEnsureLoadedFromDb(), и если флаг
+    // cart_db_loaded только что снят (removeCartItemsByOrderId на success-странице),
+    // ещё не очищенная сессионная корзина зальётся обратно в cart_items —
+    // оплаченный товар «воскресает» в корзине.
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
     $_SESSION['cart'] = [];
     $_SESSION['cart_certificates'] = [];
     $_SESSION['cart_webinar_certificates'] = [];
