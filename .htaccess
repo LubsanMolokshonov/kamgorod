@@ -385,8 +385,10 @@ Options -Indexes
     Header set X-Frame-Options "SAMEORIGIN"
     Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
-    # HSTS — отправляется только по HTTPS (по HTTP браузеры его игнорируют)
-    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{HTTPS} == 'on'"
+    # HSTS. TLS терминируется на фронтовом nginx, поэтому внутри Apache %{HTTPS} != on —
+    # ставим безусловно (клиент всё равно получает ответ только по HTTPS через nginx,
+    # а по HTTP браузеры HSTS игнорируют).
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
     # CSP в режиме Report-Only: не ломает вёрстку, копит нарушения для дальнейшего
     # ужесточения. После анализа отчётов заменить на боевой Content-Security-Policy.
     Header set Content-Security-Policy-Report-Only "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; font-src 'self' data: https:; frame-ancestors 'self'"
