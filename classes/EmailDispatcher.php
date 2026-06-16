@@ -114,6 +114,7 @@ class EmailDispatcher {
             'headers'     => $headers,
             'track_links' => 0,
             'track_read'  => 0,
+            'skip_unsubscribe' => !empty($params['skip_unsubscribe']) ? 1 : 0,
         ];
 
         $client = self::client();

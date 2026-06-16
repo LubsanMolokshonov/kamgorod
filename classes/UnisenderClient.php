@@ -86,6 +86,12 @@ class UnisenderClient {
         if (!empty($params['headers']) && is_array($params['headers'])) {
             $message['headers'] = $params['headers'];
         }
+        // skip_unsubscribe=1 — транзакционная отправка в обход глобального списка отписок
+        // (только для писем-обязательств: выдача оплаченного документа, чек, восстановление доступа).
+        // По умолчанию выключено. Требует включённой опции на аккаунте Unisender Go.
+        if (!empty($params['skip_unsubscribe'])) {
+            $message['skip_unsubscribe'] = 1;
+        }
         if (!empty($params['global_substitutions']) && is_array($params['global_substitutions'])) {
             $message['global_substitutions'] = $params['global_substitutions'];
         }
