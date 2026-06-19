@@ -52,6 +52,19 @@ class PricingMode
         $cookieName = defined('PRICING_AB_COOKIE') ? PRICING_AB_COOKIE : 'pm_v';
         $userId     = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
 
+        // QA-оверрайд: ?pm=A|B принудительно выбирает вариант для ручного теста на проде
+        // и запоминает его в cookie. В инкогнито (без логина) вариант «прилипает» к cookie
+        // на сессию — можно зайти один раз с ?pm=B и дальше ходить обычными ссылками.
+        // Для залогиненного приоритетна привязка users.pricing_variant (БД-вариант не
+        // перетираем), поэтому держите ?pm в адресе либо тестируйте в инкогнито.
+        if (isset($_GET['pm'])) {
+            $forced = strtoupper((string) $_GET['pm']);
+            if (in_array($forced, self::VARIANTS, true)) {
+                self::setCookie($cookieName, $forced);
+                return self::$cache = $forced;
+            }
+        }
+
         // 1) Залогинен и вариант уже зафиксирован за аккаунтом — он авторитетен.
         if ($userId > 0) {
             $stored = self::readUserVariant($userId);
