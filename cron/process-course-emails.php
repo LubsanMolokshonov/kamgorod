@@ -69,6 +69,23 @@ try {
         'цепочка курсов'
     );
 
+    // Watchdog: заявки приходят, а цепочка для них не планируется
+    // (фоновый scheduleForEnrollment молча падает — инцидент 05.05–19.06.2026).
+    $health = $chain->checkSchedulingHealth(6, 30);
+    if ($health['total'] > 0 && $health['covered'] === 0) {
+        TelegramNotifier::instance($db)->alert(
+            'course_chain_not_scheduling',
+            '[Cron] Цепочка курсов не планируется',
+            [
+                'окно'              => 'последние 6 часов (с лагом 30 мин)',
+                'заявок_в_окне'     => $health['total'],
+                'с_письмами'        => $health['covered'],
+                'вероятная_причина' => 'фоновый scripts/process-course-enrollment.php падает до scheduleForEnrollment — смотреть logs/course-bg.log',
+            ],
+            'critical'
+        );
+    }
+
 } catch (Throwable $e) {
     echo date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n";
     error_log("Course Email Chain Cron Error: " . $e->getMessage());

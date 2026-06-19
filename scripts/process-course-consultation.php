@@ -19,6 +19,7 @@ $consultationId = intval($argv[1]);
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Bitrix24Integration.php';
+require_once __DIR__ . '/../classes/EmailDispatcher.php';
 
 $dbObj = new Database($db);
 
@@ -62,34 +63,22 @@ try {
             );
         }
     }
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     error_log('Bitrix24 consultation error: ' . $e->getMessage());
     try {
         $dbObj->execute(
             "UPDATE course_consultations SET bitrix_attempts = bitrix_attempts + 1 WHERE id = ?",
             [$consultationId]
         );
-    } catch (Exception $ignore) {}
+    } catch (\Throwable $ignore) {}
 }
 
-// Email админу
+// Email админу — через Unisender Go (EmailDispatcher)
 try {
-    require_once __DIR__ . '/../vendor/autoload.php';
-    require_once __DIR__ . '/../includes/email-helper.php';
-
-    $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-    configureMailer($mail);
-
-    $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-    $mail->addAddress(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-
-    $mail->isHTML(true);
-    $mail->Subject = mb_encode_mimeheader('Заявка на консультацию по курсу', 'UTF-8', 'B');
-
     $courseLine = $courseTitle ? htmlspecialchars($courseTitle, ENT_QUOTES, 'UTF-8') : '—';
     $phoneSafe = htmlspecialchars($phone, ENT_QUOTES, 'UTF-8');
 
-    $mail->Body = <<<HTML
+    $adminHtml = <<<HTML
 <!DOCTYPE html>
 <html lang="ru">
 <head><meta charset="UTF-8"></head>
@@ -109,9 +98,16 @@ try {
 </html>
 HTML;
 
-    $mail->AltBody = "Заявка на консультацию\nТелефон: {$phone}\nКурс: " . ($courseTitle ?: '—');
-
-    $mail->send();
-} catch (Exception $e) {
+    EmailDispatcher::send([
+        'to_email'         => SMTP_FROM_EMAIL,
+        'to_name'          => SMTP_FROM_NAME,
+        'subject'          => 'Заявка на консультацию по курсу',
+        'html'             => $adminHtml,
+        'from_name'        => SMTP_FROM_NAME,
+        'skip_tracking'    => true,
+        'skip_unsubscribe' => true,
+        'meta'             => ['email_type' => 'other', 'touchpoint_code' => 'admin_course_consultation'],
+    ]);
+} catch (\Throwable $e) {
     error_log('Consultation admin email error: ' . $e->getMessage());
 }

@@ -64,9 +64,12 @@ try {
 
     $consultationId = $dbObj->insert('course_consultations', $consultationData);
 
-    // Bitrix24 + email — в фоновом процессе, не блокирует ответ
+    // Bitrix24 + email — в фоновом процессе, не блокирует ответ.
+    // stderr/stdout пишем в лог (НЕ /dev/null), чтобы фаталы фонового скрипта были видны.
     $scriptPath = __DIR__ . '/../scripts/process-course-consultation.php';
-    exec('php ' . escapeshellarg($scriptPath) . ' ' . intval($consultationId) . ' > /dev/null 2>&1 &');
+    $bgLog = __DIR__ . '/../logs/course-bg.log';
+    exec('php ' . escapeshellarg($scriptPath) . ' ' . intval($consultationId)
+        . ' >> ' . escapeshellarg($bgLog) . ' 2>&1 &');
 
     echo json_encode([
         'success' => true,

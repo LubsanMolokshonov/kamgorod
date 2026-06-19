@@ -1,7 +1,11 @@
 <?php
 /**
- * Фоновая обработка записи на курс: Bitrix24 CRM + email админу.
+ * Фоновая обработка записи на курс: email-цепочка дожима + Bitrix24 CRM + email админу.
  * Запускается из ajax/course-enrollment.php через exec().
+ *
+ * Порядок намеренный: сначала планируем цепочку (критично для бизнеса),
+ * потом Bitrix и письмо админу (некритично). Каждый блок изолирован
+ * catch(\Throwable) — падение одного не блокирует остальные.
  *
  * Аргументы: enrollment_id
  */
@@ -21,6 +25,8 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../classes/Bitrix24Integration.php';
+require_once __DIR__ . '/../classes/CourseEmailChain.php';
+require_once __DIR__ . '/../classes/EmailDispatcher.php';
 
 $dbObj = new Database($db);
 
@@ -29,6 +35,20 @@ $enrollment = $dbObj->queryOne("SELECT * FROM course_enrollments WHERE id = ?", 
 if (!$enrollment) {
     error_log("process-course-enrollment: enrollment #{$enrollmentId} not found");
     exit(1);
+}
+
+// ──────────────────────────────────────────────
+// 1. Email-цепочка дожима (критично) — планируем ПЕРВОЙ, до Bitrix и письма админу,
+//    чтобы сбой некритичных блоков не оставил заявку без писем.
+// ──────────────────────────────────────────────
+try {
+    $emailChain = new CourseEmailChain($db);
+    $scheduled = $emailChain->scheduleForEnrollment($enrollmentId);
+    if ($scheduled) {
+        error_log("process-course-enrollment: scheduled {$scheduled} emails for enrollment #{$enrollmentId}");
+    }
+} catch (\Throwable $e) {
+    error_log('Course email chain schedule error (enrollment #' . $enrollmentId . '): ' . $e->getMessage());
 }
 
 $courseObj = new Course($db);
@@ -42,7 +62,9 @@ $fullName = $enrollment['full_name'];
 $email = $enrollment['email'];
 $phone = $enrollment['phone'];
 
-// Bitrix24 CRM — создание сделки сразу после записи
+// ──────────────────────────────────────────────
+// 2. Bitrix24 CRM — создание сделки сразу после записи
+// ──────────────────────────────────────────────
 $crmStatus = '—';
 try {
     $bitrix = new Bitrix24Integration();
@@ -78,35 +100,27 @@ try {
     } else {
         $crmStatus = 'Bitrix24 не настроен';
     }
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     $crmStatus = 'Ошибка (retry через cron)';
     error_log("process-course-enrollment: Bitrix24 error for enrollment #{$enrollmentId}: " . $e->getMessage());
 }
 
-// Email админу
+// ──────────────────────────────────────────────
+// 3. Email админу (некритично) — через Unisender Go (EmailDispatcher)
+// ──────────────────────────────────────────────
 try {
-    require_once __DIR__ . '/../vendor/autoload.php';
-    require_once __DIR__ . '/../includes/email-helper.php';
-
-    $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-    configureMailer($mail);
-
-    $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-    $mail->addAddress(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-
-    $mail->isHTML(true);
-    $mail->Subject = mb_encode_mimeheader(
-        'Новая заявка на курс: ' . mb_substr($course['title'], 0, 60),
-        'UTF-8', 'B'
-    );
-
     $programLabel = Course::getProgramTypeLabel($course['program_type']);
     // Фактическая цена (фиксированная скидка / AB-вариант enrollment)
     $abVariant = $enrollment['ab_variant'] ?? 'A';
     $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null);
     $price = number_format($abPrice, 0, ',', ' ');
 
-    $mail->Body = <<<HTML
+    $fullNameSafe = htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8');
+    $emailSafe    = htmlspecialchars($email, ENT_QUOTES, 'UTF-8');
+    $phoneSafe    = htmlspecialchars($phone, ENT_QUOTES, 'UTF-8');
+    $courseSafe   = htmlspecialchars($course['title'], ENT_QUOTES, 'UTF-8');
+
+    $adminHtml = <<<HTML
 <!DOCTYPE html>
 <html lang="ru">
 <head><meta charset="UTF-8"></head>
@@ -116,11 +130,11 @@ try {
         <h2 style="margin: 0;">Новая заявка на курс</h2>
     </div>
     <div style="background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px;">
-        <h3 style="color: #667eea; margin-top: 0;">{$fullName}</h3>
+        <h3 style="color: #667eea; margin-top: 0;">{$fullNameSafe}</h3>
         <table style="width: 100%; border-collapse: collapse;">
-            <tr><td style="padding: 6px 0; color: #666;">Email:</td><td style="padding: 6px 0;"><strong>{$email}</strong></td></tr>
-            <tr><td style="padding: 6px 0; color: #666;">Телефон:</td><td style="padding: 6px 0;"><strong>{$phone}</strong></td></tr>
-            <tr><td style="padding: 6px 0; color: #666;">Курс:</td><td style="padding: 6px 0;"><strong>{$course['title']}</strong></td></tr>
+            <tr><td style="padding: 6px 0; color: #666;">Email:</td><td style="padding: 6px 0;"><strong>{$emailSafe}</strong></td></tr>
+            <tr><td style="padding: 6px 0; color: #666;">Телефон:</td><td style="padding: 6px 0;"><strong>{$phoneSafe}</strong></td></tr>
+            <tr><td style="padding: 6px 0; color: #666;">Курс:</td><td style="padding: 6px 0;"><strong>{$courseSafe}</strong></td></tr>
             <tr><td style="padding: 6px 0; color: #666;">Тип:</td><td style="padding: 6px 0;">{$programLabel}</td></tr>
             <tr><td style="padding: 6px 0; color: #666;">Часы:</td><td style="padding: 6px 0;">{$course['hours']} ч.</td></tr>
             <tr><td style="padding: 6px 0; color: #666;">Стоимость:</td><td style="padding: 6px 0;">{$price} ₽</td></tr>
@@ -132,21 +146,16 @@ try {
 </html>
 HTML;
 
-    $mail->AltBody = "Новая заявка на курс\n\nИмя: {$fullName}\nEmail: {$email}\nТелефон: {$phone}\nКурс: {$course['title']}\nТип: {$programLabel}\nСтоимость: {$price} руб.\nBitrix24: {$crmStatus}";
-
-    $mail->send();
-} catch (Exception $e) {
+    EmailDispatcher::send([
+        'to_email'         => SMTP_FROM_EMAIL,
+        'to_name'          => SMTP_FROM_NAME,
+        'subject'          => 'Новая заявка на курс: ' . mb_substr($course['title'], 0, 60),
+        'html'             => $adminHtml,
+        'from_name'        => SMTP_FROM_NAME,
+        'skip_tracking'    => true,
+        'skip_unsubscribe' => true,
+        'meta'             => ['email_type' => 'other', 'touchpoint_code' => 'admin_course_enrollment'],
+    ]);
+} catch (\Throwable $e) {
     error_log('Course enrollment admin email error: ' . $e->getMessage());
-}
-
-// Email-цепочка дожима (6 писем: welcome → 15мин → 1ч → 24ч → 2д → 3д)
-try {
-    require_once __DIR__ . '/../classes/CourseEmailChain.php';
-    $emailChain = new CourseEmailChain($db);
-    $scheduled = $emailChain->scheduleForEnrollment($enrollmentId);
-    if ($scheduled) {
-        error_log("process-course-enrollment: scheduled {$scheduled} emails for enrollment #{$enrollmentId}");
-    }
-} catch (Exception $e) {
-    error_log('Course email chain schedule error (enrollment #' . $enrollmentId . '): ' . $e->getMessage());
 }

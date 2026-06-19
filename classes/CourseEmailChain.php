@@ -726,6 +726,34 @@ class CourseEmailChain {
     }
 
     /**
+     * Watchdog: заявки есть, а цепочка для них не запланирована.
+     * Ловит сценарий «фоновый scheduleForEnrollment молча падает» (инцидент 05.05–19.06.2026).
+     *
+     * Берём заявки за окно [сейчас−$hours; сейчас−$graceMin] (нижняя граница — чтобы дать
+     * фоновому процессу время отработать) и смотрим, у скольких есть строки в course_email_log.
+     *
+     * @return array{total:int, covered:int}  total — заявок в окне, covered — из них с письмами.
+     */
+    public function checkSchedulingHealth(int $hours = 6, int $graceMin = 30): array {
+        $row = $this->db->queryOne(
+            "SELECT
+                COUNT(*) AS total,
+                COALESCE(SUM(EXISTS(
+                    SELECT 1 FROM course_email_log l WHERE l.enrollment_id = ce.id
+                )), 0) AS covered
+             FROM course_enrollments ce
+             WHERE ce.created_at >= NOW() - INTERVAL ? HOUR
+               AND ce.created_at <= NOW() - INTERVAL ? MINUTE
+               AND ce.status <> 'cancelled'",
+            [$hours, $graceMin]
+        );
+        return [
+            'total'   => (int)($row['total'] ?? 0),
+            'covered' => (int)($row['covered'] ?? 0),
+        ];
+    }
+
+    /**
      * Подобрать персональное имя отправителя для Gmail-инбокса.
      * Для Unisender Go from_email всегда UNISENDER_SENDER_EMAIL (info@fgos.pro),
      * но from_name ротируется детерминированно по адресу получателя — у одного

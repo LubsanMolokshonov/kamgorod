@@ -171,9 +171,13 @@ try {
         'samesite' => 'Lax'
     ]);
 
-    // Bitrix24 + email — в фоновом процессе, не блокирует ответ
+    // Email-цепочка + Bitrix24 — в фоновом процессе, не блокирует ответ.
+    // stderr/stdout пишем в лог (НЕ /dev/null): иначе фаталы фонового скрипта
+    // тихо теряются — именно так цепочка дожима молча умерла после миграции на Unisender.
     $scriptPath = __DIR__ . '/../scripts/process-course-enrollment.php';
-    exec('php ' . escapeshellarg($scriptPath) . ' ' . intval($enrollmentId) . ' > /dev/null 2>&1 &');
+    $bgLog = __DIR__ . '/../logs/course-bg.log';
+    exec('php ' . escapeshellarg($scriptPath) . ' ' . intval($enrollmentId)
+        . ' >> ' . escapeshellarg($bgLog) . ' 2>&1 &');
 
     // Success response
     echo json_encode([
