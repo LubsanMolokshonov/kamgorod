@@ -26,8 +26,11 @@ require_once BASE_PATH . '/classes/Database.php';
 require_once BASE_PATH . '/classes/CourseEmailChain.php';
 require_once BASE_PATH . '/classes/EmailDispatcher.php';
 
+// ВАЖНО: глобальный $db (PDO из config/database.php) НЕ переопределять —
+// на него опирается EmailTracker::pdo() (global $db; $db instanceof PDO).
+// Обёртку держим в отдельной переменной $dbw.
 $pdo  = $GLOBALS['db'];
-$db   = new Database($pdo);
+$dbw  = new Database($pdo);
 $mode = $argv[1] ?? '';
 
 const TOUCHPOINT_CODE = 'course_soft_reengagement';
@@ -105,7 +108,7 @@ if ($mode === 'preview') {
     if (!$enrollmentId || !filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
         die("Usage: php course-soft-reengagement.php preview <enrollment_id> <to_email>\n");
     }
-    $enr = loadEnrollment($db, $enrollmentId);
+    $enr = loadEnrollment($dbw, $enrollmentId);
     if (!$enr) { die("Enrollment #{$enrollmentId} not found\n"); }
 
     $built = buildSoftEmail($chain, $enr);
@@ -133,7 +136,7 @@ if ($mode === 'send') {
 
     $sent = 0; $skipped = 0; $failed = 0;
     foreach ($ids as $id) {
-        $enr = loadEnrollment($db, (int)$id);
+        $enr = loadEnrollment($dbw, (int)$id);
         if (!$enr) { echo "SKIP #{$id} | not found\n"; $skipped++; continue; }
         if (in_array($enr['status'], ['paid', 'cancelled'], true)) {
             echo "SKIP #{$id} | status={$enr['status']}\n"; $skipped++; continue;
@@ -141,7 +144,7 @@ if ($mode === 'send') {
         if ($chain->isUnsubscribed($enr['email'])) {
             echo "SKIP #{$id} | {$enr['email']} unsubscribed\n"; $skipped++; continue;
         }
-        if (alreadySent($db, $enr['email'])) {
+        if (alreadySent($dbw, $enr['email'])) {
             echo "SKIP #{$id} | {$enr['email']} already got soft-reengagement\n"; $skipped++; continue;
         }
 
