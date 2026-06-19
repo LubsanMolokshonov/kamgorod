@@ -383,6 +383,15 @@
   background: var(--indigo-50);
   color: var(--indigo-800);
 }
+.cd-price-band .rd-btn-ghost {
+  color: #fff;
+  border-color: rgba(255,255,255,.5);
+  background: transparent;
+}
+.cd-price-band .rd-btn-ghost:hover {
+  border-color: #fff;
+  background: rgba(255,255,255,.12);
+}
 
 /* ---------- ЦЕЛИ ---------- */
 .cd-goals-grid {

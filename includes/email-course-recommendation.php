@@ -13,10 +13,13 @@
  * @param int|null $userId   ID педагога-получателя (берём его профиль, а не
  *                           «детскую» аудиторию мероприятия). NULL → гость.
  * @param string   $campaign Метка кампании для UTM (например 'olympiad', 'webinar').
+ * @param int[]    $excludeCourseIds ID курсов, которые НЕ предлагать (например уже
+ *                           купленные в этом же заказе) — чтобы не рекомендовать
+ *                           человеку то, что он только что приобрёл.
  * @return array{pp: array|null, kpk: array|null}
  *         Каждый курс: ['title','slug','price','hours','url'] либо null.
  */
-function getCourseRecommendationsForEmail($pdo, ?int $userId, string $campaign = 'event'): array
+function getCourseRecommendationsForEmail($pdo, ?int $userId, string $campaign = 'event', array $excludeCourseIds = []): array
 {
     require_once __DIR__ . '/../classes/Database.php';
     require_once __DIR__ . '/../classes/Course.php';
@@ -38,8 +41,9 @@ function getCourseRecommendationsForEmail($pdo, ?int $userId, string $campaign =
             $audienceSlug = $stmt->fetchColumn() ?: null;
         }
 
-        $pp  = pickCourseForEmail($course, $audienceSlug, 'pp', $campaign);
-        $kpk = pickCourseForEmail($course, $audienceSlug, 'kpk', $campaign);
+        $exclude = array_map('intval', $excludeCourseIds);
+        $pp  = pickCourseForEmail($course, $audienceSlug, 'pp', $campaign, $exclude);
+        $kpk = pickCourseForEmail($course, $audienceSlug, 'kpk', $campaign, $exclude);
 
         return ['pp' => $pp, 'kpk' => $kpk];
     } catch (\Throwable $e) {
@@ -54,8 +58,18 @@ function getCourseRecommendationsForEmail($pdo, ?int $userId, string $campaign =
  * по display_order (универсальный fallback для гостей / аудиторий без курсов
  * этого типа, например КПК для СПО и доп. образования).
  */
-function pickCourseForEmail(Course $course, ?string $audienceSlug, string $programType, string $campaign): ?array
+function pickCourseForEmail(Course $course, ?string $audienceSlug, string $programType, string $campaign, array $excludeIds = []): ?array
 {
+    // Первый курс списка, не входящий в исключения (уже купленные в этом заказе).
+    $firstAllowed = static function (array $rows) use ($excludeIds): ?array {
+        foreach ($rows as $r) {
+            if (!in_array((int)($r['id'] ?? 0), $excludeIds, true)) {
+                return $r;
+            }
+        }
+        return null;
+    };
+
     $row = null;
 
     if ($audienceSlug) {
@@ -63,13 +77,13 @@ function pickCourseForEmail(Course $course, ?string $audienceSlug, string $progr
             'audience_type' => $audienceSlug,
             'program_type'  => $programType,
         ]);
-        $row = $byAudience[0] ?? null;
+        $row = $firstAllowed($byAudience);
     }
 
     if (!$row) {
         // Универсальный ТОП-курс (первый по display_order).
         $top = $course->getFilteredCourses(['program_type' => $programType]);
-        $row = $top[0] ?? null;
+        $row = $firstAllowed($top);
     }
 
     if (!$row) {
