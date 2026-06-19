@@ -21,13 +21,24 @@ if ($statusFilter && !in_array($statusFilter, $validStatuses)) {
     $statusFilter = '';
 }
 
+// A/B-тест: фильтр по варианту модели оплаты.
+$variantFilter = $_GET['variant'] ?? '';
+if ($variantFilter && !in_array($variantFilter, ['A', 'B'], true)) {
+    $variantFilter = '';
+}
+
 // Build query
-$whereClause = '';
+$conditions = [];
 $params = [];
 if ($statusFilter) {
-    $whereClause = 'WHERE o.payment_status = ?';
+    $conditions[] = 'o.payment_status = ?';
     $params[] = $statusFilter;
 }
+if ($variantFilter) {
+    $conditions[] = 'o.pricing_variant = ?';
+    $params[] = $variantFilter;
+}
+$whereClause = $conditions ? ('WHERE ' . implode(' AND ', $conditions)) : '';
 
 // Total count
 $countSql = "SELECT COUNT(*) as total FROM orders o $whereClause";
@@ -75,13 +86,24 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <!-- Status filter -->
-<div style="margin-bottom: 24px; display: flex; gap: 8px; flex-wrap: wrap;">
-    <a href="?" class="btn <?php echo !$statusFilter ? 'btn-primary' : 'btn-secondary'; ?> btn-sm">Все</a>
+<?php $vq = $variantFilter ? '&variant=' . $variantFilter : ''; ?>
+<div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+    <a href="?<?php echo $variantFilter ? 'variant=' . $variantFilter : ''; ?>" class="btn <?php echo !$statusFilter ? 'btn-primary' : 'btn-secondary'; ?> btn-sm">Все</a>
     <?php foreach ($statusNames as $key => $name): ?>
-        <a href="?status=<?php echo $key; ?>" class="btn <?php echo $statusFilter === $key ? 'btn-primary' : 'btn-secondary'; ?> btn-sm">
+        <a href="?status=<?php echo $key . $vq; ?>" class="btn <?php echo $statusFilter === $key ? 'btn-primary' : 'btn-secondary'; ?> btn-sm">
             <?php echo $name; ?>
         </a>
     <?php endforeach; ?>
+</div>
+
+<!-- A/B variant filter -->
+<?php $sq = $statusFilter ? '&status=' . $statusFilter : ''; ?>
+<div style="margin-bottom: 24px; display: flex; gap: 8px; flex-wrap: wrap; align-items:center;">
+    <span style="color:#888;font-size:13px;">A/B модель:</span>
+    <a href="?<?php echo $statusFilter ? 'status=' . $statusFilter : ''; ?>" class="btn <?php echo !$variantFilter ? 'btn-primary' : 'btn-secondary'; ?> btn-sm">Все</a>
+    <a href="?variant=A<?php echo $sq; ?>" class="btn <?php echo $variantFilter === 'A' ? 'btn-primary' : 'btn-secondary'; ?> btn-sm">A · поштучно</a>
+    <a href="?variant=B<?php echo $sq; ?>" class="btn <?php echo $variantFilter === 'B' ? 'btn-primary' : 'btn-secondary'; ?> btn-sm">B · подписка</a>
+    <a href="/admin/ab-test/" class="btn btn-secondary btn-sm" style="margin-left:auto;">📊 Дашборд A/B</a>
 </div>
 
 <div class="content-card">
@@ -103,6 +125,7 @@ include __DIR__ . '/../includes/header.php';
                         <th>Сумма</th>
                         <th>Скидка</th>
                         <th>Итого</th>
+                        <th>A/B</th>
                         <th>Статус</th>
                         <th>Дата</th>
                     </tr>
@@ -124,6 +147,16 @@ include __DIR__ . '/../includes/header.php';
                             </td>
                             <td><strong><?php echo number_format($order['final_amount'], 0, ',', ' '); ?> &#8381;</strong></td>
                             <td>
+                                <?php $pv = $order['pricing_variant'] ?? null; ?>
+                                <?php if ($pv === 'A'): ?>
+                                    <span class="badge badge-info">A</span>
+                                <?php elseif ($pv === 'B'): ?>
+                                    <span class="badge badge-purple">B</span>
+                                <?php else: ?>
+                                    &mdash;
+                                <?php endif; ?>
+                            </td>
+                            <td>
                                 <span class="badge <?php echo $statusBadges[$order['payment_status']] ?? 'badge-warning'; ?>">
                                     <?php echo $statusNames[$order['payment_status']] ?? $order['payment_status']; ?>
                                 </span>
@@ -137,11 +170,11 @@ include __DIR__ . '/../includes/header.php';
             <?php if ($totalPages > 1): ?>
                 <div style="padding: 16px 24px; display: flex; gap: 8px; justify-content: center;">
                     <?php if ($page > 1): ?>
-                        <a href="?page=<?php echo $page - 1; ?><?php echo $statusFilter ? '&status=' . $statusFilter : ''; ?>" class="btn btn-secondary btn-sm">&larr;</a>
+                        <a href="?page=<?php echo $page - 1; ?><?php echo ($statusFilter ? '&status=' . $statusFilter : '') . ($variantFilter ? '&variant=' . $variantFilter : ''); ?>" class="btn btn-secondary btn-sm">&larr;</a>
                     <?php endif; ?>
                     <span style="padding: 6px 14px; font-size: 13px;">Стр. <?php echo $page; ?> из <?php echo $totalPages; ?></span>
                     <?php if ($page < $totalPages): ?>
-                        <a href="?page=<?php echo $page + 1; ?><?php echo $statusFilter ? '&status=' . $statusFilter : ''; ?>" class="btn btn-secondary btn-sm">&rarr;</a>
+                        <a href="?page=<?php echo $page + 1; ?><?php echo ($statusFilter ? '&status=' . $statusFilter : '') . ($variantFilter ? '&variant=' . $variantFilter : ''); ?>" class="btn btn-secondary btn-sm">&rarr;</a>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>

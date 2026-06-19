@@ -267,6 +267,9 @@ RewriteRule ^material-download\.php$ pages/material-download.php [L,QSA]
 # Личный кабинет токенов
 RewriteRule ^material-balance/?$ pages/material-balance.php [L,QSA]
 
+# Подписка (тарифы Базовый / Про)
+RewriteRule ^podpiska/?$ pages/subscription.php [L,QSA]
+
 # Адаптация материала
 RewriteRule ^material-adapter/?$ pages/material-adapter.php [L,QSA]
 

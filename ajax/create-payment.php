@@ -250,6 +250,119 @@ try {
         }
     }
 
+    // ============================================================
+    // ПОДПИСЧИК: дипломы/сертификаты/свидетельства за 0 ₽ минуя Yookassa.
+    // Активная подписка (любой тариф) покрывает все позиции корзины этого эндпоинта
+    // (конкурсы/олимпиады/вебинары/публикации). Курсы КПК/ПП сюда не попадают.
+    // Скидки 2+1/loyalty не нужны — всё уже 0. Для НЕ-подписчика код ниже без изменений.
+    // ============================================================
+    require_once __DIR__ . '/../classes/SubscriptionService.php';
+    require_once __DIR__ . '/../classes/PricingMode.php';
+    require_once __DIR__ . '/../includes/order-fulfillment.php';
+    require_once __DIR__ . '/../includes/email-helper.php';
+    if ($sessionUserId && (new SubscriptionService($db))->coversCertificates((int)$sessionUserId)) {
+        $subUserId = (int)$sessionUserId;
+
+        // Все позиции бесплатны. Готовим данные для Order::createFromCart (zero-price).
+        $subCartData = [
+            'items' => [], 'subtotal' => 0, 'discount' => 0, 'group_discount' => 0,
+            'loyalty_discount' => 0, 'total' => 0, 'promotion_applied' => false,
+        ];
+        $subCerts = $subWebCerts = $subOlympRegs = [];
+        foreach ($allItems as $it) {
+            switch ($it['type']) {
+                case 'registration':
+                    $subCartData['items'][] = ['registration_id' => $it['id'], 'price' => 0, 'is_free' => true];
+                    break;
+                case 'certificate':
+                    $cd = $it['raw_data']; $cd['is_free'] = true; $cd['price'] = 0; $subCerts[] = $cd;
+                    break;
+                case 'webinar_certificate':
+                    $wd = $it['raw_data']; $wd['is_free'] = true; $wd['price'] = 0; $subWebCerts[] = $wd;
+                    break;
+                case 'olympiad_registration':
+                    $od = $it['raw_data']; $od['is_free'] = true; $od['price'] = 0; $subOlympRegs[] = $od;
+                    break;
+            }
+        }
+
+        $orderObjSub = new Order($db);
+        try {
+            $db->beginTransaction();
+            $subOrderId = $orderObjSub->createFromCart($subUserId, $subCartData, $subCerts, 0, $subWebCerts, $subOlympRegs);
+            if (!$subOrderId) {
+                throw new Exception('Не удалось создать заказ подписчика');
+            }
+            // Пометить позиции как покрытые подпиской (0 ₽, выдача без оплаты).
+            $stmtCov = $db->prepare("UPDATE order_items SET covered_by_subscription = 1 WHERE order_id = ?");
+            $stmtCov->execute([$subOrderId]);
+            // Зарезервировать позиции за заказом — fulfillOrderItems вычистит их из корзины.
+            $subKeys = [];
+            foreach ($allItems as $it) {
+                $ct = match ($it['type']) {
+                    'registration'          => 'registration',
+                    'certificate'           => 'publication_cert',
+                    'webinar_certificate'   => 'webinar_cert',
+                    'olympiad_registration' => 'olympiad_reg',
+                    default                 => null,
+                };
+                if ($ct) { $subKeys[] = ['type' => $ct, 'id' => (int)$it['id']]; }
+            }
+            reserveCartItemsForOrder($subUserId, $subKeys, (int)$subOrderId);
+            $db->commit();
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) { $db->rollBack(); }
+            error_log('create-payment subscriber order failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Не удалось оформить документы по подписке. Попробуйте ещё раз.']);
+            exit;
+        }
+
+        // A/B-атрибуция: помечаем заказ вариантом модели оплаты.
+        PricingMode::stampOrder($db, (int)$subOrderId);
+
+        // Выдача документов (своя транзакция внутри): статусы → PDF → отмена цепочек.
+        $fulfill = fulfillOrderItems($db, (int)$subOrderId, 'subscription');
+
+        // Очистить корзину (и сессию, и cart_items) — как при оплате.
+        foreach ($allItems as $it) {
+            switch ($it['type']) {
+                case 'registration':          removeFromCart((int)$it['id']); break;
+                case 'certificate':           removeCertificateFromCart((int)$it['id']); break;
+                case 'webinar_certificate':   removeWebinarCertificateFromCart((int)$it['id']); break;
+                case 'olympiad_registration': removeOlympiadRegistrationFromCart((int)$it['id']); break;
+            }
+        }
+
+        if ($fulfill['all_docs_ready']) {
+            try {
+                sendPaymentSuccessEmail($subUserId, (int)$subOrderId);
+            } catch (Throwable $e) {
+                scheduleDelayedEmail('payment_success', $subUserId, (int)$subOrderId, 10);
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'redirect_url' => '/pages/cabinet.php?subscription_fulfilled=1'
+        ]);
+        exit;
+    }
+
+    // ============================================================
+    // ВАРИАНТ B (subscription-only): не-подписчику поштучная оплата документов запрещена.
+    // Подписчик уже обработан веткой 0 ₽ выше. Здесь — только не-подписчик в варианте B:
+    // блокируем создание платежа и ведём на подписку. В варианте A / control — код ниже без изменений.
+    // ============================================================
+    if (PricingMode::isSubscriptionOnly()) {
+        echo json_encode([
+            'success'              => false,
+            'requires_subscription' => true,
+            'redirect_url'         => '/podpiska/?from=cart',
+            'message'              => 'Получить документы можно по подписке — она покрывает все дипломы и сертификаты без доплат.'
+        ]);
+        exit;
+    }
+
     $loyaltyDiscount = 0;
     if ($sessionUserId && LoyaltyDiscount::isEligible($db, (int)$sessionUserId)) {
         $loyaltyRates = LoyaltyDiscount::getEffectiveRates($db, (int)$sessionUserId);
@@ -582,6 +695,9 @@ try {
     if (!$orderId) {
         throw new Exception('Не удалось создать заказ');
     }
+
+    // A/B-атрибуция: помечаем заказ вариантом модели оплаты (control в этой ветке).
+    PricingMode::stampOrder($db, (int)$orderId);
 
     // Зарезервировать позиции корзины за этим заказом. При cancel/failed-вебхуке
     // резерв снимется (releaseCartItemsReservation), при succeeded — удалятся

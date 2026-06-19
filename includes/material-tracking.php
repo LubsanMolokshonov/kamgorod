@@ -131,6 +131,17 @@ if (!function_exists('isUnlimitedMaterialUser')) {
         if (array_key_exists($userId, $cache)) {
             return $cache[$userId];
         }
+        // Подписчик Про: безлимит генератора ФОП — те же семантики, что и whitelist
+        // (без списания токенов, без суточного rate-limit). SubscriptionService
+        // самодостаточен (UserTokens подключает лениво), цикла require нет.
+        try {
+            require_once __DIR__ . '/../classes/SubscriptionService.php';
+            if ((new SubscriptionService($pdo))->hasUnlimitedGenerations($userId)) {
+                return $cache[$userId] = true;
+            }
+        } catch (\Throwable $e) {
+            error_log('isUnlimitedMaterialUser sub-check: ' . $e->getMessage());
+        }
         $allowed = defined('MATERIAL_UNLIMITED_EMAILS') ? MATERIAL_UNLIMITED_EMAILS : [];
         if (empty($allowed)) {
             return $cache[$userId] = false;

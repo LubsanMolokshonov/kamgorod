@@ -23,6 +23,9 @@ if ($userId) {
     $tokens = new UserTokens($db);
     // Идемпотентный стартовый бонус — выдаётся при первом заходе на генератор
     $tokens->grantSignupBonusIfNeeded((int)$userId);
+    // Месячный грант токенов подписчику Базового тарифа (идемпотентно по слоту периода).
+    require_once __DIR__ . '/../classes/SubscriptionService.php';
+    (new SubscriptionService($db))->grantMonthlyTokensIfDue((int)$userId);
     $balance = $tokens->getBalance((int)$userId);
 }
 

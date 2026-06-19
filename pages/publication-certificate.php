@@ -67,6 +67,13 @@ $userStmt = $db->prepare("SELECT * FROM users WHERE id = ?");
 $userStmt->execute([$publication['user_id']]);
 $userData = $userStmt->fetch(PDO::FETCH_ASSOC);
 
+// A/B-тест: в варианте B свидетельство выдаётся только по подписке (не-подписчику).
+require_once __DIR__ . '/../classes/SubscriptionService.php';
+require_once __DIR__ . '/../classes/PricingMode.php';
+$pmCertUserId       = $_SESSION['user_id'] ?? null;
+$pmIsSubscriber     = $pmCertUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmCertUserId) : false;
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
+
 // Generate initial dynamic preview
 $previewData = [
     'author_name'        => $userData['full_name'] ?? '',
@@ -230,18 +237,28 @@ include __DIR__ . '/../includes/header.php';
                             <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
-                        <div class="price-block">
-                            <span class="price-label">Стоимость свидетельства:</span>
-                            <span class="price-value">299 ₽</span>
-                        </div>
+                        <?php if ($pmSubscriptionOnly): ?>
+                            <?php
+                            $ctaHeading = 'Свидетельство — по подписке';
+                            $ctaText    = 'Оформите подписку и получайте свидетельства о публикации и другие документы для портфолио без поштучной оплаты.';
+                            $ctaButton  = 'Оформить подписку';
+                            $ctaReturn  = $_SERVER['REQUEST_URI'] ?? '/pages/cabinet.php';
+                            include __DIR__ . '/../includes/subscribe-cta.php';
+                            ?>
+                        <?php else: ?>
+                            <div class="price-block">
+                                <span class="price-label">Стоимость свидетельства:</span>
+                                <span class="price-value">299 ₽</span>
+                            </div>
 
-                        <button type="submit" class="btn btn-submit">
-                            ПЕРЕХОД К ОПЛАТЕ...
-                        </button>
+                            <button type="submit" class="btn btn-submit">
+                                ПЕРЕХОД К ОПЛАТЕ...
+                            </button>
 
-                        <p class="form-hint">
-                            После оплаты свидетельство будет доступно<br>для скачивания в личном кабинете
-                        </p>
+                            <p class="form-hint">
+                                После оплаты свидетельство будет доступно<br>для скачивания в личном кабинете
+                            </p>
+                        <?php endif; ?>
                     </form>
                 <?php endif; ?>
             </div>

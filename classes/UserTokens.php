@@ -133,7 +133,7 @@ class UserTokens
         if ($amount <= 0) {
             throw new InvalidArgumentException('credit amount must be positive');
         }
-        $this->validateReason($reason, ['signup_bonus', 'purchase', 'refund', 'admin_grant']);
+        $this->validateReason($reason, ['signup_bonus', 'purchase', 'refund', 'admin_grant', 'subscription']);
 
         $this->db->beginTransaction();
         try {

@@ -46,6 +46,7 @@ require_once __DIR__ . '/../../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
 require_once __DIR__ . '/../../includes/session.php';
+require_once __DIR__ . '/../../includes/order-fulfillment.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use YooKassa\Model\Notification\NotificationFactory;
@@ -209,6 +210,94 @@ try {
         exit;
     }
 
+    // ============================================================
+    // Оплата ПОДПИСКИ (Базовый / Про).
+    // metadata.payment_type='subscription'. Заказ создан в orders с
+    // subscription_plan_id, без order_items. Идемпотентность — Order::isProcessed.
+    // ============================================================
+    if (($metaArray['payment_type'] ?? null) === 'subscription') {
+        require_once __DIR__ . '/../../classes/SubscriptionService.php';
+
+        if ($paymentStatus !== \YooKassa\Model\Payment\PaymentStatus::SUCCEEDED) {
+            logWebhook('INFO', $paymentId, "Subscription payment status={$paymentStatus} — wait for SUCCEEDED", '');
+            http_response_code(200);
+            echo json_encode(['status' => 'subscription_waiting']);
+            exit;
+        }
+
+        $orderObjSub = new Order($GLOBALS['db']);
+        $order = $orderObjSub->getByPaymentId($paymentId);
+        if (!$order) {
+            logWebhook('WARNING', $paymentId, 'Subscription order not found', '');
+            http_response_code(200);
+            echo json_encode(['status' => 'order_not_found']);
+            exit;
+        }
+        if ($orderObjSub->isProcessed($paymentId)) {
+            logWebhook('INFO', $paymentId, "Subscription order {$order['order_number']} already processed", '');
+            http_response_code(200);
+            echo json_encode(['status' => 'already_processed']);
+            exit;
+        }
+
+        $subUserId = (int)($metaArray['user_id'] ?? $order['user_id']);
+        $planId    = (int)($metaArray['plan_id'] ?? $order['subscription_plan_id'] ?? 0);
+        $period    = (string)($metaArray['period'] ?? $order['subscription_period'] ?? 'monthly');
+
+        // Сохранённый метод оплаты (Этап 2: автопродление). На Этапе 1 остаётся null.
+        $pmId = null;
+        try {
+            $pm = method_exists($payment, 'getPaymentMethod') ? $payment->getPaymentMethod() : null;
+            if ($pm && method_exists($pm, 'getSaved') && $pm->getSaved()) {
+                $pmId = $pm->getId();
+            }
+        } catch (Throwable $e) {
+            $pmId = null;
+        }
+
+        try {
+            $GLOBALS['db']->beginTransaction();
+            $orderObjSub->updatePaymentStatus($order['id'], 'succeeded', date('Y-m-d H:i:s'));
+            $subService = new SubscriptionService($GLOBALS['db']);
+            $subId = $subService->activate($subUserId, $planId, $period, (int)$order['id'], $pmId);
+            $GLOBALS['db']->commit();
+            logWebhook('SUCCESS', $paymentId, "Subscription activated: user={$subUserId} plan={$planId} period={$period} sub={$subId}", '');
+        } catch (Throwable $e) {
+            if ($GLOBALS['db']->inTransaction()) {
+                $GLOBALS['db']->rollBack();
+            }
+            logWebhook('ERROR', $paymentId, 'Subscription activate failed: ' . $e->getMessage(), '');
+            http_response_code(200);
+            echo json_encode(['status' => 'subscription_error']);
+            exit;
+        }
+
+        // Письмо «подписка активна» (best-effort)
+        try {
+            if (function_exists('sendSubscriptionActivatedEmail')) {
+                sendSubscriptionActivatedEmail($subUserId, $subId);
+            }
+        } catch (Throwable $e) {
+            logWebhook('WARNING', $paymentId, 'Subscription activation email failed (non-fatal): ' . $e->getMessage(), '');
+        }
+
+        // Пожизненная скидка лояльности — оплата подписки тоже первый успешный платёж.
+        try {
+            if (LoyaltyDiscount::isFirstSuccessfulOrder($GLOBALS['db'], $subUserId, (int)$order['id'])) {
+                $userObjLocal = new User($GLOBALS['db']);
+                if ($userObjLocal->grantLifetimeDiscount($subUserId)) {
+                    scheduleDelayedEmail('lifetime_discount_granted', $subUserId, (int)$order['id'], 10);
+                }
+            }
+        } catch (Throwable $e) {
+            logWebhook('WARNING', $paymentId, 'Subscription loyalty grant failed (non-fatal): ' . $e->getMessage(), '');
+        }
+
+        http_response_code(200);
+        echo json_encode(['status' => 'subscription_activated', 'subscription_id' => $subId]);
+        exit;
+    }
+
     // Initialize classes
     $orderObj = new Order($GLOBALS['db']);
     $registrationObj = new Registration($GLOBALS['db']);
@@ -279,136 +368,19 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
     $userId = $order['user_id'];
 
     try {
-        // BEGIN TRANSACTION
-        $GLOBALS['db']->beginTransaction();
-
-        // Update order status
-        $paidAt = date('Y-m-d H:i:s');
-        $orderObj->updatePaymentStatus($orderId, 'succeeded', $paidAt);
-
-        // Defense-in-depth: фронтовая проверка в create-payment.php должна была
-        // отсечь уже оплаченные позиции. Если они всё-таки попали сюда —
-        // фиксируем как инцидент, но не падаем (заказ уже создан в Yookassa).
-        $preCheckItems = $orderObj->getOrderItems($orderId);
-        foreach ($preCheckItems as $pcItem) {
-            if (!empty($pcItem['registration_id'])) {
-                $existing = $registrationObj->getById($pcItem['registration_id']);
-                if ($existing && $existing['status'] === 'paid') {
-                    logWebhook('WARNING', $paymentId,
-                        "Registration {$pcItem['registration_id']} was already 'paid' before this webhook — possible double-order for order {$orderNumber}",
-                        '');
-                }
+        // Единый «движок выдачи»: статусы → PDF → отмена email-цепочек → проверка готовности.
+        // Та же функция используется при оформлении подписчиком за 0 ₽ (create-payment.php),
+        // что исключает расхождение логики выдачи документов.
+        $fulfillResult = fulfillOrderItems(
+            $GLOBALS['db'],
+            (int)$orderId,
+            'webhook',
+            function (string $level, string $message) use ($paymentId): void {
+                logWebhook($level, $paymentId, $message, '');
             }
-        }
-
-        // Mark all registrations as paid
-        $orderObj->markRegistrationsAsPaid($orderId);
-
-        // Mark all publication certificates as paid and generate them
-        $certObj = new PublicationCertificate($GLOBALS['db']);
-        $orderItems = $orderObj->getOrderItems($orderId);
-        foreach ($orderItems as $item) {
-            if (!empty($item['certificate_id'])) {
-                $certObj->updateStatus($item['certificate_id'], 'paid');
-                $certResult = $certObj->generate($item['certificate_id']);
-                if ($certResult['success']) {
-                    logWebhook('INFO', $paymentId, "Certificate {$item['certificate_id']} generated for order {$orderNumber}", '');
-                } else {
-                    logWebhook('ERROR', $paymentId, "Certificate {$item['certificate_id']} generation FAILED for order {$orderNumber}: {$certResult['message']}", '');
-                }
-            }
-        }
-
-        // Mark all webinar certificates as paid and generate them
-        $webCertObj = new WebinarCertificate($GLOBALS['db']);
-        foreach ($orderItems as $item) {
-            if (!empty($item['webinar_certificate_id'])) {
-                $webCertObj->updateStatus($item['webinar_certificate_id'], 'paid');
-                $genResult = $webCertObj->generate($item['webinar_certificate_id']);
-                if ($genResult['success']) {
-                    logWebhook('INFO', $paymentId, "Webinar certificate {$item['webinar_certificate_id']} generated for order {$orderNumber}", '');
-                } else {
-                    logWebhook('ERROR', $paymentId, "Webinar certificate {$item['webinar_certificate_id']} generation FAILED for order {$orderNumber}: {$genResult['message']}", '');
-                }
-
-                // Cancel autowebinar email chain for this registration
-                try {
-                    require_once BASE_PATH . '/classes/AutowebinarEmailChain.php';
-                    $wcData = $webCertObj->getById($item['webinar_certificate_id']);
-                    if ($wcData && !empty($wcData['registration_id'])) {
-                        $awChain = new AutowebinarEmailChain($GLOBALS['db']);
-                        $awChain->cancelForRegistration($wcData['registration_id']);
-                        logWebhook('INFO', $paymentId, "Autowebinar email chain cancelled for registration {$wcData['registration_id']}", '');
-                    }
-                } catch (Exception $e) {
-                    logWebhook('WARNING', $paymentId, "AW email cancel failed: " . $e->getMessage(), '');
-                }
-            }
-        }
-
-        // Generate diplomas for paid registrations
-        $diplomaObj = new Diploma($GLOBALS['db']);
-        foreach ($orderItems as $item) {
-            if (!empty($item['registration_id'])) {
-                $result = $diplomaObj->generate($item['registration_id'], 'participant');
-                if ($result['success']) {
-                    logWebhook('INFO', $paymentId, "Diploma (participant) generated for registration {$item['registration_id']}", '');
-                }
-                // Generate supervisor diploma if supervisor exists
-                $regData = $diplomaObj->getRegistrationData($item['registration_id']);
-                if ($regData && !empty($regData['has_supervisor']) && !empty($regData['supervisor_name'])) {
-                    $supResult = $diplomaObj->generate($item['registration_id'], 'supervisor');
-                    if ($supResult['success']) {
-                        logWebhook('INFO', $paymentId, "Diploma (supervisor) generated for registration {$item['registration_id']}", '');
-                    }
-                }
-            }
-        }
-
-        // Mark olympiad registrations as paid and generate olympiad diplomas
-        $olympRegObj = new OlympiadRegistration($GLOBALS['db']);
-        $olympDiplomaObj = new OlympiadDiploma($GLOBALS['db']);
-        foreach ($orderItems as $item) {
-            if (!empty($item['olympiad_registration_id'])) {
-                $olympRegObj->update($item['olympiad_registration_id'], ['status' => 'paid']);
-                logWebhook('INFO', $paymentId, "Olympiad registration {$item['olympiad_registration_id']} marked as paid", '');
-
-                // Generate participant diploma
-                $result = $olympDiplomaObj->generate($item['olympiad_registration_id'], 'participant');
-                if ($result['success']) {
-                    logWebhook('INFO', $paymentId, "Olympiad diploma (participant) generated for reg {$item['olympiad_registration_id']}", '');
-                }
-
-                // Generate supervisor diploma if supervisor exists
-                $olympReg = $olympRegObj->getById($item['olympiad_registration_id']);
-                if ($olympReg && !empty($olympReg['has_supervisor']) && !empty($olympReg['supervisor_name'])) {
-                    $supResult = $olympDiplomaObj->generate($item['olympiad_registration_id'], 'supervisor');
-                    if ($supResult['success']) {
-                        logWebhook('INFO', $paymentId, "Olympiad diploma (supervisor) generated for reg {$item['olympiad_registration_id']}", '');
-                    }
-                }
-            }
-        }
-
-        // Mark course enrollments as paid
-        foreach ($orderItems as $item) {
-            if (!empty($item['course_enrollment_id'])) {
-                $stmt = $GLOBALS['db']->prepare(
-                    "UPDATE course_enrollments SET status = 'paid' WHERE id = ?"
-                );
-                $stmt->execute([$item['course_enrollment_id']]);
-                logWebhook('INFO', $paymentId, "Course enrollment {$item['course_enrollment_id']} marked as paid", '');
-            }
-        }
-
-        // Удалить из cart_items позиции, оплаченные в этом заказе (server-side cart).
-        // Делаем внутри той же транзакции, чтобы при rollback откатилось всё вместе.
-        removeCartItemsByOrderId((int)$orderId);
-
-        // COMMIT TRANSACTION
-        $GLOBALS['db']->commit();
-
-        logWebhook('SUCCESS', $paymentId, "Order {$orderNumber} marked as succeeded", '');
+        );
+        $orderItems = $fulfillResult['order_items'];
+        $allDocsReady = $fulfillResult['all_docs_ready'];
 
         // Email-атрибуция: связать оплату с конкретным письмом.
         // 1) Прямая привязка по orders.email_message_id (установлен на клике из письма).
@@ -619,106 +591,18 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
             logWebhook('WARNING', $paymentId, "Bitrix24 course integration error: " . $e->getMessage(), '');
         }
 
-        // Cancel email journey for paid registrations
-        try {
-            $emailJourney = new EmailJourney($GLOBALS['db']);
-            foreach ($orderItems as $item) {
-                if (!empty($item['registration_id'])) {
-                    $emailJourney->cancelForRegistration($item['registration_id']);
-                }
-            }
-            logWebhook('INFO', $paymentId, "Email journey cancelled for order {$orderNumber}", '');
-        } catch (Exception $e) {
-            logWebhook('WARNING', $paymentId, "Email journey cancel failed: " . $e->getMessage(), '');
-        }
-
-        // Cancel course email chain + send payment confirmation for paid enrollments
+        // Письмо-подтверждение оплаты курса (отмену email-цепочек уже сделал fulfillOrderItems).
         try {
             require_once BASE_PATH . '/classes/CourseEmailChain.php';
             $courseEmailChain = new CourseEmailChain($GLOBALS['db']);
             foreach ($orderItems as $item) {
                 if (!empty($item['course_enrollment_id'])) {
-                    $courseEmailChain->cancelForEnrollment($item['course_enrollment_id']);
-                    logWebhook('INFO', $paymentId, "Course email chain cancelled for enrollment {$item['course_enrollment_id']}", '');
-
-                    // Письмо-подтверждение оплаты курса
                     $courseEmailChain->sendPaymentConfirmation($item['course_enrollment_id'], $orderNumber);
                     logWebhook('INFO', $paymentId, "Course payment confirmation sent for enrollment {$item['course_enrollment_id']}", '');
                 }
             }
         } catch (Exception $e) {
-            logWebhook('WARNING', $paymentId, "Course email chain error: " . $e->getMessage(), '');
-        }
-
-        // Cancel publication email chain for paid certificates
-        try {
-            $pubChain = new PublicationEmailChain($GLOBALS['db']);
-            foreach ($orderItems as $item) {
-                if (!empty($item['certificate_id'])) {
-                    // Получить publication_id из сертификата
-                    $certRow = $GLOBALS['db']->prepare("SELECT publication_id FROM publication_certificates WHERE id = ?");
-                    $certRow->execute([$item['certificate_id']]);
-                    $certData = $certRow->fetch(PDO::FETCH_ASSOC);
-                    if ($certData) {
-                        $pubChain->cancelForPublication($certData['publication_id']);
-                    }
-                }
-            }
-            logWebhook('INFO', $paymentId, "Publication email chain cancelled for order {$orderNumber}", '');
-        } catch (Exception $e) {
-            logWebhook('WARNING', $paymentId, "Publication email chain cancel failed: " . $e->getMessage(), '');
-        }
-
-        // Cancel olympiad email chain for paid olympiad registrations
-        try {
-            require_once BASE_PATH . '/classes/OlympiadEmailChain.php';
-            $olympiadChain = new OlympiadEmailChain($GLOBALS['db']);
-            foreach ($orderItems as $item) {
-                if (!empty($item['olympiad_registration_id'])) {
-                    $olympiadChain->cancelForRegistration($item['olympiad_registration_id']);
-                }
-            }
-            logWebhook('INFO', $paymentId, "Olympiad email chain cancelled for order {$orderNumber}", '');
-        } catch (Exception $e) {
-            logWebhook('WARNING', $paymentId, "Olympiad email chain cancel failed: " . $e->getMessage(), '');
-        }
-
-        // Verify all documents are generated before sending email
-        $allDocsReady = true;
-        $missingDocs = [];
-        foreach ($orderItems as $item) {
-            if (!empty($item['certificate_id'])) {
-                $c = $certObj->getById($item['certificate_id']);
-                if (!$c || $c['status'] !== 'ready' || empty($c['pdf_path']) || !file_exists(BASE_PATH . $c['pdf_path'])) {
-                    $allDocsReady = false;
-                    $missingDocs[] = "pub_cert:{$item['certificate_id']}";
-                }
-            }
-            if (!empty($item['webinar_certificate_id'])) {
-                $wc = $webCertObj->getById($item['webinar_certificate_id']);
-                if (!$wc || $wc['status'] !== 'ready' || empty($wc['pdf_path']) || !file_exists(BASE_PATH . $wc['pdf_path'])) {
-                    $allDocsReady = false;
-                    $missingDocs[] = "web_cert:{$item['webinar_certificate_id']}";
-                }
-            }
-            if (!empty($item['registration_id'])) {
-                $dStmt = $GLOBALS['db']->prepare("SELECT pdf_path FROM diplomas WHERE registration_id = ? AND recipient_type = 'participant' AND pdf_path IS NOT NULL AND pdf_path != '' LIMIT 1");
-                $dStmt->execute([$item['registration_id']]);
-                $dRow = $dStmt->fetch(PDO::FETCH_ASSOC);
-                if (!$dRow || !file_exists(BASE_PATH . '/uploads/diplomas/' . $dRow['pdf_path'])) {
-                    $allDocsReady = false;
-                    $missingDocs[] = "diploma:reg_{$item['registration_id']}";
-                }
-            }
-            if (!empty($item['olympiad_registration_id'])) {
-                $odStmt = $GLOBALS['db']->prepare("SELECT pdf_path FROM olympiad_diplomas WHERE olympiad_registration_id = ? AND recipient_type = 'participant' AND pdf_path IS NOT NULL AND pdf_path != '' LIMIT 1");
-                $odStmt->execute([$item['olympiad_registration_id']]);
-                $odRow = $odStmt->fetch(PDO::FETCH_ASSOC);
-                if (!$odRow || !file_exists(BASE_PATH . '/uploads/diplomas/' . $odRow['pdf_path'])) {
-                    $allDocsReady = false;
-                    $missingDocs[] = "olympiad_diploma:reg_{$item['olympiad_registration_id']}";
-                }
-            }
+            logWebhook('WARNING', $paymentId, "Course payment confirmation error: " . $e->getMessage(), '');
         }
 
         if ($allDocsReady) {
@@ -760,6 +644,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
 
                 // Mark certificate_email_sent for webinar registrations
                 $webRegObj = new WebinarRegistration($GLOBALS['db']);
+                $webCertObj = new WebinarCertificate($GLOBALS['db']);
                 foreach ($orderItems as $item) {
                     if (!empty($item['webinar_certificate_id'])) {
                         $wcData = $webCertObj->getById($item['webinar_certificate_id']);
@@ -774,7 +659,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                 logWebhook('WARNING', $paymentId, "Email failed for order {$orderNumber}: " . $e->getMessage(), '');
             }
         } else {
-            $missing = implode(', ', $missingDocs);
+            $missing = implode(', ', $fulfillResult['missing']);
             logWebhook('ERROR', $paymentId, "EMAIL NOT SENT for order {$orderNumber} - documents not ready: {$missing}", '');
 
         }
@@ -868,6 +753,18 @@ function handleRefundSucceeded($orderObj, $order, $payment) {
             WHERE oi.order_id = ?
         ");
         $stmt->execute([$orderId]);
+
+        // Возврат подписки: если этот заказ активировал подписку — отзываем её.
+        // Токены уже выданного слота не отзываем (они потрачены/учтены).
+        if (!empty($order['subscription_plan_id'])) {
+            $stmt = $GLOBALS['db']->prepare(
+                "UPDATE user_subscriptions
+                    SET status = 'cancelled', cancelled_at = NOW(), auto_renew = 0, expires_at = NOW()
+                  WHERE order_id = ?"
+            );
+            $stmt->execute([$orderId]);
+            logWebhook('INFO', $paymentId, "Subscription cancelled due to refund of order {$orderNumber}", '');
+        }
 
         // COMMIT TRANSACTION
         $GLOBALS['db']->commit();

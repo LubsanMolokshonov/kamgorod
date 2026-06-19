@@ -72,6 +72,21 @@ function scheduleDelayedEmail(string $emailType, int $userId, int $orderId, int 
 }
 
 /**
+ * ID курсов, купленных в данном заказе (course_enrollments.course_id из позиций).
+ * Используется, чтобы не рекомендовать в письме курс, который человек только что
+ * приобрёл. Возвращает [] для заказов без курсов.
+ */
+function boughtCourseIdsFromOrder(array $order): array {
+    $ids = [];
+    foreach (($order['items'] ?? []) as $item) {
+        if (!empty($item['course_enrollment_id']) && !empty($item['ce_course_id'])) {
+            $ids[] = (int)$item['ce_course_id'];
+        }
+    }
+    return array_values(array_unique($ids));
+}
+
+/**
  * Транзакционка: подтверждение успешной оплаты заказа (magic-link на ЛК).
  * PDF-вложения не используются — все документы доступны в кабинете.
  */
@@ -92,7 +107,13 @@ function sendPaymentSuccessEmail($userId, $orderId) {
         }
 
         $cabinetUrl = generateMagicUrl((int)$userId, '/kabinet/', 14);
-        $htmlBody = buildSuccessEmailBody($order, $user, $cabinetUrl);
+
+        // Кросс-сейл: индивидуально подобранные под аудиторию педагога курсы (ПП + КПК),
+        // исключая курсы, купленные в этом же заказе.
+        require_once __DIR__ . '/email-course-recommendation.php';
+        $reco = getCourseRecommendationsForEmail($db, (int)$userId, 'payment', boughtCourseIdsFromOrder($order));
+
+        $htmlBody = buildSuccessEmailBody($order, $user, $cabinetUrl, $reco);
 
         EmailDispatcher::send([
             'to_email' => $user['email'],
@@ -156,7 +177,12 @@ function sendLifetimeDiscountGrantedEmail($userId, $orderId) {
         $cartPct          = (int)round(LoyaltyDiscount::RATE_CART * 100);
         $coursePct        = (int)round(LoyaltyDiscount::RATE_COURSE * 100);
 
-        $htmlBody = buildLifetimeDiscountEmailBody($order, $user, $cabinetUrl, $unsubscribeUrl, $cartPct, $coursePct);
+        // Кросс-сейл: индивидуально подобранные под аудиторию педагога курсы (ПП + КПК),
+        // исключая курсы, купленные в этом же заказе.
+        require_once __DIR__ . '/email-course-recommendation.php';
+        $reco = getCourseRecommendationsForEmail($db, (int)$user['id'], 'payment', boughtCourseIdsFromOrder($order));
+
+        $htmlBody = buildLifetimeDiscountEmailBody($order, $user, $cabinetUrl, $unsubscribeUrl, $cartPct, $coursePct, $reco);
 
         EmailDispatcher::send([
             'to_email'        => $user['email'],
@@ -239,6 +265,145 @@ function sendPaymentFailureEmail($userId, $orderId) {
 }
 
 /**
+ * Транзакционка: подтверждение активации подписки (magic-link на ЛК).
+ */
+function sendSubscriptionActivatedEmail($userId, $subscriptionId) {
+    global $db;
+    try {
+        require_once __DIR__ . '/../classes/User.php';
+        require_once __DIR__ . '/../classes/Database.php';
+
+        $user = (new User($db))->getById($userId);
+        if (!$user) {
+            throw new \Exception('User not found');
+        }
+        $sub = (new Database($db))->queryOne(
+            "SELECT us.*, p.name AS plan_name, p.monthly_generation_tokens, p.course_discount_percent
+             FROM user_subscriptions us JOIN subscription_plans p ON p.id = us.plan_id
+             WHERE us.id = ?",
+            [$subscriptionId]
+        );
+        if (!$sub) {
+            throw new \Exception('Subscription not found');
+        }
+
+        $cabinetUrl = generateMagicUrl((int)$userId, '/kabinet/', 14);
+        $htmlBody = buildSubscriptionActivatedEmailBody($user, $sub, $cabinetUrl);
+
+        EmailDispatcher::send([
+            'to_email' => $user['email'],
+            'to_name'  => $user['full_name'],
+            'subject'  => 'Подписка «' . $sub['plan_name'] . '» активирована',
+            'html'     => $htmlBody,
+            'meta'     => [
+                'email_type'      => 'payment',
+                'touchpoint_code' => 'subscription_activated',
+                'user_id'         => $userId,
+            ],
+        ]);
+        logEmail('SUCCESS', $user['email'], 'sub#' . $subscriptionId, 'Subscription activated email sent');
+        return true;
+    } catch (\Throwable $e) {
+        logEmail('ERROR', $user['email'] ?? 'unknown', 'sub#' . $subscriptionId, 'Subscription activated email failed: ' . $e->getMessage());
+        throw $e;
+    }
+}
+
+/**
+ * Транзакционка: напоминание об окончании подписки (для cron-напоминаний).
+ */
+function sendSubscriptionExpiringEmail($userId, $subscriptionId) {
+    global $db;
+    try {
+        require_once __DIR__ . '/../classes/User.php';
+        require_once __DIR__ . '/../classes/Database.php';
+
+        $user = (new User($db))->getById($userId);
+        if (!$user) {
+            throw new \Exception('User not found');
+        }
+        $sub = (new Database($db))->queryOne(
+            "SELECT us.*, p.name AS plan_name
+             FROM user_subscriptions us JOIN subscription_plans p ON p.id = us.plan_id
+             WHERE us.id = ?",
+            [$subscriptionId]
+        );
+        if (!$sub) {
+            throw new \Exception('Subscription not found');
+        }
+
+        $renewUrl = generateMagicUrl((int)$userId, '/podpiska/', 14);
+        $htmlBody = buildSubscriptionExpiringEmailBody($user, $sub, $renewUrl);
+
+        EmailDispatcher::send([
+            'to_email' => $user['email'],
+            'to_name'  => $user['full_name'],
+            'subject'  => 'Подписка «' . $sub['plan_name'] . '» скоро закончится',
+            'html'     => $htmlBody,
+            'meta'     => [
+                'email_type'      => 'other',
+                'touchpoint_code' => 'subscription_expiring',
+                'user_id'         => $userId,
+            ],
+        ]);
+        logEmail('SUCCESS', $user['email'], 'sub#' . $subscriptionId, 'Subscription expiring email sent');
+        return true;
+    } catch (\Throwable $e) {
+        logEmail('ERROR', $user['email'] ?? 'unknown', 'sub#' . $subscriptionId, 'Subscription expiring email failed: ' . $e->getMessage());
+        throw $e;
+    }
+}
+
+function buildSubscriptionActivatedEmailBody(array $user, array $sub, string $cabinetUrl): string {
+    $fullName = htmlspecialchars(trim((string)($user['full_name'] ?? '')), ENT_QUOTES, 'UTF-8');
+    $greet    = $fullName !== '' ? "Здравствуйте, <strong>{$fullName}</strong>!" : 'Здравствуйте!';
+    $planName = htmlspecialchars((string)$sub['plan_name'], ENT_QUOTES, 'UTF-8');
+    $expires  = htmlspecialchars(date('d.m.Y', strtotime((string)$sub['expires_at'])), ENT_QUOTES, 'UTF-8');
+    $cabEsc   = htmlspecialchars($cabinetUrl, ENT_QUOTES, 'UTF-8');
+    $unlimited = $sub['monthly_generation_tokens'] === null;
+    $courseDisc = (int)($sub['course_discount_percent'] ?? 0);
+
+    $perks = '<li style="margin-bottom:8px;">Дипломы, сертификаты и свидетельства для портфолио — <strong>без доплат</strong></li>';
+    $perks .= $unlimited
+        ? '<li style="margin-bottom:8px;"><strong>Безлимитный</strong> генератор материалов ФОП</li>'
+        : '<li style="margin-bottom:8px;">Ежемесячный пакет токенов для генератора материалов ФОП</li>';
+    if ($courseDisc > 0) {
+        $perks .= "<li>Скидка <strong>{$courseDisc}%</strong> на курсы повышения квалификации и переподготовки</li>";
+    }
+
+    $btn = "<a href=\"{$cabEsc}\" style=\"display:inline-block;background:linear-gradient(135deg,#6c5ce7 0%,#5b54c9 100%);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;\">Открыть личный кабинет</a>";
+
+    $content = <<<HTML
+        <p style="margin:0 0 18px 0;font-size:16px;">{$greet}</p>
+        <p style="margin:0 0 18px 0;">Подписка <strong>«{$planName}»</strong> активна до <strong>{$expires}</strong>. Что входит:</p>
+        <ul style="margin:0 0 22px 0;padding-left:22px;color:#333;">{$perks}</ul>
+        <div style="text-align:center;margin:28px 0;">{$btn}</div>
+        <p style="margin:18px 0 0 0;color:#5a5f6b;font-size:14px;">Документы, оформленные в период подписки, остаются у вас навсегда. Вопросы — на <a href="mailto:info@fgos.pro" style="color:#6c5ce7;">info@fgos.pro</a>.</p>
+HTML;
+
+    return renderTransactionalEmailLayout('Подписка активирована', '«' . $planName . '» · до ' . $expires, $content);
+}
+
+function buildSubscriptionExpiringEmailBody(array $user, array $sub, string $renewUrl): string {
+    $fullName = htmlspecialchars(trim((string)($user['full_name'] ?? '')), ENT_QUOTES, 'UTF-8');
+    $greet    = $fullName !== '' ? "Здравствуйте, <strong>{$fullName}</strong>!" : 'Здравствуйте!';
+    $planName = htmlspecialchars((string)$sub['plan_name'], ENT_QUOTES, 'UTF-8');
+    $expires  = htmlspecialchars(date('d.m.Y', strtotime((string)$sub['expires_at'])), ENT_QUOTES, 'UTF-8');
+    $renewEsc = htmlspecialchars($renewUrl, ENT_QUOTES, 'UTF-8');
+
+    $btn = "<a href=\"{$renewEsc}\" style=\"display:inline-block;background:linear-gradient(135deg,#6c5ce7 0%,#5b54c9 100%);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;\">Продлить подписку</a>";
+
+    $content = <<<HTML
+        <p style="margin:0 0 18px 0;font-size:16px;">{$greet}</p>
+        <p style="margin:0 0 18px 0;">Ваша подписка <strong>«{$planName}»</strong> заканчивается <strong>{$expires}</strong>. Чтобы и дальше оформлять дипломы и сертификаты для портфолио без доплат и пользоваться генератором материалов — продлите её.</p>
+        <div style="text-align:center;margin:28px 0;">{$btn}</div>
+        <p style="margin:18px 0 0 0;color:#5a5f6b;font-size:14px;">Ссылка автоматически авторизует вас на сайте. Вопросы — на <a href="mailto:info@fgos.pro" style="color:#6c5ce7;">info@fgos.pro</a>.</p>
+HTML;
+
+    return renderTransactionalEmailLayout('Подписка скоро закончится', '«' . $planName . '» · до ' . $expires, $content);
+}
+
+/**
  * Логирование email-операций в logs/email.log (для grep/аудита).
  */
 function logEmail($level, $email, $orderNumber, $message) {
@@ -313,7 +478,51 @@ function renderReviewRequestBlock(): string {
 HTML;
 }
 
-function buildSuccessEmailBody(array $order, array $user, string $cabinetUrl): string {
+/**
+ * Блок рекомендации курсов (ПП → КПК) для транзакционных писем оплаты.
+ * Курсы подбираются индивидуально под аудиторию педагога
+ * (см. getCourseRecommendationsForEmail). Inline-CSS, карточки, порядок: ПП → КПК.
+ *
+ * @param array|null $pp  ['title','slug','price','hours','url'] | null
+ * @param array|null $kpk ['title','slug','price','hours','url'] | null
+ * @return string Пустая строка, если рекомендовать нечего.
+ */
+function renderCourseRecommendationBlock(?array $pp, ?array $kpk): string {
+    $rows = [];
+    if (!empty($pp))  { $rows[] = ['label' => 'Профессиональная переподготовка', 'c' => $pp]; }
+    if (!empty($kpk)) { $rows[] = ['label' => 'Повышение квалификации',        'c' => $kpk]; }
+    if (!$rows) {
+        return '';
+    }
+
+    $cards = '';
+    foreach ($rows as $row) {
+        $c     = $row['c'];
+        $label = htmlspecialchars($row['label'], ENT_QUOTES, 'UTF-8');
+        $title = htmlspecialchars((string)$c['title'], ENT_QUOTES, 'UTF-8');
+        $url   = htmlspecialchars((string)$c['url'], ENT_QUOTES, 'UTF-8');
+        $hours = (int)$c['hours'];
+        $price = number_format((float)$c['price'], 0, '', ' ');
+        $cards .= <<<HTML
+            <div style="padding:16px 18px;margin-top:12px;background:#ffffff;border:1px solid #e9ecf3;border-radius:10px;text-align:left;">
+                <span style="display:inline-block;background:#eef0fb;color:#5b54c9;font-size:12px;font-weight:600;padding:4px 10px;border-radius:50px;">{$label}</span>
+                <div style="font-weight:600;color:#2d3142;font-size:15px;margin:8px 0 4px;">{$title}</div>
+                <div style="color:#5a5f6b;font-size:13px;margin-bottom:12px;">{$hours} ч · {$price} ₽ · дистанционно</div>
+                <a href="{$url}" style="display:inline-block;color:#667eea;font-size:14px;font-weight:600;text-decoration:none;">Подробнее о курсе →</a>
+            </div>
+HTML;
+    }
+
+    return <<<HTML
+        <div style="margin:30px 0 10px 0;padding:22px 20px;background:#f8f9fc;border:1px solid #e9ecf3;border-radius:10px;">
+            <p style="margin:0 0 4px 0;font-size:16px;font-weight:600;color:#2d3142;">Программы обучения для вашего направления</p>
+            <p style="margin:0 0 6px 0;font-size:14px;color:#5a5f6b;">Документ установленного образца, дистанционно, в удобном темпе.</p>
+            {$cards}
+        </div>
+HTML;
+}
+
+function buildSuccessEmailBody(array $order, array $user, string $cabinetUrl, array $reco = []): string {
     $orderNumber = htmlspecialchars($order['order_number'] ?? '', ENT_QUOTES, 'UTF-8');
     $fullName    = htmlspecialchars(trim((string)($user['full_name'] ?? '')), ENT_QUOTES, 'UTF-8');
     $greet       = $fullName !== '' ? "Здравствуйте, <strong>{$fullName}</strong>!" : 'Здравствуйте!';
@@ -321,12 +530,14 @@ function buildSuccessEmailBody(array $order, array $user, string $cabinetUrl): s
 
     $btn = "<a href=\"{$cabinetUrlEsc}\" style=\"display:inline-block;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;box-shadow:0 4px 14px rgba(102,126,234,0.35);\">Открыть личный кабинет</a>";
     $reviewBlock = renderReviewRequestBlock();
+    $courseBlock = renderCourseRecommendationBlock($reco['pp'] ?? null, $reco['kpk'] ?? null);
 
     $content = <<<HTML
         <p style="margin:0 0 18px 0;font-size:16px;">{$greet}</p>
         <p style="margin:0 0 18px 0;">Спасибо за оплату заказа <strong>№{$orderNumber}</strong>. Все ваши документы (дипломы, сертификаты, свидетельства) сформированы и доступны в личном кабинете.</p>
         <div style="text-align:center;margin:28px 0;">{$btn}</div>
         <p style="margin:0 0 12px 0;color:#5a5f6b;font-size:14px;">Ссылка действует 14 дней и автоматически авторизует вас на сайте — вводить пароль не нужно.</p>
+        {$courseBlock}
         {$reviewBlock}
         <p style="margin:18px 0 0 0;color:#5a5f6b;font-size:14px;">Если возникнут вопросы — ответьте на это письмо или напишите на <a href="mailto:info@fgos.pro" style="color:#667eea;">info@fgos.pro</a>.</p>
 HTML;
@@ -338,7 +549,7 @@ HTML;
     );
 }
 
-function buildLifetimeDiscountEmailBody(array $order, array $user, string $cabinetUrl, string $unsubscribeUrl, int $cartPct, int $coursePct): string {
+function buildLifetimeDiscountEmailBody(array $order, array $user, string $cabinetUrl, string $unsubscribeUrl, int $cartPct, int $coursePct, array $reco = []): string {
     $orderNumber   = htmlspecialchars($order['order_number'] ?? '', ENT_QUOTES, 'UTF-8');
     $fullName      = htmlspecialchars(trim((string)($user['full_name'] ?? '')), ENT_QUOTES, 'UTF-8');
     $greet         = $fullName !== '' ? "Здравствуйте, <strong>{$fullName}</strong>!" : 'Здравствуйте!';
@@ -346,6 +557,7 @@ function buildLifetimeDiscountEmailBody(array $order, array $user, string $cabin
     $unsubEsc      = htmlspecialchars($unsubscribeUrl, ENT_QUOTES, 'UTF-8');
 
     $btn = "<a href=\"{$cabinetUrlEsc}\" style=\"display:inline-block;background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;box-shadow:0 4px 14px rgba(34,197,94,0.3);\">Перейти в кабинет</a>";
+    $courseBlock = renderCourseRecommendationBlock($reco['pp'] ?? null, $reco['kpk'] ?? null);
 
     $content = <<<HTML
         <p style="margin:0 0 18px 0;font-size:16px;">{$greet}</p>
@@ -357,6 +569,7 @@ function buildLifetimeDiscountEmailBody(array $order, array $user, string $cabin
         <p style="margin:0 0 22px 0;color:#5a5f6b;">Скидка применяется автоматически при оформлении следующих заказов в личном кабинете.</p>
         <div style="text-align:center;margin:28px 0;">{$btn}</div>
         <p style="margin:0;color:#5a5f6b;font-size:13px;">Ссылка действует 14 дней и автоматически авторизует вас на сайте.</p>
+        {$courseBlock}
         <p style="margin:24px 0 0 0;font-size:12px;color:#9aa0ad;text-align:center;">Если вы не хотите получать такие уведомления — <a href="{$unsubEsc}" style="color:#9aa0ad;text-decoration:underline;">отписаться</a>.</p>
 HTML;
 

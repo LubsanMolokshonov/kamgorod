@@ -3,6 +3,11 @@
 require_once __DIR__ . '/session.php';
 initSession();
 
+// A/B-тест моделей оплаты: резолвим вариант ДО любого вывода (нужно для setcookie).
+require_once __DIR__ . '/../classes/PricingMode.php';
+$pricingVariant = PricingMode::getVariant();   // 'A' | 'B'
+$pricingLabel   = PricingMode::label();        // 'control' | 'subscription'
+
 // Флаг редизайн-страницы: если true, к <body> добавляется класс rd-page
 // (включает типографику и сбросы редизайна). По умолчанию false — чтобы
 // легаси-страницы сохраняли свой вид и получили только новый хедер сверху.
@@ -72,6 +77,8 @@ $rdActivePage    = $rdActivePage ?? '';
             webvisor:true,
             ecommerce:"dataLayer"
        });
+       // A/B-тест моделей оплаты: помечаем визит вариантом для сегментации отчётов.
+       ym(106465857, 'params', { pricing_ab: <?php echo json_encode($pricingLabel, JSON_UNESCAPED_UNICODE); ?> });
     </script>
     <noscript><div><img src="https://mc.yandex.ru/watch/106465857" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
     <!-- /Yandex.Metrika counter -->
@@ -171,6 +178,7 @@ $isLoggedIn = isset($_SESSION['user_email']);
           <a class="rd-sd-item" href="/materialy/katalog/"><div class="ico">🗂️</div><div><div class="t">Каталог материалов</div><div class="s">Готовые техкарты, конспекты, тесты, презентации</div></div></a>
         </div>
       </div>
+      <a class="rd-nav-link<?php echo $rdActivePage === 'podpiska' ? ' active' : ''; ?>" href="/podpiska/">Подписка</a>
       <a class="rd-nav-link<?php echo $rdActivePage === 'team' ? ' active' : ''; ?>" href="/team">Команда</a>
     </nav>
 
@@ -237,6 +245,7 @@ $isLoggedIn = isset($_SESSION['user_email']);
     <a class="rd-mm-link rd-mm-sub" href="/material-generator/">— ИИ-генератор</a>
     <a class="rd-mm-link rd-mm-sub" href="/material-adapter/">— Адаптировать материал</a>
     <a class="rd-mm-link rd-mm-sub" href="/materialy/katalog/">— Каталог материалов</a>
+    <a class="rd-mm-link" href="/podpiska/">Подписка</a>
     <a class="rd-mm-link" href="/team">Команда</a>
     <a class="rd-mm-link" href="/o-portale">О портале</a>
     <a class="rd-mm-link" href="/korzina">Корзина<?php if ($rdCartCount > 0): ?> <span class="rd-mm-badge"><?php echo $rdCartCount; ?></span><?php endif; ?></a>

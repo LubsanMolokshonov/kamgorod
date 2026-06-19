@@ -65,6 +65,11 @@ $currentAdmin = Admin::verifySession();
                     <span>Заказы</span>
                 </a>
 
+                <a href="/admin/subscriptions/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/subscriptions/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">⭐</span>
+                    <span>Подписки</span>
+                </a>
+
                 <?php
                 $newAlertsCount = 0;
                 try {
@@ -105,7 +110,7 @@ $currentAdmin = Admin::verifySession();
 
                 <a href="/admin/ab-test/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/ab-test/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">🧪</span>
-                    <span>A/B-тест корзины</span>
+                    <span>A/B-тесты</span>
                 </a>
 
                 <a href="/admin/email-tracking/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/email-tracking/') !== false ? 'active' : ''; ?>">

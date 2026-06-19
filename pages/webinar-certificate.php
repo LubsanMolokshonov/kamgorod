@@ -89,6 +89,12 @@ $webinarDate = date('d.m.Y', $webinarTime);
 $certificatePrice = $registration['certificate_price'] ?? 200;
 $certificateHours = $registration['certificate_hours'] ?? 2;
 
+// A/B-тест: в варианте B сертификат выдаётся только по подписке (не-подписчику).
+require_once __DIR__ . '/../classes/SubscriptionService.php';
+require_once __DIR__ . '/../classes/PricingMode.php';
+$pmIsSubscriber     = (new SubscriptionService($db))->coversCertificates((int)$_SESSION['user_id']);
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
+
 // Get diploma templates for certificate background selection
 $templates = $db->query(
     "SELECT * FROM diploma_templates WHERE is_active = 1 AND type = 'participant' ORDER BY display_order ASC"
@@ -194,18 +200,28 @@ include __DIR__ . '/../includes/header.php';
                                    placeholder="Должность">
                         </div>
 
-                        <div class="price-block">
-                            <span class="price-label">Стоимость сертификата:</span>
-                            <span class="price-value"><?php echo number_format($certificatePrice, 0, ',', ' '); ?> &#8381;</span>
-                        </div>
+                        <?php if ($pmSubscriptionOnly): ?>
+                            <?php
+                            $ctaHeading = 'Сертификат — по подписке';
+                            $ctaText    = 'Оформите подписку и получайте сертификаты вебинаров и другие документы для портфолио без поштучной оплаты.';
+                            $ctaButton  = 'Оформить подписку';
+                            $ctaReturn  = $_SERVER['REQUEST_URI'] ?? '/pages/cabinet.php';
+                            include __DIR__ . '/../includes/subscribe-cta.php';
+                            ?>
+                        <?php else: ?>
+                            <div class="price-block">
+                                <span class="price-label">Стоимость сертификата:</span>
+                                <span class="price-value"><?php echo number_format($certificatePrice, 0, ',', ' '); ?> &#8381;</span>
+                            </div>
 
-                        <button type="submit" class="btn btn-submit">
-                            ПЕРЕЙТИ К ОПЛАТЕ
-                        </button>
+                            <button type="submit" class="btn btn-submit">
+                                ПЕРЕЙТИ К ОПЛАТЕ
+                            </button>
 
-                        <p class="form-hint">
-                            После оплаты сертификат будет доступен<br>для скачивания в личном кабинете
-                        </p>
+                            <p class="form-hint">
+                                После оплаты сертификат будет доступен<br>для скачивания в личном кабинете
+                            </p>
+                        <?php endif; ?>
                     </form>
                 <?php endif; ?>
             </div>

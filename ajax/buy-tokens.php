@@ -25,6 +25,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/TokenPackage.php';
 require_once __DIR__ . '/../classes/MaterialTokenEmailChain.php';
+require_once __DIR__ . '/../classes/PricingMode.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -48,6 +49,18 @@ if (!$userId) {
 
 if (!validateCSRFToken($_POST['csrf'] ?? '')) {
     respond(['success' => false, 'error' => 'Сессия истекла', 'code' => 'csrf'], 403);
+}
+
+// Вариант B (subscription-only): поштучная покупка пакетов токенов запрещена — только подписка.
+// Безлимит генерации — в тарифе Про. В варианте A / control — без изменений.
+if (PricingMode::isSubscriptionOnly()) {
+    respond([
+        'success'              => false,
+        'requires_subscription' => true,
+        'redirect_url'         => '/podpiska/',
+        'error'                => 'Токены входят в подписку: тариф Про даёт безлимит генерации.',
+        'code'                 => 'requires_subscription',
+    ]);
 }
 
 $packageId = (int)($_POST['package_id'] ?? 0);

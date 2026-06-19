@@ -23,6 +23,7 @@ require_once __DIR__ . '/../classes/Material.php';
 require_once __DIR__ . '/../classes/MaterialType.php';
 require_once __DIR__ . '/../classes/UserTokens.php';
 require_once __DIR__ . '/../classes/MaterialGenerator.php';
+require_once __DIR__ . '/../classes/SubscriptionService.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/installment-helper.php';
 require_once __DIR__ . '/../includes/text-helper.php';
@@ -174,6 +175,8 @@ if ($activeTab === 'materials') {
     $materialTypeObj = new MaterialType($db);
     // Идемпотентный стартовый бонус — на случай, если юзер не заходил ещё в генератор
     $tokensObj->grantSignupBonusIfNeeded((int)$_SESSION['user_id']);
+    // Месячный грант токенов подписчику Базового тарифа (до чтения баланса).
+    (new SubscriptionService($db))->grantMonthlyTokensIfDue((int)$_SESSION['user_id']);
     $materialsData = [
         'list'        => $materialObj->getByUser((int)$_SESSION['user_id']),
         'balance'     => $tokensObj->getRecord((int)$_SESSION['user_id']),
@@ -256,6 +259,17 @@ foreach ($userOlympiadResults as $o) {
 usort($allEvents, fn($a, $b) => strtotime($b['_sort_date']) - strtotime($a['_sort_date']));
 
 // Page metadata
+// Статус подписки для сайдбара кабинета
+$cabSub = isset($_SESSION['user_id'])
+    ? (new SubscriptionService($db))->getActiveSubscription((int)$_SESSION['user_id'])
+    : null;
+
+// A/B-тест: в варианте B документы оформляются только по подписке (для не-подписчика).
+require_once __DIR__ . '/../classes/PricingMode.php';
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$cabSub;
+$pmCertHref  = $pmSubscriptionOnly ? '/podpiska/' : null; // null = обычная ссылка на страницу документа
+$pmCertLabel = 'Получить по подписке';
+
 $pageTitle = 'Личный кабинет | ' . SITE_NAME;
 $pageDescription = 'Ваши регистрации и дипломы';
 $additionalCSS = [
@@ -310,6 +324,30 @@ include __DIR__ . '/../includes/header.php';
                         <span>На конкурсы, олимпиады, вебинары и публикации. <?php echo (int)round($loyaltyRates['course'] * 100); ?>% на курсы. Применяется автоматически.</span>
                     </div>
                 </div>
+            <?php endif; ?>
+
+            <?php if ($cabSub): ?>
+                <div class="loyalty-badge" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff);border:1px solid #ddd6fe;">
+                    <div class="loyalty-badge-icon">⭐</div>
+                    <div class="loyalty-badge-body">
+                        <strong>Подписка «<?php echo htmlspecialchars($cabSub['plan_name']); ?>»</strong>
+                        <span>
+                            Активна до <?php echo htmlspecialchars(date('d.m.Y', strtotime($cabSub['expires_at']))); ?>.
+                            <?php if ($cabSub['monthly_generation_tokens'] === null): ?>Безлимит генератора ФОП.<?php endif; ?>
+                            <?php if ((int)$cabSub['course_discount_percent'] > 0): ?> Скидка <?php echo (int)$cabSub['course_discount_percent']; ?>% на курсы.<?php endif; ?>
+                            Дипломы и сертификаты — без доплат.
+                        </span>
+                        <a href="/podpiska/" style="display:inline-block;margin-top:6px;font-weight:600;color:#6c5ce7;">Продлить →</a>
+                    </div>
+                </div>
+            <?php else: ?>
+                <a href="/podpiska/" class="loyalty-badge" style="text-decoration:none;background:#f7f8ff;border:1px dashed #c7caff;">
+                    <div class="loyalty-badge-icon">⭐</div>
+                    <div class="loyalty-badge-body">
+                        <strong>Оформить подписку</strong>
+                        <span>Все дипломы и сертификаты для портфолио без доплат + генератор материалов ФОП.</span>
+                    </div>
+                </a>
             <?php endif; ?>
 
             <nav class="cabinet-tabs">
@@ -923,9 +961,9 @@ include __DIR__ . '/../includes/header.php';
                                                     Скачать сертификат
                                                 </a>
                                             <?php elseif ($autowebinarQuizPassed): ?>
-                                                <a href="/pages/webinar-certificate.php?registration_id=<?php echo $webinar['id']; ?>"
+                                                <a href="<?php echo $pmCertHref ?? ('/pages/webinar-certificate.php?registration_id=' . $webinar['id']); ?>"
                                                    class="btn btn-primary">
-                                                    Получить сертификат (<?php echo number_format($certificatePrice, 0, ',', ' '); ?> ₽)
+                                                    <?php if ($pmSubscriptionOnly): ?><?php echo $pmCertLabel; ?><?php else: ?>Получить сертификат (<?php echo number_format($certificatePrice, 0, ',', ' '); ?> ₽)<?php endif; ?>
                                                 </a>
                                             <?php else: ?>
                                                 <span class="btn" style="background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; cursor: default; font-size: 13px;">
@@ -941,9 +979,9 @@ include __DIR__ . '/../includes/header.php';
                                                     Скачать сертификат
                                                 </a>
                                             <?php else: ?>
-                                                <a href="/pages/webinar-certificate.php?registration_id=<?php echo $webinar['id']; ?>"
+                                                <a href="<?php echo $pmCertHref ?? ('/pages/webinar-certificate.php?registration_id=' . $webinar['id']); ?>"
                                                    class="btn btn-primary">
-                                                    Получить сертификат (<?php echo number_format($certificatePrice, 0, ',', ' '); ?> ₽)
+                                                    <?php if ($pmSubscriptionOnly): ?><?php echo $pmCertLabel; ?><?php else: ?>Получить сертификат (<?php echo number_format($certificatePrice, 0, ',', ' '); ?> ₽)<?php endif; ?>
                                                 </a>
                                             <?php endif; ?>
                                         <?php endif; ?>

@@ -17,7 +17,14 @@ require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../classes/ParticipantGroup.php';
 require_once __DIR__ . '/../includes/group-pricing.php';
+require_once __DIR__ . '/../classes/SubscriptionService.php';
+require_once __DIR__ . '/../classes/PricingMode.php';
 require_once __DIR__ . '/../includes/session.php';
+
+// A/B-тест: в варианте B документы оформляются только по подписке.
+$pmCartUserId      = $_SESSION['user_id'] ?? null;
+$pmIsSubscriber    = $pmCartUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmCartUserId) : false;
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
 
 // Check if cart exists
 $registrations = getCart();
@@ -409,15 +416,25 @@ include __DIR__ . '/../includes/header.php';
 
             <!-- Payment Button -->
             <div class="payment-section">
-                <form action="/ajax/create-payment.php" method="POST" id="paymentForm">
-                    <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                    <button type="submit" class="btn btn-danger payment-btn">
-                        Перейти к оплате (<?php echo number_format($grandTotal, 0, ',', ' '); ?> ₽)
-                    </button>
-                </form>
-                <p style="margin-top: 16px; color: var(--text-medium); font-size: 14px;">
-                    Оплата через ЮКасса • Банковские карты, электронные кошельки, СБП
-                </p>
+                <?php if ($pmSubscriptionOnly): ?>
+                    <?php
+                    $ctaHeading = 'Получите эти документы по подписке';
+                    $ctaText    = 'Подписка покрывает все дипломы, сертификаты и свидетельства из корзины без поштучной оплаты — оформите её и заберите документы бесплатно.';
+                    $ctaButton  = 'Оформить подписку';
+                    $ctaReturn  = '/korzina/';
+                    include __DIR__ . '/../includes/subscribe-cta.php';
+                    ?>
+                <?php else: ?>
+                    <form action="/ajax/create-payment.php" method="POST" id="paymentForm">
+                        <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                        <button type="submit" class="btn btn-danger payment-btn">
+                            Перейти к оплате (<?php echo number_format($grandTotal, 0, ',', ' '); ?> ₽)
+                        </button>
+                    </form>
+                    <p style="margin-top: 16px; color: var(--text-medium); font-size: 14px;">
+                        Оплата через ЮКасса • Банковские карты, электронные кошельки, СБП
+                    </p>
+                <?php endif; ?>
             </div>
 
             <!-- Info Block -->
@@ -470,6 +487,11 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => response.json())
             .then(data => {
+                if (data.requires_subscription && data.redirect_url) {
+                    // Вариант B: поштучная оплата запрещена — ведём на подписку.
+                    window.location.href = data.redirect_url;
+                    return;
+                }
                 if (data.success && data.redirect_url) {
                     // Запоминаем заказ для ecommerce-replay: если пользователь не вернётся
                     // на /pages/payment-success.php (закрыл вкладку Yookassa, оплатил с

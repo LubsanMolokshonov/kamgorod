@@ -87,7 +87,15 @@ try {
     $discountAmount = 0;
     $finalPrice = $price;
 
-    if ($courseObj->isDiscountEligible($enrollment)) {
+    // Скидка на курсы для подписчиков (Про, 25%) — высший приоритет, выгоднее всех прочих.
+    require_once __DIR__ . '/../classes/SubscriptionService.php';
+    $subCourseDiscount = (new SubscriptionService($db))->getCourseDiscountPercent((int)$userId);
+    if ($subCourseDiscount > 0) {
+        $discountAmount = round($price * $subCourseDiscount / 100, 2);
+        $finalPrice = $price - $discountAmount;
+    }
+
+    if (!$discountAmount && $courseObj->isDiscountEligible($enrollment)) {
         $discountAmount = round($price * 0.10, 2);
         $finalPrice = $price - $discountAmount;
     }

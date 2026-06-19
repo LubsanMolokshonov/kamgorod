@@ -21,6 +21,8 @@ $balance = null;
 if ($userId) {
     $tokens = new UserTokens($db);
     $tokens->grantSignupBonusIfNeeded((int)$userId);
+    require_once __DIR__ . '/../classes/SubscriptionService.php';
+    (new SubscriptionService($db))->grantMonthlyTokensIfDue((int)$userId);
     $balance = $tokens->getBalance((int)$userId);
 }
 $cost = MaterialAdapter::tokenCost();

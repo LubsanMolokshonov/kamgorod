@@ -476,6 +476,10 @@ include __DIR__ . '/../includes/header.php';
             if ($courseAbVariant && $courseAbVariant !== 'A') {
                 $couponParts[] = 'ab-цена-' . $courseAbVariant;
             }
+            // A/B-тест моделей оплаты: метим выручку вариантом (control/subscription).
+            if (PricingMode::isActive()) {
+                $couponParts[] = 'pm-' . PricingMode::label();
+            }
             $couponString = implode(',', $couponParts);
             ?>
             <script>
@@ -512,7 +516,8 @@ include __DIR__ . '/../includes/header.php';
             if (typeof ym === 'function') {
                 ym(106465857, 'reachGoal', 'payment_success', {
                     order_price: <?= $orderTotalJs ?>,
-                    order_id: '<?= $orderNumberJs ?>'
+                    order_id: '<?= $orderNumberJs ?>',
+                    pricing_ab: '<?= htmlspecialchars(PricingMode::label(), ENT_QUOTES) ?>'
                 });
                 <?php if (!empty($hasCourseItems)): ?>
                 ym(106465857, 'reachGoal', 'oplatakursa', {order_price: <?= $courseTotalAmount ?>});

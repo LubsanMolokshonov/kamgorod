@@ -39,6 +39,8 @@
       <a href="/kursy/povyshenie-kvalifikatsii/">Повышение квалификации</a>
       <a href="/kursy/perepodgotovka/">Профессиональная переподготовка</a>
       <a href="/kursy/">Все курсы</a>
+      <h5 style="margin-top:24px;">Подписка</h5>
+      <a href="/podpiska/">Тарифы для педагога</a>
     </div>
 
     <div>

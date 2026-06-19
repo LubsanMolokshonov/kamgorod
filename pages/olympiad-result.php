@@ -39,6 +39,15 @@ $olympiadId = $result['olympiad_id'];
 $fullName = $result['full_name'];
 $diplomaPrice = $result['diploma_price'] ?? 229;
 
+// A/B-тест: в варианте B диплом олимпиады оформляется только по подписке (не-подписчику).
+require_once __DIR__ . '/../classes/SubscriptionService.php';
+require_once __DIR__ . '/../classes/PricingMode.php';
+$pmOlympUserId      = $_SESSION['user_id'] ?? null;
+$pmIsSubscriber     = $pmOlympUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmOlympUserId) : false;
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
+$diplomaCartLabel   = $pmSubscriptionOnly ? 'Получить диплом по подписке' : ('Добавить диплом в корзину за ' . intval($diplomaPrice) . ' ₽');
+$diplomaCtaLabel    = $pmSubscriptionOnly ? 'Получить диплом по подписке' : ('Оформить диплом за ' . intval($diplomaPrice) . ' ₽');
+
 // Кросс-сейл «2+1»: родственные олимпиады (та же аудитория/предмет).
 // Показываем только тем, кто заработал диплом (есть мотивация добрать до 3).
 $relatedOlympiads = [];
@@ -887,7 +896,7 @@ include __DIR__ . '/../includes/header.php';
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M9 12L11 14L15 10M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        <span>Добавить диплом в корзину за <?php echo intval($diplomaPrice); ?> ₽</span>
+                        <span><?php echo htmlspecialchars($diplomaCartLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                     </button>
                     <div style="margin-top: 10px; text-align: center;">
                         <a href="/olimpiada-diplom/<?php echo $resultId; ?>" class="olympiad-quickform-edit">
@@ -964,11 +973,11 @@ include __DIR__ . '/../includes/header.php';
 <div class="olympiad-sticky-cta" aria-hidden="true">
     <?php if ($canQuickCheckout): ?>
         <a href="#olympiad-quickform" class="olympiad-cta-primary" id="olympiadStickyCta">
-            Оформить диплом за <?php echo intval($diplomaPrice); ?> ₽
+            <?php echo htmlspecialchars($diplomaCtaLabel, ENT_QUOTES, 'UTF-8'); ?>
         </a>
     <?php else: ?>
-        <a href="/olimpiada-diplom/<?php echo $resultId; ?>" class="olympiad-cta-primary">
-            Оформить диплом за <?php echo intval($diplomaPrice); ?> ₽
+        <a href="<?php echo $pmSubscriptionOnly ? '/podpiska/' : '/olimpiada-diplom/' . $resultId; ?>" class="olympiad-cta-primary">
+            <?php echo htmlspecialchars($diplomaCtaLabel, ENT_QUOTES, 'UTF-8'); ?>
         </a>
     <?php endif; ?>
 </div>

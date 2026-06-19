@@ -28,6 +28,14 @@ $packages = (new TokenPackage($db))->getActive();
 
 // Идемпотентный стартовый бонус — на случай если пользователь до этого не заходил в генератор
 $tokens->grantSignupBonusIfNeeded((int)$userId);
+// Месячный грант токенов подписчику Базового тарифа (идемпотентно по слоту периода).
+require_once __DIR__ . '/../classes/SubscriptionService.php';
+require_once __DIR__ . '/../classes/PricingMode.php';
+$pmSubSvc = new SubscriptionService($db);
+$pmSubSvc->grantMonthlyTokensIfDue((int)$userId);
+// A/B-тест: в варианте B пакеты токенов поштучно не продаются — только подписка (Про = безлимит).
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly();
+$pmHasUnlimited     = $pmSubSvc->hasUnlimitedGenerations((int)$userId);
 
 $record = $tokens->getRecord((int)$userId);
 $history = $tokens->getHistory((int)$userId, 50);
@@ -146,6 +154,19 @@ include __DIR__ . '/../includes/header-redesign.php';
         Действует до <?= htmlspecialchars($discountDeadline, ENT_QUOTES, 'UTF-8') ?> — применяется автоматически при оплате.
       </div>
     <?php endif; ?>
+    <?php if ($pmSubscriptionOnly && $pmHasUnlimited): ?>
+      <div class="mat-notice" style="background:#eafbf0;border-color:#b7ecc8;color:#13703a;margin-top:16px;">
+        <strong>У вас тариф «Про» — безлимит генерации.</strong> Токены докупать не нужно.
+      </div>
+    <?php elseif ($pmSubscriptionOnly): ?>
+      <?php
+      $ctaHeading = 'Генерируйте без лимита по подписке';
+      $ctaText    = 'Тариф «Про» даёт безлимит генерации материалов ФОП — без покупки пакетов токенов.';
+      $ctaButton  = 'Смотреть тарифы';
+      $ctaReturn  = '/pages/material-balance.php';
+      include __DIR__ . '/../includes/subscribe-cta.php';
+      ?>
+    <?php else: ?>
     <div class="mat-packs" style="margin-top:16px;">
       <?php foreach ($packages as $i => $p):
           $totalTokens = (int)$p['tokens'] + (int)$p['bonus_tokens'];
@@ -182,6 +203,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         </div>
       <?php endforeach; ?>
     </div>
+    <?php endif; ?>
 
     <h2 class="rd-section-title" style="font-size:24px;margin-top:40px;">История транзакций</h2>
     <?php if (empty($history)): ?>
@@ -239,6 +261,10 @@ include __DIR__ . '/../includes/header-redesign.php';
                 .then(function (res) {
                     if (res.success && res.confirmation_url) {
                         window.location.href = res.confirmation_url;
+                        return;
+                    }
+                    if (res.requires_subscription && res.redirect_url) {
+                        window.location.href = res.redirect_url;
                         return;
                     }
                     alert(res.error || 'Не удалось создать платёж');
