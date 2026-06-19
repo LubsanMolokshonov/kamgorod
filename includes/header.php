@@ -191,7 +191,7 @@ $isLoggedIn = isset($_SESSION['user_email']);
         </label>
         <div class="rd-search-dd" id="rdSearchDd">
           <div class="rd-search-dd-section">Быстрые переходы</div>
-          <a class="rd-sd-item" href="/konkursy"><div class="ico">🏆</div><div><div class="t">Конкурсы для педагогов</div><div class="s">Официальные дипломы · от 169 ₽</div></div></a>
+          <a class="rd-sd-item" href="/konkursy"><div class="ico">🏆</div><div><div class="t">Конкурсы для педагогов</div><div class="s">Официальные дипломы<?php echo PricingMode::isSubscriptionOnly() ? ' · по подписке' : ' · от 169 ₽'; ?></div></div></a>
           <a class="rd-sd-item" href="/olimpiady"><div class="ico">🎓</div><div><div class="t">Всероссийские олимпиады</div><div class="s">Бесплатно · диплом за 30 сек.</div></div></a>
           <a class="rd-sd-item" href="/kursy"><div class="ico">📚</div><div><div class="t">Курсы повышения квалификации</div><div class="s">КПК и переподготовка · с удостоверением</div></div></a>
           <a class="rd-sd-item" href="/opublikovat"><div class="ico">📝</div><div><div class="t">Опубликовать статью</div><div class="s">Свидетельство о публикации</div></div></a>

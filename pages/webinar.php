@@ -47,6 +47,13 @@ $isUpcoming    = in_array($webinar['status'], ['scheduled', 'live']);
 $isAutowebinar = $webinar['status'] === 'videolecture';
 $isFree        = !empty($webinar['is_free']);
 
+// A/B-тест: в варианте B (не-подписчик) цены сертификата нет — он доступен только по подписке.
+require_once __DIR__ . '/../classes/PricingMode.php';
+require_once __DIR__ . '/../classes/SubscriptionService.php';
+$pmUserId = $_SESSION['user_id'] ?? null;
+$pmIsSubscriber = $pmUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmUserId) : false;
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
+
 $pageTitle       = ($webinar['meta_title'] ?: 'Вебинар: ' . $webinar['title']) . ' | ' . SITE_NAME;
 $pageDescription = $webinar['meta_description'] ?: $webinar['short_description'];
 $canonicalUrl    = SITE_URL . '/vebinar/' . $webinar['slug'] . '/';
@@ -77,7 +84,7 @@ $faqItems = [
     ['q' => 'Как получить ссылку на ' . ($isAutowebinar ? 'видеолекцию' : 'вебинар') . '?',
      'a' => 'После регистрации ссылка придёт на email. ' . ($isAutowebinar ? 'Доступ — сразу.' : 'За 24 часа и за час до эфира пришлём напоминания.')],
     ['q' => 'Участие платное?',
-     'a' => 'Нет, участие бесплатное. Платный — только именной сертификат участника (' . number_format((float)$webinar['certificate_price'], 0, ',', ' ') . ' ₽).'],
+     'a' => 'Нет, участие бесплатное. ' . ($pmSubscriptionOnly ? 'Именной сертификат участника для портфолио оформляется по подписке — без поштучной оплаты.' : ('Платный — только именной сертификат участника (' . number_format((float)$webinar['certificate_price'], 0, ',', ' ') . ' ₽).'))],
     ['q' => 'Будет ли запись?',
      'a' => 'Да, после эфира пришлём ссылку на запись и презентацию спикера.'],
     ['q' => 'Как получить сертификат?',
@@ -143,7 +150,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <a href="#registration-form" class="rd-btn rd-btn-primary"><?php echo $isAutowebinar ? 'Получить доступ' : 'Зарегистрироваться'; ?>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
-        <span style="font-size:13px;color:var(--ink-500);">Бесплатное участие · Сертификат от <?php echo number_format((float)($webinar['certificate_price'] ?? 200), 0, ',', ' '); ?> ₽</span>
+        <span style="font-size:13px;color:var(--ink-500);">Бесплатное участие · Сертификат <?php echo $pmSubscriptionOnly ? 'по подписке' : ('от ' . number_format((float)($webinar['certificate_price'] ?? 200), 0, ',', ' ') . ' ₽'); ?></span>
       </div>
     </div>
 
@@ -220,7 +227,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <div class="sb-card">
           <h3>Сертификат</h3>
           <p style="margin:6px 0 0;color:var(--ink-600);font-size:14px;">Именной сертификат участника на <?php echo (int)$webinar['certificate_hours']; ?> ак. ч. для портфолио.</p>
-          <div class="price"><?php echo number_format((float)$webinar['certificate_price'], 0, ',', ' '); ?> ₽</div>
+          <div class="price"><?php echo $pmSubscriptionOnly ? 'По подписке' : (number_format((float)$webinar['certificate_price'], 0, ',', ' ') . ' ₽'); ?></div>
         </div>
       </aside>
     </div>

@@ -10,6 +10,13 @@ require_once __DIR__ . '/includes/url-helper.php';
 require_once __DIR__ . '/includes/seo-url.php';
 require_once __DIR__ . '/includes/catalog-meta.php';
 
+// A/B-тест: в варианте B (не-подписчик) цены в каталоге скрыты — дипломы доступны только по подписке.
+require_once __DIR__ . '/classes/PricingMode.php';
+require_once __DIR__ . '/classes/SubscriptionService.php';
+$pmUserId = $_SESSION['user_id'] ?? null;
+$pmIsSubscriber = $pmUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmUserId) : false;
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
+
 // Маппинг cc (URL slug) → category (internal key) для SEO URL из .htaccess
 if (isset($_GET['cc'])) {
     $ccMap = defined('COMPETITION_CATEGORY_URL_REVERSE') ? COMPETITION_CATEGORY_URL_REVERSE : [];
@@ -251,7 +258,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать конкурс
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
-        <span style="font-size:13px;color:var(--ink-500);">от 169 ₽ · оплата ЮКассой</span>
+        <span style="font-size:13px;color:var(--ink-500);"><?php echo $pmSubscriptionOnly ? 'Дипломы для портфолио — по подписке' : 'от 169 ₽ · оплата ЮКассой'; ?></span>
       </div>
     </div>
 
@@ -422,7 +429,7 @@ include __DIR__ . '/includes/header-redesign.php';
                   <?php echo htmlspecialchars(mb_substr(strip_tags($competition['description']), 0, 120), ENT_QUOTES, 'UTF-8'); ?>…
                 </div>
                 <div class="rd-card-foot">
-                  <div class="rd-price-now"><?php echo number_format($competition['price'], 0, ',', ' '); ?> ₽</div>
+                  <div class="rd-price-now"><?php echo $pmSubscriptionOnly ? 'По подписке' : (number_format($competition['price'], 0, ',', ' ') . ' ₽'); ?></div>
                   <span class="rd-join-btn">Участвовать</span>
                 </div>
               </a>
@@ -557,6 +564,7 @@ window.dataLayer.push({
 <script>
 var allCompetitionsData = <?php echo json_encode($allCompetitionsJs, JSON_UNESCAPED_UNICODE); ?>;
 var competitionsPerPage = <?php echo $perPage; ?>;
+var pmSubscriptionOnly = <?php echo $pmSubscriptionOnly ? 'true' : 'false'; ?>;
 
 function _compFmtPrice(num) { return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
 function _compEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
@@ -568,7 +576,7 @@ function renderCompetitionCard(c) {
         '<h4>' + _compEsc(c.title) + '</h4>' +
         '<div class="rd-card-meta">' + _compEsc(desc) + '</div>' +
         '<div class="rd-card-foot">' +
-          '<div class="rd-price-now">' + _compFmtPrice(Math.round(c.price)) + ' ₽</div>' +
+          '<div class="rd-price-now">' + (pmSubscriptionOnly ? 'По подписке' : (_compFmtPrice(Math.round(c.price)) + ' ₽')) + '</div>' +
           '<span class="rd-join-btn">Участвовать</span>' +
         '</div>' +
       '</a>';

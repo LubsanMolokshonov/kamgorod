@@ -272,6 +272,7 @@ include __DIR__ . '/../includes/header.php';
                 </a>
             </div>
         <?php else: ?>
+            <?php if (!$pmSubscriptionOnly): ?>
             <!-- Promotion Banner -->
             <?php if ($promotionApplied): ?>
                 <div class="promotion-banner">
@@ -317,6 +318,7 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
             <?php endif; ?>
+            <?php endif; // !$pmSubscriptionOnly — скидочные баннеры неактуальны в варианте B ?>
 
             <!-- All Cart Items -->
             <div class="cart-items">
@@ -330,7 +332,9 @@ include __DIR__ . '/../includes/header.php';
                         </div>
 
                         <div class="item-price">
-                            <?php if ($item['is_free']): ?>
+                            <?php if ($pmSubscriptionOnly): ?>
+                                <span class="sub-included">Входит в подписку&nbsp;✓</span>
+                            <?php elseif ($item['is_free']): ?>
                                 <span class="original-price"><?php echo number_format($item['price'], 0, ',', ' '); ?> ₽</span>
                                 <span class="free-label">БЕСПЛАТНО</span>
                             <?php else: ?>
@@ -373,6 +377,7 @@ include __DIR__ . '/../includes/header.php';
                 </a>
             </div>
 
+            <?php if (!$pmSubscriptionOnly): ?>
             <!-- Price Summary -->
             <div class="price-summary">
                 <div class="summary-row">
@@ -413,16 +418,15 @@ include __DIR__ . '/../includes/header.php';
                     <span><?php echo number_format($grandTotal, 0, ',', ' '); ?> ₽</span>
                 </div>
             </div>
+            <?php endif; // !$pmSubscriptionOnly — итоговая сумма скрыта в варианте B ?>
 
             <!-- Payment Button -->
             <div class="payment-section">
                 <?php if ($pmSubscriptionOnly): ?>
                     <?php
-                    $ctaHeading = 'Получите эти документы по подписке';
-                    $ctaText    = 'Подписка покрывает все дипломы, сертификаты и свидетельства из корзины без поштучной оплаты — оформите её и заберите документы бесплатно.';
-                    $ctaButton  = 'Оформить подписку';
-                    $ctaReturn  = '/korzina/';
-                    include __DIR__ . '/../includes/subscribe-cta.php';
+                    $plansHeading = 'Оформите подписку — и заберите все документы из корзины';
+                    $plansIntro   = 'Подписка покрывает все дипломы, сертификаты и свидетельства для портфолио без поштучной оплаты. В корзине сейчас: ' . count($allItems) . '. Документы станут доступны сразу после оформления подписки — выберите тариф:';
+                    include __DIR__ . '/../includes/subscription-plans.php';
                     ?>
                 <?php else: ?>
                     <form action="/ajax/create-payment.php" method="POST" id="paymentForm">
@@ -438,13 +442,14 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
             <!-- Info Block -->
+            <?php $afterPay = $pmSubscriptionOnly ? 'оформления подписки' : 'оплаты'; ?>
             <div style="margin-top: 40px; padding: 24px; background: var(--bg-light); border-radius: 16px;">
                 <h3 style="color: var(--primary-purple); margin-bottom: 16px;">Что дальше?</h3>
                 <ol style="padding-left: 20px; color: var(--text-medium);">
-                    <li style="margin-bottom: 8px;">После оплаты вы автоматически попадете в личный кабинет</li>
-                    <li style="margin-bottom: 8px;">Дипломы и свидетельства будут доступны для скачивания сразу после оплаты</li>
+                    <li style="margin-bottom: 8px;">После <?php echo $afterPay; ?> вы автоматически попадете в личный кабинет</li>
+                    <li style="margin-bottom: 8px;">Дипломы и свидетельства будут доступны для скачивания сразу после <?php echo $afterPay; ?></li>
                     <li style="margin-bottom: 8px;">Документы предоставляются в формате PDF высокого качества</li>
-                    <li>На ваш email придет подтверждение оплаты</li>
+                    <li>На ваш email придет подтверждение <?php echo $afterPay; ?></li>
                 </ol>
             </div>
         <?php endif; ?>

@@ -156,6 +156,18 @@
     margin-top: 4px;
 }
 
+/* Вариант B A/B-теста: вместо цены позиции — бейдж «входит в подписку» */
+.sub-included {
+    display: inline-block;
+    background: #f0eefc;
+    color: #6c5ce7;
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 .remove-btn {
     background: transparent;
     border: none;

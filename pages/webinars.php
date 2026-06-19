@@ -179,10 +179,17 @@ $additionalCSS = [
 $additionalJS = ["/assets/js/audience-filter.js?v=" . filemtime(__DIR__ . "/../assets/js/audience-filter.js")];
 $earlyHeadScripts = ['<script>' . file_get_contents(__DIR__ . '/../assets/js/catalog-scroll.js') . '</script>'];
 
+// A/B-тест: в варианте B (не-подписчик) цены сертификата в каталоге скрыты — только по подписке.
+require_once __DIR__ . "/../classes/PricingMode.php";
+require_once __DIR__ . "/../classes/SubscriptionService.php";
+$pmUserId = $_SESSION['user_id'] ?? null;
+$pmIsSubscriber = $pmUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmUserId) : false;
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
+
 // FAQ-блок + микроразметка Schema.org/FAQPage
 require_once __DIR__ . "/../includes/faq-helper.php";
 $faqItems = [
-    ['q' => 'Участие в вебинаре платное?', 'a' => 'Нет, участие в эфирах и видеолекциях бесплатное. Платный — только именной сертификат участника (от 200 ₽).'],
+    ['q' => 'Участие в вебинаре платное?', 'a' => 'Нет, участие в эфирах и видеолекциях бесплатное. ' . ($pmSubscriptionOnly ? 'Именной сертификат участника для портфолио оформляется по подписке — без поштучной оплаты.' : 'Платный — только именной сертификат участника (от 200 ₽).')],
     ['q' => 'Как получить ссылку на трансляцию?', 'a' => 'После регистрации ссылка на эфир придёт на email. За сутки и за час до начала отправим напоминание.'],
     ['q' => 'Будет ли запись?', 'a' => 'Да. После эфира мы пришлём ссылку на запись и презентацию спикера. Видеолекции изначально доступны 24/7.'],
     ['q' => 'Чем отличается вебинар от видеолекции?', 'a' => 'Вебинар — это прямой эфир в назначенное время с возможностью задать вопрос спикеру. Видеолекция — готовая запись, которую можно смотреть в любое время.'],
@@ -222,7 +229,7 @@ include __DIR__ . "/../includes/header-redesign.php";
         <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать вебинар
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
-        <span style="font-size:13px;color:var(--ink-500);">Бесплатно · Сертификат от 200 ₽</span>
+        <span style="font-size:13px;color:var(--ink-500);"><?php echo $pmSubscriptionOnly ? 'Бесплатно · Сертификат по подписке' : 'Бесплатно · Сертификат от 200 ₽'; ?></span>
       </div>
     </div>
 

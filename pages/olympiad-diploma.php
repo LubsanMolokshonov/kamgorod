@@ -77,6 +77,12 @@ $placementLabel = $placementLabels[$result['placement']] ?? $result['placement']
 // Diploma price (from olympiad or fallback)
 $diplomaPrice = (int)($result['diploma_price'] ?? 229);
 
+// A/B-тест: в варианте B (не-подписчик) диплом оформляется только по подписке.
+require_once __DIR__ . '/../classes/SubscriptionService.php';
+require_once __DIR__ . '/../classes/PricingMode.php';
+$pmIsSubscriber     = (new SubscriptionService($db))->coversCertificates((int)$userId);
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
+
 // CSRF token
 $csrfToken = generateCSRFToken();
 
@@ -263,9 +269,19 @@ include __DIR__ . '/../includes/header.php';
                         </div>
 
                         <!-- Submit -->
+                        <?php if ($pmSubscriptionOnly): ?>
+                            <?php
+                            $ctaHeading = 'Диплом — по подписке';
+                            $ctaText    = 'Оформите подписку и получайте дипломы олимпиад и другие документы для портфолио без поштучной оплаты.';
+                            $ctaButton  = 'Оформить подписку';
+                            $ctaReturn  = $_SERVER['REQUEST_URI'] ?? '/pages/cabinet.php';
+                            include __DIR__ . '/../includes/subscribe-cta.php';
+                            ?>
+                        <?php else: ?>
                         <button type="submit" class="btn btn-submit">
                             ОФОРМИТЬ ДИПЛОМ ЗА <?php echo $diplomaPrice; ?> РУБ
                         </button>
+                        <?php endif; ?>
                     </div>
 
                     <!-- ===== Supervisor tab ===== -->
@@ -335,9 +351,19 @@ include __DIR__ . '/../includes/header.php';
                             <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
+                        <?php if ($pmSubscriptionOnly): ?>
+                            <?php
+                            $ctaHeading = 'Диплом — по подписке';
+                            $ctaText    = 'Оформите подписку и получайте дипломы олимпиад и другие документы для портфолио без поштучной оплаты.';
+                            $ctaButton  = 'Оформить подписку';
+                            $ctaReturn  = $_SERVER['REQUEST_URI'] ?? '/pages/cabinet.php';
+                            include __DIR__ . '/../includes/subscribe-cta.php';
+                            ?>
+                        <?php else: ?>
                         <button type="submit" class="btn btn-submit">
                             ОФОРМИТЬ ДИПЛОМ ЗА <?php echo $diplomaPrice; ?> РУБ
                         </button>
+                        <?php endif; ?>
                     </div>
                 </form>
             </div>

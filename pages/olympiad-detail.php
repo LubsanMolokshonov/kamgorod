@@ -45,6 +45,13 @@ $audienceLabel = Olympiad::getAudienceLabel($olympiad['target_audience']);
 $diplomaPrice  = (int)($olympiad['diploma_price'] ?? 229);
 $academicYear  = $olympiad['academic_year'] ?? '2025-2026';
 
+// A/B-тест: в варианте B (не-подписчик) цены диплома нет — он доступен только по подписке.
+require_once __DIR__ . '/../classes/PricingMode.php';
+require_once __DIR__ . '/../classes/SubscriptionService.php';
+$pmUserId = $_SESSION['user_id'] ?? null;
+$pmIsSubscriber = $pmUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmUserId) : false;
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
+
 $pageTitle       = htmlspecialchars($olympiad['title']) . ' | Олимпиады | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr($olympiad['description'], 0, 150));
 $canonicalUrl    = SITE_URL . '/olimpiady/' . $olympiad['slug'] . '/';
@@ -74,8 +81,8 @@ $groupRegistrationUrl = '/pages/group-registration.php?product_type=olympiad&pro
 require_once __DIR__ . '/../includes/faq-helper.php';
 $faqItems = [
     ['q' => 'Как проходит олимпиада?', 'a' => 'Олимпиада проходит в онлайн-формате. После регистрации вам будет предложено ответить на 10 вопросов по теме. Время прохождения не ограничено. Вы увидите свой результат сразу после завершения теста.'],
-    ['q' => 'Участие действительно бесплатное?', 'a' => 'Да, участие в олимпиаде полностью бесплатное. Оплата требуется только в том случае, если вы захотите получить именной диплом. Стоимость оформления диплома составляет ' . $diplomaPrice . ' руб.'],
-    ['q' => 'Как работает акция «2+1»?', 'a' => 'При оформлении трёх дипломов вы оплачиваете только два — третий (самый дешёвый в заказе) мы добавляем бесплатно. Акция применяется в корзине автоматически и действует на все дипломы и сертификаты вместе: олимпиады, конкурсы и вебинары можно комбинировать. Пройдите ещё две олимпиады по своим темам, и третий диплом будет бесплатным.'],
+    ['q' => 'Участие действительно бесплатное?', 'a' => 'Да, участие в олимпиаде полностью бесплатное. ' . ($pmSubscriptionOnly ? 'Именной диплом для портфолио оформляется по подписке — без поштучной оплаты.' : ('Оплата требуется только в том случае, если вы захотите получить именной диплом. Стоимость оформления диплома составляет ' . $diplomaPrice . ' руб.'))],
+    ['q' => 'Как работает акция «2+1»?', 'a' => ($pmSubscriptionOnly ? 'По подписке все дипломы для портфолио доступны без поштучной оплаты — оформляйте столько, сколько нужно, акция «2+1» не требуется.' : 'При оформлении трёх дипломов вы оплачиваете только два — третий (самый дешёвый в заказе) мы добавляем бесплатно. Акция применяется в корзине автоматически и действует на все дипломы и сертификаты вместе: олимпиады, конкурсы и вебинары можно комбинировать. Пройдите ещё две олимпиады по своим темам, и третий диплом будет бесплатным.')],
     ['q' => 'Какие вопросы в олимпиаде?', 'a' => 'Олимпиада содержит 10 вопросов в формате теста с вариантами ответов. Вопросы составлены профессиональными методистами и соответствуют тематике олимпиады.'],
     ['q' => 'Как определяется место участника?', 'a' => 'Место определяется по количеству правильных ответов: 9–10 правильных — 1 место, 8 — 2 место, 7 — 3 место. При результате менее 7 — статус участника.'],
     ['q' => 'Можно ли пройти олимпиаду повторно?', 'a' => 'Да, вы можете пройти олимпиаду повторно для улучшения результата. Каждая попытка генерирует новый набор вопросов. При оформлении диплома используется лучший из результатов.'],
@@ -269,7 +276,11 @@ include __DIR__ . '/../includes/header-redesign.php';
       <div class="rd-step">
         <div class="rd-step-n">4</div>
         <h4>Диплом</h4>
+        <?php if ($pmSubscriptionOnly): ?>
+        <p>Оформите именной диплом для портфолио — он входит в подписку, без поштучной оплаты.</p>
+        <?php else: ?>
         <p>Оформите именной диплом за <?php echo $diplomaPrice; ?>&nbsp;₽. По акции «2+1» каждый третий диплом&nbsp;— бесплатно.</p>
+        <?php endif; ?>
       </div>
     </div>
   </div>
@@ -331,8 +342,13 @@ include __DIR__ . '/../includes/header-redesign.php';
             <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21V3h5a4 4 0 0 1 0 8H6"/><path d="M6 15h8"/></svg></div>
             <h3>Стоимость диплома</h3>
           </div>
+          <?php if ($pmSubscriptionOnly): ?>
+          <div class="price-row">По подписке</div>
+          <div class="price-note">Диплом входит в подписку для портфолио</div>
+          <?php else: ?>
           <div class="price-row"><?php echo $diplomaPrice; ?> ₽</div>
           <div class="price-note">Тест — бесплатно, оплата только за оформление</div>
+          <?php endif; ?>
         </div>
       </div>
     </div>
@@ -346,7 +362,7 @@ include __DIR__ . '/../includes/header-redesign.php';
     <div class="cd-price-band reveal">
       <div class="label">Участие в олимпиаде</div>
       <div class="amount">Бесплатно</div>
-      <div class="note">Диплом за <?php echo $diplomaPrice; ?>&nbsp;₽ — оформляется по желанию после прохождения теста. По акции «2+1» при оплате двух дипломов третий&nbsp;— бесплатно. Для группы&nbsp;— скидка до&nbsp;30%.</div>
+      <div class="note"><?php if ($pmSubscriptionOnly): ?>Именной диплом для портфолио входит в подписку — оформляется по желанию после теста, без поштучной оплаты.<?php else: ?>Диплом за <?php echo $diplomaPrice; ?>&nbsp;₽ — оформляется по желанию после прохождения теста. По акции «2+1» при оплате двух дипломов третий&nbsp;— бесплатно. Для группы&nbsp;— скидка до&nbsp;30%.<?php endif; ?></div>
       <a href="<?php echo $testUrl; ?>" class="rd-btn rd-btn-primary">
         Пройти олимпиаду
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>

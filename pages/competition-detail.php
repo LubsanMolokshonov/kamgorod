@@ -113,6 +113,13 @@ $jsonLdArray = [$jsonLd, buildFaqJsonLd($faqItems)];
 include __DIR__ . '/../includes/header-redesign.php';
 
 $priceFormatted = number_format($competition['price'], 0, ',', ' ');
+
+// A/B-тест: в варианте B (не-подписчик) поштучной цены нет — диплом доступен только по подписке.
+require_once __DIR__ . '/../classes/PricingMode.php';
+require_once __DIR__ . '/../classes/SubscriptionService.php';
+$pmUserId = $_SESSION['user_id'] ?? null;
+$pmIsSubscriber = $pmUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmUserId) : false;
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
 ?>
 
 <main>
@@ -292,8 +299,13 @@ $priceFormatted = number_format($competition['price'], 0, ',', ' ');
             <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21V3h5a4 4 0 0 1 0 8H6"/><path d="M6 15h8"/></svg></div>
             <h3>Стоимость участия</h3>
           </div>
+          <?php if ($pmSubscriptionOnly): ?>
+          <div class="price-row">По подписке</div>
+          <div class="price-note">Диплом входит в подписку для портфолио — без поштучной оплаты</div>
+          <?php else: ?>
           <div class="price-row"><?php echo $priceFormatted; ?> ₽</div>
           <div class="price-note">Третий конкурс — бесплатно при оплате двух</div>
+          <?php endif; ?>
         </div>
       </div>
     </div>
@@ -305,9 +317,15 @@ $priceFormatted = number_format($competition['price'], 0, ',', ' ');
 <section class="rd-section tight">
   <div class="rd-wrap">
     <div class="cd-price-band reveal">
+      <?php if ($pmSubscriptionOnly): ?>
+      <div class="label">Оформление диплома</div>
+      <div class="amount">По подписке</div>
+      <div class="note">Диплом конкурса входит в подписку для портфолио — оформляется без поштучной оплаты.</div>
+      <?php else: ?>
       <div class="label">Стоимость участия</div>
       <div class="amount"><?php echo $priceFormatted; ?> ₽</div>
       <div class="note">При оплате двух конкурсов третий — бесплатно. Для группы — скидка до 30%.</div>
+      <?php endif; ?>
       <a href="<?php echo $registrationUrl; ?>" class="rd-btn rd-btn-primary">
         Принять участие
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
