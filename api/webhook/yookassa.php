@@ -105,7 +105,7 @@ try {
         require_once __DIR__ . '/../../classes/UserTokens.php';
         require_once __DIR__ . '/../../classes/TokenPackage.php';
 
-        if ($paymentStatus !== \YooKassa\Model\Payment\PaymentStatus::SUCCEEDED) {
+        if ($paymentStatus !== \YooKassa\Model\PaymentStatus::SUCCEEDED) {
             logWebhook('INFO', $paymentId, "Tokens payment status={$paymentStatus} — wait for SUCCEEDED", '');
             http_response_code(200);
             echo json_encode(['status' => 'tokens_waiting']);
@@ -218,7 +218,7 @@ try {
     if (($metaArray['payment_type'] ?? null) === 'subscription') {
         require_once __DIR__ . '/../../classes/SubscriptionService.php';
 
-        if ($paymentStatus !== \YooKassa\Model\Payment\PaymentStatus::SUCCEEDED) {
+        if ($paymentStatus !== \YooKassa\Model\PaymentStatus::SUCCEEDED) {
             logWebhook('INFO', $paymentId, "Subscription payment status={$paymentStatus} — wait for SUCCEEDED", '');
             http_response_code(200);
             echo json_encode(['status' => 'subscription_waiting']);
