@@ -8,6 +8,33 @@ class YmlFeedGenerator
     private Database $db;
     private string $baseUrl;
 
+    // Олимпиады, исключённые из рекламного фида olympiads-ad (по slug).
+    // Удалены из товарной мастер-кампании Яндекс.Директа по запросу (709060905).
+    private const OLYMPIAD_AD_EXCLUDED_SLUGS = [
+        'olimpiada-sovremennye-metodiki-prepodavaniya',
+        'olimpiada-informatsionnye-resursy-shkolnoy-biblioteki',
+        'olimpiada-formirovanie-chitatelskoy-gramotnosti',
+        'olimpiada-rabota-deti-narusheniya-razvitiya',
+        'olimpiada-vseobschaya-istoriya-metodika-prepodavaniya',
+        'olimpiada-vozrastnaya-psihologiya-v-obrazovanii',
+        'olimpiada-obsledovanie-zvukoproiznosheniya',
+    ];
+
+    // Олимпиады, исключённые из товарного фида olympiads (по slug).
+    // Удалены из товарной мастер-кампании Яндекс.Директа по запросу.
+    private const OLYMPIAD_EXCLUDED_SLUGS = [
+        'olimpiada-matematika-5-8-klass',
+        'olimpiada-matematika-1-4-klass',
+        'olimpiada-matematika-9-11-klass',
+        'olimpiada-obshchestvoznanie-9-11-klass',
+        'olimpiada-metody-korrektsionnoy-raboty-ovz',
+        'olimpiada-vremena-goda',
+        'olimpiada-himicheskiy-eksperiment-i-bezopasnost-v-shkole',
+        'olimpiada-metodika-prepodavaniya-fizicheskoy-kultury-v-nachalnoy-shkole',
+        'olimpiada-volshebnyy-mir-skazok',
+        'olimpiada-ekologiya-i-evolyutsiya-v-shkolnom-kurse-biologii',
+    ];
+
     // Категории для каждого типа фида
     private const COMPETITION_CATEGORIES = [
         'methodology'    => ['id' => 11, 'name' => 'Методические конкурсы'],
@@ -412,13 +439,22 @@ class YmlFeedGenerator
 
     private function buildOlympiadOffers(): string
     {
+        // Исключённые из фида олимпиады (см. OLYMPIAD_EXCLUDED_SLUGS)
+        $excludedSlugs = self::OLYMPIAD_EXCLUDED_SLUGS;
+        $excludeSql = '';
+        if (!empty($excludedSlugs)) {
+            $placeholders = implode(', ', array_fill(0, count($excludedSlugs), '?'));
+            $excludeSql = " AND o.slug NOT IN ($placeholders)";
+        }
+
         $olympiads = $this->db->query(
             "SELECT o.*, GROUP_CONCAT(DISTINCT oac.category_id) as category_ids
              FROM olympiads o
              LEFT JOIN olympiad_audience_categories oac ON o.id = oac.olympiad_id
-             WHERE o.is_active = 1
+             WHERE o.is_active = 1" . $excludeSql . "
              GROUP BY o.id
-             ORDER BY o.display_order ASC, o.created_at DESC"
+             ORDER BY o.display_order ASC, o.created_at DESC",
+            $excludedSlugs
         );
 
         $xml = '';
@@ -479,6 +515,14 @@ class YmlFeedGenerator
 
     private function buildOlympiadAdOffers(): string
     {
+        // Исключённые из фида олимпиады (см. OLYMPIAD_AD_EXCLUDED_SLUGS)
+        $excludedSlugs = self::OLYMPIAD_AD_EXCLUDED_SLUGS;
+        $excludeSql = '';
+        if (!empty($excludedSlugs)) {
+            $placeholders = implode(', ', array_fill(0, count($excludedSlugs), '?'));
+            $excludeSql = " AND o.slug NOT IN ($placeholders)";
+        }
+
         $olympiads = $this->db->query(
             "SELECT o.*,
                     GROUP_CONCAT(DISTINCT ac.name ORDER BY ac.display_order) as audience_categories,
@@ -489,9 +533,10 @@ class YmlFeedGenerator
              INNER JOIN audience_categories ac ON oac.category_id = ac.id AND ac.slug = 'pedagogi'
              LEFT JOIN olympiad_audience_types oat ON o.id = oat.olympiad_id
              LEFT JOIN audience_types at2 ON oat.audience_type_id = at2.id
-             WHERE o.is_active = 1
+             WHERE o.is_active = 1" . $excludeSql . "
              GROUP BY o.id
-             ORDER BY o.display_order ASC, o.created_at DESC"
+             ORDER BY o.display_order ASC, o.created_at DESC",
+            $excludedSlugs
         );
 
         $xml = '';
