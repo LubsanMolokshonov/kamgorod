@@ -512,6 +512,8 @@ include __DIR__ . '/../includes/header.php';
                 }
                 $orderNumberJs = htmlspecialchars($order['order_number'], ENT_QUOTES);
                 $orderTotalJs = (float)$order['final_amount'];
+                // Подписочный заказ не содержит order_items — определяем по subscription_plan_id.
+                $isSubscriptionOrder = !empty($order['subscription_plan_id']);
             ?>
             if (typeof ym === 'function') {
                 ym(106465857, 'reachGoal', 'payment_success', {
@@ -521,6 +523,9 @@ include __DIR__ . '/../includes/header.php';
                 });
                 <?php if (!empty($hasCourseItems)): ?>
                 ym(106465857, 'reachGoal', 'oplatakursa', {order_price: <?= $courseTotalAmount ?>});
+                <?php endif; ?>
+                <?php if ($isSubscriptionOrder): ?>
+                ym(106465857, 'reachGoal', 'oplatapodpiska', {order_price: <?= $orderTotalJs ?>});
                 <?php endif; ?>
             }
 
