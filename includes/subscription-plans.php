@@ -64,6 +64,24 @@ $spFeatureRows = [
 .sub-block-head{margin-bottom:6px;}
 .sub-block-head h2{font-size:24px;font-weight:800;color:#1c2033;margin:0 0 8px;}
 .sub-block-head p{color:#5b6178;font-size:15px;line-height:1.5;margin:0;}
+@media(max-width:560px){
+    .sub-block-head h2{font-size:19px;line-height:1.25;}
+    .sub-block-head p{font-size:14px;}
+    .sub-toggle{display:flex;width:100%;margin:14px 0 18px;}
+    .sub-toggle button{flex:1;padding:10px 8px;font-size:14px;}
+    .sub-toggle .save{font-size:11px;margin-left:4px;}
+    .sub-grid{gap:16px;}
+    .sub-card{padding:20px 18px;border-radius:16px;}
+    .sub-card.pro{order:-1;}
+    .sub-name{font-size:19px;}
+    .sub-price{font-size:30px;}
+    .sub-price span{font-size:14px;}
+    .sub-feats{margin:16px 0 18px;}
+    .sub-feats li{font-size:14px;padding:6px 0;}
+    .sub-cta{padding:13px;font-size:15px;}
+    .sub-note{font-size:12px;margin-top:14px;}
+    .sub-note-more{display:none;}
+}
 </style>
 
 <?php if (!empty($plansHeading)): ?>
@@ -133,9 +151,10 @@ $spFeatureRows = [
 </div>
 
 <p class="sub-note">
-    Оплата разовая на выбранный период (месяц или год). Автопродление можно подключить
-    позже. Документы, оформленные в период действия подписки, остаются у вас навсегда.
-    Подписка не отменяет возможность покупать отдельные мероприятия и пакеты токенов.
+    Оплата разовая на выбранный период (месяц или год).<span class="sub-note-more">
+    Автопродление можно подключить позже. Документы, оформленные в период действия
+    подписки, остаются у вас навсегда. Подписка не отменяет возможность покупать
+    отдельные мероприятия и пакеты токенов.</span>
 </p>
 
 <input type="hidden" id="sub-csrf" value="<?= htmlspecialchars($spCsrf, ENT_QUOTES, 'UTF-8') ?>">

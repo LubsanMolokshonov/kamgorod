@@ -424,8 +424,8 @@ include __DIR__ . '/../includes/header.php';
             <div class="payment-section">
                 <?php if ($pmSubscriptionOnly): ?>
                     <?php
-                    $plansHeading = 'Оформите подписку — и заберите все документы из корзины';
-                    $plansIntro   = 'Подписка покрывает все дипломы, сертификаты и свидетельства для портфолио без поштучной оплаты. В корзине сейчас: ' . count($allItems) . '. Документы станут доступны сразу после оформления подписки — выберите тариф:';
+                    $plansHeading = 'Оформите подписку — заберите все документы';
+                    $plansIntro   = 'Все документы из корзины (сейчас ' . count($allItems) . ') войдут в подписку — без поштучной оплаты. Выберите тариф:';
                     include __DIR__ . '/../includes/subscription-plans.php';
                     ?>
                 <?php else: ?>
