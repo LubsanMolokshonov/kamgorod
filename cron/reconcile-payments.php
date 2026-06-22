@@ -60,10 +60,18 @@ try {
 
     $stats = $recon->reconcile();
 
-    echo date('Y-m-d H:i:s') . " - Done. "
+    echo date('Y-m-d H:i:s') . " - Orders. "
         . "checked={$stats['checked']}, recovered={$stats['recovered']}, "
         . "failed_marked={$stats['failed_marked']}, still_pending={$stats['still_pending']}, "
         . "errors={$stats['errors']}\n";
+
+    // Токены: у них нет строки в orders, поэтому сверка идёт от списка платежей Yookassa.
+    $tok = $recon->reconcileTokens();
+
+    echo date('Y-m-d H:i:s') . " - Tokens. "
+        . "scanned={$tok['scanned']}, token_payments={$tok['token_payments']}, "
+        . "recovered={$tok['recovered']}, already={$tok['already']}, "
+        . "errors={$tok['errors']}" . ($tok['capped'] ? ', CAPPED' : '') . "\n";
 
 } catch (Throwable $e) {
     echo date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n";
