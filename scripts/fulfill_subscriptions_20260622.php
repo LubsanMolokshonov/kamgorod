@@ -35,11 +35,12 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/SubscriptionService.php';
+require_once __DIR__ . '/../includes/email-helper.php'; // sendSubscriptionActivatedEmail
 
 $send = in_array('--send', array_slice($argv, 1), true);
 $mode = $send ? 'LIVE' : 'DRY-RUN';
 
-$ORDER_IDS = [4784, 4785];
+$ORDER_IDS = [4779, 4784, 4785]; // все succeeded-в-Yookassa, но pending в БД из-за бага вебхука
 
 $pdo       = $GLOBALS['db'];
 $dbw       = new Database($pdo);

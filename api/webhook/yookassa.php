@@ -47,10 +47,17 @@ require_once __DIR__ . '/../../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
 require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/order-fulfillment.php';
+require_once __DIR__ . '/../../classes/TelegramNotifier.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use YooKassa\Model\Notification\NotificationFactory;
 use YooKassa\Client;
+
+// Алерт в Telegram на фатал вебхука (класс не найден, parse error и т.п.). Раньше фатал
+// уходил только в logs/webhook.log и оставался незамеченным — так баг неймспейса
+// PaymentStatus 4 дня молча ломал активацию подписок. Свой shutdown-handler выше
+// (логирование в файл + ответ 200) остаётся; этот — добавляет оповещение.
+TelegramNotifier::registerFatalHandler('yookassa-webhook');
 
 // Get raw POST data
 $requestBody = file_get_contents('php://input');
@@ -350,8 +357,10 @@ try {
     http_response_code(200);
     echo json_encode(['status' => 'ok']);
 
-} catch (Exception $e) {
-    // Log error but still return 200 to prevent Yookassa retries on our errors
+} catch (Throwable $e) {
+    // Ловим Throwable (не только Exception): PHP-Error вроде «class not found» — это Error,
+    // он мимо catch(Exception) улетал бы в фатал. logWebhook('ERROR') сам шлёт Telegram-алерт.
+    // Всё равно отвечаем 200, чтобы Yookassa не ретраила из-за наших ошибок.
     logWebhook('ERROR', $paymentId ?? 'unknown', 'Exception: ' . $e->getMessage(), $e->getTraceAsString());
 
     http_response_code(200);
@@ -803,4 +812,20 @@ function logWebhook($level, $paymentId, $message, $details = '') {
     }
 
     error_log($logMessage, 3, $logFile);
+
+    // Алертинг: любой ERROR/FATAL в вебхуке критичен (оплата прошла, а выдача/активация
+    // сломалась). Шлём в Telegram. Throttling по тексту внутри TelegramNotifier (isDuplicate
+    // по key). Алерт не должен ронять сам вебхук — глушим любые исключения.
+    if (in_array($level, ['ERROR', 'FATAL'], true) && class_exists('TelegramNotifier')) {
+        try {
+            TelegramNotifier::instance($GLOBALS['db'] ?? null)->alert(
+                'yookassa_webhook_error_' . substr(md5($message), 0, 10),
+                '[Webhook] Yookassa: ' . $level,
+                ['payment_id' => (string)$paymentId, 'message' => (string)$message],
+                'critical'
+            );
+        } catch (\Throwable $e) {
+            // no-op
+        }
+    }
 }
