@@ -263,16 +263,18 @@ try {
         }
 
         try {
-            $GLOBALS['db']->beginTransaction();
-            $orderObjSub->updatePaymentStatus($order['id'], 'succeeded', date('Y-m-d H:i:s'));
+            // ⚠️ Без внешней транзакции: SubscriptionService::activate() управляет СВОЕЙ
+            // транзакцией. Раньше здесь была beginTransaction(), из-за которой внутренний
+            // beginTransaction() в activate() падал «There is already an active transaction» —
+            // вебхук НЕ активировал НИ одной подписки, спасал только reconcile-cron.
+            // Порядок: сначала activate() (идемпотентна по order_id), потом помечаем заказ
+            // succeeded. Если activate() упадёт — заказ остаётся pending, и reconcile-cron
+            // (а равно повтор вебхука) дожмёт; isProcessed по succeeded не «съест» заявку.
             $subService = new SubscriptionService($GLOBALS['db']);
             $subId = $subService->activate($subUserId, $planId, $period, (int)$order['id'], $pmId);
-            $GLOBALS['db']->commit();
+            $orderObjSub->updatePaymentStatus($order['id'], 'succeeded', date('Y-m-d H:i:s'));
             logWebhook('SUCCESS', $paymentId, "Subscription activated: user={$subUserId} plan={$planId} period={$period} sub={$subId}", '');
         } catch (Throwable $e) {
-            if ($GLOBALS['db']->inTransaction()) {
-                $GLOBALS['db']->rollBack();
-            }
             logWebhook('ERROR', $paymentId, 'Subscription activate failed: ' . $e->getMessage(), '');
             http_response_code(200);
             echo json_encode(['status' => 'subscription_error']);

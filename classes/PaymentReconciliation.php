@@ -117,7 +117,9 @@ class PaymentReconciliation
 
         if (!empty($o['subscription_plan_id'])) {
             // --- Подписка (повтор ветки subscription из вебхука) ---
-            $orderObj->updatePaymentStatus($orderId, 'succeeded', date('Y-m-d H:i:s'));
+            // Сначала activate() (своя транзакция, идемпотентна по order_id), потом помечаем
+            // заказ succeeded: если activate упадёт — заказ останется pending и следующий
+            // прогон повторит. НЕ оборачивать в beginTransaction (activate сделает свою).
             $svc   = new SubscriptionService($this->pdo);
             $subId = $svc->activate(
                 (int)$o['user_id'],
@@ -126,6 +128,7 @@ class PaymentReconciliation
                 $orderId,
                 null
             );
+            $orderObj->updatePaymentStatus($orderId, 'succeeded', date('Y-m-d H:i:s'));
             $this->bestEffort(fn() => sendSubscriptionActivatedEmail((int)$o['user_id'], $subId));
             $this->emit('RECOVER', "subscription order {$o['order_number']} → sub #{$subId} (user {$o['user_id']})");
             $this->alertRecovered($o, "подписка активирована (sub #{$subId})");
