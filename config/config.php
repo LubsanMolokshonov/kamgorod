@@ -56,6 +56,11 @@ if (!defined('YOOKASSA_MODE')) define('YOOKASSA_MODE', $_ENV['YOOKASSA_MODE'] ??
 if (!defined('BITRIX24_WEBHOOK_URL')) define('BITRIX24_WEBHOOK_URL', $_ENV['BITRIX24_WEBHOOK_URL'] ?? '');
 if (!defined('BITRIX24_WEBINAR_PIPELINE_ID')) define('BITRIX24_WEBINAR_PIPELINE_ID', $_ENV['BITRIX24_WEBINAR_PIPELINE_ID'] ?? 102);
 if (!defined('BITRIX24_COURSE_PIPELINE_ID')) define('BITRIX24_COURSE_PIPELINE_ID', $_ENV['BITRIX24_COURSE_PIPELINE_ID'] ?? 108);
+// Источники Bitrix, которыми помечаются оффлайн-сделки fgos.pro в общем funnel ЦДО:
+// 83 («ФГОС-практикум») / 87 («ФГОС-практикум ВК»). По ним считаем «нашу» оффлайн-
+// выручку (рассрочки/счета), отделяя от оффлайн-бизнеса остального холдинга.
+// (BITRIX24_CDO_PIPELINE_ID=4 определён ниже, в блоке мониторинга ЦДО.)
+if (!defined('BITRIX24_FGOS_SOURCE_IDS')) define('BITRIX24_FGOS_SOURCE_IDS', $_ENV['BITRIX24_FGOS_SOURCE_IDS'] ?? '83,87');
 if (!defined('BITRIX24_COURSE_STAGE_NEW')) define('BITRIX24_COURSE_STAGE_NEW', 'C108:NEW');
 // Стадия успешно оплаченной сделки — воронка «ФГОС-Практикум (Курсы)»,
 // этап «Оплаченная сделка» (C108:UC_8RO3WZ). Раньше использовался C108:WON

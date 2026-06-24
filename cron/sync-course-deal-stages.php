@@ -27,6 +27,7 @@ require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/database.php';
 require_once BASE_PATH . '/classes/Database.php';
 require_once BASE_PATH . '/classes/Bitrix24Integration.php';
+require_once BASE_PATH . '/includes/offline-order-helper.php';
 
 $lockFile = '/tmp/sync_course_deal_stages_cron.lock';
 if (file_exists($lockFile)) {
@@ -43,7 +44,11 @@ file_put_contents($lockFile, getmypid());
 $MAX_AGE_DAYS  = 90;
 $BATCH_SIZE    = 200;
 $COURSE_PIPELINE = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
+$CDO_PIPELINE    = defined('BITRIX24_CDO_PIPELINE_ID') ? (int)BITRIX24_CDO_PIPELINE_ID : 4;
 $STAGE_PAID    = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:UC_8RO3WZ';
+// Воронки, где менеджер закрывает наши курсовые сделки (рассрочки/счета).
+// ЦДО (4) — общий оффлайн-funnel; туда менеджер переносит рассрочки из «Курсов» (108).
+$OUR_PIPELINES = [$COURSE_PIPELINE, $CDO_PIPELINE];
 
 $logFile = BASE_PATH . '/logs/sync-course-deal-stages.log';
 if (!file_exists(dirname($logFile))) {
@@ -127,6 +132,7 @@ try {
 
             $stageId  = (string)($deal['STAGE_ID']    ?? '');
             $category = (int)($deal['CATEGORY_ID'] ?? -1);
+            $semantic = (string)($deal['STAGE_SEMANTIC_ID'] ?? '');
             $oldStage = $r['bitrix_stage'] ?? '';
 
             $update = [
@@ -134,21 +140,37 @@ try {
                 'bitrix_stage_updated_at' => date('Y-m-d H:i:s'),
             ];
 
+            // Выигранной (оплаченной) считаем сделку нашей воронки (Курсы/ЦДО), если:
+            //  - она дошла до явной стадии «Оплаченная сделка» в Курсах (Yookassa-путь), ИЛИ
+            //  - её семантика «успех» (S) — менеджер закрыл рассрочку/счёт как WON,
+            //    в т.ч. в ЦДО, куда сделки переносятся из «Курсов».
+            $isOurFunnel = in_array($category, $OUR_PIPELINES, true);
+            $isWon  = $isOurFunnel && ($semantic === 'S' || ($category === $COURSE_PIPELINE && $stageId === $STAGE_PAID));
+            $isLost = $isOurFunnel && ($semantic === 'F' || isset($loseStages[$stageId]));
+
             $statusChange = null;
-            if ($category === $COURSE_PIPELINE) {
-                if ($stageId === $STAGE_PAID && $r['status'] !== 'paid') {
-                    $update['status'] = 'paid';
-                    $statusChange = 'paid';
-                    $paid++;
-                } elseif (isset($loseStages[$stageId]) && $r['status'] !== 'cancelled') {
-                    $update['status'] = 'cancelled';
-                    $statusChange = 'cancelled';
-                    $lost++;
-                }
+            if ($isWon && $r['status'] !== 'paid') {
+                $update['status'] = 'paid';
+                $statusChange = 'paid';
+                $paid++;
+            } elseif ($isLost && $r['status'] !== 'cancelled') {
+                $update['status'] = 'cancelled';
+                $statusChange = 'cancelled';
+                $lost++;
             }
 
             $dbObj->update('course_enrollments', $update, 'id = ?', [$r['id']]);
             $synced++;
+
+            // Оффлайн-оплата (рассрочка/счёт) не создаёт заказа в orders — материализуем
+            // синтетический заказ, чтобы продажа попала во все отчёты по выручке.
+            // Хелпер сам идемпотентен и пропускает заявки с уже существующим заказом.
+            if ($statusChange === 'paid') {
+                $orderId = materializeOfflineCourseOrder($dbObj, (int)$r['id'], $deal);
+                if ($orderId) {
+                    log_line("OFFLINE_ORDER | Enrollment #{$r['id']} | Deal #{$r['bitrix_lead_id']} | order #{$orderId} (sum=" . (float)($deal['OPPORTUNITY'] ?? 0) . ")");
+                }
+            }
 
             if ($oldStage !== $stageId || $statusChange) {
                 $statusPart = $statusChange ? " | status→{$statusChange}" : '';

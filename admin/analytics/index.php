@@ -34,6 +34,24 @@ $filters = [
 $totals = $analytics->getTotals($filters);
 $sourceData = $analytics->getReport($filters, 'source');
 
+// Оффлайн-продажи fgos.pro из CRM, не попавшие в orders: консультации и ручные
+// сделки без записи на сайте. Рассрочки, привязанные к заявкам, уже учтены выше
+// (синтетический заказ с сохранением UTM-источника). Показываем отдельной строкой
+// при просмотре «Все»/«Курсы». Период — по дате оплаты (если задан) или создания.
+$offlineCrm = null;
+if (in_array($productType, ['all', 'courses'], true)) {
+    require_once __DIR__ . '/../../classes/Bitrix24Integration.php';
+    require_once __DIR__ . '/../../includes/offline-order-helper.php';
+    $crmFrom = $paidFrom ?: $dateFrom;
+    $crmTo   = $paidTo ?: $dateTo;
+    $crmRes  = (new Bitrix24Integration())->getFgosOfflineDeals(
+        $crmFrom, $crmTo, fgosMaterializedDealIds(new Database($db))
+    );
+    if ($crmRes['count']) {
+        $offlineCrm = $crmRes;
+    }
+}
+
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -124,6 +142,27 @@ include __DIR__ . '/../includes/header.php';
                     <td class="col-num"><strong><?php echo $totals['revenue_formatted']; ?> ₽</strong></td>
                     <td class="col-num"><?php echo $totals['avg_check_formatted']; ?> ₽</td>
                 </tr>
+
+                <?php if ($offlineCrm): ?>
+                <!-- Оффлайн-продажи (CRM, вне заказов): консультации + ручные сделки -->
+                <tr class="utm-row utm-row-no-expand" title="Рассрочки/счета fgos.pro, закрытые в Bitrix CRM и не оплаченные через сайт. Рассрочки по заявкам учтены в источниках выше через синтетический заказ.">
+                    <td class="col-label">
+                        <span style="display:inline-block;width:16px;margin-right:4px;"></span>
+                        <span class="utm-label">Оффлайн (CRM, вне заказов)</span>
+                    </td>
+                    <td class="col-num">—</td>
+                    <td class="col-num">—</td>
+                    <td class="col-num">—</td>
+                    <td class="col-num">—</td>
+                    <td class="col-num">—</td>
+                    <td class="col-num">—</td>
+                    <td class="col-num"><?php echo number_format((int)$offlineCrm['count'], 0, ',', ' '); ?></td>
+                    <td class="col-num">—</td>
+                    <td class="col-num">—</td>
+                    <td class="col-num"><?php echo number_format((float)$offlineCrm['revenue'], 0, ',', ' '); ?> ₽</td>
+                    <td class="col-num">—</td>
+                </tr>
+                <?php endif; ?>
 
                 <!-- Строки UTM Source (свёрнуты) -->
                 <?php foreach ($sourceData as $row): ?>

@@ -26,6 +26,16 @@ $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
 $dayReport  = $rnp->getReport($dateFrom, $dateTo, 'day');
 $weekReport = $rnp->getReport($dateFrom, $dateTo, 'week');
 
+// Оффлайн-продажи fgos.pro из CRM, не попавшие в orders (консультации + ручные
+// сделки без записи на сайте). Рассрочки, привязанные к заявкам, уже учтены в
+// таблице ниже через синтетический заказ (с разнесением по каналу/направлению).
+// Эти — без UTM/канала, поэтому показываем отдельной плашкой.
+require_once __DIR__ . '/../../classes/Bitrix24Integration.php';
+require_once __DIR__ . '/../../includes/offline-order-helper.php';
+$rnpOfflineCrm = (new Bitrix24Integration())->getFgosOfflineDeals(
+    $dateFrom, $dateTo, fgosMaterializedDealIds(new Database($db))
+);
+
 $csrfToken = generateCSRFToken();
 
 // ============================================================
@@ -249,6 +259,25 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </form>
 </div>
+
+<?php if (!empty($rnpOfflineCrm['count'])): ?>
+<div class="content-card rnp-card" style="border-left:4px solid #f59e0b;">
+    <div class="rnp-card-header">
+        <h2>Оффлайн-продажи (CRM, вне заказов)</h2>
+        <span class="rnp-card-meta">рассрочки/счета fgos.pro, закрытые в Bitrix вне сайта — без разнесения по каналу</span>
+    </div>
+    <div style="display:flex;gap:32px;padding:8px 4px;">
+        <div>
+            <div style="font-size:24px;font-weight:700;"><?= number_format((int)$rnpOfflineCrm['count'], 0, ',', ' ') ?></div>
+            <div style="color:#94a3b8;font-size:13px;">сделок</div>
+        </div>
+        <div>
+            <div style="font-size:24px;font-weight:700;"><?= number_format((float)$rnpOfflineCrm['revenue'], 0, ',', ' ') ?> ₽</div>
+            <div style="color:#94a3b8;font-size:13px;">выручка</div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Основная таблица -->
 <div class="content-card rnp-card">

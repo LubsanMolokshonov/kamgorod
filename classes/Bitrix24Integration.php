@@ -413,6 +413,87 @@ class Bitrix24Integration {
     }
 
     /**
+     * Сводка по выигранным (WON) оффлайн-сделкам fgos.pro в Bitrix CRM за период.
+     *
+     * Это «оффлайн»-выручка: рассрочки и оплаты по счёту, которые менеджер
+     * закрывает в CRM (как правило в воронке ЦДО) и которых нет в orders.
+     * «Нашими» считаем сделки с SOURCE_ID ∈ {83 «ФГОС-практикум», 87 «ФГОС-практикум ВК»} —
+     * иначе в воронку ЦДО попадёт оффлайн-бизнес всего холдинга (десятки тысяч сделок).
+     *
+     * ВАЖНО: фильтр Bitrix по CLOSEDATE через crm.deal.list по этому вебхуку НЕ работает
+     * (игнорируется) — поэтому тянем все «наши» WON-сделки (их единицы) и фильтруем
+     * период на стороне PHP.
+     *
+     * $excludeDealIds — сделки, уже учтённые в orders (синтетические/Yookassa-заказы),
+     * чтобы не задвоить выручку. Передаётся вызывающим кодом из БД.
+     *
+     * @param string $dateFrom Начало периода (Y-m-d[ H:i:s])
+     * @param string $dateTo   Конец периода (Y-m-d[ H:i:s])
+     * @param int[]  $excludeDealIds  ID сделок, которые уже есть в orders
+     * @return array ['count'=>int, 'revenue'=>float, 'deals'=>array] | ['count'=>null,'revenue'=>null,'deals'=>[]] при ошибке
+     */
+    public function getFgosOfflineDeals(string $dateFrom, string $dateTo, array $excludeDealIds = []): array {
+        if (!$this->isConfigured()) {
+            return ['count' => null, 'revenue' => null, 'deals' => []];
+        }
+
+        $sources = defined('BITRIX24_FGOS_SOURCE_IDS')
+            ? array_filter(array_map('trim', explode(',', (string)BITRIX24_FGOS_SOURCE_IDS)))
+            : ['83', '87'];
+
+        $from    = substr($dateFrom, 0, 10);
+        $to      = substr($dateTo,   0, 10);
+        $exclude = array_flip(array_map('intval', $excludeDealIds));
+
+        $count   = 0;
+        $revenue = 0.0;
+        $deals   = [];
+        $start   = 0;
+
+        do {
+            $result = $this->call('crm.deal.list', [
+                'filter' => [
+                    // Массив значения = оператор IN (проверено: filter[SOURCE_ID][]=83&[]=87).
+                    'SOURCE_ID'         => array_values($sources),
+                    'STAGE_SEMANTIC_ID' => 'S',
+                ],
+                'select' => ['ID', 'OPPORTUNITY', 'CLOSEDATE', 'TITLE', 'CATEGORY_ID'],
+                'start'  => $start,
+            ]);
+
+            if ($result === null || !isset($result['result'])) {
+                return ['count' => null, 'revenue' => null, 'deals' => []];
+            }
+
+            foreach ($result['result'] as $deal) {
+                $dealId = (int)($deal['ID'] ?? 0);
+                if (isset($exclude[$dealId])) {
+                    continue; // уже учтено в orders
+                }
+                $closeDate = substr((string)($deal['CLOSEDATE'] ?? ''), 0, 10);
+                if ($closeDate === '' || $closeDate < $from || $closeDate > $to) {
+                    continue; // вне периода (фильтруем здесь — API-фильтр CLOSEDATE не работает)
+                }
+                $opp = (float)($deal['OPPORTUNITY'] ?? 0);
+                $count++;
+                $revenue += $opp;
+                $deals[] = [
+                    'id'        => $dealId,
+                    'revenue'   => $opp,
+                    'title'     => (string)($deal['TITLE'] ?? ''),
+                    'closedate' => $closeDate,
+                    'category'  => (int)($deal['CATEGORY_ID'] ?? 0),
+                ];
+            }
+
+            $total = (int)($result['total'] ?? 0);
+            $start += 50;
+        } while ($start < $total);
+
+        return ['count' => $count, 'revenue' => $revenue, 'deals' => $deals];
+    }
+
+    /**
      * Переместить сделку на следующую стадию
      *
      * @param string $dealId ID сделки

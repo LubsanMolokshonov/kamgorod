@@ -305,12 +305,15 @@ class RNPAnalytics
                         'orders_count' => 0.0,
                     ];
                 }
-                // Для paid_at: revenue считается только если оплачен
+                // Для paid_at: revenue и payments — только ненулевые суммы (0₽ подписочные
+                // выдачи не должны занижать CPA и средний чек). orders_count включает все
+                // succeeded-заказы для правильного расчёта конверсии.
                 if ($dateColumn === 'paid_at' && $isPaid) {
                     $agg[$key][$channel][$section]['revenue'] += $finalAmount * $share;
-                    $agg[$key][$channel][$section]['payments'] += $share;
+                    if ($finalAmount > 0) {
+                        $agg[$key][$channel][$section]['payments'] += $share;
+                    }
                 }
-                // orders_count считается всегда (для created_at — это «создано», для paid_at — «оплачено»)
                 $agg[$key][$channel][$section]['orders_count'] += $share;
             }
         }

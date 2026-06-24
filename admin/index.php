@@ -50,13 +50,14 @@ $stmt = $db->prepare("
 $stmt->execute([$startDate, $endDate]);
 $pedportalOrders = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total_orders'];
 
-// === ПЕДПОРТАЛ: Оплаты и выручка ===
+// === ПЕДПОРТАЛ: Оплаты и выручка (только заказы > 0₽; 0₽ = подписочные выдачи) ===
 $stmt = $db->prepare("
     SELECT COUNT(*) as paid_count,
            COALESCE(SUM(o.final_amount), 0) as revenue
     FROM orders o
     WHERE o.payment_status = 'succeeded'
       AND o.paid_at >= ? AND o.paid_at <= ?
+      AND o.final_amount > 0
       AND EXISTS (
           SELECT 1 FROM order_items oi WHERE oi.order_id = o.id
           AND (oi.registration_id IS NOT NULL
@@ -108,12 +109,53 @@ $coursesAvgCheck = $coursesPaidCount > 0 ? round($coursesRevenue / $coursesPaidC
 $materialsAnalytics = new MaterialsAnalytics($db);
 $materialsTotals = $materialsAnalytics->getTotals($startDate, $endDate);
 
-// === ОБЩИЕ: Итого ===
-$totalOrders = $pedportalOrders + $coursesApps;
-$totalPaid = $pedportalPaidCount + $coursesPaidCount;
-$totalRevenue = $pedportalRevenue + $coursesRevenue;
-$totalConversion = $totalOrders > 0 ? round($totalPaid / $totalOrders * 100, 1) : 0;
-$totalAvgCheck = $totalPaid > 0 ? round($totalRevenue / $totalPaid) : 0;
+// === ПОДПИСКИ: KPI за период ===
+$stmtSub = $db->prepare("
+    SELECT COUNT(*) AS sold, COALESCE(SUM(final_amount), 0) AS revenue
+    FROM orders
+    WHERE payment_status = 'succeeded'
+      AND paid_at >= ? AND paid_at <= ?
+      AND subscription_plan_id IS NOT NULL
+");
+$stmtSub->execute([$startDate, $endDate]);
+$subPeriodRow          = $stmtSub->fetch(PDO::FETCH_ASSOC);
+$subscriptionsSold     = (int)$subPeriodRow['sold'];
+$subscriptionsRevenue  = (float)$subPeriodRow['revenue'];
+$subscriptionsAvgCheck = $subscriptionsSold > 0 ? round($subscriptionsRevenue / $subscriptionsSold) : 0;
+
+$stmtActiveSubs = $db->prepare("SELECT COUNT(*) FROM user_subscriptions WHERE status = 'active'");
+$stmtActiveSubs->execute();
+$activeSubscribersCount = (int)$stmtActiveSubs->fetchColumn();
+
+$stmtFreeDocs = $db->prepare("
+    SELECT COUNT(*) FROM orders
+    WHERE payment_status = 'succeeded' AND paid_at >= ? AND paid_at <= ?
+      AND subscription_plan_id IS NULL AND final_amount = 0
+");
+$stmtFreeDocs->execute([$startDate, $endDate]);
+$freeDocsDelivered = (int)$stmtFreeDocs->fetchColumn();
+
+// === BITRIX CRM: оффлайн-выручка fgos.pro (рассрочки/счета вне сайта) ===
+// Менеджер закрывает их как WON в CRM (обычно в воронке ЦДО). «Наши» сделки —
+// только с SOURCE_ID ∈ {83 ФГОС-практикум, 87 ВК}, иначе сюда попал бы весь
+// оффлайн-бизнес холдинга. Рассрочки, привязанные к заявкам, уже материализованы
+// синтетическими заказами (cron sync-course-deal-stages) и посчитаны выше по orders —
+// исключаем их, чтобы не задвоить. В CRM-слое остаются консультации и ручные сделки.
+require_once __DIR__ . '/../classes/Bitrix24Integration.php';
+require_once __DIR__ . '/../includes/offline-order-helper.php';
+$bitrix = new Bitrix24Integration();
+$offlineExclude  = fgosMaterializedDealIds(new Database($db));
+$offlineCrm      = $bitrix->getFgosOfflineDeals($startDate, $endDate, $offlineExclude);
+$bitrixAvailable = ($offlineCrm['count'] !== null);
+$bitrixCount     = (int)($offlineCrm['count'] ?? 0);
+$bitrixRevenue   = (float)($offlineCrm['revenue'] ?? 0);
+
+// === ОБЩИЕ: Итого (включая Bitrix WON) ===
+$totalOrders  = $pedportalOrders + $coursesApps + $subscriptionsSold;
+$totalPaid    = $pedportalPaidCount + $coursesPaidCount + $subscriptionsSold + ($bitrixAvailable ? $bitrixCount : 0);
+$totalRevenue = $pedportalRevenue + $coursesRevenue + $subscriptionsRevenue + ($bitrixAvailable ? $bitrixRevenue : 0);
+$totalConversion = $totalOrders > 0 ? round(($pedportalPaidCount + $coursesPaidCount + $subscriptionsSold) / $totalOrders * 100, 1) : 0;
+$totalAvgCheck   = $totalPaid > 0 ? round($totalRevenue / $totalPaid) : 0;
 
 // === Breakdown по типам товаров ===
 $stmt = $db->prepare("
@@ -139,6 +181,14 @@ $stmt = $db->prepare("
 ");
 $stmt->execute([$startDate, $endDate]);
 $productBreakdown = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if ($subscriptionsSold > 0) {
+    array_unshift($productBreakdown, [
+        'product_type' => 'subscriptions',
+        'item_count'   => $subscriptionsSold,
+        'revenue'      => $subscriptionsRevenue,
+        'free_count'   => 0,
+    ]);
+}
 
 // === Дневной breakdown: Педпортал (заказы + оплаты по дням) ===
 // Заказы по дням (уникальные заказы педпортала, любой статус)
@@ -160,7 +210,7 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
     $pedportalOrdersByDay[$row['sale_date']] = (int)$row['orders_count'];
 }
 
-// Оплаты + выручка по дням (succeeded)
+// Оплаты + выручка по дням (succeeded, только > 0₽)
 $stmt = $db->prepare("
     SELECT DATE(o.paid_at) as sale_date,
            COUNT(*) as paid_count,
@@ -168,6 +218,7 @@ $stmt = $db->prepare("
     FROM orders o
     WHERE o.payment_status = 'succeeded'
       AND o.paid_at >= ? AND o.paid_at <= ?
+      AND o.final_amount > 0
       AND EXISTS (
           SELECT 1 FROM order_items oi WHERE oi.order_id = o.id
           AND (oi.registration_id IS NOT NULL
@@ -262,11 +313,12 @@ foreach ($allCoursesDates as $date) {
 // === Последние заказы ===
 $stmt = $db->prepare("
     SELECT o.id, o.order_number, o.final_amount, o.paid_at, o.promotion_applied,
+           o.subscription_plan_id,
            u.full_name, u.email,
            COUNT(oi.id) as item_count
     FROM orders o
     JOIN users u ON o.user_id = u.id
-    JOIN order_items oi ON o.id = oi.order_id
+    LEFT JOIN order_items oi ON o.id = oi.order_id
     WHERE o.payment_status = 'succeeded'
       AND o.paid_at >= ?
       AND o.paid_at <= ?
@@ -493,6 +545,33 @@ include __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<!-- KPI: Оффлайн-продажи fgos.pro (Bitrix CRM) -->
+<div class="content-card" style="margin-bottom: 32px;">
+    <div class="kpi-section-header">
+        <h2>Оффлайн-продажи (рассрочка / счёт)</h2>
+        <span class="section-tag" style="background:#fef3c7;color:#92400e;">Bitrix CRM · вне Yookassa</span>
+    </div>
+    <?php if (!$bitrixAvailable): ?>
+        <div style="color:#94a3b8;padding:16px 0;">Bitrix24 недоступен — данные не загружены</div>
+    <?php else: ?>
+    <div class="kpi-grid">
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($bitrixCount, 0, ',', ' '); ?></div>
+            <div class="kpi-label">Оффлайн-сделки (CRM)</div>
+        </div>
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($bitrixRevenue, 0, ',', ' '); ?> &#8381;</div>
+            <div class="kpi-label">Оффлайн-выручка (CRM)</div>
+        </div>
+    </div>
+    <div style="color:#94a3b8;font-size:13px;margin-top:12px;">
+        Сделки fgos.pro (SOURCE_ID 83/87), закрытые в CRM как успешные и не оплаченные через сайт.
+        Рассрочки, привязанные к заявкам, уже учтены в блоке «Курсы» (синтетический заказ с сохранением источника),
+        здесь — консультации и ручные сделки без записи на сайте.
+    </div>
+    <?php endif; ?>
+</div>
+
 <!-- KPI: Материалы ФОП -->
 <div class="content-card" style="margin-bottom: 32px;">
     <div class="kpi-section-header">
@@ -530,6 +609,38 @@ include __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<!-- KPI: Подписки -->
+<div class="content-card" style="margin-bottom: 32px;">
+    <div class="kpi-section-header">
+        <h2>Подписки</h2>
+        <span class="section-tag" style="background:#ede9fe;color:#6d28d9;">Базовый и Про тарифы</span>
+        <a href="/admin/subscriptions/" class="btn btn-secondary btn-sm" style="margin-left:auto;">Все подписки &rarr;</a>
+        <a href="/admin/ab-test/" class="btn btn-secondary btn-sm">A/B-тест &rarr;</a>
+    </div>
+    <div class="kpi-grid">
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($activeSubscribersCount, 0, ',', ' '); ?></div>
+            <div class="kpi-label">Активных подписчиков</div>
+        </div>
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($subscriptionsSold, 0, ',', ' '); ?></div>
+            <div class="kpi-label">Оформлено за период</div>
+        </div>
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($subscriptionsRevenue, 0, ',', ' '); ?> &#8381;</div>
+            <div class="kpi-label">Выручка от подписок</div>
+        </div>
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($subscriptionsAvgCheck, 0, ',', ' '); ?> &#8381;</div>
+            <div class="kpi-label">Средний чек</div>
+        </div>
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($freeDocsDelivered, 0, ',', ' '); ?></div>
+            <div class="kpi-label">Документов выдано 0 ₽</div>
+        </div>
+    </div>
+</div>
+
 <!-- Product Type Breakdown -->
 <div class="content-card">
     <div class="card-header">
@@ -545,6 +656,7 @@ include __DIR__ . '/includes/header.php';
         <?php else: ?>
             <?php
             $typeNames = [
+                'subscriptions' => 'Подписки',
                 'competitions' => 'Конкурсы',
                 'publications' => 'Свидетельства о публикации',
                 'webinars' => 'Сертификаты вебинаров',
@@ -553,6 +665,7 @@ include __DIR__ . '/includes/header.php';
                 'unknown' => 'Другое'
             ];
             $typeBadges = [
+                'subscriptions' => 'badge-purple',
                 'competitions' => 'badge-success',
                 'publications' => 'badge-info',
                 'webinars' => 'badge-purple',
@@ -735,7 +848,13 @@ include __DIR__ . '/includes/header.php';
                             <td><?php echo htmlspecialchars($order['order_number']); ?></td>
                             <td><?php echo htmlspecialchars($order['full_name']); ?></td>
                             <td><?php echo htmlspecialchars($order['email']); ?></td>
-                            <td><?php echo $order['item_count']; ?></td>
+                            <td>
+                                <?php if ($order['subscription_plan_id']): ?>
+                                    <span class="badge badge-purple">Подписка</span>
+                                <?php else: ?>
+                                    <?php echo (int)$order['item_count']; ?>
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo number_format($order['final_amount'], 0, ',', ' '); ?> &#8381;</td>
                             <td>
                                 <?php if ($order['promotion_applied']): ?>
