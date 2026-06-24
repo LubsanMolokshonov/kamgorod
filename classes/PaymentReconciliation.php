@@ -82,7 +82,7 @@ class PaymentReconciliation
                 $status  = $payment->getStatus();
 
                 if ($status === \YooKassa\Model\PaymentStatus::SUCCEEDED) {
-                    if ($this->heal($o)) $stats['recovered']++;
+                    if ($this->heal($o, $payment)) $stats['recovered']++;
                     else $stats['still_pending']++; // уже обработан кем-то в гонке
                 } elseif ($status === \YooKassa\Model\PaymentStatus::CANCELED) {
                     (new Order($this->pdo))->updatePaymentStatus((int)$o['id'], 'failed');
@@ -104,7 +104,7 @@ class PaymentReconciliation
      * Довести оплаченный, но зависший заказ до конца. Возвращает true, если реально починили.
      * Повторно проверяет статус прямо перед выдачей — защита от гонки с вебхуком.
      */
-    private function heal(array $o): bool
+    private function heal(array $o, $payment = null): bool
     {
         $orderId = (int)$o['id'];
 
@@ -120,13 +120,19 @@ class PaymentReconciliation
             // Сначала activate() (своя транзакция, идемпотентна по order_id), потом помечаем
             // заказ succeeded: если activate упадёт — заказ останется pending и следующий
             // прогон повторит. НЕ оборачивать в beginTransaction (activate сделает свою).
+            // Достаём сохранённую карту из платежа — чтобы автопродление не «потерялось»,
+            // если вебхук пропустил первичный платёж (паритет с api/webhook/yookassa.php).
+            $savedPm = $payment ? SubscriptionService::extractSavedPaymentMethod($payment)
+                                : ['id' => null, 'last4' => null, 'type' => null];
             $svc   = new SubscriptionService($this->pdo);
             $subId = $svc->activate(
                 (int)$o['user_id'],
                 (int)$o['subscription_plan_id'],
                 (string)($o['subscription_period'] ?: 'monthly'),
                 $orderId,
-                null
+                $savedPm['id'],
+                $savedPm['last4'],
+                $savedPm['type']
             );
             $orderObj->updatePaymentStatus($orderId, 'succeeded', date('Y-m-d H:i:s'));
             $this->bestEffort(fn() => sendSubscriptionActivatedEmail((int)$o['user_id'], $subId));

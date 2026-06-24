@@ -79,6 +79,46 @@ try {
     }
 
     echo date('Y-m-d H:i:s') . " - Done. Reminders sent: {$sent}\n";
+
+    // --- Автопродление (auto_renew=1): предупреждение за NOTICE_DAYS до списания. ---
+    // Кандидаты: активные с привязанной картой, истекают в окне (0, +NOTICE_DAYS], предупреждение
+    // ещё не слали в текущем оплаченном периоде. Отдельно от напоминания auto_renew=0 выше.
+    $noticeDays = (int)(defined('SUBSCRIPTION_RENEW_NOTICE_DAYS') ? SUBSCRIPTION_RENEW_NOTICE_DAYS : 3);
+    $stmt2 = $db->prepare(
+        "SELECT id, user_id
+           FROM user_subscriptions
+          WHERE status = 'active'
+            AND auto_renew = 1
+            AND yookassa_payment_method_id IS NOT NULL AND yookassa_payment_method_id <> ''
+            AND expires_at IS NOT NULL
+            AND expires_at > NOW()
+            AND expires_at <= DATE_ADD(NOW(), INTERVAL ? DAY)
+            AND (
+                renewal_notice_sent_at IS NULL
+                OR (last_renewed_at IS NOT NULL AND renewal_notice_sent_at < last_renewed_at)
+            )
+          ORDER BY expires_at ASC
+          LIMIT 50"
+    );
+    $stmt2->execute([$noticeDays]);
+    $renewSubs = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+
+    $noticed = 0;
+    foreach ($renewSubs as $s) {
+        $subId = (int)$s['id'];
+        $userId = (int)$s['user_id'];
+        try {
+            sendSubscriptionAutoRenewNoticeEmail($userId, $subId);
+            $db->prepare("UPDATE user_subscriptions SET renewal_notice_sent_at = NOW() WHERE id = ?")
+               ->execute([$subId]);
+            $noticed++;
+            echo date('Y-m-d H:i:s') . " - Auto-renew notice sent for sub #{$subId} (user {$userId})\n";
+        } catch (\Throwable $e) {
+            // Не помечаем — повторим на следующем прогоне.
+            echo date('Y-m-d H:i:s') . " - FAILED auto-renew notice sub #{$subId}: " . $e->getMessage() . "\n";
+        }
+    }
+    echo date('Y-m-d H:i:s') . " - Done. Auto-renew notices sent: {$noticed}\n";
 } catch (\Throwable $e) {
     echo date('Y-m-d H:i:s') . " - FATAL: " . $e->getMessage() . "\n";
 } finally {

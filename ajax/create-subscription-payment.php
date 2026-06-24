@@ -49,6 +49,9 @@ if (!validateCSRFToken($_POST['csrf'] ?? '')) {
 
 $planSlug = strtolower(trim((string)($_POST['plan_slug'] ?? '')));
 $period   = strtolower(trim((string)($_POST['period'] ?? 'monthly')));
+// Автопродление включено по умолчанию (opt-out галочкой). save_payment_method=true сохранит
+// карту → последующие списания пойдут рекуррентом (cron/renew-subscriptions.php).
+$autoRenew = !isset($_POST['auto_renew']) || (string)$_POST['auto_renew'] === '1';
 if (!in_array($planSlug, ['basic', 'pro'], true)) {
     respond(['success' => false, 'error' => 'Неизвестный тариф', 'code' => 'invalid_plan'], 400);
 }
@@ -134,8 +137,11 @@ try {
                 'plan_id' => (int)$plan['id'],
                 'plan_slug' => $planSlug,
                 'period' => $period,
+                'auto_renew' => $autoRenew ? '1' : '0',
             ],
-            // Этап 2 (автопродление): здесь добавится 'save_payment_method' => true.
+            // Автопродление: сохраняем карту (вебхук достанет payment_method.id → активация
+            // с auto_renew=1). Если пользователь снял галочку — карта не сохраняется.
+            'save_payment_method' => $autoRenew,
         ],
         $idempotencyKey
     );

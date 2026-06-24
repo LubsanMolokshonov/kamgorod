@@ -341,6 +341,15 @@ if (!defined('OLYMPIAD_DIPLOMA_PRICE')) define('OLYMPIAD_DIPLOMA_PRICE', 229);
 // Publication Certificate Price
 if (!defined('PUBLICATION_CERTIFICATE_PRICE')) define('PUBLICATION_CERTIFICATE_PRICE', 499);
 
+// Автопродление подписок (Этап 2): параметры рекуррентных списаний.
+//   MAX_ATTEMPTS  — сколько раз пытаемся списать в одном цикле, прежде чем дать подписке истечь.
+//   LEAD_DAYS     — за сколько дней до expires_at начинаем списывать (activate стыкует период
+//                   через GREATEST(expires_at, NOW()), поэтому дни не теряются).
+//   NOTICE_DAYS   — за сколько дней до списания шлём письмо-предупреждение (>= LEAD_DAYS).
+if (!defined('SUBSCRIPTION_RENEW_MAX_ATTEMPTS')) define('SUBSCRIPTION_RENEW_MAX_ATTEMPTS', (int)($_ENV['SUBSCRIPTION_RENEW_MAX_ATTEMPTS'] ?? 3));
+if (!defined('SUBSCRIPTION_RENEW_LEAD_DAYS'))    define('SUBSCRIPTION_RENEW_LEAD_DAYS', (int)($_ENV['SUBSCRIPTION_RENEW_LEAD_DAYS'] ?? 1));
+if (!defined('SUBSCRIPTION_RENEW_NOTICE_DAYS'))  define('SUBSCRIPTION_RENEW_NOTICE_DAYS', (int)($_ENV['SUBSCRIPTION_RENEW_NOTICE_DAYS'] ?? 3));
+
 // Групповое участие: лимиты и прогрессивная скидка по размеру группы.
 // Тарифы — массив {min, max, percent}; проценты легко менять здесь.
 if (!defined('GROUP_MIN_PARTICIPANTS')) define('GROUP_MIN_PARTICIPANTS', 2);

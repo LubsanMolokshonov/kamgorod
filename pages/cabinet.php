@@ -327,17 +327,59 @@ include __DIR__ . '/../includes/header.php';
             <?php endif; ?>
 
             <?php if ($cabSub): ?>
+                <?php
+                    $cabAutoRenew = !empty($cabSub['auto_renew']) && !empty($cabSub['yookassa_payment_method_id']);
+                    $cabCardLast4 = trim((string)($cabSub['card_last4'] ?? ''));
+                    $cabCardType  = trim((string)($cabSub['card_type'] ?? ''));
+                    $cabExpires   = date('d.m.Y', strtotime($cabSub['expires_at']));
+                    $cabCsrf      = function_exists('generateCSRFToken') ? generateCSRFToken() : '';
+                ?>
                 <div class="loyalty-badge" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff);border:1px solid #ddd6fe;">
                     <div class="loyalty-badge-icon">⭐</div>
                     <div class="loyalty-badge-body">
                         <strong>Подписка «<?php echo htmlspecialchars($cabSub['plan_name']); ?>»</strong>
                         <span>
-                            Активна до <?php echo htmlspecialchars(date('d.m.Y', strtotime($cabSub['expires_at']))); ?>.
+                            Активна до <?php echo htmlspecialchars($cabExpires); ?>.
                             <?php if ($cabSub['monthly_generation_tokens'] === null): ?>Безлимит генератора ФОП.<?php endif; ?>
                             <?php if ((int)$cabSub['course_discount_percent'] > 0): ?> Скидка <?php echo (int)$cabSub['course_discount_percent']; ?>% на курсы.<?php endif; ?>
                             Дипломы и сертификаты — без доплат.
                         </span>
-                        <a href="/podpiska/" style="display:inline-block;margin-top:6px;font-weight:600;color:#6c5ce7;">Продлить →</a>
+                        <?php if ($cabAutoRenew): ?>
+                            <span style="display:block;margin-top:6px;color:#5b6178;font-size:13px;">
+                                🔄 Автопродление включено<?php if ($cabCardLast4 !== ''): ?> · <?php echo htmlspecialchars(trim($cabCardType . ' •••• ' . $cabCardLast4)); ?><?php endif; ?> · следующее списание <?php echo htmlspecialchars($cabExpires); ?>
+                            </span>
+                            <button type="button" id="cab-cancel-autorenew"
+                                    data-csrf="<?php echo htmlspecialchars($cabCsrf, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-expires="<?php echo htmlspecialchars($cabExpires, ENT_QUOTES, 'UTF-8'); ?>"
+                                    style="margin-top:8px;background:none;border:0;padding:0;color:#9aa0b4;font-size:13px;text-decoration:underline;cursor:pointer;">
+                                Отключить автопродление
+                            </button>
+                            <script>
+                            (function () {
+                                var b = document.getElementById('cab-cancel-autorenew');
+                                if (!b) return;
+                                b.addEventListener('click', function () {
+                                    if (!confirm('Отключить автопродление? Подписка останется активна до ' + b.dataset.expires + ', но дальше продлеваться не будет, карта будет отвязана.')) return;
+                                    b.disabled = true; b.style.opacity = '0.6';
+                                    var fd = new FormData();
+                                    fd.append('csrf', b.dataset.csrf);
+                                    fetch('/ajax/cancel-subscription.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                                        .then(function (r) { return r.json(); })
+                                        .then(function (res) {
+                                            if (res.success) { window.location.reload(); return; }
+                                            alert(res.error || 'Не удалось отключить автопродление');
+                                            b.disabled = false; b.style.opacity = '1';
+                                        })
+                                        .catch(function () {
+                                            alert('Сеть прервалась, попробуйте ещё раз');
+                                            b.disabled = false; b.style.opacity = '1';
+                                        });
+                                });
+                            })();
+                            </script>
+                        <?php else: ?>
+                            <a href="/podpiska/" style="display:inline-block;margin-top:6px;font-weight:600;color:#6c5ce7;">Продлить →</a>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php else: ?>

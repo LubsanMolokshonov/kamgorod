@@ -114,7 +114,7 @@ class SubscriptionService
      *   - нет активной → новая от NOW().
      * Для Базового сразу начисляем первую порцию токенов.
      */
-    public function activate(int $userId, int $planId, string $period, ?int $orderId = null, ?string $paymentMethodId = null): int
+    public function activate(int $userId, int $planId, string $period, ?int $orderId = null, ?string $paymentMethodId = null, ?string $cardLast4 = null, ?string $cardType = null): int
     {
         if (!in_array($period, ['monthly', 'yearly'], true)) {
             throw new InvalidArgumentException("Недопустимый period='{$period}'");
@@ -154,14 +154,19 @@ class SubscriptionService
             $subId = 0;
             if ($current && (int)$current['plan_id'] === $planId) {
                 // Продление того же плана: expires_at от конца текущего периода.
+                // Успешное продление закрывает цикл попыток автосписания (renewal_attempt_count → 0).
+                // Карту обновляем только если пришла новая (COALESCE сохраняет привязанную ранее).
                 $this->db->execute(
                     "UPDATE user_subscriptions
                         SET expires_at = DATE_ADD(GREATEST(expires_at, NOW()), {$interval}),
                             period = ?, order_id = ?, last_renewed_at = NOW(),
                             yookassa_payment_method_id = COALESCE(?, yookassa_payment_method_id),
+                            card_last4 = COALESCE(?, card_last4),
+                            card_type  = COALESCE(?, card_type),
+                            renewal_attempt_count = 0,
                             status = 'active'
                       WHERE id = ?",
-                    [$period, $orderId, $paymentMethodId, $current['id']]
+                    [$period, $orderId, $paymentMethodId, $cardLast4, $cardType, $current['id']]
                 );
                 $subId = (int)$current['id'];
             } else {
@@ -180,6 +185,8 @@ class SubscriptionService
                     'status' => 'active',
                     'auto_renew' => $paymentMethodId ? 1 : 0,
                     'yookassa_payment_method_id' => $paymentMethodId,
+                    'card_last4' => $cardLast4,
+                    'card_type' => $cardType,
                 ]);
                 // started_at/expires_at пишем через MySQL NOW(), а не PHP date() —
                 // чтобы started_at и token_transactions.created_at жили на ОДНИХ часах
@@ -277,18 +284,44 @@ class SubscriptionService
     }
 
     /**
-     * Отмена автопродления (Этап 2). Доступ остаётся до expires_at.
+     * Отмена автопродления + отвязка карты (Этап 2). Полный opt-out: подписка перестаёт
+     * продлеваться, сохранённый метод оплаты забывается (повторное включение — через новую
+     * оплату с галочкой). Доступ остаётся до expires_at (status не трогаем).
      * Возвращает true, если что-то изменили.
      */
     public function cancelAutoRenew(int $userId): bool
     {
         $affected = $this->db->execute(
-            "UPDATE user_subscriptions SET auto_renew = 0, cancelled_at = NOW()
+            "UPDATE user_subscriptions
+                SET auto_renew = 0, cancelled_at = NOW(),
+                    yookassa_payment_method_id = NULL, card_last4 = NULL, card_type = NULL
               WHERE user_id = ? AND status = 'active' AND auto_renew = 1",
             [$userId]
         );
         self::$activeCache = [];
         return $affected > 0;
+    }
+
+    /**
+     * Извлечь сохранённый метод оплаты из объекта платежа Yookassa.
+     * Возвращает ['id'=>?string, 'last4'=>?string, 'type'=>?string] — все null, если карта
+     * не сохранена. Используется и вебхуком, и сверкой (PaymentReconciliation), чтобы карта
+     * привязалась даже если первичный платёж дошёл не через webhook.
+     */
+    public static function extractSavedPaymentMethod($payment): array
+    {
+        $out = ['id' => null, 'last4' => null, 'type' => null];
+        try {
+            $pm = method_exists($payment, 'getPaymentMethod') ? $payment->getPaymentMethod() : null;
+            if ($pm && method_exists($pm, 'getSaved') && $pm->getSaved()) {
+                $out['id'] = $pm->getId();
+                if (method_exists($pm, 'getLast4'))    { $out['last4'] = $pm->getLast4(); }
+                if (method_exists($pm, 'getCardType')) { $out['type']  = $pm->getCardType(); }
+            }
+        } catch (\Throwable $e) {
+            return ['id' => null, 'last4' => null, 'type' => null];
+        }
+        return $out;
     }
 
     /** Пометить подписку истёкшей (для cron Этапа 2). */

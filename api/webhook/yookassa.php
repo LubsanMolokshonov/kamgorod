@@ -251,16 +251,10 @@ try {
         $planId    = (int)($metaArray['plan_id'] ?? $order['subscription_plan_id'] ?? 0);
         $period    = (string)($metaArray['period'] ?? $order['subscription_period'] ?? 'monthly');
 
-        // Сохранённый метод оплаты (Этап 2: автопродление). На Этапе 1 остаётся null.
-        $pmId = null;
-        try {
-            $pm = method_exists($payment, 'getPaymentMethod') ? $payment->getPaymentMethod() : null;
-            if ($pm && method_exists($pm, 'getSaved') && $pm->getSaved()) {
-                $pmId = $pm->getId();
-            }
-        } catch (Throwable $e) {
-            $pmId = null;
-        }
+        // Сохранённый метод оплаты + карта (Этап 2: автопродление). Если карта не сохранена
+        // (галочка снята) — всё остаётся null, activate() поставит auto_renew=0.
+        $savedPm = SubscriptionService::extractSavedPaymentMethod($payment);
+        $pmId    = $savedPm['id'];
 
         try {
             // ⚠️ Без внешней транзакции: SubscriptionService::activate() управляет СВОЕЙ
@@ -271,7 +265,7 @@ try {
             // succeeded. Если activate() упадёт — заказ остаётся pending, и reconcile-cron
             // (а равно повтор вебхука) дожмёт; isProcessed по succeeded не «съест» заявку.
             $subService = new SubscriptionService($GLOBALS['db']);
-            $subId = $subService->activate($subUserId, $planId, $period, (int)$order['id'], $pmId);
+            $subId = $subService->activate($subUserId, $planId, $period, (int)$order['id'], $pmId, $savedPm['last4'], $savedPm['type']);
             $orderObjSub->updatePaymentStatus($order['id'], 'succeeded', date('Y-m-d H:i:s'));
             logWebhook('SUCCESS', $paymentId, "Subscription activated: user={$subUserId} plan={$planId} period={$period} sub={$subId}", '');
         } catch (Throwable $e) {

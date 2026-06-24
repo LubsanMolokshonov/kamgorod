@@ -404,6 +404,143 @@ HTML;
 }
 
 /**
+ * Транзакционка: предупреждение об автосписании за N дней (cron/subscription-reminders.php).
+ */
+function sendSubscriptionAutoRenewNoticeEmail($userId, $subscriptionId) {
+    global $db;
+    try {
+        require_once __DIR__ . '/../classes/User.php';
+        require_once __DIR__ . '/../classes/Database.php';
+
+        $user = (new User($db))->getById($userId);
+        if (!$user) {
+            throw new \Exception('User not found');
+        }
+        $sub = (new Database($db))->queryOne(
+            "SELECT us.*, p.name AS plan_name, p.price_monthly, p.price_yearly
+             FROM user_subscriptions us JOIN subscription_plans p ON p.id = us.plan_id
+             WHERE us.id = ?",
+            [$subscriptionId]
+        );
+        if (!$sub) {
+            throw new \Exception('Subscription not found');
+        }
+
+        $manageUrl = generateMagicUrl((int)$userId, '/kabinet/', 14);
+        $htmlBody = buildSubscriptionAutoRenewNoticeEmailBody($user, $sub, $manageUrl);
+
+        EmailDispatcher::send([
+            'to_email' => $user['email'],
+            'to_name'  => $user['full_name'],
+            'subject'  => 'Подписка «' . $sub['plan_name'] . '» скоро продлится автоматически',
+            'html'     => $htmlBody,
+            'meta'     => [
+                'email_type'      => 'payment',
+                'touchpoint_code' => 'subscription_autorenew_notice',
+                'user_id'         => $userId,
+            ],
+        ]);
+        logEmail('SUCCESS', $user['email'], 'sub#' . $subscriptionId, 'Auto-renew notice email sent');
+        return true;
+    } catch (\Throwable $e) {
+        logEmail('ERROR', $user['email'] ?? 'unknown', 'sub#' . $subscriptionId, 'Auto-renew notice email failed: ' . $e->getMessage());
+        throw $e;
+    }
+}
+
+/**
+ * Транзакционка: автосписание не удалось (после исчерпания попыток) — продлить вручную.
+ */
+function sendSubscriptionRenewFailedEmail($userId, $subscriptionId) {
+    global $db;
+    try {
+        require_once __DIR__ . '/../classes/User.php';
+        require_once __DIR__ . '/../classes/Database.php';
+
+        $user = (new User($db))->getById($userId);
+        if (!$user) {
+            throw new \Exception('User not found');
+        }
+        $sub = (new Database($db))->queryOne(
+            "SELECT us.*, p.name AS plan_name
+             FROM user_subscriptions us JOIN subscription_plans p ON p.id = us.plan_id
+             WHERE us.id = ?",
+            [$subscriptionId]
+        );
+        if (!$sub) {
+            throw new \Exception('Subscription not found');
+        }
+
+        $renewUrl = generateMagicUrl((int)$userId, '/podpiska/', 14);
+        $htmlBody = buildSubscriptionRenewFailedEmailBody($user, $sub, $renewUrl);
+
+        EmailDispatcher::send([
+            'to_email' => $user['email'],
+            'to_name'  => $user['full_name'],
+            'subject'  => 'Не удалось продлить подписку «' . $sub['plan_name'] . '»',
+            'html'     => $htmlBody,
+            'meta'     => [
+                'email_type'      => 'payment',
+                'touchpoint_code' => 'subscription_renew_failed',
+                'user_id'         => $userId,
+            ],
+        ]);
+        logEmail('SUCCESS', $user['email'], 'sub#' . $subscriptionId, 'Renew-failed email sent');
+        return true;
+    } catch (\Throwable $e) {
+        logEmail('ERROR', $user['email'] ?? 'unknown', 'sub#' . $subscriptionId, 'Renew-failed email failed: ' . $e->getMessage());
+        throw $e;
+    }
+}
+
+function buildSubscriptionAutoRenewNoticeEmailBody(array $user, array $sub, string $manageUrl): string {
+    $fullName = htmlspecialchars(trim((string)($user['full_name'] ?? '')), ENT_QUOTES, 'UTF-8');
+    $greet    = $fullName !== '' ? "Здравствуйте, <strong>{$fullName}</strong>!" : 'Здравствуйте!';
+    $planName = htmlspecialchars((string)$sub['plan_name'], ENT_QUOTES, 'UTF-8');
+    $expires  = htmlspecialchars(date('d.m.Y', strtotime((string)$sub['expires_at'])), ENT_QUOTES, 'UTF-8');
+    $isYear   = ($sub['period'] ?? 'monthly') === 'yearly';
+    $price    = (float)($isYear ? $sub['price_yearly'] : $sub['price_monthly']);
+    $priceStr = htmlspecialchars(number_format($price, 0, '', ' '), ENT_QUOTES, 'UTF-8');
+    $periodLabel = $isYear ? 'год' : 'месяц';
+    $last4    = htmlspecialchars((string)($sub['card_last4'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $cardType = htmlspecialchars((string)($sub['card_type'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $cardStr  = $last4 !== '' ? trim($cardType . ' •••• ' . $last4) : 'привязанной карты';
+    $manageEsc = htmlspecialchars($manageUrl, ENT_QUOTES, 'UTF-8');
+
+    $btn = "<a href=\"{$manageEsc}\" style=\"display:inline-block;background:linear-gradient(135deg,#6c5ce7 0%,#5b54c9 100%);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;\">Управлять подпиской</a>";
+
+    $content = <<<HTML
+        <p style="margin:0 0 18px 0;font-size:16px;">{$greet}</p>
+        <p style="margin:0 0 18px 0;">Подписка <strong>«{$planName}»</strong> продлится автоматически <strong>{$expires}</strong>. Мы спишем <strong>{$priceStr} ₽</strong> за {$periodLabel} с {$cardStr} — делать ничего не нужно.</p>
+        <p style="margin:0 0 18px 0;color:#5a5f6b;">Если продлевать не хотите — отключите автопродление в личном кабинете до этой даты. Доступ сохранится до конца оплаченного периода.</p>
+        <div style="text-align:center;margin:28px 0;">{$btn}</div>
+        <p style="margin:18px 0 0 0;color:#5a5f6b;font-size:14px;">Вопросы — на <a href="mailto:info@fgos.pro" style="color:#6c5ce7;">info@fgos.pro</a>.</p>
+HTML;
+
+    return renderTransactionalEmailLayout('Подписка скоро продлится', '«' . $planName . '» · ' . $priceStr . ' ₽ · ' . $expires, $content);
+}
+
+function buildSubscriptionRenewFailedEmailBody(array $user, array $sub, string $renewUrl): string {
+    $fullName = htmlspecialchars(trim((string)($user['full_name'] ?? '')), ENT_QUOTES, 'UTF-8');
+    $greet    = $fullName !== '' ? "Здравствуйте, <strong>{$fullName}</strong>!" : 'Здравствуйте!';
+    $planName = htmlspecialchars((string)$sub['plan_name'], ENT_QUOTES, 'UTF-8');
+    $expires  = htmlspecialchars(date('d.m.Y', strtotime((string)$sub['expires_at'])), ENT_QUOTES, 'UTF-8');
+    $renewEsc = htmlspecialchars($renewUrl, ENT_QUOTES, 'UTF-8');
+
+    $btn = "<a href=\"{$renewEsc}\" style=\"display:inline-block;background:linear-gradient(135deg,#6c5ce7 0%,#5b54c9 100%);color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;\">Продлить подписку</a>";
+
+    $content = <<<HTML
+        <p style="margin:0 0 18px 0;font-size:16px;">{$greet}</p>
+        <p style="margin:0 0 18px 0;">Не удалось автоматически продлить подписку <strong>«{$planName}»</strong> — банк отклонил списание (например, недостаточно средств или истёк срок карты). Доступ действует до <strong>{$expires}</strong>.</p>
+        <p style="margin:0 0 18px 0;">Чтобы не потерять доступ к дипломам и генератору материалов, продлите подписку вручную:</p>
+        <div style="text-align:center;margin:28px 0;">{$btn}</div>
+        <p style="margin:18px 0 0 0;color:#5a5f6b;font-size:14px;">Ссылка автоматически авторизует вас на сайте. Вопросы — на <a href="mailto:info@fgos.pro" style="color:#6c5ce7;">info@fgos.pro</a>.</p>
+HTML;
+
+    return renderTransactionalEmailLayout('Не удалось продлить подписку', '«' . $planName . '» · до ' . $expires, $content);
+}
+
+/**
  * Логирование email-операций в logs/email.log (для grep/аудита).
  */
 function logEmail($level, $email, $orderNumber, $message) {
