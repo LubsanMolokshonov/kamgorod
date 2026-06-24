@@ -311,8 +311,16 @@ try {
     $orderObj = new Order($GLOBALS['db']);
     $registrationObj = new Registration($GLOBALS['db']);
 
+    // Для refund.succeeded объект уведомления — Refund: getId() возвращает id ВОЗВРАТА,
+    // а заказ привязан к id ПЛАТЕЖА. Берём payment_id платежа через getPaymentId(),
+    // иначе getByPaymentId по id возврата не находит заказ («Order not found»).
+    $lookupPaymentId = $paymentId;
+    if ($eventType === 'refund.succeeded' && method_exists($payment, 'getPaymentId')) {
+        $lookupPaymentId = $payment->getPaymentId();
+    }
+
     // Find order by payment ID
-    $order = $orderObj->getByPaymentId($paymentId);
+    $order = $orderObj->getByPaymentId($lookupPaymentId);
 
     if (!$order) {
         logWebhook('WARNING', $paymentId, 'Order not found', '');
