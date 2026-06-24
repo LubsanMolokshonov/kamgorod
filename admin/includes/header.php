@@ -85,6 +85,26 @@ $currentAdmin = Admin::verifySession();
                 </a>
 
                 <?php
+                // Диалоги «Макс», ждущие ответа: последнее сообщение диалога — входящее от пользователя.
+                // Без GROUP_CONCAT (не зависит от group_concat_max_len, опирается на PK/индекс phone).
+                $maxAwaitingCount = 0;
+                try {
+                    global $db;
+                    if (isset($db)) {
+                        $maxAwaitingCount = (int)$db->query(
+                            "SELECT COUNT(*) FROM max_messages m
+                             WHERE m.direction='in'
+                               AND m.id = (SELECT MAX(m2.id) FROM max_messages m2 WHERE m2.phone = m.phone)"
+                        )->fetchColumn();
+                    }
+                } catch (\Throwable $e) { /* таблицы может не быть до миграции 155 */ }
+                ?>
+                <a href="/admin/max/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/max/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">💬</span>
+                    <span>Переписка «Макс»<?php if ($maxAwaitingCount > 0): ?> <span class="nav-badge"><?php echo $maxAwaitingCount; ?></span><?php endif; ?></span>
+                </a>
+
+                <?php
                 $pendingReviewsCount = 0;
                 try {
                     global $db;

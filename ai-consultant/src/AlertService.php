@@ -318,6 +318,93 @@ class AlertService
     }
 
     /**
+     * Создать алерт из входящего сообщения в мессенджере «Макс» (вызывается из MaxInboundProcessor).
+     *
+     * @param array{provider_message_id:string, phone:string, user_id:?int, from_name:?string, text:string, received_at:?string} $maxMsg
+     * @param array{summary:?string, category:?string} $classification
+     */
+    public function createFromMax(array $maxMsg, array $classification): int
+    {
+        $providerMessageId = trim((string)($maxMsg['provider_message_id'] ?? ''));
+        $phone    = trim((string)($maxMsg['phone'] ?? ''));
+        $userId   = isset($maxMsg['user_id']) && $maxMsg['user_id'] ? (int)$maxMsg['user_id'] : null;
+        $fromName = trim((string)($maxMsg['from_name'] ?? '')) ?: ('Макс ' . $phone);
+        $text     = trim((string)($maxMsg['text'] ?? ''));
+
+        // Суррогатный email — колонка user_email NOT NULL (как для VK).
+        $userEmail   = ($phone !== '' ? $phone : 'unknown') . '@max.fgos.pro';
+        $description = self::sanitizeUtf8(mb_substr($text !== '' ? $text : '(пустое сообщение)', 0, 5000));
+        $fromName    = self::sanitizeUtf8($fromName);
+        $sourceMsgId = $providerMessageId !== '' ? ('max_' . $providerMessageId) : null;
+
+        $aiSummary  = isset($classification['summary']) ? mb_substr((string)$classification['summary'], 0, 500) : null;
+        $aiCategory = null;
+        $cat = $classification['category'] ?? null;
+        if (in_array($cat, ['payment','technical','content','access','other'], true)) {
+            $aiCategory = $cat;
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO support_alerts
+                 (chat_session_id, source, source_message_id, max_phone, user_id, user_name, user_email, user_phone,
+                  page_url, description, ai_summary, ai_category, status)
+                 VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?)'
+            );
+            $stmt->execute([
+                'max',
+                $sourceMsgId,
+                $phone !== '' ? $phone : null,
+                $userId,
+                $fromName,
+                $userEmail,
+                $phone !== '' ? $phone : null,
+                $description,
+                $aiSummary,
+                $aiCategory,
+                'new',
+            ]);
+            $alertId = (int)$this->pdo->lastInsertId();
+
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO alert_messages
+                 (alert_id, direction, from_email, from_name, to_email, subject, body_text, message_id)
+                 VALUES (?, 'inbound', ?, ?, ?, NULL, ?, ?)"
+            );
+            $stmt->execute([
+                $alertId,
+                $userEmail,
+                $fromName,
+                defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : 'info@fgos.pro',
+                $description,
+                $sourceMsgId,
+            ]);
+
+            $this->pdo->commit();
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log(sprintf(
+                'AlertService::createFromMax SQL fail phone=%s msgid=%s err=%s',
+                $phone,
+                $providerMessageId,
+                $e->getMessage()
+            ));
+            ai_log('MAX', 'createFromMax SQL fail', ['phone' => $phone, 'message_id' => $providerMessageId, 'error' => $e->getMessage()]);
+            throw $e;
+        }
+
+        ai_log('MAX', 'Alert created from MAX', ['id' => $alertId, 'phone' => $phone, 'category' => $aiCategory]);
+
+        $this->notifyAdmin($alertId, $fromName, $userEmail, $phone, $description, null, $aiSummary, $aiCategory);
+        $this->notifyTelegram($alertId, $fromName, $userEmail, $phone, $description, null, $aiSummary, $aiCategory);
+
+        return $alertId;
+    }
+
+    /**
      * Добавить inbound-сообщение в существующий тред алерта (ответ пользователя).
      * Возвращает id вставленной записи alert_messages, либо 0 если уже сохранено (дедуп по message_id).
      */

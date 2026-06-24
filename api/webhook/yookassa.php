@@ -284,6 +284,10 @@ try {
             logWebhook('WARNING', $paymentId, 'Subscription activation email failed (non-fatal): ' . $e->getMessage(), '');
         }
 
+        // MAX-уведомление подписчикам отключено (решение от 2026-06-24): в мессенджер «Макс»
+        // пишем только тем, кто купил мероприятие лично, не покупателям подписки.
+        // Ранее здесь вызывался sendSubscriptionMaxNotification() — намеренно убрано.
+
         // Пожизненная скидка лояльности — оплата подписки тоже первый успешный платёж.
         try {
             if (LoyaltyDiscount::isFirstSuccessfulOrder($GLOBALS['db'], $subUserId, (int)$order['id'])) {
@@ -628,6 +632,17 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                     // через 10 минут с экспоненциальным backoff'ом.
                     logWebhook('WARNING', $paymentId, "payment_success send failed, queued for retry: " . $sendErr->getMessage(), '');
                     scheduleDelayedEmail('payment_success', (int)$userId, (int)$orderId, 10);
+                }
+
+                // Уведомление в мессенджер «Макс» (ChatPush) об оплате мероприятия.
+                // Только конкурс/олимпиада/публикация/вебинар; телефон берётся из users.phone.
+                // Доставка в Макс не должна ломать webhook — ошибки глотаются внутри.
+                try {
+                    require_once BASE_PATH . '/includes/max-helper.php';
+                    $maxStatus = sendPaymentMaxNotification((int)$userId, $order, $orderItems);
+                    logWebhook('INFO', $paymentId, "MAX notification: {$maxStatus} for order {$orderNumber}", '');
+                } catch (\Throwable $e) {
+                    logWebhook('WARNING', $paymentId, "MAX notification failed: " . $e->getMessage(), '');
                 }
 
                 // Погасить скидку email-кампании (если применялась) — чтобы

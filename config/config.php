@@ -52,6 +52,19 @@ if (!defined('YOOKASSA_SHOP_ID')) define('YOOKASSA_SHOP_ID', $_ENV['YOOKASSA_SHO
 if (!defined('YOOKASSA_SECRET_KEY')) define('YOOKASSA_SECRET_KEY', $_ENV['YOOKASSA_SECRET_KEY'] ?? '');
 if (!defined('YOOKASSA_MODE')) define('YOOKASSA_MODE', $_ENV['YOOKASSA_MODE'] ?? 'sandbox');
 
+// ChatPush — отправка уведомлений в мессенджер «Макс» при оплате мероприятий.
+// Канал (Макс / каскад) настраивается в кабинете ChatPush под токеном, в коде не указывается.
+// Константа-флаг названа иначе, чем ключ .env (CHATPUSH_ENABLED), чтобы строки 'false'/'no'
+// корректно парсились в bool — общий загрузчик .env определил бы одноимённую константу как
+// truthy-строку (см. тот же приём для PRICING_AB ниже).
+if (!defined('CHATPUSH_ACTIVE'))    define('CHATPUSH_ACTIVE', filter_var($_ENV['CHATPUSH_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN));
+if (!defined('CHATPUSH_API_TOKEN')) define('CHATPUSH_API_TOKEN', $_ENV['CHATPUSH_API_TOKEN'] ?? '');
+if (!defined('CHATPUSH_API_URL'))   define('CHATPUSH_API_URL', $_ENV['CHATPUSH_API_URL'] ?? 'https://api.chatpush.ru/api/v1/delivery');
+// Секрет для верификации входящего вебхука ChatPush (ответы пользователей в «Макс»).
+// Пусто = входящие отклоняются (fail-closed). Секрет зашивается в callback-URL (?secret=).
+// См. api/webhook/chatpush.php и scripts/chatpush-register-webhook.php.
+if (!defined('CHATPUSH_CALLBACK_SECRET')) define('CHATPUSH_CALLBACK_SECRET', $_ENV['CHATPUSH_CALLBACK_SECRET'] ?? '');
+
 // Bitrix24 CRM Integration
 if (!defined('BITRIX24_WEBHOOK_URL')) define('BITRIX24_WEBHOOK_URL', $_ENV['BITRIX24_WEBHOOK_URL'] ?? '');
 if (!defined('BITRIX24_WEBINAR_PIPELINE_ID')) define('BITRIX24_WEBINAR_PIPELINE_ID', $_ENV['BITRIX24_WEBINAR_PIPELINE_ID'] ?? 102);

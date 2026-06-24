@@ -92,6 +92,9 @@ Thumbs.db
 # Разовые ad-hoc скрипты ответов на support_alerts (содержат ПДн клиентов — не коммитить)
 /scripts/reply_alerts_batch_*.php
 
+# Разовые ad-hoc скрипты возвратов (содержат ПДн/payment_id клиентов — не коммитить)
+/scripts/refund_subscription_*.php
+
 # Personal root-level materials (non-code)
 /Дипломы/
 /Сертификат/
