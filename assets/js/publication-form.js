@@ -16,6 +16,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Маска телефона: формат +7 (XXX) XXX-XX-XX (та же логика, что на вебинарах).
+    const phoneInput = document.getElementById('phone');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.startsWith('8')) {
+                value = '7' + value.substring(1);
+            }
+            if (value.length > 11) {
+                value = value.substring(0, 11);
+            }
+            let formatted = '+7';
+            if (value.length > 1) { formatted += ' (' + value.substring(1, 4); }
+            if (value.length >= 4) { formatted += ') ' + value.substring(4, 7); }
+            if (value.length >= 7) { formatted += '-' + value.substring(7, 9); }
+            if (value.length >= 9) { formatted += '-' + value.substring(9, 11); }
+            e.target.value = formatted;
+        });
+        phoneInput.addEventListener('focus', function(e) {
+            if (!e.target.value || e.target.value === '+7') {
+                e.target.value = '+7 ';
+            }
+        });
+    }
+
     // File upload area
     const fileUploadArea = document.getElementById('fileUploadArea');
     const fileInput = document.getElementById('publication_file');

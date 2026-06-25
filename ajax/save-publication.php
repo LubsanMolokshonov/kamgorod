@@ -12,6 +12,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Publication.php';
 require_once __DIR__ . '/../classes/PublicationCertificate.php';
+require_once __DIR__ . '/../classes/ChatpushClient.php';
 require_once __DIR__ . '/../classes/FileUploader.php';
 require_once __DIR__ . '/../includes/session.php';
 
@@ -41,6 +42,14 @@ foreach ($required as $field) {
 $email = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
 if (!$email) {
     echo json_encode(['success' => false, 'message' => 'Некорректный email']);
+    exit;
+}
+
+// Телефон обязателен: номер нужен, чтобы наполнить базу и слать уведомления в «Макс».
+// Нормализуем к 79XXXXXXXXX; невалидный/пустой → ошибка.
+$phone = ChatpushClient::normalizePhone($_POST['phone'] ?? null);
+if ($phone === null) {
+    echo json_encode(['success' => false, 'message' => 'Укажите корректный номер телефона для связи (например, +7 900 123-45-67).']);
     exit;
 }
 
@@ -102,17 +111,23 @@ try {
         $userId = $userObj->create([
             'email' => $email,
             'full_name' => $_POST['author_name'],
+            'phone' => $phone,
             'organization' => $_POST['organization'],
             'profession' => $_POST['position'] ?? ''
         ]);
     } else {
         $userId = $user['id'];
-        // Update user info if needed
-        $userObj->update($userId, [
+        // Update user info if needed. Телефон заполняем только если в профиле пусто,
+        // чтобы не затирать ранее сохранённый номер.
+        $updateData = [
             'full_name' => $_POST['author_name'],
             'organization' => $_POST['organization'],
             'profession' => $_POST['position'] ?? $user['profession']
-        ]);
+        ];
+        if (empty($user['phone'])) {
+            $updateData['phone'] = $phone;
+        }
+        $userObj->update($userId, $updateData);
     }
 
     // Upload file
@@ -167,6 +182,7 @@ try {
         'publication_id' => $publicationId,
         'user_id' => $userId,
         'author_name' => $_POST['author_name'],
+        'phone' => $phone,
         'organization' => $_POST['organization'],
         'position' => $_POST['position'] ?? '',
         'price' => 299.00

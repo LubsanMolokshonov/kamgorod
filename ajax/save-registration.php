@@ -11,6 +11,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Registration.php';
+require_once __DIR__ . '/../classes/ChatpushClient.php';
 require_once __DIR__ . '/../classes/Validator.php';
 require_once __DIR__ . '/../classes/EmailJourney.php';
 require_once __DIR__ . '/../includes/session.php';
@@ -34,6 +35,11 @@ try {
     // Sanitize data
     $data = $validator->getData();
 
+    // Телефон необязателен для конкурсов (форма не блокирует), но если введён —
+    // нормализуем к 79XXXXXXXXX. Невалидный/пустой → null (не сохраняем мусор).
+    // Номер нужен для уведомлений в «Макс» и для работы с базой.
+    $phone = ChatpushClient::normalizePhone($_POST['phone'] ?? null);
+
     // Determine if supervisor exists based on supervisor_name field
     $supervisorName = !empty($data['supervisor_name']) ? trim($data['supervisor_name']) : null;
     $hasSupervisor = !empty($supervisorName) ? 1 : 0;
@@ -55,7 +61,7 @@ try {
         $userId = $userObj->create([
             'email' => $data['email'],
             'full_name' => $accountOwnerName,
-            'phone' => $data['phone'] ?? null,
+            'phone' => $phone,
             'city' => $data['city'] ?? null,
             'organization' => $accountOwnerOrg
         ]);
@@ -68,8 +74,8 @@ try {
         if (empty($user['full_name'])) {
             $updateFields['full_name'] = $accountOwnerName;
         }
-        if (empty($user['phone']) && !empty($data['phone'])) {
-            $updateFields['phone'] = $data['phone'];
+        if (empty($user['phone']) && $phone !== null) {
+            $updateFields['phone'] = $phone;
         }
         if (empty($user['city']) && !empty($data['city'])) {
             $updateFields['city'] = $data['city'];
@@ -102,6 +108,7 @@ try {
     $registrationId = $registrationObj->create([
         'user_id' => $userId,
         'participant_name' => $data['fio'],
+        'phone' => $phone,
         'competition_id' => $data['competition_id'],
         'nomination' => $data['nomination'],
         'work_title' => $data['work_title'] ?? null,

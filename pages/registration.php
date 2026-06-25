@@ -92,6 +92,16 @@ include __DIR__ . '/../includes/header.php';
                         </div>
 
                         <div class="form-group">
+                            <input type="tel"
+                                   class="form-control"
+                                   id="phone"
+                                   name="phone"
+                                   value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>"
+                                   placeholder="Телефон (необязательно)">
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
+                        </div>
+
+                        <div class="form-group">
                             <input type="text"
                                    class="form-control"
                                    id="fio"

@@ -37,6 +37,7 @@ class PublicationCertificate {
             'user_id' => $data['user_id'],
             'template_id' => $data['template_id'] ?? 1,
             'author_name' => $data['author_name'],
+            'phone' => $data['phone'] ?? null,
             'organization' => $data['organization'] ?? '',
             'position' => $data['position'] ?? '',
             'certificate_number' => $certificateNumber,

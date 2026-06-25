@@ -20,6 +20,7 @@ class Registration {
             'user_id' => $data['user_id'],
             'group_batch_id' => $data['group_batch_id'] ?? null,
             'participant_name' => $data['participant_name'] ?? '',
+            'phone' => $data['phone'] ?? null,
             'competition_id' => $data['competition_id'],
             'nomination' => $data['nomination'],
             'work_title' => $data['work_title'] ?? null,

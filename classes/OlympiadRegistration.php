@@ -19,6 +19,7 @@ class OlympiadRegistration {
             'user_id' => $data['user_id'],
             'group_batch_id' => $data['group_batch_id'] ?? null,
             'participant_name' => $data['participant_name'] ?? null,
+            'phone' => $data['phone'] ?? null,
             'olympiad_id' => $data['olympiad_id'],
             'olympiad_result_id' => $data['olympiad_result_id'] ?? null,
             'diploma_template_id' => $data['diploma_template_id'] ?? 1,

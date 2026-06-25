@@ -162,7 +162,9 @@ include __DIR__ . '/../includes/header.php';
                                    id="phone"
                                    name="phone"
                                    value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>"
-                                   placeholder="Телефон (необязательно)">
+                                   placeholder="Телефон"
+                                   required>
+                            <div class="error-message" style="display:none; color: #ef4444; font-size: 12px; margin-top: 4px;"></div>
                         </div>
 
                         <!-- Organization -->
@@ -680,6 +682,22 @@ document.addEventListener('DOMContentLoaded', function () {
                     supAgrErr.textContent = 'Необходимо принять условия';
                     supAgrErr.style.display = 'block';
                 }
+                valid = false;
+            }
+        }
+
+        // Телефон обязателен независимо от вкладки (это контакт покупателя). Само поле
+        // живёт на вкладке «Участник»; если пользователь на вкладке «Руководитель» и не
+        // заполнил телефон — переключаем его туда, чтобы он увидел поле и ошибку.
+        var phoneField = document.getElementById('phone');
+        if (phoneField) {
+            var phoneDigits = phoneField.value.replace(/\D/g, '');
+            if (phoneDigits.length < 11) {
+                if (currentTab !== 'participant') {
+                    var participantTabBtn = document.querySelector('.diploma-tab[data-tab="participant"]');
+                    if (participantTabBtn) { participantTabBtn.click(); }
+                }
+                showError(phoneField, 'Укажите корректный номер телефона');
                 valid = false;
             }
         }

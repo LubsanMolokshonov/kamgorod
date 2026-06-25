@@ -137,6 +137,16 @@ include __DIR__ . '/../includes/header-redesign.php';
                          placeholder="Учитель начальных классов">
                 </div>
               </div>
+
+              <div class="rd-form-row">
+                <div class="rd-form-group">
+                  <label for="phone">Телефон <span class="required">*</span></label>
+                  <input type="tel" class="form-control" id="phone" name="phone"
+                         value="<?php echo htmlspecialchars($userData['phone'] ?? ''); ?>"
+                         placeholder="+7 (___) ___-__-__" required>
+                  <div class="error-message"></div>
+                </div>
+              </div>
             </div>
 
             <!-- File upload -->

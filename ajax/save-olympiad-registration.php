@@ -19,6 +19,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/OlympiadQuiz.php';
 require_once __DIR__ . '/../classes/OlympiadRegistration.php';
+require_once __DIR__ . '/../classes/ChatpushClient.php';
 require_once __DIR__ . '/../classes/Validator.php';
 require_once __DIR__ . '/../includes/session.php';
 
@@ -68,6 +69,17 @@ if ($validator->fails()) {
 
 try {
     $data = $validator->getData();
+
+    // Телефон обязателен для олимпиад: номер нужен, чтобы наполнить базу и слать
+    // уведомления в «Макс». Нормализуем к 79XXXXXXXXX; невалидный/пустой → ошибка.
+    $phone = ChatpushClient::normalizePhone($_POST['phone'] ?? null);
+    if ($phone === null) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Укажите корректный номер телефона для связи (например, +7 900 123-45-67).'
+        ]);
+        exit;
+    }
 
     // ------------------------------------------------------------------
     // 4. Validate result: exists, user owns it, placement exists
@@ -136,7 +148,7 @@ try {
         $newUserId = $userObj->create([
             'email'        => $data['email'],
             'full_name'    => $data['fio'],
-            'phone'        => $data['phone'] ?? null,
+            'phone'        => $phone,
             'city'         => $data['city'] ?? null,
             'organization' => $data['organization'] ?? null,
         ]);
@@ -153,8 +165,8 @@ try {
         if (empty($userInfo['full_name']) && !empty($data['fio'])) {
             $updateFields['full_name'] = $data['fio'];
         }
-        if (!empty($data['phone'])) {
-            $updateFields['phone'] = $data['phone'];
+        if (empty($userInfo['phone'])) {
+            $updateFields['phone'] = $phone;
         }
         if (!empty($data['city'])) {
             $updateFields['city'] = $data['city'];
@@ -199,6 +211,7 @@ try {
     $registrationId = $registrationObj->create([
         'user_id'                 => $userId,
         'participant_name'        => mb_substr(trim($data['fio']), 0, 55),
+        'phone'                   => $phone,
         'olympiad_id'             => $result['olympiad_id'],
         'olympiad_result_id'      => $result['id'],
         'diploma_template_id'     => (int)$data['template_id'],
