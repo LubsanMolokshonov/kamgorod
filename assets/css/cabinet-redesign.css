@@ -68,6 +68,82 @@
 .loyalty-badge-body strong { font-size: 13px; color: #8a5a0a; font-weight: 700; }
 .loyalty-badge-body span { font-size: 12px; color: #8a6a2a; line-height: 1.4; }
 
+/* ---------- Подписка — полноширинный баннер над сеткой ЛК ---------- */
+.cab-subscription {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 28px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+  border: 1px solid #ddd6fe;
+  border-radius: var(--r-lg, 20px);
+  box-shadow: var(--sh-1, 0 1px 2px rgba(20,20,40,.05));
+}
+.cab-subscription-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.cab-subscription-icon { font-size: 30px; line-height: 1; flex-shrink: 0; }
+.cab-subscription-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cab-subscription-info strong { font-size: 17px; color: #4c1d95; font-weight: 700; }
+.cab-subscription-info span { font-size: 13px; color: #5b4b8a; line-height: 1.45; }
+.cab-subscription-renew {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-weight: 600;
+  color: #6c5ce7;
+  text-decoration: none;
+}
+.cab-subscription-renew:hover { text-decoration: underline; }
+
+/* Привязанная карта */
+.cab-subscription-card {
+  flex: 0 1 380px;
+  min-width: 260px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid #e5e3f5;
+  border-radius: 14px;
+}
+.cab-card-head { display: flex; align-items: center; gap: 10px; }
+.cab-card-emoji { font-size: 20px; line-height: 1; flex-shrink: 0; }
+.cab-card-head strong { display: block; color: #2d2d44; font-size: 14px; }
+.cab-card-head span { display: block; color: #5b6178; font-size: 13px; margin-top: 2px; }
+.cab-card-confirm-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  color: #5b6178;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.cab-card-confirm-label input { margin-top: 2px; width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; }
+.cab-card-delete-btn {
+  margin-top: 12px;
+  background: #ef4444;
+  border: 0;
+  padding: 10px 18px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: .5;
+}
+.cab-card-delete-btn:not(:disabled) { opacity: 1; }
+
+@media (max-width: 900px) {
+  .cab-subscription { flex-direction: column; align-items: stretch; }
+  .cab-subscription-card { flex-basis: auto; }
+}
+
 /* Навигация-табы (вертикально в сайдбаре) */
 .cabinet-tabs {
   display: flex;

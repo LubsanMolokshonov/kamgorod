@@ -305,6 +305,80 @@ include __DIR__ . '/../includes/header.php';
 <?php endif; ?>
 
 <div class="cab-shell-wrap">
+    <?php if ($cabSub): ?>
+        <?php
+            $cabAutoRenew = !empty($cabSub['auto_renew']) && !empty($cabSub['yookassa_payment_method_id']);
+            $cabCardLast4 = trim((string)($cabSub['card_last4'] ?? ''));
+            $cabCardType  = trim((string)($cabSub['card_type'] ?? ''));
+            $cabExpires   = date('d.m.Y', strtotime($cabSub['expires_at']));
+            $cabCsrf      = function_exists('generateCSRFToken') ? generateCSRFToken() : '';
+        ?>
+        <div class="cab-subscription">
+            <div class="cab-subscription-main">
+                <div class="cab-subscription-icon">⭐</div>
+                <div class="cab-subscription-info">
+                    <strong>Подписка «<?php echo htmlspecialchars($cabSub['plan_name']); ?>»</strong>
+                    <span>
+                        Активна до <?php echo htmlspecialchars($cabExpires); ?>.
+                        <?php if ($cabSub['monthly_generation_tokens'] === null): ?>Безлимит генератора ФОП.<?php endif; ?>
+                        <?php if ((int)$cabSub['course_discount_percent'] > 0): ?> Скидка <?php echo (int)$cabSub['course_discount_percent']; ?>% на курсы.<?php endif; ?>
+                        Дипломы и сертификаты — без доплат.
+                    </span>
+                    <?php if (!$cabAutoRenew): ?>
+                        <a href="/podpiska/" class="cab-subscription-renew">Продлить →</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php if ($cabAutoRenew): ?>
+                <div class="cab-subscription-card" id="cab-card-box">
+                    <div class="cab-card-head">
+                        <span class="cab-card-emoji">💳</span>
+                        <div>
+                            <strong>Привязанная карта<?php if ($cabCardLast4 !== ''): ?> · <?php echo htmlspecialchars(trim($cabCardType . ' •••• ' . $cabCardLast4)); ?><?php endif; ?></strong>
+                            <span>🔄 Автопродление включено · следующее списание <?php echo htmlspecialchars($cabExpires); ?></span>
+                        </div>
+                    </div>
+                    <label class="cab-card-confirm-label">
+                        <input type="checkbox" id="cab-card-confirm">
+                        <span>Я хочу удалить привязанную карту и отключить автопродление. Подписка останется активна до <?php echo htmlspecialchars($cabExpires); ?>, но дальше продлеваться не будет.</span>
+                    </label>
+                    <button type="button" id="cab-delete-card" class="cab-card-delete-btn" disabled
+                            data-csrf="<?php echo htmlspecialchars($cabCsrf, ENT_QUOTES, 'UTF-8'); ?>">
+                        🗑 Удалить карту
+                    </button>
+                </div>
+                <script>
+                (function () {
+                    var cb = document.getElementById('cab-card-confirm');
+                    var b  = document.getElementById('cab-delete-card');
+                    if (!cb || !b) return;
+                    cb.addEventListener('change', function () {
+                        b.disabled = !cb.checked;
+                        b.style.opacity = cb.checked ? '1' : '0.5';
+                    });
+                    b.addEventListener('click', function () {
+                        if (b.disabled) return;
+                        if (!confirm('Удалить привязанную карту? Автопродление будет отключено, карта отвязана.')) return;
+                        b.disabled = true; b.style.opacity = '0.6';
+                        var fd = new FormData();
+                        fd.append('csrf', b.dataset.csrf);
+                        fetch('/ajax/cancel-subscription.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                            .then(function (r) { return r.json(); })
+                            .then(function (res) {
+                                if (res.success) { window.location.reload(); return; }
+                                alert(res.error || 'Не удалось удалить карту');
+                                b.disabled = false; b.style.opacity = '1';
+                            })
+                            .catch(function () {
+                                alert('Сеть прервалась, попробуйте ещё раз');
+                                b.disabled = false; b.style.opacity = '1';
+                            });
+                    });
+                })();
+                </script>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
     <div class="cabinet-container cab-shell">
         <aside class="cab-sidebar">
             <div class="cabinet-header">
@@ -326,78 +400,7 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             <?php endif; ?>
 
-            <?php if ($cabSub): ?>
-                <?php
-                    $cabAutoRenew = !empty($cabSub['auto_renew']) && !empty($cabSub['yookassa_payment_method_id']);
-                    $cabCardLast4 = trim((string)($cabSub['card_last4'] ?? ''));
-                    $cabCardType  = trim((string)($cabSub['card_type'] ?? ''));
-                    $cabExpires   = date('d.m.Y', strtotime($cabSub['expires_at']));
-                    $cabCsrf      = function_exists('generateCSRFToken') ? generateCSRFToken() : '';
-                ?>
-                <div class="loyalty-badge" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff);border:1px solid #ddd6fe;">
-                    <div class="loyalty-badge-icon">⭐</div>
-                    <div class="loyalty-badge-body">
-                        <strong>Подписка «<?php echo htmlspecialchars($cabSub['plan_name']); ?>»</strong>
-                        <span>
-                            Активна до <?php echo htmlspecialchars($cabExpires); ?>.
-                            <?php if ($cabSub['monthly_generation_tokens'] === null): ?>Безлимит генератора ФОП.<?php endif; ?>
-                            <?php if ((int)$cabSub['course_discount_percent'] > 0): ?> Скидка <?php echo (int)$cabSub['course_discount_percent']; ?>% на курсы.<?php endif; ?>
-                            Дипломы и сертификаты — без доплат.
-                        </span>
-                        <?php if ($cabAutoRenew): ?>
-                            <div id="cab-card-box" style="margin-top:12px;padding:14px 16px;background:#fff;border:1px solid #e5e3f5;border-radius:12px;">
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <span style="font-size:20px;">💳</span>
-                                    <div>
-                                        <strong style="display:block;color:#2d2d44;font-size:14px;">Привязанная карта<?php if ($cabCardLast4 !== ''): ?> · <?php echo htmlspecialchars(trim($cabCardType . ' •••• ' . $cabCardLast4)); ?><?php endif; ?></strong>
-                                        <span style="color:#5b6178;font-size:13px;">🔄 Автопродление включено · следующее списание <?php echo htmlspecialchars($cabExpires); ?></span>
-                                    </div>
-                                </div>
-                                <label style="display:flex;align-items:flex-start;gap:8px;margin-top:12px;color:#5b6178;font-size:13px;cursor:pointer;">
-                                    <input type="checkbox" id="cab-card-confirm" style="margin-top:2px;width:16px;height:16px;cursor:pointer;">
-                                    <span>Я хочу удалить привязанную карту и отключить автопродление. Подписка останется активна до <?php echo htmlspecialchars($cabExpires); ?>, но дальше продлеваться не будет.</span>
-                                </label>
-                                <button type="button" id="cab-delete-card" disabled
-                                        data-csrf="<?php echo htmlspecialchars($cabCsrf, ENT_QUOTES, 'UTF-8'); ?>"
-                                        style="margin-top:12px;background:#ef4444;border:0;padding:10px 18px;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;opacity:0.5;">
-                                    🗑 Удалить карту
-                                </button>
-                            </div>
-                            <script>
-                            (function () {
-                                var cb = document.getElementById('cab-card-confirm');
-                                var b  = document.getElementById('cab-delete-card');
-                                if (!cb || !b) return;
-                                cb.addEventListener('change', function () {
-                                    b.disabled = !cb.checked;
-                                    b.style.opacity = cb.checked ? '1' : '0.5';
-                                });
-                                b.addEventListener('click', function () {
-                                    if (b.disabled) return;
-                                    if (!confirm('Удалить привязанную карту? Автопродление будет отключено, карта отвязана.')) return;
-                                    b.disabled = true; b.style.opacity = '0.6';
-                                    var fd = new FormData();
-                                    fd.append('csrf', b.dataset.csrf);
-                                    fetch('/ajax/cancel-subscription.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-                                        .then(function (r) { return r.json(); })
-                                        .then(function (res) {
-                                            if (res.success) { window.location.reload(); return; }
-                                            alert(res.error || 'Не удалось удалить карту');
-                                            b.disabled = false; b.style.opacity = '1';
-                                        })
-                                        .catch(function () {
-                                            alert('Сеть прервалась, попробуйте ещё раз');
-                                            b.disabled = false; b.style.opacity = '1';
-                                        });
-                                });
-                            })();
-                            </script>
-                        <?php else: ?>
-                            <a href="/podpiska/" style="display:inline-block;margin-top:6px;font-weight:600;color:#6c5ce7;">Продлить →</a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php else: ?>
+            <?php if (!$cabSub): ?>
                 <a href="/podpiska/" class="loyalty-badge" style="text-decoration:none;background:#f7f8ff;border:1px dashed #c7caff;">
                     <div class="loyalty-badge-icon">⭐</div>
                     <div class="loyalty-badge-body">
