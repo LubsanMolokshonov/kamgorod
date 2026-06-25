@@ -345,21 +345,36 @@ include __DIR__ . '/../includes/header.php';
                             Дипломы и сертификаты — без доплат.
                         </span>
                         <?php if ($cabAutoRenew): ?>
-                            <span style="display:block;margin-top:6px;color:#5b6178;font-size:13px;">
-                                🔄 Автопродление включено<?php if ($cabCardLast4 !== ''): ?> · <?php echo htmlspecialchars(trim($cabCardType . ' •••• ' . $cabCardLast4)); ?><?php endif; ?> · следующее списание <?php echo htmlspecialchars($cabExpires); ?>
-                            </span>
-                            <button type="button" id="cab-cancel-autorenew"
-                                    data-csrf="<?php echo htmlspecialchars($cabCsrf, ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-expires="<?php echo htmlspecialchars($cabExpires, ENT_QUOTES, 'UTF-8'); ?>"
-                                    style="margin-top:8px;background:none;border:0;padding:0;color:#9aa0b4;font-size:13px;text-decoration:underline;cursor:pointer;">
-                                Отключить автопродление
-                            </button>
+                            <div id="cab-card-box" style="margin-top:12px;padding:14px 16px;background:#fff;border:1px solid #e5e3f5;border-radius:12px;">
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <span style="font-size:20px;">💳</span>
+                                    <div>
+                                        <strong style="display:block;color:#2d2d44;font-size:14px;">Привязанная карта<?php if ($cabCardLast4 !== ''): ?> · <?php echo htmlspecialchars(trim($cabCardType . ' •••• ' . $cabCardLast4)); ?><?php endif; ?></strong>
+                                        <span style="color:#5b6178;font-size:13px;">🔄 Автопродление включено · следующее списание <?php echo htmlspecialchars($cabExpires); ?></span>
+                                    </div>
+                                </div>
+                                <label style="display:flex;align-items:flex-start;gap:8px;margin-top:12px;color:#5b6178;font-size:13px;cursor:pointer;">
+                                    <input type="checkbox" id="cab-card-confirm" style="margin-top:2px;width:16px;height:16px;cursor:pointer;">
+                                    <span>Я хочу удалить привязанную карту и отключить автопродление. Подписка останется активна до <?php echo htmlspecialchars($cabExpires); ?>, но дальше продлеваться не будет.</span>
+                                </label>
+                                <button type="button" id="cab-delete-card" disabled
+                                        data-csrf="<?php echo htmlspecialchars($cabCsrf, ENT_QUOTES, 'UTF-8'); ?>"
+                                        style="margin-top:12px;background:#ef4444;border:0;padding:10px 18px;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;opacity:0.5;">
+                                    🗑 Удалить карту
+                                </button>
+                            </div>
                             <script>
                             (function () {
-                                var b = document.getElementById('cab-cancel-autorenew');
-                                if (!b) return;
+                                var cb = document.getElementById('cab-card-confirm');
+                                var b  = document.getElementById('cab-delete-card');
+                                if (!cb || !b) return;
+                                cb.addEventListener('change', function () {
+                                    b.disabled = !cb.checked;
+                                    b.style.opacity = cb.checked ? '1' : '0.5';
+                                });
                                 b.addEventListener('click', function () {
-                                    if (!confirm('Отключить автопродление? Подписка останется активна до ' + b.dataset.expires + ', но дальше продлеваться не будет, карта будет отвязана.')) return;
+                                    if (b.disabled) return;
+                                    if (!confirm('Удалить привязанную карту? Автопродление будет отключено, карта отвязана.')) return;
                                     b.disabled = true; b.style.opacity = '0.6';
                                     var fd = new FormData();
                                     fd.append('csrf', b.dataset.csrf);
@@ -367,7 +382,7 @@ include __DIR__ . '/../includes/header.php';
                                         .then(function (r) { return r.json(); })
                                         .then(function (res) {
                                             if (res.success) { window.location.reload(); return; }
-                                            alert(res.error || 'Не удалось отключить автопродление');
+                                            alert(res.error || 'Не удалось удалить карту');
                                             b.disabled = false; b.style.opacity = '1';
                                         })
                                         .catch(function () {
