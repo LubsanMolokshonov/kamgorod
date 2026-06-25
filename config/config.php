@@ -367,6 +367,12 @@ if (!defined('PUBLICATION_CERTIFICATE_PRICE')) define('PUBLICATION_CERTIFICATE_P
 if (!defined('SUBSCRIPTION_RENEW_MAX_ATTEMPTS')) define('SUBSCRIPTION_RENEW_MAX_ATTEMPTS', (int)($_ENV['SUBSCRIPTION_RENEW_MAX_ATTEMPTS'] ?? 3));
 if (!defined('SUBSCRIPTION_RENEW_LEAD_DAYS'))    define('SUBSCRIPTION_RENEW_LEAD_DAYS', (int)($_ENV['SUBSCRIPTION_RENEW_LEAD_DAYS'] ?? 1));
 if (!defined('SUBSCRIPTION_RENEW_NOTICE_DAYS'))  define('SUBSCRIPTION_RENEW_NOTICE_DAYS', (int)($_ENV['SUBSCRIPTION_RENEW_NOTICE_DAYS'] ?? 3));
+// Глобальный выключатель автопродления. Магазин YooKassa должен быть ПОДКЛЮЧЁН к
+// рекуррентным платежам — иначе save_payment_method:true даёт 403 forbidden и платёж
+// не создаётся вовсе. Пока рекуррент не включён менеджером YooMoney — держим false:
+// чекбокс/обещание автопродления скрыты в UI, карта не сохраняется, подписка разовая.
+// Когда YooMoney включит рекуррент — выставить SUBSCRIPTION_AUTORENEW_ENABLED=true в .env.
+if (!defined('SUBSCRIPTION_AUTORENEW_ENABLED')) define('SUBSCRIPTION_AUTORENEW_ENABLED', filter_var($_ENV['SUBSCRIPTION_AUTORENEW_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN));
 
 // Групповое участие: лимиты и прогрессивная скидка по размеру группы.
 // Тарифы — массив {min, max, percent}; проценты легко менять здесь.

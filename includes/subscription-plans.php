@@ -150,6 +150,7 @@ $spFeatureRows = [
     <?php endforeach; ?>
 </div>
 
+<?php if (SUBSCRIPTION_AUTORENEW_ENABLED): ?>
 <div style="text-align:center;margin-top:22px;">
     <label style="display:inline-flex;align-items:flex-start;gap:10px;max-width:520px;text-align:left;cursor:pointer;color:#3a3f54;font-size:14px;line-height:1.5;">
         <input type="checkbox" id="sub-autorenew" checked
@@ -158,9 +159,12 @@ $spFeatureRows = [
         карты, когда срок закончится. Отменить автопродление можно в любой момент в личном кабинете.</span>
     </label>
 </div>
+<?php endif; ?>
 
 <p class="sub-note">
-    Подписка продлевается автоматически на выбранный период (месяц или год).<span class="sub-note-more">
+    <?php if (SUBSCRIPTION_AUTORENEW_ENABLED): ?>
+    Подписка продлевается автоматически на выбранный период (месяц или год).<?php else: ?>
+    Оплата за выбранный период (месяц или год), без автосписаний — продлить можно вручную в личном кабинете.<?php endif; ?><span class="sub-note-more">
     Документы, оформленные в период действия подписки, остаются у вас навсегда. Подписка не
     отменяет возможность покупать отдельные мероприятия и пакеты токенов.</span>
 </p>
@@ -200,7 +204,8 @@ document.querySelectorAll('.sub-buy').forEach(function (btn) {
         fd.append('csrf', document.getElementById('sub-csrf').value);
         fd.append('plan_slug', btn.dataset.plan);
         fd.append('period', subPeriod);
-        fd.append('auto_renew', (!arEl || arEl.checked) ? '1' : '0');
+        // Чекбокса нет (автопродление выключено глобально) → без автопродления.
+        fd.append('auto_renew', (arEl && arEl.checked) ? '1' : '0');
         fetch('/ajax/create-subscription-payment.php', { method: 'POST', body: fd, credentials: 'same-origin' })
             .then(function (r) { return r.json(); })
             .then(function (res) {
