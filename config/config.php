@@ -439,6 +439,10 @@ if (!defined('COURSE_FIXED_DISCOUNT_PP')) define('COURSE_FIXED_DISCOUNT_PP', 10)
 if (!defined('PRICING_AB_ACTIVE')) define('PRICING_AB_ACTIVE', filter_var($_ENV['PRICING_AB_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN));
 if (!defined('PRICING_AB_SECRET')) define('PRICING_AB_SECRET', $_ENV['PRICING_AB_SECRET'] ?? (defined('COURSE_AB_TEST_SECRET') ? COURSE_AB_TEST_SECRET : ''));
 if (!defined('PRICING_AB_COOKIE')) define('PRICING_AB_COOKIE', 'pm_v');
+// Граница эпохи теста (раунд 2): при перезапуске выставить PRICING_AB_EPOCH='YYYY-MM-DD' в .env —
+// дашборд /admin/ab-test учитывает заказы только с этой даты, чтобы данные старого раунда (плохая
+// B-корзина) не смешивались с новыми. Пусто → фильтра нет (поведение как раньше).
+if (!defined('PRICING_AB_EPOCH')) define('PRICING_AB_EPOCH', trim((string)($_ENV['PRICING_AB_EPOCH'] ?? '')));
 
 // E-mail трекинг
 // Окно, в течение которого письмо считается причиной оплаты (дни)

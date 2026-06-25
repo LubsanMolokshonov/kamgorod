@@ -252,13 +252,33 @@ include __DIR__ . '/../includes/header.php';
 <div class="container">
     <div class="cart-container">
         <div class="cart-header">
-            <h1>
-                Ваша корзина
-                <?php if (!$isEmpty): ?>
-                    <span class="item-count-badge"><?php echo count($allItems); ?> шт.</span>
-                <?php endif; ?>
-            </h1>
-            <p>Проверьте выбранные товары перед оплатой</p>
+            <?php if (!$isEmpty && $pmSubscriptionOnly): ?>
+                <?php
+                // Падеж счётчика документов для варианта B.
+                $docN = count($allItems);
+                $d10 = $docN % 10; $d100 = $docN % 100;
+                if ($d10 === 1 && $d100 !== 11) {
+                    $docWord = 'документ готов';
+                } elseif ($d10 >= 2 && $d10 <= 4 && !($d100 >= 12 && $d100 <= 14)) {
+                    $docWord = 'документа готовы';
+                } else {
+                    $docWord = 'документов готовы';
+                }
+                ?>
+                <h1>
+                    Ваши документы готовы
+                    <span class="item-count-badge"><?php echo $docN . ' ' . $docWord; ?></span>
+                </h1>
+                <p>Скачивание открывает подписка — это безлимит дипломов, сертификатов и свидетельств для портфолио аттестации, плюс генератор материалов ФОП.</p>
+            <?php else: ?>
+                <h1>
+                    Ваша корзина
+                    <?php if (!$isEmpty): ?>
+                        <span class="item-count-badge"><?php echo count($allItems); ?> шт.</span>
+                    <?php endif; ?>
+                </h1>
+                <p>Проверьте выбранные товары перед оплатой</p>
+            <?php endif; ?>
         </div>
 
         <?php if ($isEmpty): ?>
@@ -272,6 +292,13 @@ include __DIR__ . '/../includes/header.php';
                 </a>
             </div>
         <?php else: ?>
+            <?php if ($pmSubscriptionOnly): ?>
+            <!-- Вариант B: объяснение «почему по подписке» до списка позиций -->
+            <div class="subonly-why" style="display:flex;gap:12px;align-items:flex-start;border:1px solid #e4e7f0;background:#f7f5ff;border-radius:14px;padding:16px 18px;margin:0 0 22px;color:#3a3f54;font-size:15px;line-height:1.5;">
+                <span style="font-size:20px;line-height:1.2;flex:0 0 auto;">ⓘ</span>
+                <span>Дипломы, сертификаты и свидетельства теперь выдаются по подписке, а не поштучно. К аттестации педагогу нужен не один документ, а целое портфолио — одна подписка открывает и эти документы, и все будущие, без оплаты за каждый.</span>
+            </div>
+            <?php endif; ?>
             <?php if (!$pmSubscriptionOnly): ?>
             <!-- Promotion Banner -->
             <?php if ($promotionApplied): ?>
@@ -333,7 +360,7 @@ include __DIR__ . '/../includes/header.php';
 
                         <div class="item-price">
                             <?php if ($pmSubscriptionOnly): ?>
-                                <span class="sub-included">Входит в подписку&nbsp;✓</span>
+                                <span class="sub-included">🔒&nbsp;Откроется по подписке</span>
                             <?php elseif ($item['is_free']): ?>
                                 <span class="original-price"><?php echo number_format($item['price'], 0, ',', ' '); ?> ₽</span>
                                 <span class="free-label">БЕСПЛАТНО</span>
@@ -359,6 +386,7 @@ include __DIR__ . '/../includes/header.php';
                 <?php endforeach; ?>
             </div>
 
+            <?php if (!$pmSubscriptionOnly): // в варианте B рекомендации и апсейл «добавить ещё» скрыты — не отвлекают от подписки ?>
             <!-- Smart Recommendations (loaded via AJAX) -->
             <div id="recommendations-section" class="recommendations-section" style="display:none;">
                 <div class="recommendations-header">
@@ -376,6 +404,7 @@ include __DIR__ . '/../includes/header.php';
                     + Добавить ещё мероприятие
                 </a>
             </div>
+            <?php endif; ?>
 
             <?php if (!$pmSubscriptionOnly): ?>
             <!-- Price Summary -->
@@ -424,8 +453,10 @@ include __DIR__ . '/../includes/header.php';
             <div class="payment-section">
                 <?php if ($pmSubscriptionOnly): ?>
                     <?php
-                    $plansHeading = 'Оформите подписку — заберите все документы';
-                    $plansIntro   = 'Все документы из корзины (сейчас ' . count($allItems) . ') войдут в подписку — без поштучной оплаты. Выберите тариф:';
+                    $plansHeading    = 'Заберите эти документы — и весь архив для аттестации';
+                    $plansIntro      = 'Одна подписка открывает скачивание этих документов и всех будущих дипломов, сертификатов и свидетельств для портфолио аттестации — без поштучной оплаты, плюс генератор материалов ФОП.';
+                    $spCartMode      = true;       // режим корзины: год — вторичная выгода, автопродление выкл, копирайт «разовый платёж»
+                    $spDefaultPeriod = 'monthly';  // конверсия-first: первое число 390 ₽/мес, ближе к ожиданию
                     include __DIR__ . '/../includes/subscription-plans.php';
                     ?>
                 <?php else: ?>
@@ -442,16 +473,27 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
             <!-- Info Block -->
-            <?php $afterPay = $pmSubscriptionOnly ? 'оформления подписки' : 'оплаты'; ?>
+            <?php if ($pmSubscriptionOnly): ?>
             <div style="margin-top: 40px; padding: 24px; background: var(--bg-light); border-radius: 16px;">
                 <h3 style="color: var(--primary-purple); margin-bottom: 16px;">Что дальше?</h3>
                 <ol style="padding-left: 20px; color: var(--text-medium);">
-                    <li style="margin-bottom: 8px;">После <?php echo $afterPay; ?> вы автоматически попадете в личный кабинет</li>
-                    <li style="margin-bottom: 8px;">Дипломы и свидетельства будут доступны для скачивания сразу после <?php echo $afterPay; ?></li>
-                    <li style="margin-bottom: 8px;">Документы предоставляются в формате PDF высокого качества</li>
-                    <li>На ваш email придет подтверждение <?php echo $afterPay; ?></li>
+                    <li style="margin-bottom: 8px;">Подписка активируется сразу — вы попадёте в личный кабинет</li>
+                    <li style="margin-bottom: 8px;">Все документы из этого списка можно скачать сразу</li>
+                    <li style="margin-bottom: 8px;">PDF высокого качества для портфолио аттестации — остаются у вас навсегда</li>
+                    <li>Письмо с подтверждением придёт на email</li>
                 </ol>
             </div>
+            <?php else: ?>
+            <div style="margin-top: 40px; padding: 24px; background: var(--bg-light); border-radius: 16px;">
+                <h3 style="color: var(--primary-purple); margin-bottom: 16px;">Что дальше?</h3>
+                <ol style="padding-left: 20px; color: var(--text-medium);">
+                    <li style="margin-bottom: 8px;">После оплаты вы автоматически попадете в личный кабинет</li>
+                    <li style="margin-bottom: 8px;">Дипломы и свидетельства будут доступны для скачивания сразу после оплаты</li>
+                    <li style="margin-bottom: 8px;">Документы предоставляются в формате PDF высокого качества</li>
+                    <li>На ваш email придет подтверждение оплаты</li>
+                </ol>
+            </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>

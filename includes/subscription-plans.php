@@ -27,6 +27,12 @@ if (!isset($plans) || !is_array($plans)) {
 $spUserId = $_SESSION['user_id'] ?? null;
 $spCsrf   = generateCSRFToken();
 
+// Режим встраивания в корзину (вариант B A/B-теста). По умолчанию false — на лендинге
+// /podpiska/ ничего не меняется. В корзине: год показываем как вторичную выгоду,
+// автопродление выключено по умолчанию, копирайт «разовый платёж».
+$spCartMode      = $spCartMode ?? false;
+$spDefaultPeriod = (isset($spDefaultPeriod) && $spDefaultPeriod === 'yearly') ? 'yearly' : 'monthly';
+
 // Что входит в тарифы (для карточек).
 $spFeatureRows = [
     'certs'      => 'Дипломы конкурсов, сертификаты вебинаров, свидетельства о публикациях — без доплат',
@@ -95,8 +101,8 @@ $spFeatureRows = [
 
 <div style="text-align:center;">
     <div class="sub-toggle" role="tablist">
-        <button type="button" id="t-monthly" class="active" onclick="setPeriod('monthly')">Помесячно</button>
-        <button type="button" id="t-yearly" onclick="setPeriod('yearly')">На год <span class="save">−2 месяца</span></button>
+        <button type="button" id="t-monthly" class="<?= $spDefaultPeriod === 'monthly' ? 'active' : '' ?>" onclick="setPeriod('monthly')">Помесячно</button>
+        <button type="button" id="t-yearly" class="<?= $spDefaultPeriod === 'yearly' ? 'active' : '' ?>" onclick="setPeriod('yearly')">На год <span class="save">−2 месяца</span></button>
     </div>
 </div>
 
@@ -117,7 +123,8 @@ $spFeatureRows = [
                 <?= number_format((float)$plan['price_monthly'], 0, '', ' ') ?> <span>₽/мес</span>
             </div>
             <div class="sub-price-year"
-                 data-yearprice="<?= number_format((float)$plan['price_yearly'], 0, '', ' ') ?>"></div>
+                 data-yearprice="<?= number_format((float)$plan['price_yearly'], 0, '', ' ') ?>"
+                 data-yearsave="<?= number_format(max(0, (float)$plan['price_monthly'] * 12 - (float)$plan['price_yearly']), 0, '', ' ') ?>"></div>
 
             <ul class="sub-feats">
                 <li><span class="ic yes">✓</span><span><?= htmlspecialchars($spFeatureRows['certs'], ENT_QUOTES, 'UTF-8') ?></span></li>
@@ -153,27 +160,39 @@ $spFeatureRows = [
 <?php if (SUBSCRIPTION_AUTORENEW_ENABLED): ?>
 <div style="text-align:center;margin-top:22px;">
     <label style="display:inline-flex;align-items:flex-start;gap:10px;max-width:520px;text-align:left;cursor:pointer;color:#3a3f54;font-size:14px;line-height:1.5;">
-        <input type="checkbox" id="sub-autorenew" checked
+        <input type="checkbox" id="sub-autorenew" <?= $spCartMode ? '' : 'checked' ?>
                style="margin-top:3px;width:18px;height:18px;flex:0 0 18px;accent-color:#6c5ce7;cursor:pointer;">
-        <span>Автоматически продлевать подписку. Спишем стоимость выбранного периода с привязанной
-        карты, когда срок закончится. Отменить автопродление можно в любой момент в личном кабинете.</span>
+        <span><?php if ($spCartMode): ?>Продлевать автоматически по окончании периода. По умолчанию выключено — это разовый платёж, карту не привязываем. Включить или отключить можно в любой момент в личном кабинете.<?php else: ?>Автоматически продлевать подписку. Спишем стоимость выбранного периода с привязанной карты, когда срок закончится. Отменить автопродление можно в любой момент в личном кабинете.<?php endif; ?></span>
     </label>
 </div>
 <?php endif; ?>
 
 <p class="sub-note">
-    <?php if (SUBSCRIPTION_AUTORENEW_ENABLED): ?>
-    Подписка продлевается автоматически на выбранный период (месяц или год).<?php else: ?>
-    Оплата за выбранный период (месяц или год), без автосписаний — продлить можно вручную в личном кабинете.<?php endif; ?><span class="sub-note-more">
+    <?php if ($spCartMode): ?>
+    Все документы, оформленные по подписке, остаются у вас навсегда — даже после её окончания.<span class="sub-note-more"> <?= SUBSCRIPTION_AUTORENEW_ENABLED ? 'Автопродление по умолчанию выключено — это разовый платёж.' : 'Это разовый платёж без автосписаний.' ?> Подписка не отменяет возможность покупать отдельные мероприятия.</span>
+    <?php elseif (SUBSCRIPTION_AUTORENEW_ENABLED): ?>
+    Подписка продлевается автоматически на выбранный период (месяц или год).<span class="sub-note-more">
     Документы, оформленные в период действия подписки, остаются у вас навсегда. Подписка не
     отменяет возможность покупать отдельные мероприятия и пакеты токенов.</span>
+    <?php else: ?>
+    Оплата за выбранный период (месяц или год), без автосписаний — продлить можно вручную в личном кабинете.<span class="sub-note-more">
+    Документы, оформленные в период действия подписки, остаются у вас навсегда. Подписка не
+    отменяет возможность покупать отдельные мероприятия и пакеты токенов.</span>
+    <?php endif; ?>
+</p>
+
+<p class="sub-note" style="margin-top:10px;">
+    Оформляя подписку, вы соглашаетесь с
+    <a href="/polzovatelskoe-soglashenie/" target="_blank" rel="noopener" style="color:#6c5ce7;text-decoration:underline;">Пользовательским соглашением</a>
+    и <a href="/politika-konfidencialnosti/" target="_blank" rel="noopener" style="color:#6c5ce7;text-decoration:underline;">Политикой конфиденциальности</a>.
 </p>
 
 <input type="hidden" id="sub-csrf" value="<?= htmlspecialchars($spCsrf, ENT_QUOTES, 'UTF-8') ?>">
 <input type="hidden" id="sub-logged" value="<?= $spUserId ? '1' : '0' ?>">
 
 <script>
-var subPeriod = 'monthly';
+var spCartMode = <?= $spCartMode ? 'true' : 'false' ?>;
+var subPeriod = '<?= $spDefaultPeriod ?>';
 function setPeriod(p) {
     subPeriod = p;
     document.getElementById('t-monthly').classList.toggle('active', p === 'monthly');
@@ -186,14 +205,19 @@ function setPeriod(p) {
         }
     });
     document.querySelectorAll('.sub-price-year').forEach(function (el) {
-        el.textContent = p === 'yearly' ? '' : ('или ' + el.dataset.yearprice + ' ₽ при оплате за год');
+        if (p === 'yearly') { el.textContent = ''; return; }
+        el.textContent = spCartMode
+            ? ('или ' + el.dataset.yearprice + ' ₽/год — выгоднее на ' + el.dataset.yearsave + ' ₽')
+            : ('или ' + el.dataset.yearprice + ' ₽ при оплате за год');
     });
 }
-setPeriod('monthly');
+setPeriod('<?= $spDefaultPeriod ?>');
 
 document.querySelectorAll('.sub-buy').forEach(function (btn) {
     btn.addEventListener('click', function () {
         if (document.getElementById('sub-logged').value !== '1') {
+            // Гость: сохраняем выбор тарифа/периода, чтобы после входа продолжить в один клик.
+            try { localStorage.setItem('pending_sub_choice', JSON.stringify({ plan: btn.dataset.plan, period: subPeriod })); } catch (e) {}
             window.location.href = '/vhod?return=' + encodeURIComponent(window.location.pathname + window.location.search);
             return;
         }
@@ -220,4 +244,23 @@ document.querySelectorAll('.sub-buy').forEach(function (btn) {
             });
     });
 });
+
+// Шов гостя: вернувшись после входа, восстановить выбранный тариф/период и подсветить карточку
+// (без авто-оплаты — пользователь сам подтверждает оплату одним кликом).
+if (document.getElementById('sub-logged').value === '1') {
+    try {
+        var pendSub = JSON.parse(localStorage.getItem('pending_sub_choice') || 'null');
+        if (pendSub && pendSub.plan) {
+            localStorage.removeItem('pending_sub_choice');
+            if (pendSub.period === 'yearly' || pendSub.period === 'monthly') setPeriod(pendSub.period);
+            var pendBtn = document.querySelector('.sub-buy[data-plan="' + pendSub.plan + '"]');
+            if (pendBtn) {
+                var pendCard = pendBtn.closest('.sub-card') || pendBtn;
+                pendCard.style.outline = '2px solid #6c5ce7';
+                pendCard.style.outlineOffset = '3px';
+                pendCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    } catch (e) {}
+}
 </script>

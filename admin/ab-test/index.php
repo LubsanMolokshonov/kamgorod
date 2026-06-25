@@ -17,6 +17,12 @@ $pageTitle = 'A/B-тесты';
 $variants = ['A', 'B'];
 $labels   = ['A' => 'A · поштучно (control)', 'B' => 'B · подписка (subscription)'];
 
+// Раунд 2: при перезапуске теста учитываем заказы только с даты эпохи (PRICING_AB_EPOCH в .env),
+// чтобы данные старого раунда (плохая B-корзина) не смешивались с новыми. Пусто/некорректно → фильтра нет.
+// Источник — админ-.env (не пользовательский ввод); формат строго валидируем перед вставкой в SQL.
+$abEpoch = defined('PRICING_AB_EPOCH') ? PRICING_AB_EPOCH : '';
+$epochClause = preg_match('/^\d{4}-\d{2}-\d{2}$/', $abEpoch) ? " AND created_at >= '{$abEpoch}'" : '';
+
 // Назначено пользователей по варианту.
 $usersByVariant = $db->query("
     SELECT pricing_variant AS v, COUNT(*) AS cnt
@@ -28,7 +34,7 @@ $usersByVariant = $db->query("
 $ordersByVariant = $db->query("
     SELECT pricing_variant AS v, COUNT(*) AS cnt, COALESCE(SUM(final_amount),0) AS revenue
     FROM orders
-    WHERE pricing_variant IS NOT NULL AND payment_status = 'succeeded'
+    WHERE pricing_variant IS NOT NULL AND payment_status = 'succeeded'{$epochClause}
     GROUP BY pricing_variant
 ")->fetchAll(PDO::FETCH_ASSOC);
 $orders = [];
@@ -38,7 +44,7 @@ foreach ($ordersByVariant as $r) { $orders[$r['v']] = $r; }
 $payingByVariant = $db->query("
     SELECT pricing_variant AS v, COUNT(DISTINCT user_id) AS cnt
     FROM orders
-    WHERE pricing_variant IS NOT NULL AND payment_status = 'succeeded' AND final_amount > 0
+    WHERE pricing_variant IS NOT NULL AND payment_status = 'succeeded'{$epochClause} AND final_amount > 0
     GROUP BY pricing_variant
 ")->fetchAll(PDO::FETCH_KEY_PAIR);
 
@@ -46,7 +52,7 @@ $payingByVariant = $db->query("
 $subsByVariant = $db->query("
     SELECT pricing_variant AS v, COUNT(*) AS cnt, COALESCE(SUM(final_amount),0) AS revenue
     FROM orders
-    WHERE pricing_variant IS NOT NULL AND payment_status = 'succeeded' AND subscription_plan_id IS NOT NULL
+    WHERE pricing_variant IS NOT NULL AND payment_status = 'succeeded'{$epochClause} AND subscription_plan_id IS NOT NULL
     GROUP BY pricing_variant
 ")->fetchAll(PDO::FETCH_ASSOC);
 $subs = [];
@@ -56,7 +62,7 @@ foreach ($subsByVariant as $r) { $subs[$r['v']] = $r; }
 $freeDocsByVariant = $db->query("
     SELECT pricing_variant AS v, COUNT(*) AS cnt
     FROM orders
-    WHERE pricing_variant IS NOT NULL AND payment_status = 'succeeded'
+    WHERE pricing_variant IS NOT NULL AND payment_status = 'succeeded'{$epochClause}
           AND subscription_plan_id IS NULL AND final_amount = 0
     GROUP BY pricing_variant
 ")->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -74,6 +80,7 @@ include __DIR__ . '/../includes/header.php';
             <?php echo PRICING_AB_ACTIVE ? 'АКТИВЕН — трафик делится 50/50' : 'ВЫКЛЮЧЕН — весь трафик в варианте A'; ?>
         </strong>
         · переключается переменной <code>PRICING_AB_ENABLED</code> в <code>.env</code>
+        <?php if ($epochClause !== ''): ?><br>Учитываются заказы с <strong><?php echo date('d.m.Y', strtotime($abEpoch)); ?></strong> (эпоха раунда, <code>PRICING_AB_EPOCH</code>).<?php endif; ?>
     </p>
 </div>
 

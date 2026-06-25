@@ -97,6 +97,12 @@ include __DIR__ . '/../includes/header.php';
                 Введите email для входа или регистрации
             </p>
 
+            <?php if (str_contains($returnUrl, '/korzina') || str_contains($returnUrl, '/podpiska')): ?>
+                <div class="alert" style="background:#f7f5ff;border:1px solid #d8d2f7;color:#4a4173;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:14px;line-height:1.5;">
+                    ⭐ Ещё один шаг — войдите или зарегистрируйтесь, и сразу заберёте свои документы по подписке.
+                </div>
+            <?php endif; ?>
+
             <?php if ($error): ?>
                 <div class="alert alert-error">
                     <?php echo htmlspecialchars($error); ?>

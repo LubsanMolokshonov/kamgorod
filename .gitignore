@@ -104,3 +104,6 @@ Thumbs.db
 /выбор_курсов_*.md
 /rnp.md
 /pedagogy_prod_*.sql.gz
+
+# Снапшоты раундов A/B-теста (создаются scripts/reset-pricing-ab.php)
+scripts/ab-snapshots/
