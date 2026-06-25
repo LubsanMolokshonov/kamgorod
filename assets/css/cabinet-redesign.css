@@ -140,8 +140,10 @@
 .cab-card-delete-btn:not(:disabled) { opacity: 1; }
 
 @media (max-width: 900px) {
-  .cab-subscription { flex-direction: column; align-items: stretch; }
-  .cab-subscription-card { flex-basis: auto; }
+  .cab-subscription { flex-direction: column; align-items: stretch; gap: 16px; }
+  /* в колоночном режиме flex-basis уходит в высоту — сбрасываем, иначе огромный пустой провал */
+  .cab-subscription-main { flex: 0 0 auto; }
+  .cab-subscription-card { flex: 0 0 auto; min-width: 0; }
 }
 
 /* Навигация-табы (вертикально в сайдбаре) */
