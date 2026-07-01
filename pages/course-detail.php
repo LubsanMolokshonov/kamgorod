@@ -156,7 +156,10 @@ $reviewEntityId   = (int)$course['id'];
 $reviewObj   = new Review($db);
 $reviewStats = $reviewObj->getStats($reviewEntityType, $reviewEntityId);
 $reviewList  = $reviewObj->getApproved($reviewEntityType, $reviewEntityId, 20);
-$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList);
+require_once __DIR__ . '/../includes/rating-synthetic-helper.php';
+$reviewSeedKey = $reviewEntityType . ':' . $reviewEntityId;
+$jsonLd['sku'] = syntheticSku($reviewSeedKey);
+$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList, $reviewSeedKey);
 
 $jsonLdArray = [$jsonLd, buildFaqJsonLd($faqItems)];
 

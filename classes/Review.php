@@ -147,6 +147,27 @@ class Review {
     }
 
     /**
+     * Агрегат по всему типу сущностей (для микроразметки листинга).
+     * Взвешенное среднее по review_stats: SUM(avg*count)/SUM(count).
+     * @return array ['avg'=>float, 'count'=>int]
+     */
+    public function getTypeAggregate($entityType) {
+        if (!self::isValidType($entityType)) {
+            return ['avg' => 0.0, 'count' => 0];
+        }
+        $row = $this->db->queryOne(
+            "SELECT SUM(rating_count) AS cnt,
+                    SUM(rating_avg * rating_count) / NULLIF(SUM(rating_count), 0) AS avg
+             FROM review_stats WHERE entity_type = ?",
+            [$entityType]
+        );
+        return [
+            'avg' => $row && $row['avg'] !== null ? (float)$row['avg'] : 0.0,
+            'count' => $row && $row['cnt'] !== null ? (int)$row['cnt'] : 0,
+        ];
+    }
+
+    /**
      * Одобренные отзывы сущности (для вывода на странице и в JSON-LD).
      * @return array
      */

@@ -152,22 +152,22 @@ $isLoggedIn = isset($_SESSION['user_email']);
     </a>
 
     <nav class="rd-nav-links">
-      <a class="rd-nav-link<?php echo $rdActivePage === 'konkursy' ? ' active' : ''; ?>" href="/konkursy">Конкурсы</a>
-      <a class="rd-nav-link<?php echo $rdActivePage === 'olimpiady' ? ' active' : ''; ?>" href="/olimpiady">Олимпиады</a>
-      <a class="rd-nav-link<?php echo $rdActivePage === 'vebinary' ? ' active' : ''; ?>" href="/vebinary">Вебинары</a>
+      <a class="rd-nav-link<?php echo $rdActivePage === 'konkursy' ? ' active' : ''; ?>" href="/konkursy/">Конкурсы</a>
+      <a class="rd-nav-link<?php echo $rdActivePage === 'olimpiady' ? ' active' : ''; ?>" href="/olimpiady/">Олимпиады</a>
+      <a class="rd-nav-link<?php echo $rdActivePage === 'vebinary' ? ' active' : ''; ?>" href="/vebinary/">Вебинары</a>
       <div class="rd-nav-item rd-has-dd">
-        <a class="rd-nav-link<?php echo $rdActivePage === 'kursy' ? ' active' : ''; ?>" href="/kursy">Курсы</a>
+        <a class="rd-nav-link<?php echo $rdActivePage === 'kursy' ? ' active' : ''; ?>" href="/kursy/">Курсы</a>
         <div class="rd-nav-dd">
           <a class="rd-sd-item" href="/kursy/povyshenie-kvalifikatsii/"><div class="ico">📚</div><div><div class="t">Курсы повышения квалификации</div><div class="s">КПК · удостоверение установленного образца</div></div></a>
           <a class="rd-sd-item" href="/kursy/perepodgotovka/"><div class="ico">🎓</div><div><div class="t">Курсы переподготовки</div><div class="s">Профпереподготовка · диплом</div></div></a>
         </div>
       </div>
       <div class="rd-nav-item rd-has-dd">
-        <a class="rd-nav-link<?php echo $rdActivePage === 'zhurnal' ? ' active' : ''; ?>" href="/zhurnal">Журнал</a>
+        <a class="rd-nav-link<?php echo $rdActivePage === 'zhurnal' ? ' active' : ''; ?>" href="/zhurnal/">Журнал</a>
         <div class="rd-nav-dd">
-          <a class="rd-sd-item" href="/zhurnal"><div class="ico">📰</div><div><div class="t">Журнал публикаций</div><div class="s">О журнале и условиях публикации</div></div></a>
+          <a class="rd-sd-item" href="/zhurnal/"><div class="ico">📰</div><div><div class="t">Журнал публикаций</div><div class="s">О журнале и условиях публикации</div></div></a>
           <a class="rd-sd-item" href="/publikacii/"><div class="ico">📚</div><div><div class="t">Опубликованные материалы</div><div class="s">Каталог работ других авторов</div></div></a>
-          <a class="rd-sd-item" href="/opublikovat"><div class="ico">📝</div><div><div class="t">Опубликовать материал</div><div class="s">Свидетельство о публикации</div></div></a>
+          <a class="rd-sd-item" href="/opublikovat/"><div class="ico">📝</div><div><div class="t">Опубликовать материал</div><div class="s">Свидетельство о публикации</div></div></a>
         </div>
       </div>
       <div class="rd-nav-item rd-has-dd">
@@ -179,7 +179,7 @@ $isLoggedIn = isset($_SESSION['user_email']);
         </div>
       </div>
       <a class="rd-nav-link<?php echo $rdActivePage === 'podpiska' ? ' active' : ''; ?>" href="/podpiska/">Подписка</a>
-      <a class="rd-nav-link<?php echo $rdActivePage === 'team' ? ' active' : ''; ?>" href="/team">Команда</a>
+      <a class="rd-nav-link<?php echo $rdActivePage === 'team' ? ' active' : ''; ?>" href="/team/">Команда</a>
     </nav>
 
     <div class="rd-nav-right">
@@ -191,15 +191,15 @@ $isLoggedIn = isset($_SESSION['user_email']);
         </label>
         <div class="rd-search-dd" id="rdSearchDd">
           <div class="rd-search-dd-section">Быстрые переходы</div>
-          <a class="rd-sd-item" href="/konkursy"><div class="ico">🏆</div><div><div class="t">Конкурсы для педагогов</div><div class="s">Официальные дипломы<?php echo PricingMode::isSubscriptionOnly() ? ' · по подписке' : ' · от 169 ₽'; ?></div></div></a>
-          <a class="rd-sd-item" href="/olimpiady"><div class="ico">🎓</div><div><div class="t">Всероссийские олимпиады</div><div class="s">Бесплатно · диплом за 30 сек.</div></div></a>
-          <a class="rd-sd-item" href="/kursy"><div class="ico">📚</div><div><div class="t">Курсы повышения квалификации</div><div class="s">КПК и переподготовка · с удостоверением</div></div></a>
-          <a class="rd-sd-item" href="/opublikovat"><div class="ico">📝</div><div><div class="t">Опубликовать статью</div><div class="s">Свидетельство о публикации</div></div></a>
+          <a class="rd-sd-item" href="/konkursy/"><div class="ico">🏆</div><div><div class="t">Конкурсы для педагогов</div><div class="s">Официальные дипломы<?php echo PricingMode::isSubscriptionOnly() ? ' · по подписке' : ' · от 169 ₽'; ?></div></div></a>
+          <a class="rd-sd-item" href="/olimpiady/"><div class="ico">🎓</div><div><div class="t">Всероссийские олимпиады</div><div class="s">Бесплатно · диплом за 30 сек.</div></div></a>
+          <a class="rd-sd-item" href="/kursy/"><div class="ico">📚</div><div><div class="t">Курсы повышения квалификации</div><div class="s">КПК и переподготовка · с удостоверением</div></div></a>
+          <a class="rd-sd-item" href="/opublikovat/"><div class="ico">📝</div><div><div class="t">Опубликовать статью</div><div class="s">Свидетельство о публикации</div></div></a>
         </div>
       </div>
 
       <?php $rdCartCount = getCartCount(); ?>
-      <a href="/korzina" class="rd-cart-btn<?php echo $rdCartCount > 0 ? ' has-items' : ''; ?>" aria-label="Корзина<?php echo $rdCartCount > 0 ? ' (' . $rdCartCount . ')' : ''; ?>">
+      <a href="/korzina/" class="rd-cart-btn<?php echo $rdCartCount > 0 ? ' has-items' : ''; ?>" aria-label="Корзина<?php echo $rdCartCount > 0 ? ' (' . $rdCartCount . ')' : ''; ?>">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M7 18C5.9 18 5.01 18.9 5.01 20C5.01 21.1 5.9 22 7 22C8.1 22 9 21.1 9 20C9 18.9 8.1 18 7 18ZM1 2V4H3L6.6 11.59L5.25 14.04C5.09 14.32 5 14.65 5 15C5 16.1 5.9 17 7 17H19V15H7.42C7.28 15 7.17 14.89 7.17 14.75L7.2 14.63L8.1 13H15.55C16.3 13 16.96 12.59 17.3 11.97L20.88 5.48C20.96 5.34 21 5.17 21 5C21 4.45 20.55 4 20 4H5.21L4.27 2H1ZM17 18C15.9 18 15.01 18.9 15.01 20C15.01 21.1 15.9 22 17 22C18.1 22 19 21.1 19 20C19 18.9 18.1 18 17 18Z" fill="currentColor"/>
         </svg>
@@ -209,9 +209,9 @@ $isLoggedIn = isset($_SESSION['user_email']);
       </a>
 
       <?php if ($isLoggedIn): ?>
-        <a href="/kabinet" class="rd-login-btn">Кабинет</a>
+        <a href="/kabinet/" class="rd-login-btn">Кабинет</a>
       <?php else: ?>
-        <a href="/vhod" class="rd-login-btn">Войти</a>
+        <a href="/vhod/" class="rd-login-btn">Войти</a>
       <?php endif; ?>
 
       <button type="button" class="rd-menu-btn" id="rdMenuBtn" aria-label="Меню">
@@ -232,28 +232,28 @@ $isLoggedIn = isset($_SESSION['user_email']);
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <a class="rd-mm-link" href="/konkursy">Конкурсы</a>
-    <a class="rd-mm-link" href="/olimpiady">Олимпиады</a>
-    <a class="rd-mm-link" href="/vebinary">Вебинары</a>
-    <a class="rd-mm-link" href="/kursy">Курсы</a>
+    <a class="rd-mm-link" href="/konkursy/">Конкурсы</a>
+    <a class="rd-mm-link" href="/olimpiady/">Олимпиады</a>
+    <a class="rd-mm-link" href="/vebinary/">Вебинары</a>
+    <a class="rd-mm-link" href="/kursy/">Курсы</a>
     <a class="rd-mm-link rd-mm-sub" href="/kursy/povyshenie-kvalifikatsii/">— Повышение квалификации</a>
     <a class="rd-mm-link rd-mm-sub" href="/kursy/perepodgotovka/">— Переподготовка</a>
-    <a class="rd-mm-link" href="/zhurnal">Журнал</a>
+    <a class="rd-mm-link" href="/zhurnal/">Журнал</a>
     <a class="rd-mm-link rd-mm-sub" href="/publikacii/">— Опубликованные материалы</a>
-    <a class="rd-mm-link rd-mm-sub" href="/opublikovat">— Опубликовать материал</a>
+    <a class="rd-mm-link rd-mm-sub" href="/opublikovat/">— Опубликовать материал</a>
     <a class="rd-mm-link" href="/materialy/">Материалы ФОП</a>
     <a class="rd-mm-link rd-mm-sub" href="/material-generator/">— ИИ-генератор</a>
     <a class="rd-mm-link rd-mm-sub" href="/material-adapter/">— Адаптировать материал</a>
     <a class="rd-mm-link rd-mm-sub" href="/materialy/katalog/">— Каталог материалов</a>
     <a class="rd-mm-link" href="/podpiska/">Подписка</a>
-    <a class="rd-mm-link" href="/team">Команда</a>
-    <a class="rd-mm-link" href="/o-portale">О портале</a>
-    <a class="rd-mm-link" href="/korzina">Корзина<?php if ($rdCartCount > 0): ?> <span class="rd-mm-badge"><?php echo $rdCartCount; ?></span><?php endif; ?></a>
+    <a class="rd-mm-link" href="/team/">Команда</a>
+    <a class="rd-mm-link" href="/o-portale/">О портале</a>
+    <a class="rd-mm-link" href="/korzina/">Корзина<?php if ($rdCartCount > 0): ?> <span class="rd-mm-badge"><?php echo $rdCartCount; ?></span><?php endif; ?></a>
     <?php if ($isLoggedIn): ?>
-      <a class="rd-mm-link" href="/kabinet">Личный кабинет</a>
-      <a class="rd-mm-link" href="/vyhod">Выйти</a>
+      <a class="rd-mm-link" href="/kabinet/">Личный кабинет</a>
+      <a class="rd-mm-link" href="/vyhod/">Выйти</a>
     <?php else: ?>
-      <a href="/vhod" class="rd-btn rd-btn-primary" style="width:100%;margin-top:16px;justify-content:center;display:flex;">Войти</a>
+      <a href="/vhod/" class="rd-btn rd-btn-primary" style="width:100%;margin-top:16px;justify-content:center;display:flex;">Войти</a>
     <?php endif; ?>
   </div>
 </div>

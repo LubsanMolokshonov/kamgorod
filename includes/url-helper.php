@@ -13,7 +13,7 @@
  * @return string Clean URL for the competition
  */
 function getCompetitionUrl($slug, $audienceTypes = [], $contextAudience = null) {
-    return '/konkursy/' . urlencode($slug);
+    return '/konkursy/' . urlencode($slug) . '/';
 }
 
 /**

@@ -175,6 +175,10 @@ $faqItems = [
 // чтобы разметка совпадала с видимым контентом.
 $jsonLdArray = $showLanding ? [$jsonLd, buildFaqJsonLd($faqItems)] : [$jsonLd];
 
+// Микроразметка Schema.org/Product для листинга (гибрид рейтинга)
+require_once __DIR__ . '/../includes/listing-schema-helper.php';
+$jsonLdArray[] = buildListingSchema($db, 'publication', 'zhurnal', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
+
 // Готовим данные для клиентского поиска по публикациям (когда показан каталог)
 $allForSearch = [];
 if (!$showLanding) {

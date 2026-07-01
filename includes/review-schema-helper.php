@@ -85,15 +85,24 @@ if (!function_exists('applyReviewSchema')) {
      * Навесить aggregateRating и review[] на существующий JSON-LD-узел продукта.
      * Возвращает изменённый узел (или исходный, если отзывов нет).
      *
+     * Гибрид: если реальных одобренных отзывов нет, но передан $fallbackSeedKey,
+     * навешивается ДЕТЕРМИНИРОВАННЫЙ синтетический aggregateRating (стабильный
+     * per-entity). Без ключа сохраняется прежнее поведение «органика-онли».
+     *
      * @param array $node Главный JSON-LD-узел (Course/Event/Quiz/Article/...)
      * @param array $stats ['avg'=>float, 'count'=>int] из Review::getStats()
      * @param array $reviews Строки из Review::getApproved() (опционально)
+     * @param string|null $fallbackSeedKey Стабильный ключ ("$type:$id") для синтетики
      * @return array
      */
-    function applyReviewSchema(array $node, array $stats, array $reviews = []): array {
+    function applyReviewSchema(array $node, array $stats, array $reviews = [], ?string $fallbackSeedKey = null): array {
         $agg = buildAggregateRatingJsonLd($stats['avg'] ?? 0, $stats['count'] ?? 0);
         if ($agg === null) {
-            return $node; // нет одобренных отзывов — разметку не добавляем
+            // Нет реальных отзывов: синтетический фолбэк, если задан ключ.
+            if ($fallbackSeedKey !== null && function_exists('buildSyntheticAggregateRating')) {
+                $node['aggregateRating'] = buildSyntheticAggregateRating($fallbackSeedKey);
+            }
+            return $node;
         }
         $node['aggregateRating'] = $agg;
         $reviewNodes = buildReviewNodes($reviews);

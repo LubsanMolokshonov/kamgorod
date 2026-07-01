@@ -93,7 +93,7 @@ $offersData = [
             'title' => $c['title'],
             'meta'  => 'от ' . number_format($c['price'], 0, ',', ' ') . ' ₽',
             'price' => number_format($c['price'], 0, ',', ' ') . ' ₽',
-            'url'   => '/konkursy/' . $c['slug'],
+            'url'   => '/konkursy/' . $c['slug'] . '/',
         ];
     }, $topCompetitions),
     'veb' => array_map(function ($w) {

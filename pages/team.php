@@ -81,7 +81,7 @@ function teamAvatarTone(string $name): int {
 
 $pageTitle = 'Команда ФГОС.ПРО — эксперты, методисты и преподаватели';
 $pageDescription = 'Команда портала «ФГОС-Практикум»: руководство проекта, преподаватели курсов повышения квалификации и переподготовки, спикеры вебинаров. Резиденты Сколково, методисты с опытом от 10 лет.';
-$canonicalUrl = SITE_URL . '/team';
+$canonicalUrl = SITE_URL . '/team/';
 
 // JSON-LD: AboutPage + Person для членов команды и спикеров
 $persons = [];

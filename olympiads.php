@@ -185,6 +185,10 @@ $additionalCSS   = [
 ];
 $earlyHeadScripts = ['<script>' . file_get_contents(__DIR__ . '/assets/js/catalog-scroll.js') . '</script>'];
 
+// Микроразметка Schema.org/Product для листинга (гибрид рейтинга)
+require_once __DIR__ . '/includes/listing-schema-helper.php';
+$jsonLdArray = [buildListingSchema($db, 'olympiad', 'olimpiady', $pageTitle, $pageDescription, $ogImage, SITE_NAME)];
+
 include __DIR__ . '/includes/header-redesign.php';
 ?>
 

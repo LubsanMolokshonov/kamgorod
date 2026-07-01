@@ -192,7 +192,7 @@ class EmailJourney {
                     'utm_campaign' => 'registration_journey',
                     'utm_content'  => $emailData['email_template'] ?? '',
                 ]),
-                'competition_url' => SITE_URL . '/konkursy/' . $emailData['competition_slug'],
+                'competition_url' => SITE_URL . '/konkursy/' . $emailData['competition_slug'] . '/',
                 'unsubscribe_url' => $unsubscribeUrl,
                 'site_url' => SITE_URL,
                 'site_name' => SITE_NAME ?? 'ФГОС-Практикум',

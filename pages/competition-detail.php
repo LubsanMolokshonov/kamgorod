@@ -20,6 +20,12 @@ if (empty($slug)) {
 $competitionObj = new Competition($db);
 $competition = $competitionObj->getBySlug($slug);
 
+// Склейка дублей-тайтлов (SEO): проигравшая версия 301-редиректится на канонический слаг
+if ($competition && !empty($competition['redirect_to_slug'])) {
+    header('Location: /konkursy/' . urlencode($competition['redirect_to_slug']) . '/', true, 301);
+    exit;
+}
+
 if (!$competition) {
     http_response_code(404);
     $pageTitle = 'Конкурс не найден | ' . SITE_NAME;
@@ -103,7 +109,11 @@ $reviewEntityId   = (int)$competition['id'];
 $reviewObj   = new Review($db);
 $reviewStats = $reviewObj->getStats($reviewEntityType, $reviewEntityId);
 $reviewList  = $reviewObj->getApproved($reviewEntityType, $reviewEntityId, 20);
-$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList);
+require_once __DIR__ . '/../includes/rating-synthetic-helper.php';
+$reviewSeedKey = $reviewEntityType . ':' . $reviewEntityId;
+$jsonLd['image'] = $ogImage;
+$jsonLd['sku'] = syntheticSku($reviewSeedKey);
+$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList, $reviewSeedKey);
 $additionalCSS[] = '/assets/css/reviews.css?v=' . filemtime(__DIR__ . '/../assets/css/reviews.css');
 $additionalJS = $additionalJS ?? [];
 $additionalJS[] = '/assets/js/reviews.js?v=' . filemtime(__DIR__ . '/../assets/js/reviews.js');

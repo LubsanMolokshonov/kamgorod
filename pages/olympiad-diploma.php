@@ -760,7 +760,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 var redirected = false;
                 function olympDiplomaRedirect() {
-                    if (!redirected) { redirected = true; window.location.href = '/korzina'; }
+                    if (!redirected) { redirected = true; window.location.href = '/korzina/'; }
                 }
                 if (typeof ym === 'function') {
                     ym(106465857, 'reachGoal', 'add_to_cart_olympiad', null, olympDiplomaRedirect);

@@ -61,14 +61,75 @@ $fmtDate = function ($d) use ($months) {
     return $dt->format('j') . ' ' . $months[$dt->format('n') - 1] . ' ' . $dt->format('Y');
 };
 
-// Склонение «материал»
-$pubWord = (function ($n) {
+// Универсальное склонение: plural(5, 'материал', 'материала', 'материалов')
+$plural = function ($n, $one, $few, $many) {
     $n = abs($n) % 100; $n1 = $n % 10;
-    if ($n > 10 && $n < 20) return 'материалов';
-    if ($n1 > 1 && $n1 < 5) return 'материала';
-    if ($n1 === 1) return 'материал';
-    return 'материалов';
-})($pubCount);
+    if ($n > 10 && $n < 20) return $many;
+    if ($n1 > 1 && $n1 < 5) return $few;
+    if ($n1 === 1) return $one;
+    return $many;
+};
+$pubWord = $plural($pubCount, 'материал', 'материала', 'материалов');
+
+// --- Агрегаты по публикациям (считаем из уже загруженного $publications, без доп. запросов) ---
+$totalViews = 0;
+$ratingWeightedSum = 0.0;   // сумма (оценка * число голосов)
+$ratingVotes = 0;           // общее число голосов
+$firstPubDate = null;
+$lastPubDate = null;
+$authorTypes = [];          // уникальные типы материалов: name => slug
+foreach ($publications as $pub) {
+    $totalViews += (int)($pub['views_count'] ?? 0);
+    $rc = (int)($pub['rating_count'] ?? 0);
+    if ($rc > 0) {
+        $ratingWeightedSum += (float)$pub['rating_avg'] * $rc;
+        $ratingVotes += $rc;
+    }
+    $d = $pub['published_at'] ?? null;
+    if ($d) {
+        if ($firstPubDate === null || $d < $firstPubDate) $firstPubDate = $d;
+        if ($lastPubDate === null || $d > $lastPubDate)  $lastPubDate = $d;
+    }
+    if (!empty($pub['type_name'])) {
+        $authorTypes[$pub['type_name']] = $pub['type_slug'] ?? '';
+    }
+}
+$authorTypeNames = array_keys($authorTypes);
+$authorAvgRating = $ratingVotes > 0 ? round($ratingWeightedSum / $ratingVotes, 1) : null;
+$firstPubYear = $firstPubDate ? (new DateTime($firstPubDate))->format('Y') : null;
+
+// --- Авто-описание автора: уникальный фактический абзац для каждой страницы ---
+$sumParts = [];
+$sumParts[] = $authorName . ' — автор ' . $pubCount . ' ' . $pubWord
+            . ' на педагогическом портале «Каменный город».';
+if (!empty($authorTypeNames)) {
+    $sumParts[] = 'Публикует: ' . implode(', ', array_map('mb_strtolower', $authorTypeNames)) . '.';
+}
+if ($totalViews > 0) {
+    $sumParts[] = 'Материалы автора набрали ' . number_format($totalViews, 0, '', ' ')
+                . ' ' . $plural($totalViews, 'просмотр', 'просмотра', 'просмотров') . '.';
+}
+if ($authorAvgRating !== null) {
+    $sumParts[] = 'Средняя оценка читателей — ' . number_format($authorAvgRating, 1, '.', '') . ' из 5.';
+}
+if ($firstPubDate) {
+    if ($lastPubDate && $lastPubDate !== $firstPubDate) {
+        $sumParts[] = 'Первая публикация — ' . $fmtDate($firstPubDate)
+                    . ', последняя — ' . $fmtDate($lastPubDate) . '.';
+    } else {
+        $sumParts[] = 'Публикация размещена ' . $fmtDate($firstPubDate) . '.';
+    }
+}
+$authorSummary = implode(' ', $sumParts);
+
+// --- FAQ + микроразметка Schema.org/FAQPage (общий для всех авторов) ---
+require_once __DIR__ . '/../includes/faq-helper.php';
+$faqItems = [
+    ['q' => 'Как стать автором на портале «Каменный город»?', 'a' => 'Зарегистрируйтесь на портале и отправьте свой материал через форму <a href="/opublikovat/">публикации</a>. После проверки редакцией материал появится в журнале, а у вас откроется личная страница автора.'],
+    ['q' => 'Как опубликовать свой материал?', 'a' => 'Загрузите методическую разработку, конспект, статью или сценарий через форму <a href="/opublikovat/">«Опубликовать материал»</a>. Укажите тип материала и аудиторию — после модерации публикация станет доступна другим педагогам.'],
+    ['q' => 'Сколько стоит свидетельство о публикации?', 'a' => 'После публикации материала вы можете оформить именное свидетельство о публикации в СМИ. Актуальную стоимость и образец документа вы увидите в личном кабинете при оформлении.'],
+    ['q' => 'Можно ли редактировать опубликованный материал?', 'a' => 'Да. Обратитесь в службу поддержки — мы поможем внести правки в текст публикации или в данные автора.'],
+];
 
 $pageTitle = htmlspecialchars($authorName) . ' — автор публикаций | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr(
@@ -90,16 +151,26 @@ $jsonLd = [
     'name' => $authorName,
     'url' => $canonicalUrl,
 ];
-if (!empty($user['author_bio'])) {
-    $jsonLd['description'] = mb_substr(strip_tags($user['author_bio']), 0, 500);
-}
+// Описание: биография автора либо авто-описание из фактических данных
+$jsonLd['description'] = !empty($user['author_bio'])
+    ? mb_substr(strip_tags($user['author_bio']), 0, 500)
+    : mb_substr($authorSummary, 0, 500);
 $jsonLd['image'] = (strpos($avatarUrl, 'http') === 0) ? $avatarUrl : SITE_URL . $avatarUrl;
+if (!empty($user['profession'])) {
+    $jsonLd['jobTitle'] = $user['profession'];
+}
+if (!empty($user['city'])) {
+    $jsonLd['homeLocation'] = ['@type' => 'Place', 'name' => $user['city']];
+}
 if (!empty($user['organization'])) {
     $jsonLd['worksFor'] = ['@type' => 'Organization', 'name' => $user['organization']];
 }
 if (!empty($socialLinks)) {
     $jsonLd['sameAs'] = array_values($socialLinks);
 }
+
+// Person + FAQPage в одном блоке JSON-LD
+$jsonLdArray = [$jsonLd, buildFaqJsonLd($faqItems)];
 
 include __DIR__ . '/../includes/header-redesign.php';
 ?>
@@ -125,7 +196,6 @@ include __DIR__ . '/../includes/header-redesign.php';
         <?php if (!empty($user['organization'])): ?>
           <div class="author-hero-org"><?php echo htmlspecialchars($user['organization']); ?></div>
         <?php endif; ?>
-        <div class="author-hero-stats"><?php echo $pubCount . ' ' . $pubWord; ?></div>
         <?php if (!empty($socialLinks)): ?>
           <div class="author-hero-social">
             <?php foreach ($socialLinks as $label => $href): ?>
@@ -135,6 +205,48 @@ include __DIR__ . '/../includes/header-redesign.php';
         <?php endif; ?>
       </div>
     </div>
+
+    <!-- Статистика автора -->
+    <div class="author-stats">
+      <div class="author-stat">
+        <span class="author-stat-num"><?php echo number_format($pubCount, 0, '', ' '); ?></span>
+        <span class="author-stat-label"><?php echo $pubWord; ?></span>
+      </div>
+      <?php if ($totalViews > 0): ?>
+        <div class="author-stat">
+          <span class="author-stat-num"><?php echo number_format($totalViews, 0, '', ' '); ?></span>
+          <span class="author-stat-label"><?php echo $plural($totalViews, 'просмотр', 'просмотра', 'просмотров'); ?></span>
+        </div>
+      <?php endif; ?>
+      <?php if ($authorAvgRating !== null): ?>
+        <div class="author-stat">
+          <span class="author-stat-num">★ <?php echo number_format($authorAvgRating, 1, '.', ''); ?></span>
+          <span class="author-stat-label">средняя оценка</span>
+        </div>
+      <?php endif; ?>
+      <?php if ($firstPubYear): ?>
+        <div class="author-stat">
+          <span class="author-stat-num"><?php echo htmlspecialchars($firstPubYear); ?></span>
+          <span class="author-stat-label">на портале с</span>
+        </div>
+      <?php endif; ?>
+    </div>
+
+    <!-- Авто-описание автора (уникальный текст на каждой странице) -->
+    <p class="author-summary"><?php echo htmlspecialchars($authorSummary); ?></p>
+
+    <?php if (!empty($authorTypes)): ?>
+      <div class="author-topics">
+        <span class="author-topics-label">Направления автора:</span>
+        <?php foreach ($authorTypes as $typeName => $typeSlug): ?>
+          <?php if (!empty($typeSlug)): ?>
+            <a class="author-topic" href="/zhurnal/?type=<?php echo urlencode($typeSlug); ?>"><?php echo htmlspecialchars($typeName); ?></a>
+          <?php else: ?>
+            <span class="author-topic"><?php echo htmlspecialchars($typeName); ?></span>
+          <?php endif; ?>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
 
     <?php if (!empty($user['author_bio'])): ?>
       <div class="author-bio">
@@ -171,6 +283,14 @@ include __DIR__ . '/../includes/header-redesign.php';
         </a>
       <?php endforeach; ?>
     </div>
+  </div>
+</section>
+
+<!-- FAQ: как публиковаться на портале -->
+<section class="rd-section author-faq-section" style="padding-top:8px;">
+  <div class="rd-wrap" style="max-width:880px;">
+    <h2 class="author-faq-title">Частые вопросы о публикациях</h2>
+    <?php renderFaqList($faqItems); ?>
   </div>
 </section>
 

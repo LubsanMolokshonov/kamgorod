@@ -18,6 +18,11 @@ $id = $_GET['id'] ?? null;
 
 if ($slug) {
     $publication = $publicationObj->getBySlug($slug);
+    // Склейка дублей-тайтлов (SEO): проигравшая версия 301-редиректится на канонический слаг
+    if ($publication && !empty($publication['redirect_to_slug'])) {
+        header('Location: /publikaciya/' . urlencode($publication['redirect_to_slug']) . '/', true, 301);
+        exit;
+    }
 } elseif ($id) {
     $publication = $publicationObj->getById($id);
     if ($publication && $publication['status'] === 'published' && $publication['slug']) {
@@ -118,6 +123,7 @@ $authorUrl = '/avtor/' . (int)$publication['user_id'] . '/';
 
 $pageTitle = htmlspecialchars($publication['title']) . ' | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr($publication['annotation'], 0, 160));
+$canonicalUrl = SITE_URL . '/publikaciya/' . $publication['slug'] . '/';
 
 $rdActivePage = 'zhurnal';
 $additionalCSS = [
@@ -163,7 +169,10 @@ if (!empty($tags)) {
 if ($articleHtml !== '') {
     $jsonLd['articleBody'] = mb_substr(trim(strip_tags($articleHtml)), 0, 5000);
 }
-$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList);
+require_once __DIR__ . '/../includes/rating-synthetic-helper.php';
+$reviewSeedKey = $reviewEntityType . ':' . $reviewEntityId;
+$jsonLd['sku'] = syntheticSku($reviewSeedKey);
+$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList, $reviewSeedKey);
 
 $breadcrumbs = [
     ['label' => 'Главная', 'url' => '/'],

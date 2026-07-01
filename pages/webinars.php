@@ -198,6 +198,10 @@ $faqItems = [
 ];
 $jsonLdArray = [buildFaqJsonLd($faqItems)];
 
+// Микроразметка Schema.org/Product для листинга (гибрид рейтинга)
+require_once __DIR__ . "/../includes/listing-schema-helper.php";
+$jsonLdArray[] = buildListingSchema($db, 'webinar', 'vebinary', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
+
 include __DIR__ . "/../includes/header-redesign.php";
 ?>
 
