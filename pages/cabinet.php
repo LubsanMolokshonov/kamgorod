@@ -1147,7 +1147,7 @@ include __DIR__ . '/../includes/header.php';
                                     <?php if ($pub['status'] === 'published'): ?>
                                         <div class="share-inline">
                                             <div class="share-label">Поделитесь публикацией с коллегами:</div>
-                                            <?php $publication = $pub; include __DIR__ . '/../includes/share-publication.php'; ?>
+                                            <?php $publication = $pub; $shareContext = 'cabinet'; include __DIR__ . '/../includes/share-publication.php'; ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>

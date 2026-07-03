@@ -341,7 +341,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 
         <div class="pub-side-card">
           <h3>Поделиться</h3>
-          <?php include __DIR__ . '/../includes/share-publication.php'; ?>
+          <?php $shareContext = 'publication'; include __DIR__ . '/../includes/share-publication.php'; ?>
         </div>
       </aside>
     </div>

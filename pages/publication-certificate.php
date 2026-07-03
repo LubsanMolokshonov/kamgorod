@@ -144,7 +144,7 @@ include __DIR__ . '/../includes/header.php';
                                     Расскажите о ней в соцсетях — и о вашей работе узнают коллеги.
                                 <?php endif; ?>
                             </div>
-                            <?php include __DIR__ . '/../includes/share-publication.php'; ?>
+                            <?php $shareContext = 'certificate'; include __DIR__ . '/../includes/share-publication.php'; ?>
                         </div>
                     </div>
                 <?php elseif ($existingCert && $existingCert['status'] === 'paid'): ?>
@@ -166,7 +166,7 @@ include __DIR__ . '/../includes/header.php';
                                     Расскажите о ней в соцсетях — и о вашей работе узнают коллеги.
                                 <?php endif; ?>
                             </div>
-                            <?php include __DIR__ . '/../includes/share-publication.php'; ?>
+                            <?php $shareContext = 'certificate'; include __DIR__ . '/../includes/share-publication.php'; ?>
                         </div>
                     </div>
                 <?php else: ?>

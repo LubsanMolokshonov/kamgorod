@@ -128,6 +128,11 @@ $currentAdmin = Admin::verifySession();
                     <span>UTM-аналитика</span>
                 </a>
 
+                <a href="/admin/publication-shares/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/publication-shares/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">📤</span>
+                    <span>Шеринг публикаций</span>
+                </a>
+
                 <a href="/admin/ab-test/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/ab-test/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">🧪</span>
                     <span>A/B-тесты</span>

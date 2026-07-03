@@ -47,7 +47,7 @@
       var network = el.getAttribute('data-network');
       if (network === 'copy') {
         el.addEventListener('click', function () {
-          var url = box.getAttribute('data-share-url') || window.location.href;
+          var url = box.getAttribute('data-share-url-copy') || window.location.href;
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(url).then(function () { flash(el); }, function () {});
           } else {
@@ -71,8 +71,8 @@
       nativeBtn.addEventListener('click', function () {
         navigator.share({
           title: box.getAttribute('data-share-title') || document.title,
-          text: box.getAttribute('data-share-text') || '',
-          url: box.getAttribute('data-share-url') || window.location.href
+          text: box.getAttribute('data-share-text-native') || '',
+          url: box.getAttribute('data-share-url-native') || window.location.href
         }).then(function () { track(box, 'native'); }, function () {});
       });
       box.insertBefore(nativeBtn, box.firstChild);
