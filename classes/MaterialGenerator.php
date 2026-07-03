@@ -301,11 +301,12 @@ class MaterialGenerator
             //    ключей (они уходят в раздел «Ключи для учителя» только в скачиваемом файле).
             $studentBlank = in_array($typeSlug, ['rabochiy-list', 'test-kontrolnaya'], true);
 
-            // 7. Создаём Material.
-            //    full: сразу PUBLISHED — материал автоматически попадает в общий каталог
-            //          (/materialy/katalog/) без действий пользователя, is_unlocked=1 (оплачено при генерации).
-            //    preview: остаётся DRAFT — анонимный тизер до регистрации/оплаты в каталог не выносим,
-            //             is_unlocked=0, unlock_token_cost=цена.
+            // 7. Создаём Material. Любая генерация сразу PUBLISHED — материал попадает
+            //    в общий каталог (/materialy/katalog/) и sitemap без действий пользователя
+            //    (политика 2026-07-03: весь сгенерированный контент публичен).
+            //    full: is_unlocked=1 (оплачено при генерации) — страница отдаёт полный текст.
+            //    preview: is_unlocked=0, unlock_token_cost=цена — публично виден только
+            //    отрывок ~600 символов + paywall (pages/material-detail.php), полный текст за оплату.
             $materialId = $this->materialObj->create([
                 'user_id' => $userId,
                 'funnel_session_id' => $isPreview ? $funnelSessionId : null,
@@ -325,7 +326,7 @@ class MaterialGenerator
                 'token_cost' => 0,
                 'is_unlocked' => $isPreview ? 0 : 1,
                 'unlock_token_cost' => $isPreview ? $tokenCost : 0,
-                'status' => $isPreview ? 'draft' : 'published',
+                'status' => 'published',
             ]);
 
             // Привязка к аудитории, если передана в params

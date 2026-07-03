@@ -45,6 +45,7 @@ $maxOlympiads    = fetchMax($db, "SELECT MAX(updated_at) AS m FROM olympiads WHE
 $maxWebinars     = fetchMax($db, "SELECT MAX(updated_at) AS m FROM webinars WHERE is_active = 1 AND status IN ('scheduled','completed','videolecture')");
 $maxCourses      = fetchMax($db, "SELECT MAX(updated_at) AS m FROM courses WHERE is_active = 1");
 $maxPublications = fetchMax($db, "SELECT MAX(updated_at) AS m FROM publications WHERE status = 'published'");
+$maxMaterials    = fetchMax($db, "SELECT MAX(updated_at) AS m FROM materials WHERE status = 'published'");
 
 $maxWebUpcoming  = fetchMax($db, "SELECT MAX(updated_at) AS m FROM webinars WHERE is_active = 1 AND status IN ('scheduled','live')");
 $maxWebRecord    = fetchMax($db, "SELECT MAX(updated_at) AS m FROM webinars WHERE is_active = 1 AND status = 'completed'");
@@ -59,7 +60,8 @@ $siteWideLastmod = max(
     strtotime($maxOlympiads    ?: '1970-01-01'),
     strtotime($maxWebinars     ?: '1970-01-01'),
     strtotime($maxCourses      ?: '1970-01-01'),
-    strtotime($maxPublications ?: '1970-01-01')
+    strtotime($maxPublications ?: '1970-01-01'),
+    strtotime($maxMaterials    ?: '1970-01-01')
 );
 
 // ========================================
@@ -74,6 +76,8 @@ sitemapUrl($baseUrl . '/konkursy/', '0.9', 'weekly', $maxCompetitions);
 sitemapUrl($baseUrl . '/olimpiady/', '0.9', 'weekly', $maxOlympiads);
 sitemapUrl($baseUrl . '/vebinary/', '0.9', 'weekly', $maxWebinars);
 sitemapUrl($baseUrl . '/zhurnal/', '0.9', 'weekly', $maxPublications);
+sitemapUrl($baseUrl . '/materialy/', '0.8', 'monthly', fileLastmod($rootDir . '/pages/materials-landing.php'));
+sitemapUrl($baseUrl . '/materialy/katalog/', '0.9', 'weekly', $maxMaterials);
 
 // Категории конкурсов — lastmod от таблицы competitions
 foreach (['metodika', 'vneurochnaya', 'proekty', 'tvorchestvo'] as $cat) {
@@ -236,6 +240,15 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 $stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' ORDER BY published_at DESC");
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     sitemapUrl($baseUrl . '/publikaciya/' . $row['slug'] . '/', '0.7', 'monthly', $row['updated_at']);
+}
+
+// ========================================
+// 7. МАТЕРИАЛЫ ФОП (ИИ-генератор)
+// ========================================
+
+$stmt = $db->query("SELECT slug, updated_at FROM materials WHERE status = 'published' ORDER BY published_at DESC");
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    sitemapUrl($baseUrl . '/material/' . $row['slug'] . '/', '0.7', 'monthly', $row['updated_at']);
 }
 ?>
 </urlset>

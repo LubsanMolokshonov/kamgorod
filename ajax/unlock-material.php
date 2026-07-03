@@ -94,6 +94,13 @@ try {
         'token_cost'  => 0,
     ]);
 
+    // Оплаченный материал не должен оставаться черновиком: новые генерации публикуются
+    // сразу при создании, но старые draft'ы доводим до published здесь. Отклонённые/
+    // архивные админкой (rejected/archived) намеренно не трогаем.
+    if ($material['status'] === 'draft') {
+        $materialObj->publish($materialId);
+    }
+
     // Материал оплачен — гасим неотправленные письма дожима «превью без оплаты»
     try {
         require_once __DIR__ . '/../classes/MaterialTokenEmailChain.php';
