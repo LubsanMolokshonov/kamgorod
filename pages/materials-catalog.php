@@ -93,6 +93,15 @@ $totalPages = max(1, (int)ceil($totalCount / $perPage));
 
 $types = $typeObj->getWithCounts();
 
+// Ступени с материалами — чипсы-ссылки на аудиторные посадочные /pedagogi/{at}/
+$stageLinks = $materialObj->getAudienceStageCounts();
+$stageShortNames = [
+    'dou' => 'ДОУ',
+    'nachalnaya-shkola' => 'Начальная школа (1–4 класс)',
+    'srednyaya-starshaya-shkola' => 'Средняя и старшая школа (5–11 класс)',
+    'spo' => 'СПО',
+];
+
 // ============ SEO: H1 / title / description / canonical ============
 
 // Человекочитаемые названия аудиторных категорий (фиксированный список из .htaccess)
@@ -296,6 +305,18 @@ include __DIR__ . '/../includes/header-redesign.php';
 
       <button type="submit" class="rd-btn rd-btn-primary">Найти</button>
     </form>
+
+    <?php if (!empty($stageLinks) && $search === '' && !$currentTag): ?>
+      <div class="mat-stage-chips" style="display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 4px;">
+        <?php foreach ($stageLinks as $sl): ?>
+          <?php $isActiveStage = $selectedTypeData && $selectedTypeData['slug'] === $sl['slug']; ?>
+          <a href="/materialy/katalog/pedagogi/<?= htmlspecialchars($sl['slug'], ENT_QUOTES, 'UTF-8') ?>/"
+             class="mat-detail-tag"<?= $isActiveStage ? ' style="background:var(--indigo-600,#4f46e5);color:#fff;"' : '' ?>>
+            <?= htmlspecialchars($stageShortNames[$sl['slug']] ?? $sl['name'], ENT_QUOTES, 'UTF-8') ?> · <?= (int)$sl['cnt'] ?>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
 
     <?php if ($selectedCategoryData || $currentType || $currentTag): ?>
       <p class="mat-result-meta">

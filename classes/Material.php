@@ -236,6 +236,87 @@ class Material
     }
 
     /**
+     * Автоклассификация материала по параметрам генерации (ai_params_json):
+     * заполняет пустой program_compliance и привязывает аудиторию
+     * (категория pedagogi + ступень). Идемпотентна: заполненные вручную
+     * program_compliance и существующие аудиторные связи не трогает.
+     *
+     * @return array{programs: string[], audience_type: ?string, updated: bool}
+     */
+    public function syncClassification(int $materialId): array
+    {
+        require_once __DIR__ . '/MaterialClassifier.php';
+
+        $row = $this->db->queryOne(
+            "SELECT id, ai_params_json, program_compliance FROM materials WHERE id = ?",
+            [$materialId]
+        );
+        $result = ['programs' => [], 'audience_type' => null, 'updated' => false];
+        if (!$row) {
+            return $result;
+        }
+        $params = json_decode((string)$row['ai_params_json'], true);
+        if (!is_array($params)) {
+            return $result;
+        }
+
+        // program_compliance — только если ещё не заполнен
+        $programs = MaterialClassifier::derivePrograms($params);
+        if (!empty($programs) && trim((string)$row['program_compliance']) === '') {
+            $this->db->update('materials', ['program_compliance' => implode(',', $programs)], 'id = ?', [$materialId]);
+            $result['programs'] = $programs;
+            $result['updated'] = true;
+        }
+
+        // Аудитория — только если связей ещё нет (не затираем ручную разметку)
+        $hasAudience = (int)($this->db->queryOne(
+            "SELECT COUNT(*) c FROM material_audience_categories WHERE material_id = ?",
+            [$materialId]
+        )['c'] ?? 0) > 0;
+        if (!$hasAudience) {
+            $catRow = $this->db->queryOne("SELECT id FROM audience_categories WHERE slug = 'pedagogi' AND is_active = 1");
+            if ($catRow) {
+                $typeIds = [];
+                $typeSlug = MaterialClassifier::audienceTypeSlug($params);
+                if ($typeSlug !== null) {
+                    $typeRow = $this->db->queryOne(
+                        "SELECT id FROM audience_types WHERE slug = ? AND category_id = ? AND is_active = 1",
+                        [$typeSlug, $catRow['id']]
+                    );
+                    if ($typeRow) {
+                        $typeIds[] = (int)$typeRow['id'];
+                        $result['audience_type'] = $typeSlug;
+                    }
+                }
+                $this->attachAudience($materialId, [(int)$catRow['id']], $typeIds, []);
+                $result['updated'] = true;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Опубликованные материалы по ступеням (audience_types категории pedagogi) —
+     * для чипсов-ссылок на аудиторные посадочные каталога.
+     *
+     * @return array<int, array{slug: string, name: string, cnt: int}>
+     */
+    public function getAudienceStageCounts(): array
+    {
+        return $this->db->query(
+            "SELECT at2.slug, at2.name, COUNT(DISTINCT m.id) AS cnt
+             FROM materials m
+             JOIN material_audience_types mat2 ON mat2.material_id = m.id
+             JOIN audience_types at2 ON at2.id = mat2.audience_type_id
+             JOIN audience_categories ac ON ac.id = at2.category_id
+             WHERE m.status = 'published' AND at2.is_active = 1 AND ac.slug = 'pedagogi'
+             GROUP BY at2.id, at2.slug, at2.name
+             ORDER BY at2.id"
+        );
+    }
+
+    /**
      * Похожие материалы для блока перелинковки на детальной странице:
      * тот же тип — в приоритете, добор самыми свежими опубликованными.
      */

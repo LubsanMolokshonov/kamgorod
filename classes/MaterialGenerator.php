@@ -339,6 +339,15 @@ class MaterialGenerator
                 );
             }
 
+            // Автоклассификация: program_compliance + аудитория (pedagogi + ступень)
+            // из class/program в параметрах генерации. Явную привязку выше не затирает.
+            // Best-effort: ошибка классификации не должна валить генерацию.
+            try {
+                $this->materialObj->syncClassification($materialId);
+            } catch (Throwable $clsErr) {
+                error_log('MaterialGenerator: classification failed (non-fatal): ' . $clsErr->getMessage());
+            }
+
             // 7b. Финализируем лог СРАЗУ, как только готов контент материала.
             //     Обложку (YandexART, +10–40с) генерируем уже ПОСЛЕ done — иначе её
             //     задержка раздувала общее время и фронт ловил ложный 5-минутный таймаут
