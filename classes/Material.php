@@ -235,6 +235,24 @@ class Material
         return $this->db->query($sql, $params);
     }
 
+    /**
+     * Похожие материалы для блока перелинковки на детальной странице:
+     * тот же тип — в приоритете, добор самыми свежими опубликованными.
+     */
+    public function getRelated(int $materialId, int $typeId = 0, int $limit = 4): array
+    {
+        return $this->db->query(
+            "SELECT m.slug, m.title, m.description, m.file_format, m.downloads_count, m.token_cost,
+                    mt.name AS type_name
+             FROM materials m
+             LEFT JOIN material_types mt ON m.material_type_id = mt.id
+             WHERE m.status = 'published' AND m.id != ?
+             ORDER BY (m.material_type_id = ?) DESC, m.published_at DESC
+             LIMIT ?",
+            [$materialId, $typeId, $limit]
+        );
+    }
+
     public function incrementViews(int $id): void
     {
         $this->db->execute("UPDATE materials SET views_count = views_count + 1 WHERE id = ?", [$id]);

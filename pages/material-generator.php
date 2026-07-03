@@ -45,6 +45,13 @@ $canonicalUrl = SITE_URL . '/material-generator/';
 $rdActivePage = 'materialy';
 $additionalCSS = ['/assets/css/materials.css?v=' . filemtime(__DIR__ . '/../assets/css/materials.css')];
 
+require_once __DIR__ . '/../includes/breadcrumb-jsonld-helper.php';
+$breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    ['label' => 'Главная', 'url' => '/'],
+    ['label' => 'Материалы ФОП', 'url' => '/materialy/'],
+    ['label' => 'Генератор'],
+]);
+
 include __DIR__ . '/../includes/header-redesign.php';
 ?>
 

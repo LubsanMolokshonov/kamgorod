@@ -246,6 +246,67 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 // 7. МАТЕРИАЛЫ ФОП (ИИ-генератор)
 // ========================================
 
+// Посадочные каталога по типу материала — только типы с опубликованными материалами
+try {
+    $stmt = $db->query("
+        SELECT mt.slug, MAX(m.updated_at) AS lastmod
+        FROM material_types mt
+        JOIN materials m ON m.material_type_id = mt.id AND m.status = 'published'
+        GROUP BY mt.slug
+    ");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        sitemapUrl($baseUrl . '/materialy/katalog/tip/' . $row['slug'] . '/', '0.7', 'weekly', $row['lastmod']);
+    }
+} catch (Exception $e) {
+    // Не блокируем sitemap при отсутствии таблиц на старых средах
+}
+
+// Аудиторные посадочные каталога (1-й уровень) — только с материалами
+try {
+    $stmt = $db->query("
+        SELECT ac.slug, MAX(m.updated_at) AS lastmod
+        FROM materials m
+        JOIN material_audience_categories mac ON mac.material_id = m.id
+        JOIN audience_categories ac ON ac.id = mac.category_id
+        WHERE m.status = 'published' AND ac.is_active = 1
+        GROUP BY ac.slug
+    ");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        sitemapUrl($baseUrl . '/materialy/katalog/' . $row['slug'] . '/', '0.6', 'weekly', $row['lastmod']);
+    }
+} catch (Exception $e) {
+}
+
+// Аудиторные посадочные 2-го уровня ({ac}/{at}/) — только с материалами
+try {
+    $stmt = $db->query("
+        SELECT ac.slug AS cat_slug, at2.slug AS type_slug, MAX(m.updated_at) AS lastmod
+        FROM materials m
+        JOIN material_audience_types mat2 ON mat2.material_id = m.id
+        JOIN audience_types at2 ON at2.id = mat2.audience_type_id
+        JOIN audience_categories ac ON ac.id = at2.category_id
+        WHERE m.status = 'published' AND at2.is_active = 1 AND ac.is_active = 1
+        GROUP BY ac.slug, at2.slug
+    ");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        sitemapUrl($baseUrl . '/materialy/katalog/' . $row['cat_slug'] . '/' . $row['type_slug'] . '/', '0.5', 'weekly', $row['lastmod']);
+    }
+} catch (Exception $e) {
+}
+
+// Страницы ИИ-генератора и адаптера
+$generatorLastmod = fileLastmod($rootDir . '/pages/material-generator-form.php');
+sitemapUrl($baseUrl . '/material-generator/', '0.7', 'monthly', fileLastmod($rootDir . '/pages/material-generator.php'));
+try {
+    $stmt = $db->query("SELECT slug FROM material_types ORDER BY id");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        sitemapUrl($baseUrl . '/material-generator/' . $row['slug'] . '/', '0.6', 'monthly', $generatorLastmod);
+    }
+} catch (Exception $e) {
+}
+sitemapUrl($baseUrl . '/material-adapter/', '0.6', 'monthly', fileLastmod($rootDir . '/pages/material-adapter.php'));
+
+// Детальные страницы материалов
 $stmt = $db->query("SELECT slug, updated_at FROM materials WHERE status = 'published' ORDER BY published_at DESC");
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     sitemapUrl($baseUrl . '/material/' . $row['slug'] . '/', '0.7', 'monthly', $row['updated_at']);

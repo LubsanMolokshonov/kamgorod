@@ -28,6 +28,10 @@
       <a href="/vebinary/">Все вебинары</a>
       <a href="/vebinary/predstoyashchie/">Ближайшие</a>
       <a href="/vebinary/zapisi/">Архив записей</a>
+      <h5 style="margin-top:24px;">Материалы ФОП</h5>
+      <a href="/materialy/katalog/">Каталог готовых материалов</a>
+      <a href="/material-generator/">ИИ-генератор материалов</a>
+      <a href="/material-adapter/">Адаптация под класс</a>
     </div>
 
     <div>

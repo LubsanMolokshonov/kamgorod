@@ -244,6 +244,9 @@ RewriteRule ^materialy/?$ pages/materials-landing.php [L,QSA]
 # Каталог материалов
 RewriteRule ^materialy/katalog/?$ pages/materials-catalog.php [L,QSA]
 
+# Каталог по типу материала: /materialy/katalog/tip/konspekt-uroka/
+RewriteRule ^materialy/katalog/tip/([a-z0-9-]+)/?$ pages/materials-catalog.php?type=$1 [L,QSA]
+
 # Аудитория каталога (3 уровня): /materialy/katalog/pedagogi/dou/logopediya/
 RewriteRule ^materialy/katalog/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ pages/materials-catalog.php?ac=$1&at=$2&as=$3 [L,QSA]
 RewriteRule ^materialy/katalog/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ pages/materials-catalog.php?ac=$1&at=$2 [L,QSA]

@@ -41,6 +41,19 @@ redirectToSeoUrl('materialy/katalog', [
     'q'    => $search,
 ]);
 
+// ЧПУ типа материала: ?type={slug} из формы → 301 на /materialy/katalog/tip/{slug}/
+// (только без аудиторных сегментов; на самих /tip/-страницах query-параметра type нет)
+parse_str(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY) ?: '', $realQuery);
+if (!empty($realQuery['type']) && $selectedCategory === '') {
+    $qs = array_filter($realQuery, fn($v) => $v !== '' && $v !== null);
+    unset($qs['type']);
+    if (($qs['sort'] ?? '') === 'date') { unset($qs['sort']); }
+    $loc = '/materialy/katalog/tip/' . rawurlencode($realQuery['type']) . '/';
+    if (!empty($qs)) { $loc .= '?' . http_build_query($qs); }
+    header('Location: ' . $loc, true, 301);
+    exit;
+}
+
 $page    = max(1, (int)($_GET['page'] ?? 1));
 $perPage = 12;
 $offset  = ($page - 1) * $perPage;
@@ -80,16 +93,142 @@ $totalPages = max(1, (int)ceil($totalCount / $perPage));
 
 $types = $typeObj->getWithCounts();
 
-// SEO
+// ============ SEO: H1 / title / description / canonical ============
+
+// Человекочитаемые названия аудиторных категорий (фиксированный список из .htaccess)
+$audienceCatSeoNames = [
+    'pedagogi'      => 'для педагогов',
+    'doshkolnikam'  => 'для дошкольников',
+    'shkolnikam'    => 'для школьников',
+    'studentam-spo' => 'для студентов СПО',
+];
+
+// H1: самый специфичный активный фильтр
 $h1 = 'Каталог материалов ФОП';
-if ($currentType) {
+$isBaseCatalog = true;
+if ($selectedSpecData) {
+    $h1 = 'Материалы ФОП — ' . $selectedSpecData['name'];
+    $isBaseCatalog = false;
+} elseif ($selectedTypeData) {
+    $h1 = 'Материалы ФОП — ' . $selectedTypeData['name'];
+    $isBaseCatalog = false;
+} elseif ($selectedCategoryData) {
+    $h1 = 'Материалы ФОП ' . ($audienceCatSeoNames[$selectedCategory] ?? $selectedCategoryData['name']);
+    $isBaseCatalog = false;
+} elseif ($currentType) {
     $h1 = $currentType['name'];
+    $isBaseCatalog = false;
+} elseif ($currentTag) {
+    $h1 = 'Материалы по теме «' . $currentTag['name'] . '»';
+    $isBaseCatalog = false;
 }
-$pageTitle = $h1 . ' — каталог материалов для педагогов | ' . SITE_NAME;
-$pageDescription = 'Готовые материалы ФОП: технологические карты, конспекты, рабочие листы, тесты, презентации. Под ФГОС 2026 и ФАОП ОВЗ. Адаптация под класс через ИИ.';
-$canonicalUrl = SITE_URL . '/materialy/katalog/';
+
+// Title и description — уникальные под фильтр, с количеством материалов
+if ($isBaseCatalog) {
+    $pageTitle = 'Каталог материалов ФОП — готовые конспекты, технокарты, рабочие листы, тесты | ' . SITE_NAME;
+    $pageDescription = ($totalCount >= 10 ? $totalCount . '+ готовых материалов' : 'Готовые материалы')
+        . ' по ФОП и ФГОС 2026: технологические карты, конспекты уроков, рабочие листы, тесты, презентации, классные часы. Скачивание в DOCX, PDF и PPTX, адаптация под класс через ИИ.';
+} elseif ($currentType) {
+    $typeDesc = trim((string)($currentType['description'] ?? ''));
+    if ($typeDesc !== '' && !in_array(mb_substr($typeDesc, -1), ['.', '!', '?'], true)) {
+        $typeDesc .= '.';
+    }
+    $pageTitle = $currentType['name'] . ' — готовые материалы по ФОП и ФГОС, скачать | ' . SITE_NAME;
+    $pageDescription = $currentType['name'] . ' — '
+        . ($totalCount >= 3 ? $totalCount . ' готовых материалов' : 'готовые материалы')
+        . ' в каталоге ФОП. ' . ($typeDesc !== '' ? $typeDesc . ' ' : '')
+        . 'Соответствие ФГОС 2026 и ФАОП ОВЗ, адаптация под свой класс через ИИ.';
+} else {
+    $pageTitle = $h1 . ' — каталог готовых разработок | ' . SITE_NAME;
+    $pageDescription = $h1 . ': '
+        . ($totalCount >= 3 ? $totalCount . ' готовых материалов' : 'готовые материалы')
+        . ' — технологические карты, конспекты, рабочие листы, тесты и презентации. Под ФОП, ФАОП ОВЗ и ФГОС 2026, скачивание в DOCX/PDF/PPTX.';
+}
+
+// Canonical: аудиторные ЧПУ и /tip/{slug}/ — самоканоничные, query-фильтры клеятся к базе
+$catalogPath = '/materialy/katalog/';
+if ($selectedCategoryData) {
+    $catalogPath .= rawurlencode($selectedCategory) . '/';
+    if ($selectedTypeData) {
+        $catalogPath .= rawurlencode($selectedType) . '/';
+        if ($selectedSpecData) {
+            $catalogPath .= rawurlencode($selectedSpec) . '/';
+        }
+    }
+} elseif ($currentType) {
+    $catalogPath = '/materialy/katalog/tip/' . rawurlencode($currentType['slug']) . '/';
+}
+$hasExtraFilters = ($search !== '') || ($sort !== 'date') || ($program !== '') || $currentTag !== null
+    || ($currentType && strpos($catalogPath, '/tip/') === false);
+$canonicalUrl = SITE_URL . $catalogPath;
+if (!$hasExtraFilters && $page > 1) {
+    $canonicalUrl .= '?page=' . $page;
+}
+
+// Пагинация: уникальные title/description, чтобы страницы не склеивались как дубли
+if ($page > 1) {
+    $pageTitle = $h1 . ' — страница ' . $page . ' | ' . SITE_NAME;
+    $pageDescription = 'Страница ' . $page . ' из ' . $totalPages . '. ' . $pageDescription;
+}
+
+// Поиск и пустые выборки не индексируем
+if ($search !== '' || $totalCount === 0) {
+    $noindex = true;
+}
+
 $rdActivePage = 'materialy';
 $additionalCSS = ['/assets/css/materials.css?v=' . filemtime(__DIR__ . '/../assets/css/materials.css')];
+
+// ============ JSON-LD: BreadcrumbList + ItemList + Product-рейтинг листинга ============
+
+require_once __DIR__ . '/../includes/breadcrumb-jsonld-helper.php';
+$crumbs = [
+    ['label' => 'Главная', 'url' => '/'],
+    ['label' => 'Материалы ФОП', 'url' => '/materialy/'],
+];
+if ($isBaseCatalog) {
+    $crumbs[] = ['label' => 'Каталог'];
+} else {
+    $crumbs[] = ['label' => 'Каталог', 'url' => '/materialy/katalog/'];
+    $crumbs[] = ['label' => $h1];
+}
+$breadcrumbJsonLd = buildBreadcrumbJsonLd($crumbs);
+
+$jsonLdArray = [];
+
+// ItemList: материалы текущей страницы (позиции сквозные с учётом пагинации)
+if (!empty($materials)) {
+    $itemListElements = [];
+    foreach ($materials as $i => $m) {
+        $itemListElements[] = [
+            '@type' => 'ListItem',
+            'position' => $offset + $i + 1,
+            'url' => SITE_URL . '/material/' . rawurlencode($m['slug']) . '/',
+            'name' => $m['title'],
+        ];
+    }
+    $jsonLdArray[] = [
+        '@context' => 'https://schema.org',
+        '@type' => 'ItemList',
+        'name' => $h1,
+        'numberOfItems' => $totalCount,
+        'itemListElement' => $itemListElements,
+    ];
+}
+
+// Рейтинг листинга (тот же паттерн, что у /vebinary/ и /zhurnal/) — только на первой странице
+if ($page === 1 && empty($noindex)) {
+    require_once __DIR__ . '/../includes/listing-schema-helper.php';
+    $jsonLdArray[] = buildListingSchema(
+        $db,
+        'material',
+        'materialy',
+        $h1,
+        $pageDescription,
+        SITE_URL . '/assets/images/og-home.jpg',
+        SITE_NAME
+    );
+}
 
 // FAQ + микроразметка Schema.org/FAQPage
 require_once __DIR__ . '/../includes/faq-helper.php';
@@ -99,7 +238,7 @@ $faqItems = [
     ['q' => 'Можно ли адаптировать материал под свой класс?', 'a' => 'Да. Любой текст можно переработать под нужный класс, ОВЗ, ФАОП или ФОП-2026 с помощью инструмента <a href="/material-adapter/">адаптации материала</a>.'],
     ['q' => 'Чем каталог отличается от ИИ-генератора?', 'a' => 'В каталоге собраны готовые материалы, которые можно сразу скачать. Если нужного нет — <a href="/material-generator/">генератор</a> создаст новый материал с нуля под ваши параметры: предмет, класс, тему и программу.'],
 ];
-$jsonLdArray = [buildFaqJsonLd($faqItems)];
+$jsonLdArray[] = buildFaqJsonLd($faqItems);
 
 include __DIR__ . '/../includes/header-redesign.php';
 ?>
@@ -111,7 +250,13 @@ include __DIR__ . '/../includes/header-redesign.php';
       <span class="sep">/</span>
       <a href="/materialy/">Материалы ФОП</a>
       <span class="sep">/</span>
-      <strong>Каталог</strong>
+      <?php if ($isBaseCatalog): ?>
+        <strong>Каталог</strong>
+      <?php else: ?>
+        <a href="/materialy/katalog/">Каталог</a>
+        <span class="sep">/</span>
+        <strong><?= htmlspecialchars($h1, ENT_QUOTES, 'UTF-8') ?></strong>
+      <?php endif; ?>
     </div>
     <h1 class="rd-hero-title rd-hero-title-sm" style="margin-top:18px;"><?= htmlspecialchars($h1, ENT_QUOTES, 'UTF-8') ?></h1>
     <p class="rd-hero-sub" style="max-width:640px;">Готовые материалы под ФОП и ФАОП ОВЗ. Не нашли нужного — <a href="/material-generator/" style="color:var(--indigo-600);font-weight:600;">сгенерируйте свой через ИИ</a>.</p>
@@ -191,10 +336,18 @@ include __DIR__ . '/../includes/header-redesign.php';
       <?php if ($totalPages > 1): ?>
         <nav class="mat-pagination">
           <?php
-          $baseQuery = $_GET;
+          // Ссылки от ЧПУ-пути, в query — только реальные фильтры (без ac/at/as/type из rewrite).
+          // Первая страница — чистый URL без ?page=1, чтобы не плодить дубль.
+          $pgQuery = [];
+          if ($currentType && strpos($catalogPath, '/tip/') === false) { $pgQuery['type'] = $currentType['slug']; }
+          if ($currentTag)       { $pgQuery['tag'] = $currentTag['slug']; }
+          if ($program !== '')   { $pgQuery['program'] = $program; }
+          if ($sort !== 'date')  { $pgQuery['sort'] = $sort; }
+          if ($search !== '')    { $pgQuery['q'] = $search; }
           for ($p = 1; $p <= $totalPages; $p++) {
-              $baseQuery['page'] = $p;
-              $url = '?' . http_build_query($baseQuery);
+              $q = $pgQuery;
+              if ($p > 1) { $q['page'] = $p; }
+              $url = $catalogPath . (!empty($q) ? '?' . http_build_query($q) : '');
               $cls = $p === $page ? ' class="is-active"' : '';
               echo '<a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '"' . $cls . '>' . $p . '</a>';
           }

@@ -76,6 +76,13 @@ $topOlympiads   = $olympiadObj->getTopOlympiads(6);
 $totalCourses   = $courseObj->count();
 $topCourses     = array_slice($courseObj->getActiveCourses(), 0, 6);
 
+try {
+    $totalMaterials = (int)$db->query("SELECT COUNT(*) AS c FROM materials WHERE status = 'published'")
+        ->fetch(PDO::FETCH_ASSOC)['c'];
+} catch (Exception $e) {
+    $totalMaterials = 0;
+}
+
 // Данные для JS-табов
 $offersData = [
     'kursy' => array_map(function ($c) {
@@ -259,6 +266,22 @@ include __DIR__ . '/includes/header-redesign.php';
           <div class="rd-feat-go">→</div>
         </div>
       </a>
+    </div>
+  </div>
+</section>
+
+<!-- Материалы ФОП: каталог + ИИ-генератор -->
+<section class="rd-section tight">
+  <div class="rd-wrap">
+    <div class="reveal" style="background:linear-gradient(135deg,#eef2ff,#f8fafc); border:1px solid #e0e7ff; border-radius:20px; padding:28px 32px; display:flex; flex-wrap:wrap; gap:20px; align-items:center; justify-content:space-between;">
+      <div style="max-width:640px;">
+        <h2 style="margin:0 0 8px; font-size:24px;">Готовые материалы ФОП<?php if ($totalMaterials >= 50): ?> — <?php echo $totalMaterials; ?>+ разработок<?php endif; ?></h2>
+        <p style="margin:0; color:#475569;">Технологические карты, конспекты уроков, рабочие листы, тесты и презентации под ФГОС 2026 и ФАОП ОВЗ. Скачивайте готовые из каталога — или создайте свой материал через ИИ за 30 секунд.</p>
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <a href="/materialy/katalog/" class="rd-btn rd-btn-primary">Каталог материалов</a>
+        <a href="/material-generator/" class="rd-btn rd-btn-ghost">ИИ-генератор</a>
+      </div>
     </div>
   </div>
 </section>

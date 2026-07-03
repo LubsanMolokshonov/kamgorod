@@ -37,6 +37,7 @@ $additionalCSS = ['/assets/css/materials.css?v=' . filemtime(__DIR__ . '/../asse
 if (!$material || (!$isPublished && !$isAuthor && !$isAdmin && !$isOwnerAnon)) {
     http_response_code(404);
     $pageTitle = 'Материал не найден — ' . SITE_NAME;
+    $noindex = true;
     include __DIR__ . '/../includes/header-redesign.php';
     echo '<div class="rd-wrap" style="padding:80px 20px; text-align:center;">'
         . '<h1>404 — материал не найден</h1>'
@@ -52,9 +53,35 @@ if ($isPublished) {
 
 $tags = $materialObj->getTags((int)$material['id']);
 
+// Похожие материалы (перелинковка): тот же тип в приоритете, добор свежими
+$relatedMaterials = $isPublished
+    ? $materialObj->getRelated((int)$material['id'], (int)$material['material_type_id'], 4)
+    : [];
+
 $pageTitle       = ($material['meta_title'] ?: $material['title']) . ' | ' . SITE_NAME;
 $pageDescription = $material['meta_description'] ?: mb_substr(strip_tags($material['description'] ?? ''), 0, 200);
 $canonicalUrl    = SITE_URL . '/material/' . rawurlencode($material['slug']) . '/';
+
+// Черновики/превью видны только владельцу — на всякий случай закрываем от индексации
+if (!$isPublished) {
+    $noindex = true;
+}
+
+// OG-картинка: превью материала, если есть
+if (!empty($material['preview_image_url'])) {
+    $ogImage = strpos($material['preview_image_url'], 'http') === 0
+        ? $material['preview_image_url']
+        : SITE_URL . $material['preview_image_url'];
+}
+
+// JSON-LD BreadcrumbList (выводится в header.php)
+require_once __DIR__ . '/../includes/breadcrumb-jsonld-helper.php';
+$breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    ['label' => 'Главная', 'url' => '/'],
+    ['label' => 'Материалы ФОП', 'url' => '/materialy/'],
+    ['label' => 'Каталог', 'url' => '/materialy/katalog/'],
+    ['label' => $material['title']],
+]);
 
 // Преобразуем SET program_compliance в массив человекочитаемых меток
 $programLabels = [
@@ -91,13 +118,29 @@ $schema = [
     'inLanguage' => 'ru',
     'learningResourceType' => $material['type_name'] ?? 'Учебный материал',
     'isAccessibleForFree' => ((int)$material['token_cost'] === 0),
+    'datePublished' => date('c', strtotime($material['published_at'] ?: $material['created_at'])),
     'dateModified' => date('c', strtotime($material['updated_at'] ?? $material['created_at'])),
+    'audience' => [
+        '@type' => 'EducationalAudience',
+        'educationalRole' => 'teacher',
+    ],
+    'interactionStatistic' => [
+        '@type' => 'InteractionCounter',
+        'interactionType' => 'https://schema.org/DownloadAction',
+        'userInteractionCount' => (int)$material['downloads_count'],
+    ],
     'publisher' => [
         '@type' => 'Organization',
         'name' => defined('SITE_NAME') ? SITE_NAME : 'fgos.pro',
         'url' => SITE_URL,
     ],
 ];
+if (!empty($tags)) {
+    $schema['keywords'] = implode(', ', array_column($tags, 'name'));
+}
+if (!empty($ogImage)) {
+    $schema['image'] = $ogImage;
+}
 if (!empty($programs)) {
     $schema['educationalAlignment'] = array_map(fn($p) => [
         '@type' => 'AlignmentObject',
@@ -130,7 +173,15 @@ include __DIR__ . '/../includes/header-redesign.php';
 
 <section class="mat-page">
   <div class="rd-wrap mat-detail">
-    <a href="/materialy/katalog/" class="mat-detail-back">← Каталог материалов</a>
+    <div class="rd-crumbs" style="margin-bottom:16px;">
+      <a href="/">Главная</a>
+      <span class="sep">/</span>
+      <a href="/materialy/">Материалы ФОП</a>
+      <span class="sep">/</span>
+      <a href="/materialy/katalog/">Каталог</a>
+      <span class="sep">/</span>
+      <strong><?= htmlspecialchars(mb_strlen($material['title']) > 50 ? mb_substr($material['title'], 0, 50) . '…' : $material['title'], ENT_QUOTES, 'UTF-8') ?></strong>
+    </div>
 
     <?php if (!empty($material['type_name'])): ?>
       <div class="mat-detail-type">
@@ -304,6 +355,32 @@ include __DIR__ . '/../includes/header-redesign.php';
         <?php foreach ($tags as $tag): ?>
           <a href="/materialy/katalog/?tag=<?= htmlspecialchars($tag['slug'], ENT_QUOTES, 'UTF-8') ?>" class="mat-detail-tag">#<?= htmlspecialchars($tag['name'], ENT_QUOTES, 'UTF-8') ?></a>
         <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
+    <?php if (!empty($relatedMaterials)): ?>
+      <div class="mat-related" style="margin-top:40px;">
+        <h2 style="font-size:22px; margin:0 0 16px;">Похожие материалы</h2>
+        <div class="mat-cards-grid">
+          <?php foreach ($relatedMaterials as $rm): ?>
+            <a href="/material/<?= htmlspecialchars($rm['slug'], ENT_QUOTES, 'UTF-8') ?>/" class="mat-card">
+              <?php if (!empty($rm['type_name'])): ?>
+                <div class="mat-card-type">
+                  <?= htmlspecialchars($rm['type_name'], ENT_QUOTES, 'UTF-8') ?><?php if (!empty($rm['file_format'])): ?> · <?= strtoupper(htmlspecialchars($rm['file_format'], ENT_QUOTES, 'UTF-8')) ?><?php endif; ?>
+                </div>
+              <?php endif; ?>
+              <h3><?= htmlspecialchars($rm['title'], ENT_QUOTES, 'UTF-8') ?></h3>
+              <?php if (!empty($rm['description'])): ?>
+                <p><?= htmlspecialchars(mb_substr($rm['description'], 0, 120), ENT_QUOTES, 'UTF-8') ?><?= mb_strlen($rm['description']) > 120 ? '…' : '' ?></p>
+              <?php endif; ?>
+              <div class="mat-card-foot">
+                <span>↓ <?= (int)$rm['downloads_count'] ?></span>
+                <span><?= (int)$rm['token_cost'] > 0 ? (int)$rm['token_cost'] . ' токенов' : 'Бесплатно' ?></span>
+              </div>
+            </a>
+          <?php endforeach; ?>
+        </div>
+        <p style="margin-top:16px;"><a href="/materialy/katalog/" style="color:var(--indigo-600); font-weight:600;">Все материалы в каталоге →</a></p>
       </div>
     <?php endif; ?>
   </div>
