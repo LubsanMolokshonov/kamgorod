@@ -168,12 +168,12 @@ include __DIR__ . '/../includes/header-redesign.php';
       <div class="cd-hero-art reveal">
         <div class="hero-diploma">
           <div class="diploma-stack">
-            <div class="diploma-item diploma-1"><img src="/assets/images/diplomas/previews/diploma-1.svg" alt="Диплом вариант 1"></div>
-            <div class="diploma-item diploma-2"><img src="/assets/images/diplomas/previews/diploma-2.svg" alt="Диплом вариант 2"></div>
-            <div class="diploma-item diploma-3"><img src="/assets/images/diplomas/previews/diploma-3.svg" alt="Диплом вариант 3"></div>
-            <div class="diploma-item diploma-4"><img src="/assets/images/diplomas/previews/diploma-4.svg" alt="Диплом вариант 4"></div>
-            <div class="diploma-item diploma-5"><img src="/assets/images/diplomas/previews/diploma-5.svg" alt="Диплом вариант 5"></div>
-            <div class="diploma-item diploma-6"><img src="/assets/images/diplomas/previews/diploma-6.svg" alt="Диплом вариант 6"></div>
+            <div class="diploma-item diploma-1"><img src="/assets/images/diplomas/previews/diploma-1.svg" alt="Диплом вариант 1" loading="lazy" decoding="async"></div>
+            <div class="diploma-item diploma-2"><img src="/assets/images/diplomas/previews/diploma-2.svg" alt="Диплом вариант 2" loading="lazy" decoding="async"></div>
+            <div class="diploma-item diploma-3"><img src="/assets/images/diplomas/previews/diploma-3.svg" alt="Диплом вариант 3" loading="lazy" decoding="async"></div>
+            <div class="diploma-item diploma-4"><img src="/assets/images/diplomas/previews/diploma-4.svg" alt="Диплом вариант 4" loading="lazy" decoding="async"></div>
+            <div class="diploma-item diploma-5"><img src="/assets/images/diplomas/previews/diploma-5.svg" alt="Диплом вариант 5" loading="lazy" decoding="async"></div>
+            <div class="diploma-item diploma-6"><img src="/assets/images/diplomas/previews/diploma-6.svg" alt="Диплом вариант 6" loading="lazy" decoding="async"></div>
           </div>
         </div>
       </div>

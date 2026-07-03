@@ -1,6 +1,7 @@
 <?php
 // Initialize session for user authentication check
 require_once __DIR__ . '/session.php';
+require_once __DIR__ . '/asset-helpers.php';
 initSession();
 
 // A/B-тест моделей оплаты: резолвим вариант ДО любого вывода (нужно для setcookie).
@@ -46,21 +47,35 @@ $rdActivePage    = $rdActivePage ?? '';
     <meta name="twitter:image" content="<?php echo $ogImage; ?>">
 
     <!-- Preconnect -->
-    <link rel="preconnect" href="https://code.jquery.com" crossorigin>
     <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="dns-prefetch" href="https://code.jquery.com">
     <link rel="dns-prefetch" href="https://mc.yandex.ru">
+
+    <!-- Preload критичных шрифтов (Inter 400 — текст, Onest 700 — заголовки).
+         crossorigin обязателен даже для same-origin, иначе браузер скачает дважды. -->
+    <link rel="preload" href="/assets/fonts/inter/inter-400-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/assets/fonts/onest/onest-700-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
 
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
-    <!-- Стили: легаси (для старых страниц) + редизайн (для нового хедера/футера) -->
-    <link rel="stylesheet" href="/assets/css/main.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/main.css'); ?>">
-    <link rel="stylesheet" href="/assets/css/search.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/search.css'); ?>">
-    <link rel="stylesheet" href="/assets/css/redesign.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/redesign.css'); ?>">
-    <link rel="stylesheet" href="/assets/css/redesign-info.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/redesign-info.css'); ?>">
+    <!-- Стили: шрифты + легаси + редизайн, склеены в bundle.min.css
+         (сборка: php scripts/build-assets.php, артефакт коммитится в git).
+         Если бандл отсутствует или старее исходников — fallback на отдельные файлы. -->
+<?php
+    $cssRoot     = __DIR__ . '/../assets/css';
+    $cssSources  = ['fonts.css', 'main.css', 'search.css', 'redesign.css', 'redesign-info.css'];
+    $bundleFile  = $cssRoot . '/bundle.min.css';
+    $bundleTime  = is_file($bundleFile) ? filemtime($bundleFile) : 0;
+    $bundleFresh = $bundleTime > 0;
+    foreach ($bundleFresh ? $cssSources : [] as $f) {
+        if (filemtime($cssRoot . '/' . $f) > $bundleTime) { $bundleFresh = false; break; }
+    }
+    if ($bundleFresh):
+?>
+    <link rel="stylesheet" href="/assets/css/bundle.min.css?v=<?php echo $bundleTime; ?>">
+<?php else: foreach ($cssSources as $f): ?>
+    <link rel="stylesheet" href="/assets/css/<?php echo $f; ?>?v=<?php echo filemtime($cssRoot . '/' . $f); ?>">
+<?php endforeach; endif; ?>
 
     <!-- Yandex.Metrika counter -->
     <script type="text/javascript">
@@ -101,14 +116,14 @@ $rdActivePage    = $rdActivePage ?? '';
     <?php if (isset($additionalCSS)): ?>
         <?php
         // Не дублируем то, что уже подключили выше (точное совпадение basename).
-        $rdAlreadyLoaded = ['redesign.css', 'redesign-info.css', 'main.css', 'search.css'];
+        $rdAlreadyLoaded = ['redesign.css', 'redesign-info.css', 'main.css', 'search.css', 'fonts.css', 'bundle.min.css'];
         ?>
         <?php foreach ($additionalCSS as $css): ?>
             <?php
             $cssBase = basename(parse_url($css, PHP_URL_PATH) ?: $css);
             if (!in_array($cssBase, $rdAlreadyLoaded, true)):
             ?>
-            <link rel="stylesheet" href="<?php echo $css; ?>">
+            <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl($css), ENT_QUOTES, 'UTF-8'); ?>">
             <?php endif; ?>
         <?php endforeach; ?>
     <?php endif; ?>

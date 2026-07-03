@@ -156,13 +156,15 @@
     })();
     </script>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <?php // jQuery самохост (sha256 сверен с code.jquery.com). defer безопасен:
+          // все скрипты, использующие $, тоже defer и стоят в DOM ниже. ?>
+    <script src="/assets/js/vendor/jquery-3.6.0.min.js" defer></script>
     <script src="/assets/js/main.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/main.js'); ?>" defer></script>
     <script src="/assets/js/search.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/search.js'); ?>" defer></script>
     <script src="/assets/js/hero-parallax.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/hero-parallax.js'); ?>" defer></script>
-    <?php if (isset($additionalJS)): ?>
+    <?php if (isset($additionalJS)): require_once __DIR__ . '/asset-helpers.php'; ?>
         <?php foreach ($additionalJS as $js): ?>
-            <script src="<?php echo $js; ?>" defer></script>
+            <script src="<?php echo htmlspecialchars(assetUrl($js), ENT_QUOTES, 'UTF-8'); ?>" defer></script>
         <?php endforeach; ?>
     <?php endif; ?>
 

@@ -409,17 +409,27 @@ Options -Indexes
 
 # Compression
 <IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json image/svg+xml
 </IfModule>
 
-# Browser Caching
-<IfModule mod_expires.c>
-    ExpiresActive On
-    ExpiresByType image/jpg "access plus 1 year"
-    ExpiresByType image/jpeg "access plus 1 year"
-    ExpiresByType image/gif "access plus 1 year"
-    ExpiresByType image/png "access plus 1 year"
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
-    ExpiresByType application/pdf "access plus 1 month"
+# MIME для шрифтов (страховка: в базовом образе может не быть)
+AddType font/woff2 .woff2
+AddType font/woff .woff
+
+# Browser Caching через mod_headers.
+# mod_expires в образе НЕ включён (Dockerfile: a2enmod без expires), поэтому
+# заголовки ставим напрямую. CSS/JS версионируются ?v=filemtime (см.
+# includes/asset-helpers.php) — им можно год + immutable. Картинки без
+# версионирования — 30 дней. PHP-страницы не задеваются: FilesMatch матчится
+# по имени файла, а сессии шлют собственный no-cache.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|mjs)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    <FilesMatch "\.(woff2?|ttf|otf)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    <FilesMatch "\.(jpe?g|png|gif|webp|avif|svg|ico)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
 </IfModule>

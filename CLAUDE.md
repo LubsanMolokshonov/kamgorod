@@ -73,7 +73,9 @@ PHP 8.2 (без фреймворка) · MySQL 8 utf8mb4 PDO · Apache mod_rewri
 - SQL: только prepared statements.
 - XSS: `htmlspecialchars($v, ENT_QUOTES, 'UTF-8')`.
 - CSRF: `validateCSRFToken()` для форм.
-- Ассеты с версией: `?v=<?= filemtime(...) ?>`.
+- Ассеты с версией: `?v=<?= filemtime(...) ?>` (для `$additionalCSS`/`$additionalJS` версию дописывает `assetUrl()` из `includes/asset-helpers.php`).
+- Глобальный CSS склеен в `assets/css/bundle.min.css`: после правок `fonts|main|search|redesign|redesign-info.css` пересобрать — `docker exec pedagogy_web php scripts/build-assets.php` — и закоммитить артефакт (иначе header.php безопасно откатится на отдельные `<link>`).
+- Шрифты Onest/Inter самохостятся (`assets/fonts/`, `assets/css/fonts.css`). Google Fonts не подключать.
 - utf8mb4 везде. Язык: русский (UI, комментарии, коммиты).
 - `.env` — НЕ коммитить.
 
