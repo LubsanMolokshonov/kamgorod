@@ -479,7 +479,7 @@ TXT;
 
         $aiJson = json_encode($aiData, JSON_UNESCAPED_UNICODE);
         // Review-модель часто СУЩЕСТВЕННО дорабатывает (углубляет) материал, поэтому даём
-        // большой лимит под исправленный ответ. У Gemini 2.5 Pro контекст это позволяет.
+        // большой лимит под исправленный ответ (модель задаётся OPENROUTER_MODEL_REVIEW).
         $longTypes = ['konspekt-uroka', 'prezentatsiya', 'ktp-fragment', 'tehkarta-uroka', 'rabochiy-list', 'test-kontrolnaya'];
         $scMaxTokens = in_array((string)($type['slug'] ?? ''), $longTypes, true) ? 12000 : 8000;
         if (mb_strlen($aiJson) > 14000) {
@@ -491,8 +491,8 @@ TXT;
             ['role' => 'user', 'content' => $checklist . "\n\nJSON материала:\n" . $aiJson],
         ];
 
-        // Сильная review-модель (Gemini 2.5 Pro) + низкая температура: задача — поймать
-        // фактические/программные ошибки и аккуратно исправить, не сочинять заново.
+        // Review-модель (ключ 'review' → OPENROUTER_MODEL_REVIEW) + низкая температура:
+        // задача — поймать фактические/программные ошибки и аккуратно исправить, не сочинять заново.
         $resp = $this->ai->generateJson('review', $messages, ['temperature' => 0.2, 'max_tokens' => $scMaxTokens]);
         $data = $resp['data'] ?? [];
         // Защита: не принимаем явно деградировавший ответ. У материала должен остаться

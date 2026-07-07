@@ -43,6 +43,17 @@ if (!defined('DB_CHARSET')) define('DB_CHARSET', 'utf8mb4');
 
 // Site Configuration
 if (!defined('SITE_URL')) define('SITE_URL', $_ENV['SITE_URL'] ?? 'http://localhost');
+// Публичный URL для ссылок в письмах и share-ссылок: письма уходят реальным адресатам
+// даже из локальной среды, поэтому localhost из SITE_URL не должен утекать наружу.
+if (!defined('PUBLIC_SITE_URL')) {
+    $__publicSiteUrl = rtrim($_ENV['PUBLIC_SITE_URL'] ?? SITE_URL, '/');
+    $__publicSiteHost = strtolower((string)(parse_url($__publicSiteUrl, PHP_URL_HOST) ?: ''));
+    if ($__publicSiteHost === '' || $__publicSiteHost === 'localhost' || $__publicSiteHost === '127.0.0.1') {
+        $__publicSiteUrl = 'https://fgos.pro';
+    }
+    define('PUBLIC_SITE_URL', $__publicSiteUrl);
+    unset($__publicSiteUrl, $__publicSiteHost);
+}
 if (!defined('SITE_NAME')) define('SITE_NAME', $_ENV['SITE_NAME'] ?? 'Педагогический портал');
 if (!defined('APP_ENV')) define('APP_ENV', $_ENV['APP_ENV'] ?? 'local');
 if (!defined('BASE_PATH')) define('BASE_PATH', dirname(__DIR__));
@@ -459,5 +470,6 @@ if (!defined('EMAIL_TRACK_ALLOWED_HOSTS')) {
         'yandex.ru',
         'kinescope.io',
         '2gis.ru',
+        'vk.com', // кнопка «Поделиться ВКонтакте» в письмах о публикации
     ]);
 }

@@ -486,7 +486,7 @@ class PublicationEmailChain {
                 'certificate_url'     => $certificateUrl,
                 'cabinet_url'         => $cabinetUrl,
                 'submit_url'          => $submitUrl,
-                'publication_url'     => SITE_URL . '/publikaciya/' . ($emailData['publication_slug'] ?? '') . '/',
+                'publication_url'     => PUBLIC_SITE_URL . '/publikaciya/' . ($emailData['publication_slug'] ?? '') . '/',
                 'moderation_comment'  => $emailData['moderation_comment'] ?? '',
                 'unsubscribe_url'     => $unsubscribeUrl,
                 'site_url'            => SITE_URL,
