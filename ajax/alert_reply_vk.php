@@ -16,8 +16,8 @@ try {
         throw new Exception('Метод не поддерживается');
     }
 
-    // Только для авторизованных администраторов
-    if (empty($_SESSION['admin_logged_in'])) {
+    // Только для авторизованных администраторов (те же ключи, что в Admin::verifySession)
+    if (empty($_SESSION['admin_id']) || empty($_SESSION['admin_username'])) {
         http_response_code(403);
         echo json_encode(['success' => false, 'message' => 'Доступ запрещён']);
         exit;
