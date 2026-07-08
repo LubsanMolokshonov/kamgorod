@@ -12,8 +12,13 @@
  *                     выручка = token_packages.price_rub (материалы + ФОП объединены).
  *
  * Выручка смешанных заказов делится пропорционально сумме price позиций каждого направления.
- * База расчётов — orders.paid_at (только succeeded) и token_transactions.created_at.
- * Гранулярность всегда недельная (ISO-неделя ПН–ВС).
+ *
+ * Режимы атрибуции выручки/оплат ($basis):
+ *   - 'paid'    (дефолт) — по дате оплаты orders.paid_at («по дате завершения»);
+ *   - 'created' — когортный: доля courses привязывается к дате создания заявки
+ *     (course_enrollments.created_at), остальные направления — к orders.created_at.
+ * Материалы/ФОП всегда по token_transactions.created_at (= момент оплаты), расходы —
+ * по неделе расхода. Гранулярность всегда недельная (ISO-неделя ПН–ВС).
  */
 
 class DirectionAnalytics
@@ -46,9 +51,10 @@ class DirectionAnalytics
      *     grand_rows: array
      * }
      */
-    public function getReport(string $dateFrom, string $dateTo): array
+    public function getReport(string $dateFrom, string $dateTo, string $basis = 'paid'): array
     {
-        $orderRows = $this->fetchOrderSplit($dateFrom, $dateTo);
+        $basis = $basis === 'created' ? 'created' : 'paid';
+        $orderRows = $this->fetchOrderSplit($dateFrom, $dateTo, $basis);
         $tokenRows = $this->fetchTokenRevenue($dateFrom, $dateTo);
         $costs     = $this->fetchCosts($dateFrom, $dateTo);
         $periods   = $this->buildPeriods($dateFrom, $dateTo);
@@ -154,28 +160,62 @@ class DirectionAnalytics
 
     /**
      * Выручка/оплаты по 5 «orders»-направлениям с пропорциональным делением final_amount.
+     *
+     * @param string $basis 'paid' — по paid_at | 'created' — когортно, по дате заявки/заказа
      */
-    private function fetchOrderSplit(string $dateFrom, string $dateTo): array
+    private function fetchOrderSplit(string $dateFrom, string $dateTo, string $basis = 'paid'): array
     {
-        $periodExpr = $this->periodExpr('o.paid_at');
-        $sql = "
-            SELECT
-                {$periodExpr} AS period_key,
-                o.id AS order_id,
-                o.final_amount AS final_amount,
+        $rawSelect = "
                 COALESCE(SUM(CASE WHEN oi.olympiad_registration_id IS NOT NULL THEN oi.price ELSE 0 END), 0) AS olympiads_raw,
                 COALESCE(SUM(CASE WHEN oi.registration_id          IS NOT NULL THEN oi.price ELSE 0 END), 0) AS competitions_raw,
                 COALESCE(SUM(CASE WHEN oi.certificate_id           IS NOT NULL THEN oi.price ELSE 0 END), 0) AS publications_raw,
                 COALESCE(SUM(CASE WHEN oi.webinar_certificate_id   IS NOT NULL THEN oi.price ELSE 0 END), 0) AS webinars_raw,
                 COALESCE(SUM(CASE WHEN oi.course_enrollment_id     IS NOT NULL THEN oi.price ELSE 0 END), 0) AS courses_raw
-            FROM orders o
-            LEFT JOIN order_items oi ON oi.order_id = o.id
-            WHERE o.payment_status = 'succeeded' AND o.paid_at IS NOT NULL
-              AND DATE(o.paid_at) BETWEEN ? AND ?
-            GROUP BY o.id
         ";
+
+        if ($basis === 'created') {
+            // Когортный режим: доля courses — по дате создания заявки, остальные — заказа.
+            // Верхней границы по created_at в SQL нет намеренно: оплата после date_to
+            // за заявку внутри периода должна попасть в отчёт. Заявка всегда раньше
+            // заказа, поэтому нижней границы достаточно; точный диапазон режется в PHP.
+            $periodCommon = $this->periodExpr('o.created_at');
+            $periodCourse = $this->periodExpr('COALESCE(MIN(ce.created_at), o.created_at)');
+            $sql = "
+                SELECT
+                    {$periodCommon} AS period_common,
+                    DATE(o.created_at) AS date_common,
+                    {$periodCourse} AS period_course,
+                    DATE(COALESCE(MIN(ce.created_at), o.created_at)) AS date_course,
+                    o.id AS order_id,
+                    o.final_amount AS final_amount,
+                    {$rawSelect}
+                FROM orders o
+                LEFT JOIN order_items oi ON oi.order_id = o.id
+                LEFT JOIN course_enrollments ce ON ce.id = oi.course_enrollment_id
+                WHERE o.payment_status = 'succeeded' AND o.paid_at IS NOT NULL
+                  AND DATE(o.created_at) >= ?
+                GROUP BY o.id
+            ";
+            $params = [$dateFrom];
+        } else {
+            $periodExpr = $this->periodExpr('o.paid_at');
+            $sql = "
+                SELECT
+                    {$periodExpr} AS period_key,
+                    o.id AS order_id,
+                    o.final_amount AS final_amount,
+                    {$rawSelect}
+                FROM orders o
+                LEFT JOIN order_items oi ON oi.order_id = o.id
+                WHERE o.payment_status = 'succeeded' AND o.paid_at IS NOT NULL
+                  AND DATE(o.paid_at) BETWEEN ? AND ?
+                GROUP BY o.id
+            ";
+            $params = [$dateFrom, $dateTo];
+        }
+
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$dateFrom, $dateTo]);
+        $stmt->execute($params);
         $orders = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Карта: колонка_raw => ключ направления
@@ -200,12 +240,21 @@ class DirectionAnalytics
                 continue;
             }
 
-            $key = $o['period_key'];
             $finalAmount = (float)$o['final_amount'];
 
             foreach ($raws as $dir => $raw) {
                 if ($raw <= 0) {
                     continue;
+                }
+                if ($basis === 'created') {
+                    // У каждой доли своя дата атрибуции; доли вне периода отбрасываем здесь.
+                    $shareDate = $dir === 'courses' ? $o['date_course'] : $o['date_common'];
+                    if ($shareDate < $dateFrom || $shareDate > $dateTo) {
+                        continue;
+                    }
+                    $key = $dir === 'courses' ? $o['period_course'] : $o['period_common'];
+                } else {
+                    $key = $o['period_key'];
                 }
                 $share = $raw / $rawSum;
                 if (!isset($agg[$key][$dir])) {

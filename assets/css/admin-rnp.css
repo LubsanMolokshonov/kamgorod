@@ -9,6 +9,16 @@
 .rnp-filters .filter-dates { display: flex; align-items: center; gap: 8px; }
 .rnp-filters .filter-dates input[type="date"] { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
 
+/* Переключатель атрибуции оплат: по дате оплаты / по дате создания заявки */
+.rnp-basis-toggle { display: inline-flex; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; }
+.rnp-filters .filter-group .rnp-basis-pill { display: block; margin: 0; cursor: pointer; text-transform: none; letter-spacing: 0; }
+.rnp-basis-pill input { position: absolute; opacity: 0; pointer-events: none; }
+.rnp-basis-pill span { display: block; padding: 8px 14px; font-size: 14px; color: #374151; background: #fff; white-space: nowrap; }
+.rnp-basis-pill + .rnp-basis-pill span { border-left: 1px solid #d1d5db; }
+.rnp-basis-pill input:checked + span { background: #2563eb; color: #fff; }
+.rnp-basis-pill input:focus-visible + span { outline: 2px solid #93c5fd; outline-offset: -2px; }
+.rnp-basis-hint { margin: 12px 0 0; color: #6c757d; font-size: 12px; line-height: 1.5; max-width: 900px; }
+
 .rnp-card { margin-bottom: 24px; padding: 20px; }
 .rnp-card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
 .rnp-card-header h2 { margin: 0; font-size: 18px; font-weight: 600; }

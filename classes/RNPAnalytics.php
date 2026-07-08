@@ -12,7 +12,13 @@
  *   - portal  — конкурс/олимпиада/вебинар/публикация + материалы ФОП (токены)
  *
  * Выручка смешанных заказов делится пропорционально сумме price позиций каждого направления.
- * База расчётов выручки — orders.paid_at. Созданные заказы — orders.created_at.
+ *
+ * Режимы атрибуции выручки/оплат ($basis):
+ *   - 'paid'    (дефолт) — по дате оплаты orders.paid_at («по дате завершения»);
+ *   - 'created' — когортный: курсовая доля заказа привязывается к дате создания
+ *     заявки (course_enrollments.created_at), портальная — к orders.created_at.
+ *     Оплата июля за заявку июня попадает в июнь.
+ * Заявки и «создано заказов» в обоих режимах — по created_at, расходы — по дате расхода.
  *
  * Материалы ФОП (покупка токенов) идут мимо orders — отдельной веткой через
  * token_transactions (reason='purchase'). Их выручка/платежи доклеиваются в
@@ -50,6 +56,7 @@ class RNPAnalytics
      * @param string $dateFrom 'YYYY-MM-DD'
      * @param string $dateTo   'YYYY-MM-DD'
      * @param string $granularity 'day' | 'week' | 'month'
+     * @param string $basis 'paid' — выручка по paid_at | 'created' — когортно, по дате заявки/заказа
      * @return array{
      *     periods: array<int, array{
      *         key: string, label: string, start: string, end: string,
@@ -59,11 +66,12 @@ class RNPAnalytics
      *     grand_total: array<string, mixed>
      * }
      */
-    public function getReport(string $dateFrom, string $dateTo, string $granularity = 'day'): array
+    public function getReport(string $dateFrom, string $dateTo, string $granularity = 'day', string $basis = 'paid'): array
     {
         $granularity = in_array($granularity, ['day', 'week', 'month'], true) ? $granularity : 'day';
+        $basis = $basis === 'created' ? 'created' : 'paid';
 
-        $paidRows = $this->fetchOrderSplit($dateFrom, $dateTo, 'paid_at', $granularity);
+        $paidRows = $this->fetchOrderSplit($dateFrom, $dateTo, $basis === 'created' ? 'cohort' : 'paid_at', $granularity);
         $createdRows = $this->fetchOrderSplit($dateFrom, $dateTo, 'created_at', $granularity);
         $costs = $this->fetchCosts($dateFrom, $dateTo, $granularity);
         $leadRows = $this->fetchCourseLeads($dateFrom, $dateTo, $granularity);
@@ -198,9 +206,9 @@ class RNPAnalytics
     /**
      * Данные для графиков (всегда по дням, для выбранного периода).
      */
-    public function getChartData(string $dateFrom, string $dateTo): array
+    public function getChartData(string $dateFrom, string $dateTo, string $basis = 'paid'): array
     {
-        $report = $this->getReport($dateFrom, $dateTo, 'day');
+        $report = $this->getReport($dateFrom, $dateTo, 'day', $basis);
         $labels = [];
         $revenue = [];
         $cost = [];
@@ -232,42 +240,74 @@ class RNPAnalytics
      * Достаёт агрегированные данные по заказам с пропорциональным разбиением
      * выручки между курсами и порталом.
      *
-     * @param string $dateColumn 'paid_at' | 'created_at'
+     * @param string $dateColumn 'paid_at' | 'created_at' | 'cohort'
      */
     private function fetchOrderSplit(string $dateFrom, string $dateTo, string $dateColumn, string $granularity): array
     {
-        $periodExpr = $this->periodExpr("o.$dateColumn", $granularity);
         $channelExpr = $this->channelExpr('o.utm_source');
 
-        // Условие даты:
-        // - для paid_at учитываем только успешно оплаченные
-        // - для created_at — все заказы (как «создано»), плюс отдельно «оплачено» среди них
-        if ($dateColumn === 'paid_at') {
-            $whereDate = "o.payment_status = 'succeeded' AND o.paid_at IS NOT NULL
-                          AND DATE(o.paid_at) BETWEEN ? AND ?";
+        if ($dateColumn === 'cohort') {
+            // Когортный режим («по дате создания»): только оплаченные заказы;
+            // курсовая доля привязывается к дате создания заявки, портальная — заказа.
+            // Верхней границы по created_at в SQL нет намеренно: оплата после date_to
+            // за заявку внутри периода должна попасть в отчёт. Заявка всегда раньше
+            // заказа, поэтому нижней границы достаточно; точный диапазон режется в PHP.
+            $periodPortal = $this->periodExpr('o.created_at', $granularity);
+            $periodCourse = $this->periodExpr('COALESCE(MIN(ce.created_at), o.created_at)', $granularity);
+            $sql = "
+                SELECT
+                    {$periodPortal} AS period_portal,
+                    DATE(o.created_at) AS date_portal,
+                    {$periodCourse} AS period_course,
+                    DATE(COALESCE(MIN(ce.created_at), o.created_at)) AS date_course,
+                    {$channelExpr} AS channel,
+                    o.id AS order_id,
+                    o.final_amount AS final_amount,
+                    1 AS is_paid,
+                    COALESCE(SUM(CASE WHEN oi.course_enrollment_id IS NOT NULL THEN oi.price ELSE 0 END), 0) AS course_raw,
+                    COALESCE(SUM(CASE WHEN oi.course_enrollment_id IS NULL THEN oi.price ELSE 0 END), 0) AS portal_raw
+                FROM orders o
+                LEFT JOIN order_items oi ON oi.order_id = o.id
+                LEFT JOIN course_enrollments ce ON ce.id = oi.course_enrollment_id
+                WHERE o.payment_status = 'succeeded' AND o.paid_at IS NOT NULL
+                  AND DATE(o.created_at) >= ?
+                GROUP BY o.id
+            ";
+            $params = [$dateFrom];
         } else {
-            $whereDate = "DATE(o.created_at) BETWEEN ? AND ?";
+            // Условие даты:
+            // - для paid_at учитываем только успешно оплаченные
+            // - для created_at — все заказы (как «создано»), плюс отдельно «оплачено» среди них
+            if ($dateColumn === 'paid_at') {
+                $whereDate = "o.payment_status = 'succeeded' AND o.paid_at IS NOT NULL
+                              AND DATE(o.paid_at) BETWEEN ? AND ?";
+            } else {
+                $whereDate = "DATE(o.created_at) BETWEEN ? AND ?";
+            }
+
+            $periodExpr = $this->periodExpr("o.$dateColumn", $granularity);
+
+            // Сначала собираем «сырые» суммы по каждому заказу с CASE по course_enrollment_id
+            // LEFT JOIN: orphan-заказы (без order_items) тоже учитываются и считаются как portal.
+            $sql = "
+                SELECT
+                    {$periodExpr} AS period_key,
+                    {$channelExpr} AS channel,
+                    o.id AS order_id,
+                    o.final_amount AS final_amount,
+                    (o.payment_status = 'succeeded' AND o.paid_at IS NOT NULL) AS is_paid,
+                    COALESCE(SUM(CASE WHEN oi.course_enrollment_id IS NOT NULL THEN oi.price ELSE 0 END), 0) AS course_raw,
+                    COALESCE(SUM(CASE WHEN oi.course_enrollment_id IS NULL THEN oi.price ELSE 0 END), 0) AS portal_raw
+                FROM orders o
+                LEFT JOIN order_items oi ON oi.order_id = o.id
+                WHERE {$whereDate}
+                GROUP BY o.id
+            ";
+            $params = [$dateFrom, $dateTo];
         }
 
-        // Сначала собираем «сырые» суммы по каждому заказу с CASE по course_enrollment_id
-        // LEFT JOIN: orphan-заказы (без order_items) тоже учитываются и считаются как portal.
-        $sql = "
-            SELECT
-                {$periodExpr} AS period_key,
-                {$channelExpr} AS channel,
-                o.id AS order_id,
-                o.final_amount AS final_amount,
-                (o.payment_status = 'succeeded' AND o.paid_at IS NOT NULL) AS is_paid,
-                COALESCE(SUM(CASE WHEN oi.course_enrollment_id IS NOT NULL THEN oi.price ELSE 0 END), 0) AS course_raw,
-                COALESCE(SUM(CASE WHEN oi.course_enrollment_id IS NULL THEN oi.price ELSE 0 END), 0) AS portal_raw
-            FROM orders o
-            LEFT JOIN order_items oi ON oi.order_id = o.id
-            WHERE {$whereDate}
-            GROUP BY o.id
-        ";
-
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$dateFrom, $dateTo]);
+        $stmt->execute($params);
         $orders = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Агрегация в PHP с пропорциональным делением
@@ -288,12 +328,21 @@ class RNPAnalytics
                 $portalShare = $portalRaw / $rawSum;
             }
 
-            $key = $o['period_key'];
             $channel = $o['channel'];
 
             foreach ([['course', $courseShare], ['portal', $portalShare]] as [$section, $share]) {
                 if ($share <= 0) {
                     continue;
+                }
+                if ($dateColumn === 'cohort') {
+                    // У каждой доли своя дата атрибуции; доли вне периода отбрасываем здесь.
+                    $shareDate = $section === 'course' ? $o['date_course'] : $o['date_portal'];
+                    if ($shareDate < $dateFrom || $shareDate > $dateTo) {
+                        continue;
+                    }
+                    $key = $section === 'course' ? $o['period_course'] : $o['period_portal'];
+                } else {
+                    $key = $o['period_key'];
                 }
                 if (!isset($agg[$key][$channel][$section])) {
                     $agg[$key][$channel][$section] = [
@@ -305,10 +354,10 @@ class RNPAnalytics
                         'orders_count' => 0.0,
                     ];
                 }
-                // Для paid_at: revenue и payments — только ненулевые суммы (0₽ подписочные
+                // Для paid_at/cohort: revenue и payments — только ненулевые суммы (0₽ подписочные
                 // выдачи не должны занижать CPA и средний чек). orders_count включает все
                 // succeeded-заказы для правильного расчёта конверсии.
-                if ($dateColumn === 'paid_at' && $isPaid) {
+                if ($dateColumn !== 'created_at' && $isPaid) {
                     $agg[$key][$channel][$section]['revenue'] += $finalAmount * $share;
                     if ($finalAmount > 0) {
                         $agg[$key][$channel][$section]['payments'] += $share;

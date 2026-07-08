@@ -430,12 +430,15 @@ class Bitrix24Integration {
      * @param string $dateFrom Начало периода (Y-m-d[ H:i:s])
      * @param string $dateTo   Конец периода (Y-m-d[ H:i:s])
      * @param int[]  $excludeDealIds  ID сделок, которые уже есть в orders
+     * @param string $dateField Поле даты для фильтра периода: 'CLOSEDATE' (дата закрытия,
+     *                          дефолт) или 'DATE_CREATE' (когортный режим «по дате создания»)
      * @return array ['count'=>int, 'revenue'=>float, 'deals'=>array] | ['count'=>null,'revenue'=>null,'deals'=>[]] при ошибке
      */
-    public function getFgosOfflineDeals(string $dateFrom, string $dateTo, array $excludeDealIds = []): array {
+    public function getFgosOfflineDeals(string $dateFrom, string $dateTo, array $excludeDealIds = [], string $dateField = 'CLOSEDATE'): array {
         if (!$this->isConfigured()) {
             return ['count' => null, 'revenue' => null, 'deals' => []];
         }
+        $dateField = $dateField === 'DATE_CREATE' ? 'DATE_CREATE' : 'CLOSEDATE';
 
         $sources = defined('BITRIX24_FGOS_SOURCE_IDS')
             ? array_filter(array_map('trim', explode(',', (string)BITRIX24_FGOS_SOURCE_IDS)))
@@ -457,7 +460,7 @@ class Bitrix24Integration {
                     'SOURCE_ID'         => array_values($sources),
                     'STAGE_SEMANTIC_ID' => 'S',
                 ],
-                'select' => ['ID', 'OPPORTUNITY', 'CLOSEDATE', 'TITLE', 'CATEGORY_ID'],
+                'select' => ['ID', 'OPPORTUNITY', 'CLOSEDATE', 'DATE_CREATE', 'TITLE', 'CATEGORY_ID'],
                 'start'  => $start,
             ]);
 
@@ -470,9 +473,9 @@ class Bitrix24Integration {
                 if (isset($exclude[$dealId])) {
                     continue; // уже учтено в orders
                 }
-                $closeDate = substr((string)($deal['CLOSEDATE'] ?? ''), 0, 10);
-                if ($closeDate === '' || $closeDate < $from || $closeDate > $to) {
-                    continue; // вне периода (фильтруем здесь — API-фильтр CLOSEDATE не работает)
+                $filterDate = substr((string)($deal[$dateField] ?? ''), 0, 10);
+                if ($filterDate === '' || $filterDate < $from || $filterDate > $to) {
+                    continue; // вне периода (фильтруем здесь — API-фильтр по датам не работает)
                 }
                 $opp = (float)($deal['OPPORTUNITY'] ?? 0);
                 $count++;
@@ -481,7 +484,8 @@ class Bitrix24Integration {
                     'id'        => $dealId,
                     'revenue'   => $opp,
                     'title'     => (string)($deal['TITLE'] ?? ''),
-                    'closedate' => $closeDate,
+                    'closedate' => substr((string)($deal['CLOSEDATE'] ?? ''), 0, 10),
+                    'created'   => substr((string)($deal['DATE_CREATE'] ?? ''), 0, 10),
                     'category'  => (int)($deal['CATEGORY_ID'] ?? 0),
                 ];
             }

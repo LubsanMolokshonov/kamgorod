@@ -21,10 +21,13 @@ $rnp = new RNPAnalytics($db);
 
 $dateFrom = $_GET['date_from'] ?? date('Y-m-01');
 $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
+// Атрибуция выручки/оплат: 'paid' — по дате оплаты (дефолт), 'created' — когортно
+// по дате создания заявки (курсы) / заказа (педпортал). Заявки и расходы всегда по дате создания.
+$basis = ($_GET['basis'] ?? 'paid') === 'created' ? 'created' : 'paid';
 
 // Всегда получаем оба уровня — дни и недели
-$dayReport  = $rnp->getReport($dateFrom, $dateTo, 'day');
-$weekReport = $rnp->getReport($dateFrom, $dateTo, 'week');
+$dayReport  = $rnp->getReport($dateFrom, $dateTo, 'day', $basis);
+$weekReport = $rnp->getReport($dateFrom, $dateTo, 'week', $basis);
 
 // Оффлайн-продажи fgos.pro из CRM, не попавшие в orders (консультации + ручные
 // сделки без записи на сайте). Рассрочки, привязанные к заявкам, уже учтены в
@@ -33,7 +36,8 @@ $weekReport = $rnp->getReport($dateFrom, $dateTo, 'week');
 require_once __DIR__ . '/../../classes/Bitrix24Integration.php';
 require_once __DIR__ . '/../../includes/offline-order-helper.php';
 $rnpOfflineCrm = (new Bitrix24Integration())->getFgosOfflineDeals(
-    $dateFrom, $dateTo, fgosMaterializedDealIds(new Database($db))
+    $dateFrom, $dateTo, fgosMaterializedDealIds(new Database($db)),
+    $basis === 'created' ? 'DATE_CREATE' : 'CLOSEDATE'
 );
 
 $csrfToken = generateCSRFToken();
@@ -255,10 +259,29 @@ include __DIR__ . '/../includes/header.php';
                     <input type="date" name="date_to" value="<?= htmlspecialchars($dateTo) ?>">
                 </div>
             </div>
+            <div class="filter-group">
+                <label>Атрибуция оплат</label>
+                <div class="rnp-basis-toggle">
+                    <label class="rnp-basis-pill">
+                        <input type="radio" name="basis" value="paid" <?= $basis === 'paid' ? 'checked' : '' ?>>
+                        <span>По дате оплаты</span>
+                    </label>
+                    <label class="rnp-basis-pill">
+                        <input type="radio" name="basis" value="created" <?= $basis === 'created' ? 'checked' : '' ?>>
+                        <span>По дате создания заявки</span>
+                    </label>
+                </div>
+            </div>
             <div class="filter-group filter-actions">
                 <button type="submit" class="btn btn-primary">Применить</button>
             </div>
         </div>
+        <p class="rnp-basis-hint">
+            Расходы и заявки всегда считаются по дате создания. Переключатель меняет только выручку и оплаты:
+            «по дате оплаты» — деньги в периоде получения (как раньше); «по дате создания заявки» — когортно,
+            оплата привязывается к дате заявки (курсы) / создания заказа (педпортал), поэтому цифры прошлых
+            периодов растут по мере закрытия сделок.
+        </p>
     </form>
 </div>
 
@@ -266,7 +289,8 @@ include __DIR__ . '/../includes/header.php';
 <div class="content-card rnp-card" style="border-left:4px solid #f59e0b;">
     <div class="rnp-card-header">
         <h2>Оффлайн-продажи (CRM, вне заказов)</h2>
-        <span class="rnp-card-meta">рассрочки/счета fgos.pro, закрытые в Bitrix вне сайта — без разнесения по каналу</span>
+        <span class="rnp-card-meta">рассрочки/счета fgos.pro, закрытые в Bitrix вне сайта — без разнесения по каналу;
+            период по <?= $basis === 'created' ? 'дате создания сделки' : 'дате закрытия сделки' ?></span>
     </div>
     <div style="display:flex;gap:32px;padding:8px 4px;">
         <div>

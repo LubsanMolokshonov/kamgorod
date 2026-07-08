@@ -21,8 +21,11 @@ $analytics = new DirectionAnalytics($db);
 
 $dateFrom = $_GET['date_from'] ?? date('Y-m-01');
 $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
+// Атрибуция выручки/оплат: 'paid' — по дате оплаты (дефолт), 'created' — когортно
+// по дате создания заявки (курсы) / заказа (остальные направления). Расходы всегда по неделе расхода.
+$basis = ($_GET['basis'] ?? 'paid') === 'created' ? 'created' : 'paid';
 
-$report = $analytics->getReport($dateFrom, $dateTo);
+$report = $analytics->getReport($dateFrom, $dateTo, $basis);
 $csrfToken = generateCSRFToken();
 
 // ============================================================
@@ -125,10 +128,29 @@ include __DIR__ . '/../includes/header.php';
                     <input type="date" name="date_to" value="<?= htmlspecialchars($dateTo) ?>">
                 </div>
             </div>
+            <div class="filter-group">
+                <label>Атрибуция оплат</label>
+                <div class="rnp-basis-toggle">
+                    <label class="rnp-basis-pill">
+                        <input type="radio" name="basis" value="paid" <?= $basis === 'paid' ? 'checked' : '' ?>>
+                        <span>По дате оплаты</span>
+                    </label>
+                    <label class="rnp-basis-pill">
+                        <input type="radio" name="basis" value="created" <?= $basis === 'created' ? 'checked' : '' ?>>
+                        <span>По дате создания заявки</span>
+                    </label>
+                </div>
+            </div>
             <div class="filter-group filter-actions">
                 <button type="submit" class="btn btn-primary">Применить</button>
             </div>
         </div>
+        <p class="rnp-basis-hint">
+            Расходы всегда считаются по неделе расхода, материалы/ФОП — по дате покупки. Переключатель меняет
+            только выручку и оплаты заказов: «по дате оплаты» — деньги в периоде получения (как раньше);
+            «по дате создания заявки» — когортно, оплата привязывается к дате заявки (курсы) / создания заказа
+            (остальные направления), поэтому цифры прошлых периодов растут по мере закрытия сделок.
+        </p>
     </form>
 </div>
 
