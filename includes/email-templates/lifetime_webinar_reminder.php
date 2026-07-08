@@ -24,7 +24,7 @@ ob_start();
 <div class="email-header">
     <div class="email-header-content">
         <div class="logo" style="text-align: center;">
-            <img src="<?php echo htmlspecialchars($site_url); ?>/assets/images/logo-white.png" alt="ФГОС-Практикум" style="height: 40px;">
+            <span class="logo-text" style="color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.02em;">ФГОС-Практикум</span>
         </div>
         <h1>У вас есть постоянная скидка &minus;<?php echo (int)$discount_percent; ?>%</h1>
         <p>Она закреплена за вашим аккаунтом и не сгорает — напоминаем, куда её применить</p>
