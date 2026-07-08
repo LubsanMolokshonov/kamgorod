@@ -69,7 +69,10 @@ class DirectionAnalytics
         }
         $costIdx = [];
         foreach ($costs as $c) {
-            $costIdx[$c['period_key']][$c['direction']] = (float)$c['cost'];
+            $costIdx[$c['period_key']][$c['direction']] = [
+                'manual' => (float)$c['cost_manual'],
+                'direct' => (float)$c['cost_direct'],
+            ];
         }
 
         $report = [];
@@ -79,19 +82,23 @@ class DirectionAnalytics
             $rows = $this->blankMatrix();
             foreach (array_keys(self::DIRECTIONS) as $dir) {
                 $rev  = $revIdx[$period['key']][$dir] ?? null;
-                $cost = $costIdx[$period['key']][$dir] ?? 0.0;
+                $cost = $costIdx[$period['key']][$dir] ?? ['manual' => 0.0, 'direct' => 0.0];
 
                 $cell = [
-                    'direction' => $dir,
-                    'cost'      => $cost,
-                    'revenue'   => $rev['revenue'] ?? 0.0,
-                    'payments'  => $rev['payments'] ?? 0.0,
+                    'direction'   => $dir,
+                    'cost'        => $cost['manual'] + $cost['direct'],
+                    'cost_manual' => $cost['manual'],
+                    'cost_direct' => $cost['direct'],
+                    'revenue'     => $rev['revenue'] ?? 0.0,
+                    'payments'    => $rev['payments'] ?? 0.0,
                 ];
                 $rows[$dir] = $cell;
 
-                $grandRows[$dir]['cost']     += $cell['cost'];
-                $grandRows[$dir]['revenue']  += $cell['revenue'];
-                $grandRows[$dir]['payments'] += $cell['payments'];
+                $grandRows[$dir]['cost']        += $cell['cost'];
+                $grandRows[$dir]['cost_manual'] += $cell['cost_manual'];
+                $grandRows[$dir]['cost_direct'] += $cell['cost_direct'];
+                $grandRows[$dir]['revenue']     += $cell['revenue'];
+                $grandRows[$dir]['payments']    += $cell['payments'];
             }
 
             $computed = $this->computeMetrics($rows);
@@ -239,13 +246,15 @@ class DirectionAnalytics
     }
 
     /**
-     * Понедельные расходы по направлениям.
+     * Понедельные расходы по направлениям: cost — ручной ввод прочих каналов,
+     * direct_cost — авто из синка Директа (cron/sync-direct-spend.php).
      */
     private function fetchCosts(string $dateFrom, string $dateTo): array
     {
         $periodExpr = $this->periodExpr('week_start');
         $sql = "
-            SELECT {$periodExpr} AS period_key, direction, SUM(cost) AS cost
+            SELECT {$periodExpr} AS period_key, direction,
+                   SUM(cost) AS cost_manual, SUM(direct_cost) AS cost_direct
             FROM direction_weekly_costs
             WHERE week_start BETWEEN ? AND ?
             GROUP BY period_key, direction
@@ -297,10 +306,12 @@ class DirectionAnalytics
         $matrix = [];
         foreach (array_keys(self::DIRECTIONS) as $dir) {
             $matrix[$dir] = [
-                'direction' => $dir,
-                'cost'      => 0.0,
-                'revenue'   => 0.0,
-                'payments'  => 0.0,
+                'direction'   => $dir,
+                'cost'        => 0.0,
+                'cost_manual' => 0.0,
+                'cost_direct' => 0.0,
+                'revenue'     => 0.0,
+                'payments'    => 0.0,
             ];
         }
         return $matrix;

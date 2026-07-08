@@ -136,7 +136,7 @@ include __DIR__ . '/../includes/header.php';
 <div class="content-card rnp-card">
     <div class="rnp-card-header">
         <h2>Направления по неделям</h2>
-        <span class="rnp-card-meta">Вводите рекламный расход прямо в недельных столбцах</span>
+        <span class="rnp-card-meta">Вводите расход прочих каналов (ВК и др.) — Директ подтягивается автоматически из ai.h1pro.ru</span>
     </div>
     <div class="rnp-pivot-wrapper">
         <table class="rnp-pivot">
@@ -192,9 +192,13 @@ include __DIR__ . '/../includes/header.php';
                                 class="rnp-cost-input dir-cost-input"
                                 data-week-start="<?= htmlspecialchars($col['date']) ?>"
                                 data-direction="<?= htmlspecialchars($grp['key']) ?>"
-                                value="<?= $val > 0 ? (int)round($val) : '' ?>"
+                                value="<?= $cell['cost_manual'] > 0 ? (int)round($cell['cost_manual']) : '' ?>"
                                 placeholder="0"
+                                title="Ручной ввод: расход прочих каналов (без Директа)"
                             >
+                            <?php if (($cell['cost_direct'] ?? 0) > 0): ?>
+                            <span class="rnp-cost-auto-note" title="Директ — автоматически из ai.h1pro.ru">+<?= dirMoney($cell['cost_direct']) ?> Директ</span>
+                            <?php endif; ?>
                         <?php else: ?>
                             <?= dirFormat($metric['format'], $val) ?>
                         <?php endif; ?>

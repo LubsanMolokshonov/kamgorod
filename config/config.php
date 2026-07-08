@@ -137,6 +137,11 @@ if (!defined('UNISENDER_SENDER_NAME'))  define('UNISENDER_SENDER_NAME',  $_ENV['
 // Секрет для проверки вебхука доставки (api/webhook/unisender.php). Пусто — проверка отключена.
 if (!defined('UNISENDER_WEBHOOK_SECRET')) define('UNISENDER_WEBHOOK_SECRET', $_ENV['UNISENDER_WEBHOOK_SECRET'] ?? '');
 
+// ai.h1pro.ru — выгрузка расходов Яндекс.Директа (cron/sync-direct-spend.php)
+if (!defined('H1PRO_EXPORT_API_URL')) define('H1PRO_EXPORT_API_URL', $_ENV['H1PRO_EXPORT_API_URL'] ?? 'https://ai.h1pro.ru/api/export/v1');
+if (!defined('H1PRO_EXPORT_API_KEY')) define('H1PRO_EXPORT_API_KEY', $_ENV['H1PRO_EXPORT_API_KEY'] ?? '');
+if (!defined('H1PRO_PROJECT_ID'))     define('H1PRO_PROJECT_ID',     $_ENV['H1PRO_PROJECT_ID'] ?? '');
+
 // Yandex GPT AI Moderation
 if (!defined('YANDEX_GPT_API_KEY')) define('YANDEX_GPT_API_KEY', $_ENV['YANDEX_GPT_API_KEY'] ?? '');
 if (!defined('YANDEX_GPT_FOLDER_ID')) define('YANDEX_GPT_FOLDER_ID', $_ENV['YANDEX_GPT_FOLDER_ID'] ?? '');

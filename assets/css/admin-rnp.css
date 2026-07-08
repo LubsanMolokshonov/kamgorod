@@ -156,6 +156,16 @@ thead .rnp-pivot-col-week {
 .rnp-cost-input.is-saved  { background: #dcfce7; border-color: #22c55e; }
 .rnp-cost-input.is-error  { background: #fee2e2; border-color: #ef4444; }
 
+/* Автозаполняемые поля Директа (крон sync-direct-spend, ai.h1pro.ru) */
+.rnp-cost-input--auto { background: #eef2ff; border-color: #c7d2fe; }
+.rnp-cost-auto-note {
+    display: block;
+    margin-top: 2px;
+    font-size: 10px;
+    color: #6366f1;
+    white-space: nowrap;
+}
+
 /* Графики */
 .rnp-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
 .rnp-chart-box { background: #fff; border: 1px solid #eef0f3; border-radius: 8px; padding: 16px; min-height: 260px; display: flex; flex-direction: column; }

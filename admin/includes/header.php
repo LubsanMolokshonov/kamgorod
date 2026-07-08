@@ -168,6 +168,11 @@ $currentAdmin = Admin::verifySession();
                     <span>Экономика направлений</span>
                 </a>
 
+                <a href="/admin/direct-spend/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/direct-spend/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">🎯</span>
+                    <span>Расходы Директа</span>
+                </a>
+
                 <div class="nav-divider"></div>
 
                 <a href="/index.php" class="nav-item" target="_blank">

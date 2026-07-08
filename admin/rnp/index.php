@@ -125,6 +125,7 @@ $groups = [
         'key' => 'direct_portal', 'label' => 'Пед.портал Директ', 'is_sum' => false,
         'channels' => [['direct','portal']],
         'cost_field' => 'direct_portal_cost',
+        'auto_cost' => true, // заполняется кроном sync-direct-spend из ai.h1pro.ru
     ],
     [
         'key' => 'vk_portal', 'label' => 'Пед.портал ВК', 'is_sum' => false,
@@ -145,6 +146,7 @@ $groups = [
         'key' => 'direct_course', 'label' => 'Курсы Директ', 'is_sum' => false,
         'channels' => [['direct','course']],
         'cost_field' => 'direct_course_cost',
+        'auto_cost' => true, // заполняется кроном sync-direct-spend из ai.h1pro.ru
     ],
     [
         'key' => 'vk_course', 'label' => 'Курсы ВК', 'is_sum' => false,
@@ -334,11 +336,12 @@ include __DIR__ . '/../includes/header.php';
                                 type="number"
                                 step="1"
                                 min="0"
-                                class="rnp-cost-input"
+                                class="rnp-cost-input<?= !empty($grp['auto_cost']) ? ' rnp-cost-input--auto' : '' ?>"
                                 data-date="<?= htmlspecialchars($col['date']) ?>"
                                 data-field="<?= htmlspecialchars($grp['cost_field']) ?>"
                                 value="<?= $val > 0 ? (int)round($val) : '' ?>"
                                 placeholder="0"
+                                <?= !empty($grp['auto_cost']) ? 'title="Заполняется автоматически из Директа (ai.h1pro.ru) — ручные правки за последние 7 дней перезапишет ежедневный крон"' : '' ?>
                             >
                         <?php else: ?>
                             <?= rnpFormat($metric['format'], $val) ?>
