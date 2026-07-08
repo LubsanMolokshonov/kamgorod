@@ -205,8 +205,10 @@ sitemapUrl($baseUrl . '/kursy/', '0.9', 'weekly', $maxCourses);
 sitemapUrl($baseUrl . '/kursy/povyshenie-kvalifikatsii/', '0.8', 'weekly', $maxCoursesKPK);
 sitemapUrl($baseUrl . '/kursy/perepodgotovka/', '0.8', 'weekly', $maxCoursesPP);
 
-// Аудиторные страницы курсов
-$courseAudienceSlugs = ['pedagogi', 'doshkolnikam', 'shkolnikam', 'studentam-spo'];
+// Аудиторные страницы курсов.
+// «pedagogi» намеренно исключена: срез для педагогов дублирует корень (/kursy/)
+// и типовые страницы по H1/description — эти URL каноникалятся на родителя (см. courses.php).
+$courseAudienceSlugs = ['doshkolnikam', 'shkolnikam', 'studentam-spo'];
 foreach ($courseAudienceSlugs as $acSlug) {
     sitemapUrl($baseUrl . '/kursy/' . $acSlug . '/', '0.7', 'weekly', $maxCourses);
     sitemapUrl($baseUrl . '/kursy/povyshenie-kvalifikatsii/' . $acSlug . '/', '0.6', 'weekly', $maxCoursesKPK);
@@ -225,6 +227,34 @@ $stmt = $db->query("
 ");
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     sitemapUrl($baseUrl . '/kursy/' . $row['cat_slug'] . '/' . $row['type_slug'] . '/', '0.6', 'weekly', $row['lastmod']);
+}
+
+// Специализация (предмет) × тип программы — /kursy/{тип}/{spec}/ (правило .htaccess «ct+as»).
+// Только пары, где есть активные курсы. Исключаем слаги, совпадающие с enum
+// категории/уровня аудитории — для них в роутинге приоритет у правил ac/at, а не «специализация».
+$reservedCourseSlugs = [
+    'pedagogi', 'doshkolnikam', 'shkolnikam', 'studentam-spo',
+    'dou', 'nachalnaya-shkola', 'srednyaya-starshaya-shkola', 'spo', 'dopolnitelnoe-obrazovanie',
+];
+$courseTypeSlugMap = ['kpk' => 'povyshenie-kvalifikatsii', 'pp' => 'perepodgotovka'];
+try {
+    $stmt = $db->query("
+        SELECT c.program_type AS pt, s.slug AS spec_slug, MAX(c.updated_at) AS lastmod
+        FROM courses c
+        JOIN course_specializations cs ON cs.course_id = c.id
+        JOIN audience_specializations s ON s.id = cs.specialization_id
+        WHERE c.is_active = 1 AND s.is_active = 1 AND c.program_type IN ('kpk', 'pp')
+        GROUP BY c.program_type, s.slug
+    ");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $typeSlug = $courseTypeSlugMap[$row['pt']] ?? null;
+        if (!$typeSlug || in_array($row['spec_slug'], $reservedCourseSlugs, true)) {
+            continue;
+        }
+        sitemapUrl($baseUrl . '/kursy/' . $typeSlug . '/' . $row['spec_slug'] . '/', '0.6', 'weekly', $row['lastmod']);
+    }
+} catch (Exception $e) {
+    // Не блокируем sitemap при отсутствии junction-таблиц на старых средах
 }
 
 // Отдельные курсы

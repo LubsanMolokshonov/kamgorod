@@ -208,15 +208,21 @@ if ($programType === 'kpk') {
 $pageTitle       = $h1Text . ' 2025-2026 | ' . SITE_NAME;
 $pageDescription = $h1Text . '. Дистанционное обучение с удостоверением установленного образца, внесение в ФИС ФРДО.';
 
-// Canonical для /kursy/
+// Canonical для /kursy/.
+// Срез «pedagogi» без уровня/специализации дублирует корень (H1/description совпадают,
+// «педагогов» — дефолтная аудитория) → каноникалим на родителя без сегмента pedagogi.
 $courseTypeUrlMap = defined('COURSE_TYPE_URL_MAP') ? COURSE_TYPE_URL_MAP : [];
+$canonicalCategory = $selectedCategory;
+if ($selectedCategory === 'pedagogi' && empty($selectedType) && empty($selectedSpec)) {
+    $canonicalCategory = '';
+}
 $canonicalPath = '/kursy/';
 if ($programType !== 'all' && !empty($courseTypeUrlMap[$programType])) {
     $canonicalPath .= $courseTypeUrlMap[$programType] . '/';
 }
-if ($selectedCategory) $canonicalPath .= $selectedCategory . '/';
-if ($selectedType)     $canonicalPath .= $selectedType . '/';
-if ($selectedSpec)     $canonicalPath .= $selectedSpec . '/';
+if ($canonicalCategory) $canonicalPath .= $canonicalCategory . '/';
+if ($selectedType)      $canonicalPath .= $selectedType . '/';
+if ($selectedSpec)      $canonicalPath .= $selectedSpec . '/';
 $canonicalUrl = SITE_URL . $canonicalPath;
 $ogImage = SITE_URL . '/assets/images/og-courses.jpg';
 $rdActivePage = 'kursy';
@@ -261,6 +267,66 @@ $jsonLdArray = [buildFaqJsonLd($faqItems)];
 require_once __DIR__ . '/includes/listing-schema-helper.php';
 $jsonLdArray[] = buildListingSchema($db, 'course', 'kursy', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
 
+// ItemList: карточки текущего среза каталога (даёт краулеру URL курсов из листинга)
+if (!empty($allCourses)) {
+    $itemListElements = [];
+    foreach ($allCourses as $i => $c) {
+        $itemListElements[] = [
+            '@type'    => 'ListItem',
+            'position' => $i + 1,
+            'url'      => SITE_URL . '/kursy/' . rawurlencode($c['slug']) . '/',
+            'name'     => $c['title'],
+        ];
+    }
+    $jsonLdArray[] = [
+        '@context'        => 'https://schema.org',
+        '@type'           => 'ItemList',
+        'name'            => $h1Text,
+        'numberOfItems'   => $totalCourses,
+        'itemListElement' => $itemListElements,
+    ];
+}
+
+// Хлебные крошки (видимые + BreadcrumbList JSON-LD) — динамические по выбранному срезу
+require_once __DIR__ . '/includes/breadcrumb-jsonld-helper.php';
+$courseCrumbs = [
+    ['label' => 'Главная', 'url' => '/'],
+    ['label' => 'Курсы',   'url' => '/kursy/'],
+];
+$crumbTypeSlug = ($programType !== 'all' && !empty($courseTypeUrlMap[$programType])) ? $courseTypeUrlMap[$programType] : '';
+if ($crumbTypeSlug) {
+    $courseCrumbs[] = [
+        'label' => COURSE_PROGRAM_TYPES[$programType] ?? $baseTitle,
+        'url'   => '/kursy/' . $crumbTypeSlug . '/',
+    ];
+}
+// Категория аудитории — кроме схлопнутого «pedagogi» (каноникалится на родителя)
+if ($selectedCategoryData && $canonicalCategory !== '' && !empty($selectedCategoryData['name'])) {
+    $courseCrumbs[] = [
+        'label' => $selectedCategoryData['name'],
+        'url'   => buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '', 'ac' => $selectedCategory]),
+    ];
+}
+// Уровень
+if ($selectedTypeData && !empty($selectedTypeData['name'])) {
+    $courseCrumbs[] = [
+        'label' => $selectedTypeData['name'],
+        'url'   => buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '', 'ac' => $selectedCategory, 'at' => $selectedType]),
+    ];
+}
+// Специализация (предмет)
+if ($selectedSpecData && !empty($selectedSpecData['name'])) {
+    $courseCrumbs[] = [
+        'label' => $selectedSpecData['name'],
+        'url'   => buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
+    ];
+}
+// В JSON-LD последний элемент — текущая страница (без ссылки)
+$jsonLdCrumbs = $courseCrumbs;
+$lastCrumbIdx = count($jsonLdCrumbs) - 1;
+unset($jsonLdCrumbs[$lastCrumbIdx]['url']);
+$breadcrumbJsonLd = buildBreadcrumbJsonLd($jsonLdCrumbs);
+
 include __DIR__ . '/includes/header-redesign.php';
 ?>
 
@@ -268,9 +334,14 @@ include __DIR__ . '/includes/header-redesign.php';
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
     <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <strong>Курсы</strong>
+      <?php foreach ($courseCrumbs as $ci => $crumb): ?>
+        <?php if ($ci > 0): ?><span class="sep">/</span><?php endif; ?>
+        <?php if ($ci === count($courseCrumbs) - 1 || empty($crumb['url'])): ?>
+          <strong><?php echo htmlspecialchars($crumb['label'], ENT_QUOTES, 'UTF-8'); ?></strong>
+        <?php else: ?>
+          <a href="<?php echo htmlspecialchars($crumb['url'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($crumb['label'], ENT_QUOTES, 'UTF-8'); ?></a>
+        <?php endif; ?>
+      <?php endforeach; ?>
     </div>
   </div>
   <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
