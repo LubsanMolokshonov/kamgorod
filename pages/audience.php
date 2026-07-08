@@ -1,7 +1,10 @@
 <?php
 /**
- * Landing Page для типа аудитории
+ * Landing Page для типа аудитории (направление конкурсов)
  * URL: /dou, /nachalnaya-shkola, /srednyaya-starshaya-shkola, /spo
+ *
+ * Дизайн зеркалит листинг конкурсов (/konkursy/, competitions.php) —
+ * единая фирменная дизайн-система rd-* (assets/css/redesign.css).
  */
 
 session_start();
@@ -14,873 +17,528 @@ require_once __DIR__ . '/../classes/AudienceSpecialization.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/url-helper.php';
 
-// Получить slug типа аудитории из URL
-$audienceSlug = $_GET['slug'] ?? '';
-$category = $_GET['category'] ?? 'all';
+// A/B-тест: в варианте B (не-подписчик) цены в каталоге скрыты — дипломы доступны только по подписке.
+require_once __DIR__ . '/../classes/PricingMode.php';
+require_once __DIR__ . '/../classes/SubscriptionService.php';
+$pmUserId = $_SESSION['user_id'] ?? null;
+$pmIsSubscriber = $pmUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmUserId) : false;
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
+
+// Параметры
+$audienceSlug   = $_GET['slug'] ?? '';
+$category       = $_GET['category'] ?? 'all';
 $specialization = $_GET['specialization'] ?? '';
 
 // Инициализация объектов
 $audienceTypeObj = new AudienceType($db);
 $audienceSpecObj = new AudienceSpecialization($db);
-$competitionObj = new Competition($db);
+$competitionObj  = new Competition($db);
 
 // Получить тип аудитории
 $audienceType = $audienceTypeObj->getBySlug($audienceSlug);
-
 if (!$audienceType) {
     header('Location: /konkursy');
     exit;
 }
 
-// Получить специализации для данного типа аудитории
+// Специализации для данного типа аудитории
 $specializations = $audienceTypeObj->getSpecializations($audienceType['id']);
 
-// Pagination settings
-$perPage = 21;
+// Валидация категории
+$validCategories = array_keys(COMPETITION_CATEGORIES);
+if ($category !== 'all' && !in_array($category, $validCategories)) {
+    $category = 'all';
+}
 
-// Фильтрация конкурсов
+// Загрузка конкурсов направления
 if (!empty($specialization)) {
-    // Фильтр по специализации
     $allCompetitions = $competitionObj->getBySpecialization($specialization, $category);
 } else {
-    // Только по типу аудитории
     $allCompetitions = $competitionObj->getByAudienceType($audienceSlug, $category);
 }
 
-// Apply pagination
+$perPage           = 21;
 $totalCompetitions = count($allCompetitions);
-$competitions = array_slice($allCompetitions, 0, $perPage);
-$hasMore = $totalCompetitions > $perPage;
+$competitions      = array_slice($allCompetitions, 0, $perPage);
+$hasMore           = $totalCompetitions > $perPage;
 
-// Генерация заголовка с правильным падежом
-// Фоллбэк-словарь на случай, если поле target_participants_genitive не заполнено
+// Генерация H1 с правильным падежом.
+// Фоллбэк-словарь на случай, если target_participants_genitive не заполнено.
 $genitiveFallbacks = [
     'dou' => 'воспитателей и педагогов дошкольного образования',
     'nachalnaya-shkola' => 'учителей начальных классов',
     'srednyaya-starshaya-shkola' => 'учителей предметников средней и старшей школы',
     'spo' => 'преподавателей колледжей и техникумов'
 ];
-
-// Используем поле из БД, или фоллбэк, или в крайнем случае название в нижнем регистре
 $genitiveForm = $audienceType['target_participants_genitive']
     ?? $genitiveFallbacks[$audienceSlug]
-    ?? strtolower($audienceType['name']);
+    ?? mb_strtolower($audienceType['name']);
 
-// Meta данные страницы
 $heroTitle = 'Конкурсы для ' . $genitiveForm;
-$pageTitle = $heroTitle . ' | ' . SITE_NAME;
-$pageDescription = $audienceType['description'];
 
-include __DIR__ . '/../includes/header.php';
+// Meta / redesign-переменные шапки
+$pageTitle       = $heroTitle . ' | ' . SITE_NAME;
+$pageDescription = $audienceType['description'];
+$canonicalUrl    = SITE_URL . '/' . $audienceSlug . '/';
+$ogImage         = SITE_URL . '/assets/images/og-competitions.jpg';
+$rdActivePage    = 'konkursy';
+$additionalCSS   = ['/assets/css/competition-detail.css'];
+$earlyHeadScripts = ['<script>' . file_get_contents(__DIR__ . '/../assets/js/catalog-scroll.js') . '</script>'];
+$h1Html          = htmlspecialchars($heroTitle, ENT_QUOTES, 'UTF-8');
+
+if ($totalCompetitions === 0) {
+    $noindex = true;
+}
+
+// Лёгкий массив для клиентского поиска / догрузки
+$allCompetitionsJs = [];
+foreach ($allCompetitions as $c) {
+    $allCompetitionsJs[] = [
+        'id'             => $c['id'],
+        'title'          => $c['title'],
+        'description'    => $c['description'] ?? '',
+        'category'       => $c['category'] ?? '',
+        'category_label' => Competition::getCategoryLabel($c['category'] ?? ''),
+        'price'          => (float)$c['price'],
+        'url'            => '/konkursy/' . urlencode($c['slug']) . '/',
+    ];
+}
+
+// FAQ + микроразметка Schema.org/FAQPage (те же вопросы, что на листинге конкурсов)
+require_once __DIR__ . '/../includes/faq-helper.php';
+$faqItems = [
+    ['q' => 'Подходит ли диплом для аттестации педагога?', 'a' => 'Да. Дипломы выдаются от имени зарегистрированного СМИ (Эл. №ФС 77-74524) и соответствуют ФГОС. Принимаются при аттестации педагогов и для портфолио.'],
+    ['q' => 'Как быстро приходит диплом?', 'a' => 'В течение 30 секунд после оплаты — диплом появляется в личном кабинете автоматически. Никаких ожиданий и ручной обработки.'],
+    ['q' => 'Что входит в стоимость участия?', 'a' => 'Подача работы, экспертная оценка, диплом победителя/участника в электронном виде с уникальным номером, проверяемым по реестру.'],
+    ['q' => 'Как работает акция «2+1»?', 'a' => 'При оплате двух конкурсов в корзине третий участник добавляется бесплатно. Акция применяется автоматически.'],
+    ['q' => 'Могу ли я отправить ученика на конкурс?', 'a' => 'Да. На каждом конкурсе указано, для кого он — для педагогов, дошкольников, школьников. Педагог получает диплом куратора.'],
+    ['q' => 'Какой формат работы принимается?', 'a' => 'Зависит от номинации: методическая разработка (PDF/Word), рисунок (JPG/PNG), проект, видео, презентация. Конкретные форматы — в карточке конкурса.'],
+];
+$jsonLdArray = [buildFaqJsonLd($faqItems)];
+
+/**
+ * Ссылка на страницу направления с набором фильтров.
+ * slug берётся из пути (/spo/), category/specialization — из query ([QSA] в .htaccess:333).
+ */
+function audienceFilterUrl($slug, $category, $spec) {
+    $p = [];
+    if ($category && $category !== 'all') $p['category'] = $category;
+    if ($spec) $p['specialization'] = $spec;
+    return '/' . $slug . '/' . ($p ? '?' . http_build_query($p) : '') . '#catalog';
+}
+
+include __DIR__ . '/../includes/header-redesign.php';
 ?>
 
-<!-- Hero Section -->
-<section class="hero-landing">
-    <div class="container">
-        <div class="hero-content">
-            <h1 class="hero-title"><?php echo htmlspecialchars($heroTitle); ?></h1>
-
-            <p class="hero-subtitle"><?php echo htmlspecialchars($audienceType['description']); ?></p>
-
-            <a href="#competitions" class="btn btn-hero">Выбрать конкурс</a>
-        </div>
-
-        <div class="hero-right">
-            <div class="hero-images" id="heroImages">
-            <div class="hero-image-circle hero-img-1" data-parallax-speed="0.3">
-                <picture>
-                    <source
-                        media="(max-width: 768px)"
-                        srcset="/assets/images/teachers/optimized/mobile/1.webp"
-                        type="image/webp">
-                    <source
-                        media="(max-width: 768px)"
-                        srcset="/assets/images/teachers/optimized/mobile/1.jpg"
-                        type="image/jpeg">
-                    <source
-                        srcset="/assets/images/teachers/optimized/desktop/1.webp"
-                        type="image/webp">
-                    <source
-                        srcset="/assets/images/teachers/optimized/desktop/1.jpg"
-                        type="image/jpeg">
-                    <img
-                        src="/assets/images/teachers/optimized/desktop/1.jpg"
-                        alt="Педагог"
-                        loading="lazy"
-                        width="220"
-                        height="220">
-                </picture>
-            </div>
-            <div class="hero-image-circle hero-img-2" data-parallax-speed="0.5">
-                <picture>
-                    <source
-                        media="(max-width: 768px)"
-                        srcset="/assets/images/teachers/optimized/mobile/2.webp"
-                        type="image/webp">
-                    <source
-                        media="(max-width: 768px)"
-                        srcset="/assets/images/teachers/optimized/mobile/2.jpg"
-                        type="image/jpeg">
-                    <source
-                        srcset="/assets/images/teachers/optimized/desktop/2.webp"
-                        type="image/webp">
-                    <source
-                        srcset="/assets/images/teachers/optimized/desktop/2.jpg"
-                        type="image/jpeg">
-                    <img
-                        src="/assets/images/teachers/optimized/desktop/2.jpg"
-                        alt="Педагог"
-                        loading="lazy"
-                        width="300"
-                        height="300">
-                </picture>
-            </div>
-            <div class="hero-image-circle hero-img-4" data-parallax-speed="0.4">
-                <picture>
-                    <source
-                        media="(max-width: 768px)"
-                        srcset="/assets/images/teachers/optimized/mobile/4.webp"
-                        type="image/webp">
-                    <source
-                        media="(max-width: 768px)"
-                        srcset="/assets/images/teachers/optimized/mobile/4.jpg"
-                        type="image/jpeg">
-                    <source
-                        srcset="/assets/images/teachers/optimized/desktop/4.webp"
-                        type="image/webp">
-                    <source
-                        srcset="/assets/images/teachers/optimized/desktop/4.jpg"
-                        type="image/jpeg">
-                    <img
-                        src="/assets/images/teachers/optimized/desktop/4.jpg"
-                        alt="Педагог"
-                        loading="lazy"
-                        width="230"
-                        height="230">
-                </picture>
-            </div>
-            </div>
-
-            <div class="hero-features hero-features--badges">
-                <div class="feature-card feature-card--badge">
-                    <div class="feature-logo">
-                        <img src="/assets/images/skolkovo.webp" alt="Сколково" width="70" height="70">
-                    </div>
-                    <div class="feature-text">
-                        <span class="feature-label">Резидент</span>
-                        <span class="feature-label">Сколково</span>
-                    </div>
-                </div>
-
-                <div class="feature-card feature-card--badge">
-                    <div class="feature-logo">
-                        <img src="/assets/images/eagle_s.svg" alt="СМИ" width="70" height="70">
-                    </div>
-                    <div class="feature-text">
-                        <span class="feature-label">Свидетельство о регистрации СМИ:</span>
-                        <span class="feature-label">Эл. №ФС 77-74524</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!-- HERO каталога -->
+<section class="rd-hero-catalog">
+  <div class="rd-wrap">
+    <div class="rd-crumbs">
+      <a href="/">Главная</a>
+      <span class="sep">/</span>
+      <a href="/konkursy/">Конкурсы</a>
+      <span class="sep">/</span>
+      <strong><?php echo htmlspecialchars($audienceType['name'], ENT_QUOTES, 'UTF-8'); ?></strong>
     </div>
+  </div>
+  <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
+    <div>
+      <div class="rd-pill-row reveal-stagger">
+        <span class="rd-pill"><span class="dot"></span><?php echo $totalCompetitions; ?>+ активных конкурсов</span>
+        <span class="rd-pill indigo">Соответствует ФГОС</span>
+        <span class="rd-pill">Принимается при аттестации</span>
+      </div>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo $h1Html; ?></h1>
+      <p class="rd-hero-sub reveal"><?php echo htmlspecialchars($audienceType['description'], ENT_QUOTES, 'UTF-8'); ?></p>
+      <div class="rd-hero-bullets reveal-stagger">
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Диплом сразу после оплаты</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Подходит для аттестации педагога</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Хранение в личном кабинете бессрочно</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Акция «2+1»: третий конкурс — бесплатно</div>
+      </div>
+      <div class="rd-hero-cta reveal">
+        <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать конкурс
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+        </a>
+        <span style="font-size:13px;color:var(--ink-500);"><?php echo $pmSubscriptionOnly ? '' : 'от 169 ₽ · оплата ЮКассой'; ?></span>
+      </div>
+    </div>
+
+    <div class="rd-hero-art rd-hero-art-cat reveal">
+      <div class="rd-blob"></div>
+      <!-- ВЕЕР ДИПЛОМОВ — НЕ МЕНЯТЬ -->
+      <div class="hero-diploma" style="position:absolute;inset:0;padding:0;">
+        <div class="diploma-stack">
+          <div class="diploma-item diploma-1">
+            <img src="/assets/images/diplomas/previews/diploma-1.svg" alt="Диплом вариант 1" loading="lazy" decoding="async">
+          </div>
+          <div class="diploma-item diploma-2">
+            <img src="/assets/images/diplomas/previews/diploma-2.svg" alt="Диплом вариант 2" loading="lazy" decoding="async">
+          </div>
+          <div class="diploma-item diploma-3">
+            <img src="/assets/images/diplomas/previews/diploma-3.svg" alt="Диплом вариант 3" loading="lazy" decoding="async">
+          </div>
+          <div class="diploma-item diploma-4">
+            <img src="/assets/images/diplomas/previews/diploma-4.svg" alt="Диплом вариант 4" loading="lazy" decoding="async">
+          </div>
+          <div class="diploma-item diploma-5">
+            <img src="/assets/images/diplomas/previews/diploma-5.svg" alt="Диплом вариант 5" loading="lazy" decoding="async">
+          </div>
+          <div class="diploma-item diploma-6">
+            <img src="/assets/images/diplomas/previews/diploma-6.svg" alt="Диплом вариант 6" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+      <div class="rd-float-card rd-fc-cat-1">
+        <div class="rd-fc-icon">⚡</div>
+        <div class="rd-fc-text"><div class="rd-fc-t">Диплом за 30 секунд</div><div class="rd-fc-s">сразу после оплаты</div></div>
+      </div>
+      <div class="rd-float-card rd-fc-cat-2">
+        <div class="rd-fc-icon">✓</div>
+        <div class="rd-fc-text"><div class="rd-fc-t">Соответствует ФГОС</div><div class="rd-fc-s">для аттестации</div></div>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- Competitions Section with Sidebar -->
-<div class="container" id="competitions">
-    <!-- Мобильные фильтры (чипы) -->
-    <div class="mobile-filters">
-        <div class="mobile-filters-scroll">
-            <!-- Кнопка сортировки/фильтра -->
-            <button class="filter-chip filter-chip-icon" data-filter="sort">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-            </button>
-            <!-- Специализация -->
-            <?php if (!empty($specializations)): ?>
-            <button class="filter-chip <?php echo !empty($specialization) ? 'active' : ''; ?>" data-filter="specialization">
-                <span class="filter-chip-text">Специализация</span>
-                <?php if (!empty($specialization)): ?>
-                <span class="filter-chip-clear" data-clear="specialization">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </span>
-                <?php endif; ?>
-            </button>
-            <?php endif; ?>
-            <!-- Категория -->
-            <button class="filter-chip <?php echo $category !== 'all' ? 'active' : ''; ?>" data-filter="category">
-                <span class="filter-chip-text">Категория</span>
-                <?php if ($category !== 'all'): ?>
-                <span class="filter-chip-clear" data-clear="category">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </span>
-                <?php endif; ?>
-            </button>
-        </div>
-    </div>
-
-    <!-- Попап фильтра "Специализация" -->
-    <?php if (!empty($specializations)): ?>
-    <div class="filter-popup" id="specializationPopup">
-        <div class="filter-popup-overlay"></div>
-        <div class="filter-popup-content">
-            <div class="filter-popup-header">
-                <span class="filter-popup-title">Специализация</span>
-                <button class="filter-popup-cancel">Отмена</button>
-            </div>
-            <div class="filter-popup-body">
-                <label class="filter-popup-option">
-                    <input type="radio" name="mobile_specialization" value="" <?php echo empty($specialization) ? 'checked' : ''; ?>>
-                    <span>Все специализации</span>
-                </label>
-                <?php foreach ($specializations as $spec): ?>
-                <label class="filter-popup-option">
-                    <input type="radio" name="mobile_specialization" value="<?php echo $spec['slug']; ?>" <?php echo $specialization === $spec['slug'] ? 'checked' : ''; ?>>
-                    <span><?php echo htmlspecialchars($spec['name']); ?></span>
-                </label>
-                <?php endforeach; ?>
-            </div>
-            <div class="filter-popup-footer">
-                <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
-
-    <!-- Попап фильтра "Категория" -->
-    <div class="filter-popup" id="categoryPopup">
-        <div class="filter-popup-overlay"></div>
-        <div class="filter-popup-content">
-            <div class="filter-popup-header">
-                <span class="filter-popup-title">Категория конкурса</span>
-                <button class="filter-popup-cancel">Отмена</button>
-            </div>
-            <div class="filter-popup-body">
-                <label class="filter-popup-option">
-                    <input type="radio" name="mobile_category" value="all" <?php echo $category === 'all' ? 'checked' : ''; ?>>
-                    <span>Все конкурсы</span>
-                </label>
-                <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
-                <label class="filter-popup-option">
-                    <input type="radio" name="mobile_category" value="<?php echo $cat; ?>" <?php echo $category === $cat ? 'checked' : ''; ?>>
-                    <span><?php echo htmlspecialchars($label); ?></span>
-                </label>
-                <?php endforeach; ?>
-            </div>
-            <div class="filter-popup-footer">
-                <button class="filter-popup-apply btn btn-primary btn-block">Применить фильтр</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="competitions-layout">
-        <!-- Сайдбар с фильтрами -->
-        <aside class="sidebar-filters">
-            <?php if (!empty($specializations)): ?>
-            <div class="sidebar-section">
-                <h4>Специализация</h4>
-                <div class="filter-checkboxes">
-                    <label class="filter-checkbox">
-                        <input type="radio" name="specialization" value="" <?php echo empty($specialization) ? 'checked' : ''; ?>>
-                        <span class="checkbox-label">Все специализации</span>
-                    </label>
-                    <?php foreach ($specializations as $spec): ?>
-                    <label class="filter-checkbox">
-                        <input type="radio" name="specialization" value="<?php echo $spec['slug']; ?>" <?php echo $specialization === $spec['slug'] ? 'checked' : ''; ?>>
-                        <span class="checkbox-label"><?php echo htmlspecialchars($spec['name']); ?></span>
-                    </label>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <div class="sidebar-section">
-                <h4>Категория конкурса</h4>
-                <div class="filter-checkboxes">
-                    <label class="filter-checkbox">
-                        <input type="checkbox" name="category" value="all" <?php echo $category === 'all' ? 'checked' : ''; ?>>
-                        <span class="checkbox-label">Все конкурсы</span>
-                    </label>
-                    <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
-                    <label class="filter-checkbox">
-                        <input type="checkbox" name="category" value="<?php echo $cat; ?>" <?php echo $category === $cat ? 'checked' : ''; ?>>
-                        <span class="checkbox-label"><?php echo htmlspecialchars($label); ?></span>
-                    </label>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-        </aside>
-
-        <!-- Контент с карточками -->
-        <div class="content-area">
-            <?php include __DIR__ . '/../includes/catalog-search.php'; ?>
-
-            <div class="competitions-count mb-20">
-                Найдено конкурсов: <strong id="totalCount"><?php echo $totalCompetitions; ?></strong>
-            </div>
-
-            <?php if (empty($competitions)): ?>
-                <div class="text-center mb-40">
-                    <h2>Конкурсы не найдены</h2>
-                    <p>В данной категории пока нет конкурсов для выбранной аудитории. Попробуйте выбрать другую категорию или специализацию.</p>
-                </div>
-            <?php else: ?>
-                <div class="competitions-grid" id="competitionsGrid">
-                    <?php foreach ($competitions as $competition): ?>
-                        <div class="competition-card">
-                            <span class="competition-category">
-                                <?php echo htmlspecialchars(Competition::getCategoryLabel($competition['category'])); ?>
-                            </span>
-
-                            <h3><?php echo htmlspecialchars($competition['title']); ?></h3>
-
-                            <p><?php echo htmlspecialchars(mb_substr($competition['description'], 0, 150) . '...'); ?></p>
-
-                            <div class="competition-price">
-                                <?php echo number_format($competition['price'], 0, ',', ' '); ?> ₽
-                                <span>/ участие</span>
-                            </div>
-
-                            <?php
-                            $compUrl = '/konkursy/' . urlencode($competition['slug']) . '/';
-                            ?>
-                            <a href="<?php echo $compUrl; ?>"
-                               class="btn btn-primary btn-block">
-                                Принять участие
-                            </a>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-
-                <!-- Кнопка загрузки -->
-                <?php if ($hasMore): ?>
-                <div class="load-more-container" id="loadMoreContainer">
-                    <button id="loadMoreBtn" class="btn btn-secondary btn-load-more" data-offset="<?php echo $perPage; ?>" data-audience="<?php echo $audienceSlug; ?>">
-                        Показать больше конкурсов
-                    </button>
-                </div>
-                <?php endif; ?>
-            <?php endif; ?>
-        </div>
-    </div>
+<!-- USP-полоска -->
+<div class="rd-usps">
+  <div class="rd-wrap rd-usp-grid reveal-stagger">
+    <div class="rd-usp"><div class="ic">⚡</div><div><div class="t">Диплом сразу</div><div class="s">за 30 секунд после оплаты</div></div></div>
+    <div class="rd-usp"><div class="ic">📜</div><div><div class="t">Соответствует ФГОС</div><div class="s">для аттестации педагога</div></div></div>
+    <div class="rd-usp"><div class="ic">🎁</div><div><div class="t">Акция «2+1»</div><div class="s">третий конкурс — бесплатно</div></div></div>
+    <div class="rd-usp"><div class="ic">🔒</div><div><div class="t">Безопасная оплата</div><div class="s">ЮКасса · PCI DSS</div></div></div>
+  </div>
 </div>
 
+<!-- Каталог -->
+<section class="rd-section" id="catalog">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <div>
+        <div class="rd-eyebrow">Каталог конкурсов</div>
+        <h2 class="rd-section-title">Выберите конкурс для <?php echo htmlspecialchars(mb_strtolower($audienceType['name']), ENT_QUOTES, 'UTF-8'); ?></h2>
+      </div>
+      <p class="rd-section-sub">Найдено: <strong><?php echo (int)$totalCompetitions; ?></strong> конкурсов. Все с дипломом победителя или участника.</p>
+      <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+        Фильтры
+      </button>
+    </div>
+
+    <div class="rd-catalog">
+      <!-- Поиск (на мобильных — над фильтрами) -->
+      <div class="rd-comp-search" style="margin-bottom:16px;">
+        <div style="position:relative;">
+          <svg style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--ink-400);pointer-events:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" id="competitionSearchInput" placeholder="Поиск по конкурсам — например, «рисунок» или «методическая разработка»" autocomplete="off" style="width:100%;padding:14px 44px 14px 46px;font-size:15px;border:1.5px solid var(--ink-200,#e5e7eb);border-radius:12px;background:#fff;outline:none;transition:border-color .15s, box-shadow .15s;" onfocus="this.style.borderColor='var(--indigo-500,#6366f1)';this.style.boxShadow='0 0 0 4px rgba(99,102,241,.12)';" onblur="this.style.borderColor='var(--ink-200,#e5e7eb)';this.style.boxShadow='none';">
+          <button type="button" id="competitionSearchClear" aria-label="Очистить" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer;padding:8px;color:var(--ink-400);line-height:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div id="competitionSearchStatus" style="display:none;margin-top:10px;font-size:14px;color:var(--ink-500,#6b7280);"></div>
+      </div>
+
+      <!-- Sidebar фильтры -->
+      <aside class="rd-filters" id="rdFiltersPanel">
+
+        <!-- Категория конкурса -->
+        <h4>Категория</h4>
+        <div class="rd-chip-list">
+          <div class="rd-chip-row<?php echo $category === 'all' ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo audienceFilterUrl($audienceSlug, '', $specialization); ?>" style="text-decoration:none;color:inherit;">Все конкурсы</a>
+            </label>
+          </div>
+          <?php foreach (COMPETITION_CATEGORIES as $cat => $label): ?>
+          <div class="rd-chip-row<?php echo $category === $cat ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo audienceFilterUrl($audienceSlug, $cat, $specialization); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></a>
+            </label>
+          </div>
+          <?php endforeach; ?>
+        </div>
+
+        <!-- Специализация -->
+        <?php if (!empty($specializations)): ?>
+        <h4>Предмет / специализация</h4>
+        <div class="rd-chip-list">
+          <div class="rd-chip-row<?php echo empty($specialization) ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo audienceFilterUrl($audienceSlug, $category, ''); ?>" style="text-decoration:none;color:inherit;">Все специализации</a>
+            </label>
+          </div>
+          <?php foreach ($specializations as $spec): ?>
+          <div class="rd-chip-row<?php echo $specialization === $spec['slug'] ? ' active' : ''; ?>">
+            <label>
+              <a href="<?php echo audienceFilterUrl($audienceSlug, $category, $spec['slug']); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($spec['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+            </label>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <a href="/<?php echo htmlspecialchars($audienceSlug, ENT_QUOTES, 'UTF-8'); ?>/" class="rd-reset-btn">Сбросить фильтры</a>
+      </aside>
+
+      <!-- Каталог + карточки -->
+      <div class="rd-catalog-main">
+        <?php if (empty($competitions)): ?>
+          <div style="text-align:center;padding:60px 0;color:var(--ink-500);">
+            <p style="font-size:18px;margin-bottom:16px;">Конкурсы не найдены</p>
+            <p>Попробуйте выбрать другую категорию или <a href="/<?php echo htmlspecialchars($audienceSlug, ENT_QUOTES, 'UTF-8'); ?>/" style="color:var(--indigo-600);">сбросить фильтры</a>.</p>
+          </div>
+        <?php else: ?>
+          <div class="rd-grid reveal-stagger" id="competitionsGrid">
+            <?php foreach ($competitions as $competition):
+                $compUrl  = '/konkursy/' . urlencode($competition['slug']) . '/';
+                $catLabel = Competition::getCategoryLabel($competition['category']);
+            ?>
+              <a class="rd-card" href="<?php echo $compUrl; ?>">
+                <div class="rd-card-pat"></div>
+                <div class="rd-card-tags">
+                  <span class="rd-tag indigo"><?php echo htmlspecialchars($catLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                </div>
+                <h4><?php echo htmlspecialchars($competition['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
+                <div class="rd-card-meta">
+                  <?php echo htmlspecialchars(mb_substr(strip_tags($competition['description']), 0, 120), ENT_QUOTES, 'UTF-8'); ?>…
+                </div>
+                <div class="rd-card-foot">
+                  <div class="rd-price-now"><?php echo $pmSubscriptionOnly ? '' : (number_format($competition['price'], 0, ',', ' ') . ' ₽'); ?></div>
+                  <span class="rd-join-btn">Участвовать</span>
+                </div>
+              </a>
+            <?php endforeach; ?>
+          </div>
+
+          <?php if ($hasMore): ?>
+            <div id="loadMoreContainer" style="margin-top:24px;text-align:center;">
+              <button id="loadMoreBtn" class="rd-load-more" data-offset="<?php echo $perPage; ?>">
+                Показать больше конкурсов
+              </button>
+            </div>
+          <?php endif; ?>
+        <?php endif; ?>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 шага -->
+<section class="rd-path rd-section">
+  <div class="rd-wrap">
+    <div class="rd-section-head reveal">
+      <div>
+        <div class="rd-eyebrow">Как это работает</div>
+        <h2 class="rd-section-title">Четыре шага до диплома</h2>
+      </div>
+      <p class="rd-section-sub">От выбора конкурса до диплома в личном кабинете — занимает считанные минуты.</p>
+    </div>
+    <div class="rd-steps four reveal-stagger">
+      <div class="rd-step">
+        <div class="rd-step-n">1</div>
+        <h4>Выберите конкурс</h4>
+        <p>Используйте фильтры по уровню, предмету и формату — подберём за секунды.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">2</div>
+        <h4>Загрузите работу</h4>
+        <p>Метод. разработку, рисунок, проект или видео. Размер до 50 МБ.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">3</div>
+        <h4>Оплатите участие</h4>
+        <p>Картой через ЮКассу. Защищено по PCI&nbsp;DSS. От 169&nbsp;₽.</p>
+      </div>
+      <div class="rd-step">
+        <div class="rd-step-n">4</div>
+        <h4>Получите диплом</h4>
+        <p>Сразу после оплаты — в личный кабинет. Скачать можно в любой момент.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Trust band -->
+<section class="rd-section">
+  <div class="rd-wrap">
+    <div class="rd-trust-band reveal">
+      <div class="rd-trust-grid">
+        <div>
+          <div class="rd-eyebrow">Документы и аккредитации</div>
+          <h2>Дипломы соответствуют ФГОС и принимаются при аттестации</h2>
+          <p>Мы — официальное СМИ и резидент Сколково с лицензией на образовательную деятельность. Каждый диплом можно проверить по реестру.</p>
+        </div>
+        <div class="rd-tc-grid">
+          <div class="rd-tc"><div class="badge">📜</div><h5>Лицензия</h5><p>№ Л035-01212-59 от 17.12.2021</p></div>
+          <div class="rd-tc"><div class="badge">📰</div><h5>СМИ</h5><p>Эл. №ФС 77-74524 от 24.12.2018</p></div>
+          <div class="rd-tc"><div class="badge">⚡</div><h5>Сколково</h5><p>Резидент №1127165 от 18.02.2025</p></div>
+          <div class="rd-tc"><div class="badge">✓</div><h5>ФГОС</h5><p>Дипломы соответствуют стандарту</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="rd-section">
+  <div class="rd-wrap">
+    <div class="rd-faq">
+      <div class="reveal">
+        <div class="rd-eyebrow">FAQ</div>
+        <h2 class="rd-section-title">Вопросы о конкурсах</h2>
+        <p class="rd-section-sub">Не нашли ответ? Напишите <a href="mailto:info@fgos.pro" style="color:var(--indigo-600)">info@fgos.pro</a> или позвоните <a href="tel:+79223044413" style="color:var(--indigo-600)">+7 (922) 304-44-13</a>. Ежедневно 9:00–21:00.</p>
+      </div>
+      <?php renderFaqList($faqItems); ?>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="rd-section" style="padding-bottom:64px;">
+  <div class="rd-wrap">
+    <div class="rd-final-cta reveal">
+      <div>
+        <div class="rd-eyebrow">Готовы участвовать?</div>
+        <h2>Выберите конкурс и получите диплом сегодня</h2>
+        <p><?php echo $totalCompetitions; ?>+ активных конкурсов для <?php echo htmlspecialchars(mb_strtolower($audienceType['name']), ENT_QUOTES, 'UTF-8'); ?>. Дипломы соответствуют ФГОС и принимаются при аттестации.</p>
+      </div>
+      <div class="actions">
+        <a href="#catalog" class="rd-btn rd-btn-primary">К каталогу
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+        </a>
+        <a href="/pages/contacts.php" class="rd-btn rd-btn-ghost">Связаться с нами</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- E-commerce: Impressions -->
 <script>
-// Обработка фильтров - автоматическое применение при выборе
-document.addEventListener('DOMContentLoaded', function() {
-    const categoryCheckboxes = document.querySelectorAll('input[name="category"]');
-    const allCheckbox = document.querySelector('input[name="category"][value="all"]');
-    const specializationRadios = document.querySelectorAll('input[name="specialization"]');
-    const audienceSlug = '<?php echo $audienceSlug; ?>';
-    const loadMoreBtn = document.getElementById('loadMoreBtn');
-    const competitionsGrid = document.getElementById('competitionsGrid');
-    const loadMoreContainer = document.getElementById('loadMoreContainer');
-
-    // Функция применения фильтров (desktop)
-    function applyFilters() {
-        const selectedSpec = document.querySelector('input[name="specialization"]:checked');
-        const checkedCategories = Array.from(categoryCheckboxes)
-            .filter(cb => cb.checked && cb.value !== 'all')
-            .map(cb => cb.value);
-
-        let url = '?slug=' + audienceSlug;
-
-        if (checkedCategories.length === 1) {
-            url += '&category=' + checkedCategories[0];
-        } else {
-            url += '&category=all';
-        }
-
-        if (selectedSpec && selectedSpec.value) {
-            url += '&specialization=' + selectedSpec.value;
-        }
-
-        url += '#competitions';
-        window.location.href = url;
-    }
-
-    // Автоприменение при выборе категории (desktop)
-    categoryCheckboxes.forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            if (this.value === 'all' && this.checked) {
-                categoryCheckboxes.forEach(function(cb) {
-                    if (cb.value !== 'all') cb.checked = false;
-                });
-            } else if (this.value !== 'all' && this.checked) {
-                if (allCheckbox) allCheckbox.checked = false;
-            }
-
-            const anyChecked = Array.from(categoryCheckboxes).some(cb => cb.checked);
-            if (!anyChecked && allCheckbox) {
-                allCheckbox.checked = true;
-            }
-
-            // Автоматически применить фильтры
-            applyFilters();
-        });
-    });
-
-    // Автоприменение при выборе специализации (desktop)
-    specializationRadios.forEach(function(radio) {
-        radio.addEventListener('change', applyFilters);
-    });
-
-    // ========================================
-    // МОБИЛЬНЫЕ ФИЛЬТРЫ (Ozon Style)
-    // ========================================
-
-    const filterChips = document.querySelectorAll('.filter-chip');
-    const filterPopups = document.querySelectorAll('.filter-popup');
-
-    // Открыть попап
-    function openPopup(popupId) {
-        const popup = document.getElementById(popupId);
-        if (popup) {
-            popup.classList.add('show');
-            document.body.classList.add('popup-open');
-            setTimeout(() => {
-                popup.querySelector('.filter-popup-content').style.transform = 'translateY(0)';
-            }, 10);
-        }
-    }
-
-    // Закрыть попап
-    function closePopup(popup) {
-        popup.classList.remove('show');
-        document.body.classList.remove('popup-open');
-    }
-
-    // Сбросить фильтр
-    function clearFilter(filterType) {
-        const urlParams = new URLSearchParams(window.location.search);
-
-        if (filterType === 'specialization') {
-            urlParams.delete('specialization');
-        } else if (filterType === 'category') {
-            urlParams.delete('category');
-        }
-
-        let url = '?slug=' + audienceSlug;
-        const paramsString = urlParams.toString();
-        if (paramsString && paramsString !== 'slug=' + audienceSlug) {
-            url += '&' + paramsString.replace('slug=' + audienceSlug + '&', '');
-        }
-        url += '#competitions';
-        window.location.href = url;
-    }
-
-    // Клик на чипы
-    filterChips.forEach(function(chip) {
-        chip.addEventListener('click', function() {
-            const filterType = this.dataset.filter;
-            let popupId = '';
-
-            if (filterType === 'specialization') {
-                popupId = 'specializationPopup';
-            } else if (filterType === 'category') {
-                popupId = 'categoryPopup';
-            }
-
-            if (popupId) {
-                openPopup(popupId);
-            }
-        });
-    });
-
-    // Кнопки сброса (X)
-    document.querySelectorAll('.filter-chip-clear').forEach(function(clearBtn) {
-        clearBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const filterType = this.dataset.clear;
-            clearFilter(filterType);
-        });
-    });
-
-    // Закрытие попапов
-    filterPopups.forEach(function(popup) {
-        // Overlay
-        const overlay = popup.querySelector('.filter-popup-overlay');
-        if (overlay) {
-            overlay.addEventListener('click', function() {
-                closePopup(popup);
-            });
-        }
-
-        // Кнопка "Отмена"
-        const cancelBtn = popup.querySelector('.filter-popup-cancel');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', function() {
-                closePopup(popup);
-            });
-        }
-
-        // Кнопка "Закрыть" (применить)
-        const applyBtn = popup.querySelector('.filter-popup-apply');
-        if (applyBtn) {
-            applyBtn.addEventListener('click', function() {
-                closePopup(popup);
-                applyMobileFilters();
-            });
-        }
-    });
-
-    // Применить мобильные фильтры
-    function applyMobileFilters() {
-        const selectedSpec = document.querySelector('input[name="mobile_specialization"]:checked');
-        const selectedCategory = document.querySelector('input[name="mobile_category"]:checked');
-
-        let url = '?slug=' + audienceSlug;
-        const params = [];
-
-        if (selectedSpec && selectedSpec.value) {
-            params.push('specialization=' + selectedSpec.value);
-        }
-        if (selectedCategory && selectedCategory.value && selectedCategory.value !== 'all') {
-            params.push('category=' + selectedCategory.value);
-        }
-
-        if (params.length > 0) {
-            url += '&' + params.join('&');
-        }
-        url += '#competitions';
-
-        window.location.href = url;
-    }
-
-    // ========================================
-    // LOAD MORE PAGINATION
-    // ========================================
-
-    if (loadMoreBtn) {
-        loadMoreBtn.addEventListener('click', function() {
-            const offset = parseInt(this.dataset.offset);
-            const audienceSlugData = this.dataset.audience;
-            const btn = this;
-
-            // Получить текущие фильтры
-            const selectedSpec = document.querySelector('input[name="specialization"]:checked');
-            const checkedCategories = Array.from(categoryCheckboxes)
-                .filter(cb => cb.checked && cb.value !== 'all')
-                .map(cb => cb.value);
-
-            // Построить URL
-            let url = '/ajax/get-competitions.php?offset=' + offset + '&limit=21';
-            url += '&audience=' + encodeURIComponent(audienceSlugData);
-
-            if (selectedSpec && selectedSpec.value) {
-                url += '&specialization=' + encodeURIComponent(selectedSpec.value);
-            }
-            if (checkedCategories.length === 1) {
-                url += '&category=' + encodeURIComponent(checkedCategories[0]);
-            }
-
-            // Показать загрузку
-            btn.disabled = true;
-            btn.textContent = 'Загрузка...';
-
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Добавить новые карточки
-                        competitionsGrid.insertAdjacentHTML('beforeend', data.html);
-
-                        // Обновить offset
-                        btn.dataset.offset = data.nextOffset;
-
-                        // Скрыть кнопку если больше нет конкурсов
-                        if (!data.hasMore) {
-                            loadMoreContainer.style.display = 'none';
-                        } else {
-                            btn.disabled = false;
-                            btn.textContent = 'Показать больше конкурсов';
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка загрузки конкурсов:', error);
-                    btn.disabled = false;
-                    btn.textContent = 'Показать больше конкурсов';
-                });
-        });
-    }
+window.dataLayer = window.dataLayer || [];
+<?php if (!empty($competitions)): ?>
+window.dataLayer.push({
+  ecommerce: {
+    impressions: [
+      <?php foreach ($competitions as $i => $c): ?>
+      {
+        id: '<?php echo $c['id']; ?>',
+        name: <?php echo json_encode($c['title'], JSON_UNESCAPED_UNICODE); ?>,
+        category: <?php echo json_encode($c['category'] ?? '', JSON_UNESCAPED_UNICODE); ?>,
+        price: <?php echo $c['price']; ?>,
+        position: <?php echo $i + 1; ?>,
+        list: 'Catalog'
+      }<?php echo $i < count($competitions) - 1 ? ',' : ''; ?>
+      <?php endforeach; ?>
+    ]
+  }
 });
+<?php endif; ?>
 </script>
 
-<!-- Info Section -->
-<div class="container mt-40 mb-40">
-    <div class="text-center">
-        <h2>Как принять участие?</h2>
-        <p class="mb-40">Всего 4 простых шага до получения вашего диплома</p>
+<script>
+var allCompetitionsData = <?php echo json_encode($allCompetitionsJs, JSON_UNESCAPED_UNICODE); ?>;
+var competitionsPerPage = <?php echo $perPage; ?>;
+var pmSubscriptionOnly = <?php echo $pmSubscriptionOnly ? 'true' : 'false'; ?>;
 
-        <div class="steps-grid">
-            <div class="competition-card">
-                <h3>1. Выберите конкурс</h3>
-                <p>Ознакомьтесь с доступными конкурсами и выберите подходящий для вас или ваших учеников.</p>
-            </div>
+function _compFmtPrice(num) { return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+function _compEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+function renderCompetitionCard(c) {
+    var desc = c.description ? c.description.replace(/<[^>]*>/g, '').substring(0, 120) + '…' : '';
+    return '<a class="rd-card" href="' + _compEsc(c.url) + '">' +
+        '<div class="rd-card-pat"></div>' +
+        '<div class="rd-card-tags"><span class="rd-tag indigo">' + _compEsc(c.category_label) + '</span></div>' +
+        '<h4>' + _compEsc(c.title) + '</h4>' +
+        '<div class="rd-card-meta">' + _compEsc(desc) + '</div>' +
+        '<div class="rd-card-foot">' +
+          '<div class="rd-price-now">' + (pmSubscriptionOnly ? '' : (_compFmtPrice(Math.round(c.price)) + ' ₽')) + '</div>' +
+          '<span class="rd-join-btn">Участвовать</span>' +
+        '</div>' +
+      '</a>';
+}
 
-            <div class="competition-card">
-                <h3>2. Заполните форму</h3>
-                <p>Укажите свои данные и выберите дизайн диплома из предложенных шаблонов.</p>
-            </div>
+// Поиск по конкурсам
+(function() {
+    var input = document.getElementById('competitionSearchInput');
+    var clearBtn = document.getElementById('competitionSearchClear');
+    var status = document.getElementById('competitionSearchStatus');
+    var grid = document.getElementById('competitionsGrid');
+    var loadMoreContainer = document.getElementById('loadMoreContainer');
+    if (!input || !grid) return;
 
-            <div class="competition-card">
-                <h3>3. Оплатите участие</h3>
-                <p>Безопасная оплата через ЮКасса. При оплате 2 конкурсов - третий бесплатно!</p>
-            </div>
+    var originalGridHtml = null;
+    var debounceTimer = null;
 
-            <div class="competition-card">
-                <h3>4. Получите диплом</h3>
-                <p>Диплом сразу доступен для скачивания в личном кабинете после оплаты.</p>
-            </div>
-        </div>
-    </div>
-</div>
+    function normalize(s) { return (s || '').toString().toLowerCase().replace(/ё/g, 'е').trim(); }
 
-<!-- Criteria Section -->
-<div class="container mb-40">
-    <div class="criteria-section-new">
-        <h2>Критерии оценки конкурсных работ</h2>
-        <div class="criteria-grid">
-            <!-- 1. Целесообразность -->
-            <div class="criteria-card">
-                <div class="criteria-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"/>
-                        <circle cx="12" cy="12" r="6"/>
-                        <circle cx="12" cy="12" r="2"/>
-                    </svg>
-                </div>
-                <h4>Целесообразность материала</h4>
-            </div>
+    function applyFilter(q) {
+        q = normalize(q);
+        if (!q) {
+            if (originalGridHtml !== null) { grid.innerHTML = originalGridHtml; originalGridHtml = null; }
+            if (loadMoreContainer) loadMoreContainer.style.display = '';
+            status.style.display = 'none';
+            clearBtn.style.display = 'none';
+            return;
+        }
+        if (originalGridHtml === null) originalGridHtml = grid.innerHTML;
+        clearBtn.style.display = '';
+        if (loadMoreContainer) loadMoreContainer.style.display = 'none';
 
-            <!-- 2. Оригинальность -->
-            <div class="criteria-card">
-                <div class="criteria-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 18h6"/>
-                        <path d="M10 22h4"/>
-                        <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/>
-                    </svg>
-                </div>
-                <h4>Оригинальность материала</h4>
-            </div>
+        var tokens = q.split(/\s+/).filter(Boolean);
+        var matches = allCompetitionsData.filter(function(c) {
+            var hay = normalize((c.title || '') + ' ' + (c.description || '') + ' ' + (c.category_label || ''));
+            return tokens.every(function(t) { return hay.indexOf(t) !== -1; });
+        });
 
-            <!-- 3. Полнота и информативность -->
-            <div class="criteria-card">
-                <div class="criteria-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                        <line x1="8" y1="7" x2="16" y2="7"/>
-                        <line x1="8" y1="11" x2="14" y2="11"/>
-                    </svg>
-                </div>
-                <h4>Полнота и информативность</h4>
-            </div>
+        if (matches.length === 0) {
+            grid.innerHTML = '';
+            status.style.display = '';
+            status.innerHTML = 'По запросу «' + _compEsc(q) + '» ничего не найдено. Попробуйте другие слова или <a href="#" id="compSearchResetLink" style="color:var(--indigo-600);">сбросьте поиск</a>.';
+            var rl = document.getElementById('compSearchResetLink');
+            if (rl) rl.addEventListener('click', function(e) { e.preventDefault(); input.value = ''; applyFilter(''); input.focus(); });
+            return;
+        }
+        grid.innerHTML = matches.map(renderCompetitionCard).join('');
+        status.style.display = '';
+        var n = matches.length;
+        var word = (n % 10 === 1 && n % 100 !== 11) ? 'конкурс' : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'конкурса' : 'конкурсов');
+        status.textContent = 'Найдено: ' + n + ' ' + word;
+    }
 
-            <!-- 4. Научная достоверность -->
-            <div class="criteria-card">
-                <div class="criteria-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 3h6v2H9z"/>
-                        <path d="M10 5v4"/>
-                        <path d="M14 5v4"/>
-                        <circle cx="12" cy="14" r="5"/>
-                        <path d="M12 12v2"/>
-                        <path d="M12 16h.01"/>
-                    </svg>
-                </div>
-                <h4>Научная достоверность</h4>
-            </div>
+    input.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        var v = input.value;
+        debounceTimer = setTimeout(function() { applyFilter(v); }, 120);
+    });
+    clearBtn.addEventListener('click', function() { input.value = ''; applyFilter(''); input.focus(); });
+    input.addEventListener('keydown', function(e) { if (e.key === 'Escape' && input.value) { input.value = ''; applyFilter(''); } });
+})();
 
-            <!-- 5. Стиль изложения -->
-            <div class="criteria-card">
-                <div class="criteria-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 19l7-7 3 3-7 7-3-3z"/>
-                        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
-                        <path d="M2 2l7.586 7.586"/>
-                        <circle cx="11" cy="11" r="2"/>
-                    </svg>
-                </div>
-                <h4>Стиль и логичность изложения</h4>
-            </div>
+// Load more
+(function() {
+    var loadMoreBtn = document.getElementById('loadMoreBtn');
+    var grid = document.getElementById('competitionsGrid');
+    var loadMoreContainer = document.getElementById('loadMoreContainer');
+    if (!loadMoreBtn || !grid) return;
 
-            <!-- 6. Качество оформления -->
-            <div class="criteria-card">
-                <div class="criteria-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="13.5" cy="6.5" r="2.5"/>
-                        <circle cx="6" cy="12" r="2.5"/>
-                        <circle cx="18" cy="12" r="2.5"/>
-                        <circle cx="8.5" cy="18.5" r="2.5"/>
-                        <circle cx="15.5" cy="18.5" r="2.5"/>
-                    </svg>
-                </div>
-                <h4>Качество оформления</h4>
-            </div>
+    var remaining = allCompetitionsData.slice(competitionsPerPage);
+    var currentOffset = 0;
 
-            <!-- 7. Практическое использование -->
-            <div class="criteria-card">
-                <div class="criteria-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
-                        <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
-                        <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
-                        <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
-                    </svg>
-                </div>
-                <h4>Практическое применение</h4>
-            </div>
+    loadMoreBtn.addEventListener('click', function() {
+        var batch = remaining.slice(currentOffset, currentOffset + competitionsPerPage);
+        if (batch.length === 0) return;
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent = 'Загрузка...';
+        grid.insertAdjacentHTML('beforeend', batch.map(renderCompetitionCard).join(''));
+        currentOffset += competitionsPerPage;
+        if (currentOffset >= remaining.length) {
+            loadMoreContainer.style.display = 'none';
+        } else {
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.textContent = 'Показать больше конкурсов';
+        }
+    });
+})();
+</script>
 
-            <!-- 8. Соответствие ФГОС -->
-            <div class="criteria-card">
-                <div class="criteria-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <path d="M9 15l2 2 4-4"/>
-                    </svg>
-                </div>
-                <h4>Соответствие ФГОС</h4>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- FAQ Section -->
-<div class="container">
-    <div class="faq-section">
-        <h2>Вопросы и ответы</h2>
-        <div class="faq-grid">
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Как принять участие?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Выберите интересующий вас конкурс, заполните форму регистрации, оплатите участие и получите диплом в личном кабинете после проверки работы.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Нужна ли регистрация на вашем сайте?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Регистрация происходит автоматически при оформлении участия в конкурсе. Вы получите доступ в личный кабинет, где сможете управлять своими дипломами.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Нужно ли на сайте загружать работу?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Нет, загружать работу не требуется. После оплаты диплом будет автоматически доступен для скачивания в вашем личном кабинете.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Вы выдаете официальные дипломы?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Да, все наши дипломы являются официальными документами. Мы работаем на основании свидетельства о регистрации СМИ: Эл. №ФС 77-74524.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Как можно оплатить?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Оплата производится безопасно через платежную систему ЮКасса. Принимаются банковские карты и электронные кошельки.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Сколько хранятся дипломы на вашем сайте?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Дипломы хранятся в вашем личном кабинете бессрочно. Вы можете скачать их в любой момент.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Что делать, если в дипломе обнаружена ошибка?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Свяжитесь с нами через форму обратной связи, и мы бесплатно исправим ошибку в течение 24 часов.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Есть ли у вас Лицензия?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Мы являются зарегистрированным СМИ и работаем на основании свидетельства Эл. №ФС 77-74524. Для организации конкурсов лицензия не требуется.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Как долго ждать результатов?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Диплом становится доступен сразу после оплаты. Ускоренное рассмотрение конкурсных работ занимает до 2 дней.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Можно ли выбрать дизайн диплома?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Да, при оформлении участия вы можете выбрать один из предложенных шаблонов дизайна диплома.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Какой уровень проведения конкурса?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Мы проводим всероссийские и международные конкурсы для педагогов и школьников с официальными дипломами участников и победителей.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Что мне делать, если я боюсь вводить данные своей банковской карты?</h3>
-                    <div class="faq-icon">+</div>
-                </div>
-                <div class="faq-answer">
-                    Все платежи проходят через защищенную систему ЮКасса, которая сертифицирована по стандарту PCI DSS. Мы не имеем доступа к данным вашей карты.
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer-redesign.php'; ?>
