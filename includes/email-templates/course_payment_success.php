@@ -28,7 +28,7 @@ ob_start();
 <div class="email-content">
     <p class="greeting">Здравствуйте, <?php echo htmlspecialchars($user_name); ?>!</p>
 
-    <p>Благодарим вас за оплату! Ваш доступ к курсу активирован. Ниже — детали вашего заказа.</p>
+    <p>Благодарим вас за оплату! Место на курсе закреплено за вами. Доступ к учебным материалам откроет методист — он свяжется с вами в течение одного рабочего дня. Ниже — детали вашего заказа.</p>
 
     <!-- Подтверждение -->
     <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 24px; text-align: center; margin: 25px 0;">
@@ -56,7 +56,7 @@ ob_start();
             </td>
             <td style="padding: 12px 0; vertical-align: top;">
                 <strong style="color: #1e293b;">Доступ к учебным материалам</strong>
-                <p style="margin: 4px 0 0; font-size: 14px; color: #64748b;">Наш методист свяжется с вами для организации доступа к учебным материалам курса</p>
+                <p style="margin: 4px 0 0; font-size: 14px; color: #64748b;">Методист свяжется с вами в течение одного рабочего дня и откроет доступ к учебным материалам курса</p>
             </td>
         </tr>
         <tr>
