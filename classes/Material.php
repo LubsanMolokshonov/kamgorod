@@ -334,6 +334,29 @@ class Material
         );
     }
 
+    /**
+     * Курсы, релевантные материалу, для блоков рекомендаций в теле и под ним.
+     * Сигналы — аудиторные связи материала (их проставляет MaterialClassifier).
+     * Категорию аудитории не учитываем: парной таблицы у courses нет.
+     *
+     * @return array Курсы (id, slug, title, course_group, hours, price, program_type)
+     */
+    public function getRecommendedCourses(int $materialId, int $limit = 2): array
+    {
+        require_once __DIR__ . '/../includes/course-scoring.php';
+
+        $specIds = array_column(
+            $this->db->query("SELECT specialization_id FROM material_specializations WHERE material_id = ?", [$materialId]),
+            'specialization_id'
+        );
+        $typeIds = array_column(
+            $this->db->query("SELECT audience_type_id FROM material_audience_types WHERE material_id = ?", [$materialId]),
+            'audience_type_id'
+        );
+
+        return scoreCoursesByAudience($this->db, $specIds, $typeIds, [], $limit);
+    }
+
     public function incrementViews(int $id): void
     {
         $this->db->execute("UPDATE materials SET views_count = views_count + 1 WHERE id = ?", [$id]);

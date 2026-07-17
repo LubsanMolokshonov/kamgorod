@@ -1,0 +1,319 @@
+/**
+ * Карточка рекомендуемого курса в теле статьи/материала (includes/course-card.php).
+ * Токены --indigo-*, --ink-*, --r-*, --font-sans приходят из redesign.css (в бандле).
+ */
+
+.cc-card {
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid var(--indigo-100, #dfe4fb);
+  border-radius: var(--r-xl, 18px);
+  padding: 24px;
+  margin: 32px 0;
+  font-family: var(--font-sans);
+  box-shadow: 0 6px 24px rgba(20, 28, 80, .06);
+}
+.cc-card * { box-sizing: border-box; }
+
+.cc-card--expanded {
+  border-color: var(--indigo-300, #aab4f4);
+  background: linear-gradient(180deg, var(--indigo-50, #f2f4ff) 0%, #fff 55%);
+  padding: 28px;
+  margin: 40px 0;
+}
+
+.cc-eyebrow {
+  font: 600 12px/1 var(--font-sans);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--indigo-600, #3b4bd8);
+  margin-bottom: 14px;
+}
+
+.cc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.cc-head-main { min-width: 0; }
+
+.cc-kind {
+  display: inline-block;
+  font: 600 12px/1 var(--font-sans);
+  color: var(--indigo-700, #2a37ad);
+  background: var(--indigo-50, #f2f4ff);
+  border-radius: 999px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+}
+
+.cc-title {
+  margin: 0;
+  font: 700 20px/1.3 var(--font-sans);
+}
+.cc-title a {
+  color: var(--ink-900, #101534);
+  text-decoration: none;
+}
+.cc-title a:hover { color: var(--indigo-600, #3b4bd8); }
+
+.cc-discount-badge {
+  flex-shrink: 0;
+  font: 700 16px/1 var(--font-sans);
+  color: var(--indigo-700, #2a37ad);
+  background: var(--indigo-50, #f2f4ff);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+/* Мета-строки */
+.cc-meta {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.cc-meta-item {
+  position: relative;
+  padding-left: 28px;
+  font: 400 14px/1.45 var(--font-sans);
+  color: var(--ink-700, #3d456e);
+}
+.cc-ico {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  color: var(--indigo-600, #3b4bd8);
+  flex-shrink: 0;
+}
+.cc-expert-label { color: var(--ink-500, #6b7396); }
+.cc-expert-name { font-weight: 600; color: var(--ink-900, #101534); }
+.cc-expert-cred {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--ink-500, #6b7396);
+}
+
+/* Цена */
+.cc-price {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ink-50, #eef0f7);
+}
+.cc-price-installment {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.cc-price-prefix {
+  font: 400 14px var(--font-sans);
+  color: var(--ink-500, #6b7396);
+}
+.cc-price-monthly {
+  font: 700 26px/1.1 var(--font-sans);
+  color: #9b1c31;
+}
+.cc-price-per {
+  font: 400 14px var(--font-sans);
+  color: var(--ink-500, #6b7396);
+}
+.cc-price-months {
+  flex-basis: 100%;
+  font: 400 13px var(--font-sans);
+  color: var(--ink-500, #6b7396);
+}
+.cc-price-full {
+  margin-top: 6px;
+  font: 400 14px var(--font-sans);
+  color: var(--ink-700, #3d456e);
+}
+.cc-price-old {
+  color: var(--ink-500, #6b7396);
+  text-decoration: line-through;
+  margin-right: 6px;
+}
+.cc-price-now { font-weight: 600; }
+
+/* Действия */
+.cc-actions {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.cc-link {
+  font: 600 14px var(--font-sans);
+  color: var(--indigo-600, #3b4bd8);
+  text-decoration: underline;
+}
+.cc-link:hover { color: var(--indigo-700, #2a37ad); }
+
+.cc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  padding: 13px 22px;
+  font: 600 15px var(--font-sans);
+  cursor: pointer;
+  transition: background .2s, transform .1s;
+}
+.cc-btn-primary {
+  background: #9b1c31;
+  color: #fff;
+}
+.cc-btn-primary:hover { background: #7f1728; }
+.cc-btn-primary:active { transform: translateY(1px); }
+.cc-btn-primary:disabled { opacity: .6; cursor: default; }
+.cc-btn-block { width: 100%; }
+
+/* Модалка консультации */
+.cc-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(14, 19, 48, .55);
+  backdrop-filter: blur(4px);
+}
+.cc-modal.active { display: flex; }
+.cc-modal-box {
+  position: relative;
+  background: #fff;
+  border-radius: var(--r-xl, 18px);
+  max-width: 460px;
+  width: 100%;
+  padding: 36px 32px 32px;
+  box-shadow: 0 30px 80px rgba(20, 28, 80, .25);
+  max-height: 92vh;
+  overflow-y: auto;
+  font-family: var(--font-sans);
+}
+.cc-modal-box * { box-sizing: border-box; }
+.cc-modal-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: var(--ink-50, #eef0f7);
+  border: 0;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-700, #3d456e);
+  display: grid;
+  place-items: center;
+  transition: background .2s, color .2s;
+}
+.cc-modal-close:hover {
+  background: var(--indigo-50, #f2f4ff);
+  color: var(--indigo-700, #2a37ad);
+}
+.cc-modal-form h3 {
+  font: 700 22px var(--font-sans);
+  color: var(--ink-900, #101534);
+  margin: 0 0 6px;
+}
+.cc-modal-sub {
+  font-size: 14px;
+  color: var(--ink-500, #6b7396);
+  margin: 0 0 8px;
+}
+.cc-modal-course {
+  font: 600 14px/1.4 var(--font-sans);
+  color: var(--indigo-700, #2a37ad);
+  margin: 12px 0 20px;
+  padding: 10px 12px;
+  background: var(--indigo-50, #f2f4ff);
+  border-radius: 10px;
+}
+.cc-modal-course:empty { display: none; }
+
+.cc-form-group { margin-bottom: 14px; }
+.cc-form-group label {
+  display: block;
+  font: 600 13px var(--font-sans);
+  color: var(--ink-700, #3d456e);
+  margin-bottom: 6px;
+}
+.cc-form-group input {
+  width: 100%;
+  border: 1px solid var(--ink-100, #dfe2ee);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: 400 15px var(--font-sans);
+  color: var(--ink-900, #101534);
+}
+.cc-form-group input:focus {
+  outline: none;
+  border-color: var(--indigo-300, #aab4f4);
+  box-shadow: 0 0 0 3px var(--indigo-50, #f2f4ff);
+}
+.cc-form-agreement {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-500, #6b7396);
+  margin-bottom: 16px;
+}
+.cc-form-agreement input {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.cc-form-agreement a { color: var(--indigo-600, #3b4bd8); }
+
+.cc-form-error {
+  background: #fdeced;
+  color: #9b1c31;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.cc-modal-success {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 12px 0;
+}
+.cc-modal-success[hidden] { display: none; }
+.cc-modal-success.active { display: flex; }
+.cc-modal-success h3 {
+  font: 700 20px var(--font-sans);
+  color: var(--ink-900, #101534);
+  margin: 4px 0 0;
+}
+.cc-modal-success p {
+  font-size: 14px;
+  color: var(--ink-500, #6b7396);
+  margin: 0 0 8px;
+}
+
+@media (max-width: 768px) {
+  .cc-card, .cc-card--expanded { padding: 20px; margin: 24px 0; }
+  .cc-title { font-size: 18px; }
+  .cc-price-monthly { font-size: 22px; }
+  .cc-actions { flex-direction: column; align-items: stretch; }
+  .cc-actions .cc-btn { width: 100%; }
+  .cc-link { text-align: center; }
+  .cc-modal-box { padding: 30px 20px 24px; }
+}

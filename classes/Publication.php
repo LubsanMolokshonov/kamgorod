@@ -663,69 +663,8 @@ class Publication {
             if (!empty($entry['type']))  { $typeIds = array_merge($typeIds, $entry['type']); }
             if (!empty($entry['group'])) { $groups[] = $entry['group']; }
         }
-        $specIds = array_values(array_unique(array_map('intval', $specIds)));
-        $typeIds = array_values(array_unique(array_map('intval', $typeIds)));
-        $groups  = array_values(array_unique($groups));
-
-        $courses = [];
-        $excludeIds = [];
-
-        if ($specIds || $typeIds || $groups) {
-            $select = "SELECT c.id, c.slug, c.title, c.course_group, c.hours, c.price, c.program_type, (";
-            $scoreParts = [];
-            $params = [];
-
-            if ($specIds) {
-                $ph = implode(',', array_fill(0, count($specIds), '?'));
-                $scoreParts[] = "(EXISTS (SELECT 1 FROM course_specializations cs WHERE cs.course_id = c.id AND cs.specialization_id IN ($ph)) * 3)";
-                $params = array_merge($params, $specIds);
-            }
-            if ($typeIds) {
-                $ph = implode(',', array_fill(0, count($typeIds), '?'));
-                $scoreParts[] = "(EXISTS (SELECT 1 FROM course_audience_types cat WHERE cat.course_id = c.id AND cat.audience_type_id IN ($ph)) * 2)";
-                $params = array_merge($params, $typeIds);
-            }
-            if ($groups) {
-                $ph = implode(',', array_fill(0, count($groups), '?'));
-                $scoreParts[] = "(c.course_group IN ($ph)) * 1";
-                $params = array_merge($params, $groups);
-            }
-
-            $select .= implode(' + ', $scoreParts) . ") AS score
-                 FROM courses c
-                 WHERE c.is_active = 1
-                 HAVING score > 0
-                 ORDER BY score DESC, c.display_order ASC, c.created_at DESC
-                 LIMIT ?";
-            $params[] = $limit;
-
-            $courses = $this->db->query($select, $params);
-            $excludeIds = array_column($courses, 'id');
-        }
-
-        // Фолбэк: дозаполнить популярными активными курсами
-        if (count($courses) < $limit) {
-            $need = $limit - count($courses);
-            $fbParams = [];
-            $excludeSql = '';
-            if ($excludeIds) {
-                $ph = implode(',', array_fill(0, count($excludeIds), '?'));
-                $excludeSql = " AND c.id NOT IN ($ph)";
-                $fbParams = array_map('intval', $excludeIds);
-            }
-            $fbParams[] = $need;
-            $fallback = $this->db->query(
-                "SELECT c.id, c.slug, c.title, c.course_group, c.hours, c.price, c.program_type
-                 FROM courses c
-                 WHERE c.is_active = 1{$excludeSql}
-                 ORDER BY c.display_order ASC, c.created_at DESC
-                 LIMIT ?",
-                $fbParams
-            );
-            $courses = array_merge($courses, $fallback);
-        }
-
-        return $courses;
+        require_once __DIR__ . '/../includes/course-scoring.php';
+        return scoreCoursesByAudience($this->db, $specIds, $typeIds, $groups, $limit);
     }
 
     /**
