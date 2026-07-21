@@ -185,9 +185,48 @@ $additionalCSS   = [
 ];
 $earlyHeadScripts = ['<script>' . file_get_contents(__DIR__ . '/assets/js/catalog-scroll.js') . '</script>'];
 
-// Микроразметка Schema.org/Product для листинга (гибрид рейтинга)
+// --- Уникализация посадочной: page_key, FAQ, SEO-текст, витрина отзывов ---
+require_once __DIR__ . '/includes/faq-helper.php';
+require_once __DIR__ . '/includes/faq-pool-helper.php';
+require_once __DIR__ . '/includes/landing-content-helper.php';
+
+// Путь строим через buildSeoUrl (rawurlencode сегментов + корректный порядок ac/as/at) —
+// сырые $_GET не должны попадать в canonical/og:url конкатенацией.
+$olympiadPath = parse_url(
+    buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'as' => $selectedSpec, 'at' => $selectedType]),
+    PHP_URL_PATH
+) ?: '/olimpiady/';
+$pageKey = landingPageKey($olympiadPath);
+
+$landingSeoHtml = getLandingSeoHtml($db, $pageKey);
+$landingReviews = getLandingReviews($db, $pageKey);
+
+// Отфильтрованная посадочная с уникальным текстом становится self-canonical и
+// индексируемой; без такого контента — прежняя каноникализация на корень (без тонких дублей).
+if (!empty($landingSeoHtml) && $hasAnyFilter) {
+    $canonicalUrl = SITE_URL . $olympiadPath; // $olympiadPath уже rawurlencode-безопасен
+}
+
+$additionalCSS[] = '/assets/css/landing-seo.css?v=' . filemtime(__DIR__ . '/assets/css/landing-seo.css');
+$additionalJS    = array_merge($additionalJS ?? [], ['/assets/js/landing-seo.js?v=' . filemtime(__DIR__ . '/assets/js/landing-seo.js')]);
+
+// FAQ — гибрид: поднабор из пула по seed + переменные страницы.
+$olPrices  = array_filter(array_map(fn($o) => (int)($o['diploma_price'] ?? 229), $allOlympiads), fn($p) => $p > 0);
+$olPriceMin = !empty($olPrices) ? number_format(min($olPrices), 0, '', ' ') : '229';
+$faqItems = buildLandingFaq(olympiadsLandingFaqPool(), $pageKey, [
+    'count'     => $totalOlympiads,
+    'price_min' => $olPriceMin,
+    'category'  => $selectedCategoryData['name'] ?? '',
+], 6);
+$jsonLdArray = [buildFaqJsonLd($faqItems)];
+
+// Product-схема: есть витрина отзывов → единый Product с реальными review[]; иначе generic-гибрид.
 require_once __DIR__ . '/includes/listing-schema-helper.php';
-$jsonLdArray = [buildListingSchema($db, 'olympiad', 'olimpiady', $pageTitle, $pageDescription, $ogImage, SITE_NAME)];
+if (!empty($landingReviews)) {
+    $jsonLdArray[] = buildLandingReviewsProductJsonLd($pageTitle, $pageDescription, $ogImage, SITE_NAME, $landingReviews);
+} else {
+    $jsonLdArray[] = buildListingSchema($db, 'olympiad', 'olimpiady', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
+}
 
 include __DIR__ . '/includes/header-redesign.php';
 ?>
@@ -505,6 +544,22 @@ include __DIR__ . '/includes/header-redesign.php';
   </div>
 </section>
 
+<?php if (!empty($landingReviews)):
+    $lrTitle = ($hasAnyFilter && $audienceSeoPhrase !== '')
+        ? 'Отзывы об олимпиадах ' . $audienceSeoPhrase
+        : 'Отзывы об олимпиадах';
+    renderLandingReviews($landingReviews, $lrTitle);
+endif; ?>
+
+<?php if (!empty($landingSeoHtml)): ?>
+<!-- Уникальный SEO-текст посадочной -->
+<section class="rd-section landing-seo-text">
+  <div class="rd-wrap">
+    <div class="landing-seo-inner"><?php echo $landingSeoHtml; ?></div>
+  </div>
+</section>
+<?php endif; ?>
+
 <!-- FAQ -->
 <section class="rd-section">
   <div class="rd-wrap">
@@ -516,32 +571,7 @@ include __DIR__ . '/includes/header-redesign.php';
         </div>
         <p class="rd-section-sub">Не нашли ответ? Напишите <a href="mailto:info@fgos.pro" style="color:var(--indigo-600)">info@fgos.pro</a> или позвоните <a href="tel:+79223044413" style="color:var(--indigo-600)">+7 (922) 304-44-13</a>.</p>
       </div>
-      <div class="rd-faq-list reveal-stagger">
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Участие действительно бесплатное? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Да. Прохождение теста олимпиады — полностью бесплатное. Оплата требуется только если вы захотите получить именной диплом (от 229 ₽).</div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Сколько вопросов в олимпиаде? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>10 вопросов с вариантами ответов. Время прохождения не ограничено, но рекомендуем сосредоточенно.</div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Как определяется место? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>9–10 правильных ответов — 1 место, 8 — 2 место, 7 — 3 место. Менее 7 — статус участника.</div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Можно пройти повторно? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Да. Каждая попытка — новый набор вопросов. При оформлении диплома будет использован лучший результат.</div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Подходит ли диплом для аттестации? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Да. Дипломы выдаются от имени зарегистрированного СМИ (Эл. №ФС 77-74524) и соответствуют ФГОС.</div></div>
-        </div>
-        <div class="rd-faq-item">
-          <button class="rd-faq-q">Как быстро придёт диплом? <span class="pm">+</span></button>
-          <div class="rd-faq-a"><div>Сразу после оплаты — в личный кабинет, в течение 30 секунд.</div></div>
-        </div>
-      </div>
+      <?php renderFaqList($faqItems); ?>
     </div>
   </div>
 </section>

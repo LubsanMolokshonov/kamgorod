@@ -1,0 +1,104 @@
+/* Блоки уникализации посадочных: SEO-текст + витрина отзывов (аватар-инициалы). */
+
+/* --- SEO-текст --- */
+.landing-seo-text {
+  margin: 48px 0;
+}
+.landing-seo-text .landing-seo-inner {
+  max-width: 860px;
+  color: #334155;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.landing-seo-text h2,
+.landing-seo-text h3 {
+  color: #0f172a;
+  line-height: 1.3;
+  margin: 28px 0 12px;
+}
+.landing-seo-text h2 { font-size: 24px; }
+.landing-seo-text h3 { font-size: 19px; }
+.landing-seo-text p { margin: 0 0 14px; }
+.landing-seo-text ul,
+.landing-seo-text ol { margin: 0 0 14px; padding-left: 22px; }
+.landing-seo-text li { margin: 0 0 6px; }
+
+/* --- Витрина отзывов --- */
+.lr-section { margin: 48px 0; }
+.lr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.lr-title {
+  font-size: 28px;
+  line-height: 1.25;
+  color: #0f172a;
+  margin: 0;
+}
+.lr-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.lr-summary-value { font-size: 22px; font-weight: 700; color: #0f172a; }
+.lr-summary-count { color: #64748b; font-size: 14px; }
+
+.lr-stars { display: inline-flex; gap: 1px; }
+.lr-star { color: #cbd5e1; font-size: 16px; line-height: 1; }
+.lr-star--on { color: #f59e0b; }
+.lr-stars--card .lr-star { font-size: 14px; }
+
+.lr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) { .lr-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .lr-grid { grid-template-columns: 1fr; } }
+
+.lr-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px;
+  background: #fff;
+}
+.lr-card--hidden { display: none; }
+.lr-card-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.lr-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.lr-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lr-author { font-weight: 600; color: #0f172a; font-size: 15px; }
+.lr-date { color: #94a3b8; font-size: 13px; }
+.lr-text { margin: 0; color: #334155; font-size: 15px; line-height: 1.6; }
+
+.lr-more {
+  display: block;
+  margin: 20px auto 0;
+  padding: 10px 22px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 15px;
+  cursor: pointer;
+}
+.lr-more:hover { background: #f8fafc; }

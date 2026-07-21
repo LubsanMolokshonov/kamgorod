@@ -215,21 +215,47 @@ foreach ($allCompetitions as $c) {
     ];
 }
 
-// FAQ-блок + микроразметка Schema.org/FAQPage
+// --- Уникализация посадочной: page_key, FAQ, SEO-текст, витрина отзывов ---
 require_once __DIR__ . '/includes/faq-helper.php';
-$faqItems = [
-    ['q' => 'Подходит ли диплом для аттестации педагога?', 'a' => 'Да. Дипломы выдаются от имени зарегистрированного СМИ (Эл. №ФС 77-74524) и соответствуют ФГОС. Принимаются при аттестации педагогов и для портфолио.'],
-    ['q' => 'Как быстро приходит диплом?', 'a' => 'В течение 30 секунд после оплаты — диплом появляется в личном кабинете автоматически. Никаких ожиданий и ручной обработки.'],
-    ['q' => 'Что входит в стоимость участия?', 'a' => 'Подача работы, экспертная оценка, диплом победителя/участника в электронном виде с уникальным номером, проверяемым по реестру.'],
-    ['q' => 'Как работает акция «2+1»?', 'a' => 'При оплате двух конкурсов в корзине третий участник добавляется бесплатно. Акция применяется автоматически.'],
-    ['q' => 'Могу ли я отправить ученика на конкурс?', 'a' => 'Да. На каждом конкурсе указано, для кого он — для педагогов, дошкольников, школьников. Педагог получает диплом куратора.'],
-    ['q' => 'Какой формат работы принимается?', 'a' => 'Зависит от номинации: методическая разработка (PDF/Word), рисунок (JPG/PNG), проект, видео, презентация. Конкретные форматы — в карточке конкурса.'],
-];
+require_once __DIR__ . '/includes/faq-pool-helper.php';
+require_once __DIR__ . '/includes/landing-content-helper.php';
+
+$competitionPath = buildSeoUrl('konkursy', [
+    'category' => $category !== 'all' ? $category : '',
+    'ac' => $selectedCategory,
+    'at' => $selectedType,
+    'as' => $selectedSpec,
+]);
+$pageKey = landingPageKey(parse_url($competitionPath, PHP_URL_PATH) ?: $competitionPath);
+
+$landingSeoHtml = getLandingSeoHtml($db, $pageKey);
+$landingReviews = getLandingReviews($db, $pageKey);
+
+// Отфильтрованная посадочная с уникальным текстом → self-canonical и индексируемая.
+if (!empty($landingSeoHtml) && $hasAnyFilter) {
+    $canonicalUrl = SITE_URL . (parse_url($competitionPath, PHP_URL_PATH) ?: $competitionPath);
+}
+
+$additionalCSS[] = '/assets/css/landing-seo.css?v=' . filemtime(__DIR__ . '/assets/css/landing-seo.css');
+$additionalJS    = array_merge($additionalJS ?? [], ['/assets/js/landing-seo.js?v=' . filemtime(__DIR__ . '/assets/js/landing-seo.js')]);
+
+// FAQ — гибрид: поднабор из пула по seed + переменные страницы.
+$compPrices  = array_filter(array_map(fn($c) => (float)($c['price'] ?? 0), $allCompetitions), fn($p) => $p > 0);
+$compPriceMin = !empty($compPrices) ? number_format(min($compPrices), 0, '', ' ') : '';
+$faqItems = buildLandingFaq(competitionsLandingFaqPool(), $pageKey, [
+    'count'     => $totalCompetitions,
+    'price_min' => $compPriceMin,
+    'category'  => $selectedCategoryData['name'] ?? '',
+], 6);
 $jsonLdArray = [buildFaqJsonLd($faqItems)];
 
-// Микроразметка Schema.org/Product для листинга (гибрид рейтинга)
+// Product-схема: есть витрина отзывов → единый Product с реальными review[]; иначе generic-гибрид.
 require_once __DIR__ . '/includes/listing-schema-helper.php';
-$jsonLdArray[] = buildListingSchema($db, 'competition', 'konkursy', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
+if (!empty($landingReviews)) {
+    $jsonLdArray[] = buildLandingReviewsProductJsonLd($pageTitle, $pageDescription, $ogImage, SITE_NAME, $landingReviews);
+} else {
+    $jsonLdArray[] = buildListingSchema($db, 'competition', 'konkursy', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
+}
 
 include __DIR__ . '/includes/header-redesign.php';
 ?>
@@ -508,6 +534,22 @@ include __DIR__ . '/includes/header-redesign.php';
     </div>
   </div>
 </section>
+
+<?php if (!empty($landingReviews)):
+    $lrTitle = ($hasAnyFilter && $audienceSeoPhrase !== '')
+        ? 'Отзывы о конкурсах ' . $audienceSeoPhrase
+        : 'Отзывы о конкурсах';
+    renderLandingReviews($landingReviews, $lrTitle);
+endif; ?>
+
+<?php if (!empty($landingSeoHtml)): ?>
+<!-- Уникальный SEO-текст посадочной -->
+<section class="rd-section landing-seo-text">
+  <div class="rd-wrap">
+    <div class="landing-seo-inner"><?php echo $landingSeoHtml; ?></div>
+  </div>
+</section>
+<?php endif; ?>
 
 <!-- FAQ -->
 <section class="rd-section">

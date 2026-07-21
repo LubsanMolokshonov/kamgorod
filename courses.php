@@ -184,8 +184,16 @@ if ($selectedTypeData && !empty($selectedTypeData['target_participants_genitive'
     $audiencePhrase = 'педагогов';
 }
 
-$h1Text = $baseTitle . ' для ' . $audiencePhrase;
-if (!empty($selectedSpecData)) $h1Text .= ' — ' . $selectedSpecData['name'];
+// Специализация выбрана → «Курсы ... по <спец в дательном>» (без «для педагогов»/«дистанционно»);
+// иначе — прежний формат «Курсы ... для <аудитории>».
+if (!empty($selectedSpecData)) {
+    $specDative = !empty($selectedSpecData['name_dative'])
+        ? $selectedSpecData['name_dative']
+        : mb_strtolower($selectedSpecData['name'], 'UTF-8');
+    $h1Text = $baseTitle . ' по ' . $specDative;
+} else {
+    $h1Text = $baseTitle . ' для ' . $audiencePhrase;
+}
 
 // Адаптация hero под тип программы
 if ($programType === 'kpk') {
@@ -227,6 +235,26 @@ $canonicalUrl = SITE_URL . $canonicalPath;
 $ogImage = SITE_URL . '/assets/images/og-courses.jpg';
 $rdActivePage = 'kursy';
 
+// --- Уникализация посадочной: seed страницы, перемешивание преподавателей, цены ---
+require_once __DIR__ . '/includes/seeded-shuffle.php';
+require_once __DIR__ . '/includes/faq-pool-helper.php';
+require_once __DIR__ . '/includes/landing-content-helper.php';
+
+$pageKey = landingPageKey($canonicalPath); // напр. 'kursy/perepodgotovka/matematika'
+
+// Преподаватели — детерминированно перемешиваем по seed страницы и ограничиваем набор,
+// чтобы на каждой специализации был свой (но стабильный) состав.
+// Реальное число экспертов запоминаем ДО среза — для честного счётчика в тексте.
+$expertsTotal = count($categoryExperts);
+if (!empty($categoryExperts)) {
+    $categoryExperts = array_slice(seededShuffle($categoryExperts, $pageKey), 0, 12);
+}
+
+// Диапазон цен текущей выборки — для переменных FAQ.
+$coursePrices = array_filter(array_map(fn($c) => (float)($c['price'] ?? 0), $allCourses), fn($p) => $p > 0);
+$landingPriceMin = !empty($coursePrices) ? number_format(min($coursePrices), 0, '', ' ') : '';
+$landingPriceMax = !empty($coursePrices) ? number_format(max($coursePrices), 0, '', ' ') : '';
+
 // Пустой фильтр → noindex (любая комбинация фильтров без результата)
 $hasAnyFilter = $programType !== 'all' || !empty($selectedCategory) || !empty($selectedType) || !empty($selectedSpec);
 if ($totalCourses === 0 && $hasAnyFilter) {
@@ -248,24 +276,44 @@ function buildKursyUrl($params) {
     return $url;
 }
 
-$additionalCSS = ['/assets/css/courses.css?v=' . filemtime(__DIR__ . '/assets/css/courses.css')];
+$additionalCSS = [
+    '/assets/css/courses.css?v=' . filemtime(__DIR__ . '/assets/css/courses.css'),
+    '/assets/css/landing-seo.css?v=' . filemtime(__DIR__ . '/assets/css/landing-seo.css'),
+];
+$additionalJS = ['/assets/js/landing-seo.js?v=' . filemtime(__DIR__ . '/assets/js/landing-seo.js')];
 $earlyHeadScripts = ['<script>' . file_get_contents(__DIR__ . '/assets/js/catalog-scroll.js') . '</script>'];
 
 // FAQ-блок + микроразметка Schema.org/FAQPage
 require_once __DIR__ . '/includes/faq-helper.php';
-$faqItems = [
-    ['q' => 'Какой документ я получу?', 'a' => 'По окончании курса — удостоверение о повышении квалификации (или диплом о переподготовке) установленного образца. Данные вносим в ФИС ФРДО — документ примут при аттестации и любой проверке.'],
-    ['q' => 'Как проходит обучение?', 'a' => 'Полностью дистанционно. После оплаты вы получаете доступ к учебным материалам в личном кабинете и проходите курс в удобном темпе.'],
-    ['q' => 'Есть ли у вас лицензия?', 'a' => 'Да, разрешение № 068 на образовательную деятельность на территории инновационного центра «Сколково». Все удостоверения вносятся в ФИС ФРДО.'],
-    ['q' => 'Принимает ли работодатель такое удостоверение?', 'a' => 'Да. Удостоверение принимается всеми образовательными организациями, учитывается при аттестации и проверках Рособрнадзора. Все данные вносятся в ФИС ФРДО — видно на Госуслугах.'],
-    ['q' => 'Когда можно начать обучение?', 'a' => 'Сразу после оплаты. Все материалы доступны 24/7 — учитесь в удобном темпе.'],
-    ['q' => 'Как можно оплатить?', 'a' => 'Банковской картой через ЮКассу, по счёту для юридических лиц или через безналичный расчёт для образовательных организаций.'],
+$landingDoc = $programType === 'pp'
+    ? 'диплом о профессиональной переподготовке'
+    : ($programType === 'kpk' ? 'удостоверение о повышении квалификации' : 'документ установленного образца');
+$faqVars = [
+    'doc'       => $landingDoc,
+    'count'     => $totalCourses,
+    'price_min' => $landingPriceMin,
+    'price_max' => $landingPriceMax,
+    'spec'      => $selectedSpecData['name'] ?? '',
+    'category'  => $selectedCategoryData['name'] ?? '',
 ];
+// Гибрид: детерминированный поднабор вопросов по seed страницы + подстановка переменных.
+$faqItems = buildLandingFaq(coursesLandingFaqPool(), $pageKey, $faqVars, 6);
 $jsonLdArray = [buildFaqJsonLd($faqItems)];
 
-// Микроразметка Schema.org/Product для листинга (гибрид рейтинга)
+// Витрина отзывов посадочной (только на страницах со специализацией).
+$landingReviews = !empty($selectedSpecData) ? getLandingReviews($db, $pageKey) : [];
+// Уникальный SEO-текст посадочной (если сгенерирован под этот page_key).
+$landingSeoHtml = getLandingSeoHtml($db, $pageKey);
+
+// Микроразметка Schema.org/Product для листинга.
+// Есть витрина отзывов → единый Product с реальными review[]+уникальным рейтингом;
+// иначе — generic-гибрид по типу/синтетике.
 require_once __DIR__ . '/includes/listing-schema-helper.php';
-$jsonLdArray[] = buildListingSchema($db, 'course', 'kursy', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
+if (!empty($landingReviews)) {
+    $jsonLdArray[] = buildLandingReviewsProductJsonLd($pageTitle, $pageDescription, $ogImage, SITE_NAME, $landingReviews);
+} else {
+    $jsonLdArray[] = buildListingSchema($db, 'course', 'kursy', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
+}
 
 // ItemList: карточки текущего среза каталога (даёт краулеру URL курсов из листинга)
 if (!empty($allCourses)) {
@@ -351,7 +399,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <span class="rd-pill indigo"><?php echo htmlspecialchars($heroDocPill); ?></span>
         <span class="rd-pill">Разрешение Сколково № 068</span>
       </div>
-      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo htmlspecialchars($h1Text); ?> — <span class="accent">дистанционно</span></h1>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo htmlspecialchars($h1Text); ?><?php if (empty($selectedSpecData)): ?> — <span class="accent">дистанционно</span><?php endif; ?></h1>
       <p class="rd-hero-sub reveal"><?php echo htmlspecialchars($heroSubText); ?></p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><?php echo htmlspecialchars($heroDocBullet); ?></div>
@@ -594,7 +642,7 @@ include __DIR__ . '/includes/header-redesign.php';
       </div>
       <p class="rd-section-sub">
         Эксперты-практики ведут наши курсы. Всего в команде —
-        <?= count($categoryExperts) ?>.
+        <?= (int)$expertsTotal ?>.
       </p>
     </div>
 
@@ -811,6 +859,22 @@ include __DIR__ . '/includes/header-redesign.php';
   });
 })();
 </script>
+
+<?php if (!empty($landingReviews)):
+    $lrTitle = !empty($selectedSpecData)
+        ? 'Отзывы о курсах по ' . (($selectedSpecData['name_dative'] ?? '') ?: mb_strtolower($selectedSpecData['name'], 'UTF-8'))
+        : 'Отзывы о курсах';
+    renderLandingReviews($landingReviews, $lrTitle);
+endif; ?>
+
+<?php if (!empty($landingSeoHtml)): ?>
+<!-- Уникальный SEO-текст посадочной -->
+<section class="rd-section landing-seo-text">
+  <div class="rd-wrap">
+    <div class="landing-seo-inner"><?php echo $landingSeoHtml; ?></div>
+  </div>
+</section>
+<?php endif; ?>
 
 <!-- FAQ -->
 <section class="rd-section">

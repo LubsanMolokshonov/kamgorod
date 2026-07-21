@@ -52,7 +52,13 @@ if (!function_exists('rsRenderStars')) {
          data-ajax-url="/ajax/submit-review.php">
     <div class="rs-container">
         <div class="rs-head">
-            <h2 class="rs-title">Отзывы</h2>
+            <h2 class="rs-title"><?php
+                // «Отзывы на {название}» когда задано имя сущности; иначе — просто «Отзывы».
+                $rsName = trim((string)($reviewEntityName ?? ''));
+                echo $rsName !== ''
+                    ? 'Отзывы на ' . htmlspecialchars($rsName, ENT_QUOTES, 'UTF-8')
+                    : 'Отзывы';
+            ?></h2>
             <?php if ($rsCount > 0): ?>
                 <div class="rs-summary">
                     <span class="rs-summary-value"><?= number_format($rsAvg, 1, ',', '') ?></span>
