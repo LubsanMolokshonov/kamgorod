@@ -127,7 +127,8 @@ try {
     echo date('Y-m-d H:i:s') . " - Processing " . $messages->count() . " unseen message(s)" . ($dryRun ? ' [DRY_RUN]' : '') . "\n";
 
     $alertService = new AlertService($db);
-    $processor = new InboundEmailProcessor($db, $alertService, 0.6, $dryRun);
+    // Порог 0.5 (а не 0.6): лучше лишний алерт, чем потерянное обращение педагога.
+    $processor = new InboundEmailProcessor($db, $alertService, 0.5, $dryRun);
 
     $stats = ['alert_new' => 0, 'alert_reply' => 0, 'not_alert' => 0, 'skipped' => 0, 'error' => 0];
 
