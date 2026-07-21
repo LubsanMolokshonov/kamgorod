@@ -79,11 +79,23 @@ class InboundEmailProcessor
             $email['message_id'] = $messageId;
         }
 
-        // 1) дедуп
+        // 1) дедуп.
+        // Строки с classification='error' (сбой GPT-классификации) НЕ считаем дублем:
+        // такое письмо НЕ помечалось \Seen и должно переклассифицироваться на следующем
+        // заходе крона. Иначе дедуп вернёт 'skipped' → cron пометит письмо \Seen →
+        // алерт не создастся уже НИКОГДА (письмо тихо потеряется). Удаляем прошлую
+        // error-запись и обрабатываем заново.
         $stmt = $this->pdo->prepare('SELECT id, classification FROM inbound_email_log WHERE message_id = ? LIMIT 1');
         $stmt->execute([$messageId]);
-        if ($stmt->fetch()) {
-            return $this->result('skipped', 'duplicate_message_id');
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($existing) {
+            if (($existing['classification'] ?? '') !== 'error') {
+                return $this->result('skipped', 'duplicate_message_id');
+            }
+            if (!$this->dryRun) {
+                $del = $this->pdo->prepare('DELETE FROM inbound_email_log WHERE id = ?');
+                $del->execute([(int)$existing['id']]);
+            }
         }
 
         // 2) фильтр шума
