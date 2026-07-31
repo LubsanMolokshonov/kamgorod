@@ -1,24 +1,15 @@
 #!/usr/bin/env php
 <?php
 /**
- * Cron: автопродвижение сделок по заявкам на консультацию по курсам
- * в воронке Bitrix24, аналогично обычным записям на курс.
+ * Cron: сервисный учёт по заявкам на консультацию по курсам в Bitrix24.
  *
- * Этапы:
- *   0 мин           → C108:NEW (ставится при создании)
- *   ≥ 15 мин        → C108:UC_HWWIFQ
- *   ≥ 60 мин        → C108:UC_1YOFLO
- *   ≥ 90 мин        → C108:UC_DLXNLQ (перевод на менеджера)
- *
- * Писем нет (в заявке только телефон). Двигаем только этапы.
- *
- * Дополнительно:
+ * Автопродвижение этапов по времени (15/60/90 мин) ОТКЛЮЧЕНО 2026-07-31 —
+ * переводы сделки между этапами теперь делают только менеджеры вручную.
+ * Скрипт продолжает делать сервисный учёт, не связанный со сменой этапа:
  *  - Retry-создание сделки для консультаций без bitrix_lead_id (fallback).
- *  - После «перевода на менеджера» — проверка ЦДО: если сделка ушла дальше
- *    «Подготовки документов», помечаем status='processed'.
- *  - Тот же цикл этапов (15MIN → 1H → MANAGER) и проверка ЦДО
- *    применяется к course_enrollments (status='new' с заведённой сделкой);
- *    при попадании в ЦДО за «Подготовкой документов» status='enrolled'.
+ *  - Проверка ЦДО: если сделка (переведённая менеджером на этап
+ *    «менеджер») ушла дальше «Подготовки документов», помечаем
+ *    status='processed' (consultations) / 'enrolled' (course_enrollments).
  *    Создание сделки для course_enrollments — в process-course-bitrix.php.
  *
  * Crontab (каждые 5 минут):
@@ -132,55 +123,10 @@ try {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // 2) Автопродвижение этапов
-    //    Берём консультации активные (status='new'), моложе 7 дней,
-    //    с заведённой сделкой, и двигаем по текущему этапу и возрасту.
-    // ─────────────────────────────────────────────────────────────
-    // Только status='new'. Заявки на рассрочку (installment_requested)
-    // сюда не попадают намеренно — их этапы ведут Битрикс-роботы,
-    // а обратную сверку этапа делает cron/sync-course-deal-stages.php.
-    $rows = $dbObj->query(
-        "SELECT id, bitrix_lead_id, bitrix_stage, created_at,
-                TIMESTAMPDIFF(MINUTE, created_at, NOW()) AS age_minutes
-         FROM course_consultations
-         WHERE status = 'new'
-           AND bitrix_lead_id IS NOT NULL
-           AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-         ORDER BY created_at ASC",
-        [$MAX_AGE_DAYS]
-    );
-
+    // 2) Автопродвижение этапов по времени ОТКЛЮЧЕНО 2026-07-31 —
+    //    переводы между этапами сделки делают только менеджеры вручную
+    //    в Bitrix24. $moved оставлен для лога DONE ниже.
     $moved = 0;
-    foreach ($rows as $r) {
-        $age = (int)$r['age_minutes'];
-        $current = $r['bitrix_stage'] ?? $STAGE_NEW;
-        $target = null;
-
-        if ($age >= 90 && $current !== $STAGE_MANAGER) {
-            $target = $STAGE_MANAGER;
-        } elseif ($age >= 60 && in_array($current, [$STAGE_NEW, $STAGE_15MIN], true)) {
-            $target = $STAGE_1H;
-        } elseif ($age >= 15 && $current === $STAGE_NEW) {
-            $target = $STAGE_15MIN;
-        }
-
-        if ($target === null) {
-            continue;
-        }
-
-        try {
-            $bitrix->moveDeal($r['bitrix_lead_id'], $target);
-            $dbObj->update('course_consultations', [
-                'bitrix_stage' => $target,
-                'bitrix_stage_updated_at' => date('Y-m-d H:i:s'),
-            ], 'id = ?', [$r['id']]);
-            $moved++;
-            log_line("MOVE | Consultation #{$r['id']} | Deal #{$r['bitrix_lead_id']} | {$current} → {$target} | age {$age}min");
-        } catch (Exception $e) {
-            log_line("MOVE_ERROR | Consultation #{$r['id']} | Deal #{$r['bitrix_lead_id']} | " . $e->getMessage());
-        }
-    }
 
     // ─────────────────────────────────────────────────────────────
     // 3) Проверка ЦДО: если сделка ушла в ЦДО и прошла
@@ -236,53 +182,13 @@ try {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 4) Автопродвижение этапов для course_enrollments
-    //    Создание сделки делает process-course-bitrix.php; здесь
-    //    только двигаем по тем же этапам прозвона и закрываем по ЦДО.
-    // ─────────────────────────────────────────────────────────────
-    // installment_requested не двигаем: после заявки на рассрочку этапы
-    // меняют только Битрикс-роботы. Обратную сверку (включая финальный
-    // WON → status='paid') делает cron/sync-course-deal-stages.php.
-    $enrollRows = $dbObj->query(
-        "SELECT id, bitrix_lead_id, bitrix_stage, created_at,
-                TIMESTAMPDIFF(MINUTE, created_at, NOW()) AS age_minutes
-         FROM course_enrollments
-         WHERE status = 'new'
-           AND bitrix_lead_id IS NOT NULL
-           AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-         ORDER BY created_at ASC",
-        [$MAX_AGE_DAYS]
-    );
-
+    // 4) Автопродвижение этапов для course_enrollments по времени
+    //    ОТКЛЮЧЕНО 2026-07-31 — переводы делают только менеджеры вручную.
+    //    bitrix_stage для course_enrollments по-прежнему актуализируется
+    //    независимо через cron/sync-course-deal-stages.php (каждые 30 мин,
+    //    подтягивает реальный STAGE_ID из Bitrix), так что секция 5 ниже
+    //    продолжает находить сделки, доведённые менеджером до STAGE_MANAGER.
     $enrollMoved = 0;
-    foreach ($enrollRows as $r) {
-        $age = (int)$r['age_minutes'];
-        $current = $r['bitrix_stage'] ?? $STAGE_NEW;
-        $target = null;
-
-        if ($age >= 90 && $current !== $STAGE_MANAGER) {
-            $target = $STAGE_MANAGER;
-        } elseif ($age >= 60 && in_array($current, [$STAGE_NEW, $STAGE_15MIN], true)) {
-            $target = $STAGE_1H;
-        } elseif ($age >= 15 && $current === $STAGE_NEW) {
-            $target = $STAGE_15MIN;
-        }
-
-        if ($target === null) {
-            continue;
-        }
-
-        try {
-            $bitrix->moveDeal($r['bitrix_lead_id'], $target);
-            $dbObj->update('course_enrollments', [
-                'bitrix_stage' => $target,
-            ], 'id = ?', [$r['id']]);
-            $enrollMoved++;
-            log_line("MOVE | Enrollment #{$r['id']} | Deal #{$r['bitrix_lead_id']} | {$current} → {$target} | age {$age}min");
-        } catch (Exception $e) {
-            log_line("MOVE_ERROR | Enrollment #{$r['id']} | Deal #{$r['bitrix_lead_id']} | " . $e->getMessage());
-        }
-    }
 
     // ─────────────────────────────────────────────────────────────
     // 5) Проверка ЦДО для course_enrollments: если сделка ушла в ЦДО
