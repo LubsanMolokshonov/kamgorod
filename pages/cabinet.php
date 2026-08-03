@@ -847,14 +847,56 @@ include __DIR__ . '/../includes/header.php';
                     // Счётчики по типам для саб-меню — считаем по реально показываемым
                     // карточкам $allEvents. Групповые карточки относим к продукту
                     // (конкурс/олимпиада), под которым они отображаются.
+                    // Параллельно считаем, в каких разделах есть ГОТОВЫЙ к скачиванию
+                    // документ — по этим счётчикам выбирается стартовый раздел.
                     $eventCounts = ['competition' => 0, 'olympiad' => 0, 'webinar' => 0, 'publication' => 0];
+                    $eventReadyCounts = $eventCounts;
                     foreach ($allEvents as $ev) {
                         $t = $ev['_type'];
                         if ($t === 'group') {
                             $t = (($ev['_product'] ?? '') === 'olympiad') ? 'olympiad' : 'competition';
                         }
-                        if (isset($eventCounts[$t])) {
-                            $eventCounts[$t]++;
+                        if (!isset($eventCounts[$t])) {
+                            continue;
+                        }
+                        $eventCounts[$t]++;
+
+                        // Условия здесь зеркалят те, по которым ниже рисуется кнопка
+                        // «Скачать …» на карточке соответствующего типа.
+                        $hasDoc = false;
+                        switch ($ev['_type']) {
+                            case 'competition':
+                                $hasDoc = in_array($ev['status'] ?? '', ['paid', 'diploma_ready'], true);
+                                break;
+                            case 'group':
+                                foreach ($ev['regs'] ?? [] as $gReg) {
+                                    if (in_array($gReg['status'] ?? '', ['paid', 'diploma_ready'], true)) {
+                                        $hasDoc = true;
+                                        break;
+                                    }
+                                }
+                                break;
+                            case 'olympiad':
+                                $oPrimary = $olympRegsByResultId[$ev['id']]['primary'] ?? null;
+                                $hasDoc = $oPrimary && in_array($oPrimary['status'] ?? '', ['paid', 'diploma_ready'], true);
+                                break;
+                            case 'webinar':
+                                $wCert = $webinarCertsByRegId[$ev['id']] ?? null;
+                                $hasDoc = $wCert && in_array($wCert['status'] ?? '', ['paid', 'ready'], true);
+                                break;
+                            case 'publication':
+                                if (in_array($ev['certificate_status'] ?? '', ['paid', 'ready'], true)) {
+                                    foreach ($userCertificates as $uCert) {
+                                        if ($uCert['publication_id'] == $ev['id']) {
+                                            $hasDoc = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                break;
+                        }
+                        if ($hasDoc) {
+                            $eventReadyCounts[$t]++;
                         }
                     }
                     // Разделы саб-меню (порядок зафиксирован)
@@ -864,10 +906,29 @@ include __DIR__ . '/../includes/header.php';
                         'webinar'     => 'Вебинары',
                         'publication' => 'Публикации',
                     ];
-                    // Активный раздел: из query params либо первый («Конкурсы»)
-                    $activeEventType = $_GET['evtype'] ?? 'competition';
+                    // Стартовый раздел по умолчанию: тот, где лежит готовый документ;
+                    // если готовых нет — первый непустой; если пусто везде — «Конкурсы».
+                    // Раньше здесь был жёстко зашит 'competition', и человек без единого
+                    // конкурса открывал кабинет на пустом разделе, не находя свой диплом.
+                    $defaultEventType = 'competition';
+                    foreach (array_keys($eventSubTabs) as $type) {
+                        if ($eventReadyCounts[$type] > 0) {
+                            $defaultEventType = $type;
+                            break;
+                        }
+                    }
+                    if ($eventReadyCounts[$defaultEventType] === 0) {
+                        foreach (array_keys($eventSubTabs) as $type) {
+                            if ($eventCounts[$type] > 0) {
+                                $defaultEventType = $type;
+                                break;
+                            }
+                        }
+                    }
+                    // Активный раздел: из query params либо выбранный по умолчанию
+                    $activeEventType = $_GET['evtype'] ?? $defaultEventType;
                     if (!isset($eventSubTabs[$activeEventType])) {
-                        $activeEventType = 'competition';
+                        $activeEventType = $defaultEventType;
                     }
                 ?>
                 <div class="registrations-section">
@@ -1340,11 +1401,12 @@ include __DIR__ . '/../includes/header.php';
                             });
                         });
 
-                        // Стартовый раздел: из query params либо «Конкурсы»
+                        // Стартовый раздел: из query params либо тот, что выбрал сервер
+                        // (раздел с готовым документом / первый непустой — см. $defaultEventType).
                         var params = new URLSearchParams(window.location.search);
                         var initial = params.get('evtype');
                         var allowed = Array.prototype.map.call(subtabs, function (t) { return t.getAttribute('data-event-tab'); });
-                        if (allowed.indexOf(initial) === -1) initial = 'competition';
+                        if (allowed.indexOf(initial) === -1) initial = <?php echo json_encode($defaultEventType); ?>;
                         applyFilter(initial);
 
                         // «Скачать все дипломы» для групповой карточки — последовательно
