@@ -296,6 +296,23 @@ if (!defined('COURSE_TYPE_URL_REVERSE')) {
     ]);
 }
 
+// Типы публикаций (publication_types.slug) → URL-сегмент /zhurnal/{slug}/.
+// Слаги уже латиница и совпадают с internal key — карта identity, но заведена
+// отдельно (по образцу COURSE_TYPE_URL_MAP), чтобы buildSeoUrl()/getSectionPathPrefix()
+// могли отличать «это тип публикации» от «это ac»-сегмент (закрытое множество).
+if (!defined('PUBLICATION_TYPE_URL_MAP')) {
+    define('PUBLICATION_TYPE_URL_MAP', [
+        'methodology'  => 'methodology',
+        'article'      => 'article',
+        'research'     => 'research',
+        'program'      => 'program',
+        'presentation' => 'presentation',
+        'masterclass'  => 'masterclass',
+        'project'      => 'project',
+        'experience'   => 'experience',
+    ]);
+}
+
 // Карта «тег публикации → аудитория курса» для рекомендаций курсов в статьях.
 // Ключ — slug тега (publication_tags.slug). Значение:
 //   'spec'  — ID специализаций курсов (audience_specializations.id), сильный сигнал (предмет);

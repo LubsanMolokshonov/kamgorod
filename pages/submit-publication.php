@@ -37,8 +37,8 @@ $pmUserId = $_SESSION['user_id'] ?? null;
 $pmIsSubscriber = $pmUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmUserId) : false;
 $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
 
-$pageTitle = 'Опубликовать статью и получить свидетельство | ' . SITE_NAME;
-$pageDescription = 'Опубликуйте свою педагогическую статью в электронном журнале и получите официальное свидетельство о публикации для аттестации';
+$pageTitle = 'Опубликовать статью бесплатно и получить свидетельство | ' . SITE_NAME;
+$pageDescription = 'Опубликуйте статью бесплатно в электронном педагогическом журнале — материал разместят за 5 минут, платно только свидетельство о публикации для аттестации.';
 
 $rdActivePage = 'zhurnal';
 $additionalCSS = [
@@ -46,7 +46,6 @@ $additionalCSS = [
     '/assets/css/journal-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/journal-redesign.css'),
 ];
 $additionalJS = ['/assets/js/publication-form.js?v=' . filemtime(__DIR__ . '/../assets/js/publication-form.js')];
-$noindex = true;
 
 include __DIR__ . '/../includes/header-redesign.php';
 ?>
@@ -68,7 +67,7 @@ include __DIR__ . '/../includes/header-redesign.php';
       <span class="rd-pill indigo">Свидетельство <?php echo $pmSubscriptionOnly ? 'по подписке' : '499&nbsp;₽'; ?></span>
       <span class="rd-pill">5&nbsp;минут оформление</span>
     </div>
-    <h1 class="rd-hero-title rd-hero-title-sm reveal" style="max-width:880px;margin:0 auto;">Опубликуйте статью и&nbsp;получите <span class="accent">свидетельство о&nbsp;публикации</span></h1>
+    <h1 class="rd-hero-title rd-hero-title-sm reveal" style="max-width:880px;margin:0 auto;">Опубликуйте статью бесплатно и&nbsp;получите <span class="accent">свидетельство о&nbsp;публикации</span></h1>
     <p class="rd-hero-sub reveal" style="max-width:720px;margin:14px auto 0;">Ваш материал разместят в&nbsp;электронном педагогическом журнале и&nbsp;он&nbsp;станет доступен коллегам по&nbsp;всей России.</p>
   </div>
 </section>
@@ -317,6 +316,10 @@ include __DIR__ . '/../includes/header-redesign.php';
         <div class="rd-side-faq">
           <h3>Частые вопросы</h3>
           <details>
+            <summary>Как отправить статью на публикацию?</summary>
+            <p>Заполните форму слева: укажите данные автора, прикрепите файл статьи (PDF, DOC или DOCX) и отправьте — материал сразу уйдёт на модерацию, регистрация на сайте не обязательна.</p>
+          </details>
+          <details>
             <summary>Какие материалы можно публиковать?</summary>
             <p>Методические разработки, статьи, исследования, программы, презентации, мастер‑классы и&nbsp;другие авторские педагогические материалы.</p>
           </details>
@@ -327,6 +330,10 @@ include __DIR__ . '/../includes/header-redesign.php';
           <details>
             <summary>Какие форматы файлов?</summary>
             <p>PDF, DOC и&nbsp;DOCX размером до&nbsp;10&nbsp;МБ.</p>
+          </details>
+          <details>
+            <summary>Сколько стоит свидетельство о публикации статьи?</summary>
+            <p>Сама публикация в журнале бесплатна. Платно только именное свидетельство о публикации с QR-кодом для проверки в реестре — оно нужно для портфолио и аттестации.</p>
           </details>
         </div>
       </aside>

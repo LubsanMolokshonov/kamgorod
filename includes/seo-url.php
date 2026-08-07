@@ -39,6 +39,14 @@ function buildSeoUrl($section, $options = []) {
             $path .= '/' . $map[$options['program_type']];
         }
     }
+    // Тип публикации → сегмент пути (только если аудитория не выбрана — комбинацию
+    // «тип + аудитория» не выносим в чистый URL, оставляем query-параметром).
+    if ($section === 'zhurnal' && empty($options['ac']) && !empty($options['type'])) {
+        $map = defined('PUBLICATION_TYPE_URL_MAP') ? PUBLICATION_TYPE_URL_MAP : [];
+        if (isset($map[$options['type']])) {
+            $path .= '/' . $map[$options['type']];
+        }
+    }
 
     // Аудитория → сегменты пути
     // Для konkursy/olimpiady/vebinary порядок: ac → as (специализация) → at (уровень/тип)
@@ -79,7 +87,16 @@ function buildSeoUrl($section, $options = []) {
     $path .= '/';
 
     // Оставшиеся параметры → query string
-    $queryKeys = array_diff_key($options, array_flip(['category', 'status', 'program_type', 'ac', 'at', 'as']));
+    $consumedKeys = ['category', 'status', 'program_type', 'ac', 'at', 'as'];
+    // 'type' ушёл в путь только если это zhurnal без выбранной аудитории (см. выше) —
+    // иначе оставляем его в query string, иначе комбинация «тип+аудитория» потеряется.
+    if ($section === 'zhurnal' && empty($options['ac']) && !empty($options['type'])) {
+        $map = defined('PUBLICATION_TYPE_URL_MAP') ? PUBLICATION_TYPE_URL_MAP : [];
+        if (isset($map[$options['type']])) {
+            $consumedKeys[] = 'type';
+        }
+    }
+    $queryKeys = array_diff_key($options, array_flip($consumedKeys));
     $queryKeys = array_filter($queryKeys, function($v) { return $v !== null && $v !== ''; });
     if (!empty($queryKeys)) {
         $path .= '?' . http_build_query($queryKeys);
@@ -108,6 +125,10 @@ function getSectionPathPrefix($section, $options = []) {
         $map = defined('COURSE_TYPE_URL_MAP') ? COURSE_TYPE_URL_MAP : [];
         return $map[$options['program_type']] ?? '';
     }
+    if ($section === 'zhurnal' && empty($options['ac']) && !empty($options['type'])) {
+        $map = defined('PUBLICATION_TYPE_URL_MAP') ? PUBLICATION_TYPE_URL_MAP : [];
+        return $map[$options['type']] ?? '';
+    }
     return '';
 }
 
@@ -134,6 +155,12 @@ function redirectToSeoUrl($section, $currentParams = []) {
     if ($section === 'kursy') $seoParams[] = 'program_type';
 
     parse_str($queryString, $queryParsed);
+
+    // 'type' у zhurnal уходит в путь, только если в этом же запросе нет 'ac' —
+    // иначе оставляем его обычным query-параметром (см. buildSeoUrl).
+    if ($section === 'zhurnal' && empty($queryParsed['ac']) && !empty($currentParams['type'] ?? $queryParsed['type'] ?? '')) {
+        $seoParams[] = 'type';
+    }
 
     $hasSeoParamInQuery = false;
     foreach ($seoParams as $param) {

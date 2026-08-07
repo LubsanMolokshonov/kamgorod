@@ -127,17 +127,28 @@ if ($currentTag) {
     $pageDescription = 'Бесплатная публикация статей, методических разработок и материалов в электронном педагогическом журнале. Получите свидетельство о публикации с QR-кодом.';
 }
 
-$canonicalPath = '/zhurnal/';
 if (!empty($selectedCategory)) {
-    $canonicalPath .= $selectedCategory . '/';
+    $canonicalPath = '/zhurnal/' . $selectedCategory . '/';
     if (!empty($selectedType)) {
         $canonicalPath .= $selectedType . '/';
         if (!empty($selectedSpec)) {
             $canonicalPath .= $selectedSpec . '/';
         }
     }
+} elseif ($currentType && isset(PUBLICATION_TYPE_URL_MAP[$typeSlug])) {
+    // Тип публикации без аудитории — самостоятельный чистый URL с self-canonical
+    // (иначе уникальный H1/title типа тонет под canonical на голый /zhurnal/).
+    $canonicalPath = '/zhurnal/' . PUBLICATION_TYPE_URL_MAP[$typeSlug] . '/';
+} else {
+    $canonicalPath = '/zhurnal/';
 }
 $canonicalUrl = SITE_URL . $canonicalPath;
+
+// --- Уникализация посадочной: SEO-текст + витрина отзывов (как на olympiads.php/competitions.php) ---
+require_once __DIR__ . '/../includes/landing-content-helper.php';
+$pageKey = landingPageKey($canonicalPath);
+$landingSeoHtml = getLandingSeoHtml($db, $pageKey);
+$landingReviews = getLandingReviews($db, $pageKey);
 
 $rdActivePage = 'zhurnal';
 $additionalCSS = [
@@ -175,9 +186,14 @@ $faqItems = [
 // чтобы разметка совпадала с видимым контентом.
 $jsonLdArray = $showLanding ? [$jsonLd, buildFaqJsonLd($faqItems)] : [$jsonLd];
 
-// Микроразметка Schema.org/Product для листинга (гибрид рейтинга)
+// Микроразметка Schema.org/Product для листинга: витрина реальных отзывов посадочной
+// (если есть) — иначе прежний generic-гибрид по всем публикациям.
 require_once __DIR__ . '/../includes/listing-schema-helper.php';
-$jsonLdArray[] = buildListingSchema($db, 'publication', 'zhurnal', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
+if (!empty($landingReviews)) {
+    $jsonLdArray[] = buildLandingReviewsProductJsonLd($pageTitle, $pageDescription, $ogImage, SITE_NAME, $landingReviews);
+} else {
+    $jsonLdArray[] = buildListingSchema($db, 'publication', 'zhurnal', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
+}
 
 // Готовим данные для клиентского поиска по публикациям (когда показан каталог)
 $allForSearch = [];
@@ -413,7 +429,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <p>Статьи, методические разработки и&nbsp;другие работы педагогов со&nbsp;всей России.</p>
       </div>
       <div class="actions">
-        <a href="/publikacii/" class="rd-btn rd-btn-primary">Смотреть публикации
+        <a href="/zhurnal/" class="rd-btn rd-btn-primary">Смотреть публикации
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
       </div>
@@ -441,6 +457,19 @@ include __DIR__ . '/../includes/header-redesign.php';
     </div>
   </div>
 </section>
+
+<?php if (!empty($landingReviews)):
+    renderLandingReviews($landingReviews, 'Отзывы о журнале' . (!empty($audiencePhrase) && $hasAudience ? ' для ' . $audiencePhrase : ''));
+endif; ?>
+
+<?php if (!empty($landingSeoHtml)): ?>
+<!-- Уникальный SEO-текст посадочной -->
+<section class="rd-section landing-seo-text">
+  <div class="rd-wrap">
+    <div class="landing-seo-inner"><?php echo $landingSeoHtml; ?></div>
+  </div>
+</section>
+<?php endif; ?>
 
 <!-- FAQ -->
 <section class="rd-section">
@@ -471,7 +500,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <a href="/opublikovat" class="rd-btn rd-btn-primary">Опубликовать бесплатно
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
-        <a href="/publikacii/" class="rd-btn rd-btn-ghost">Смотреть каталог</a>
+        <a href="/zhurnal/" class="rd-btn rd-btn-ghost">Смотреть каталог</a>
       </div>
     </div>
   </div>
