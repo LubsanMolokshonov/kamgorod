@@ -1,10 +1,4 @@
 <?php
-// Prevent web access
-if (php_sapi_name() !== 'cli') {
-    http_response_code(403);
-    die('CLI only');
-}
-
 /**
  * Разовый скрипт: закрытие алертов-дублей (один пользователь написал несколько раз
  * об одной проблеме). Главному алерту ответ уходит через reply_alerts_batch_20260601.php,
@@ -14,6 +8,12 @@ if (php_sapi_name() !== 'cli') {
  *   docker exec pedagogy_web php /var/www/html/scripts/close_duplicate_alerts_20260601.php --send
  */
 declare(strict_types=1);
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 

@@ -1,10 +1,4 @@
 <?php
-// Prevent web access
-if (php_sapi_name() !== 'cli') {
-    http_response_code(403);
-    die('CLI only');
-}
-
 /**
  * Разовый фулфилмент подписок, оплаченных, но НЕ активированных из-за бага вебхука.
  *
@@ -27,6 +21,12 @@ if (php_sapi_name() !== 'cli') {
  */
 
 declare(strict_types=1);
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 register_shutdown_function(function () {

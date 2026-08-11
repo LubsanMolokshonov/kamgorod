@@ -1,10 +1,4 @@
 <?php
-// Prevent web access
-if (php_sapi_name() !== 'cli') {
-    http_response_code(403);
-    die('CLI only');
-}
-
 /**
  * Batch-сидер каталога материалов ФОП.
  *
@@ -29,6 +23,12 @@ if (php_sapi_name() !== 'cli') {
  */
 
 declare(strict_types=1);
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 
 if (PHP_SAPI !== 'cli') {
     fwrite(STDERR, "CLI only\n");
