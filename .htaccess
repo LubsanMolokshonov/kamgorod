@@ -13,7 +13,14 @@ RewriteBase /
 # scripts/preview_html_emails.php и scripts/send_email_redesign_preview.php
 # (~480 раз, 14.5k писем) и scripts/silent-reengagement-send.php (досыл 192
 # реальным пользователям). Правило стоит первым, до всех прочих RewriteRule.
-RewriteRule ^(scripts|tests|database|logs|includes|classes|config|vendor)/ - [F,L]
+RewriteRule ^(scripts|cron|tests|database|logs|includes|classes|config|vendor)/ - [F,L]
+
+# Точечные файлы и каталоги, начинающиеся с точки: .git отдавал .git/config и
+# объекты наружу (11.08.2026 обнаружено: один IP выкачивал .git/objects/*), это
+# полное раскрытие исходников и истории. .well-known остаётся доступным — через
+# него ходит Let's Encrypt.
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule (^|/)\. - [F,L]
 
 # ================================================
 # ИИ-КОНСУЛЬТАНТ (изолированный контейнер)
