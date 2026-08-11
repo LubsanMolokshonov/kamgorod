@@ -38,6 +38,7 @@ PHP 8.2 (без фреймворка) · MySQL 8 utf8mb4 PDO · Apache mod_rewri
   - `AutowebinarEmailChain` — видеолекции
   - `CourseEmailChain`, `CoursePromoEmailCampaign` — курсы (ротация sender'а через `pickPersonalSender`)
   - `OlympiadEmailChain`, `SilentReengagementCampaign`
+- Надзор: `cron/email-volume-alert.php` (каждые 15 мин) — алерт в Telegram и на `ALERT_EMAIL` при аномальном объёме отправки.
 
 ### Утилиты и интеграции
 - `Database` — обёртка PDO (`query`, `queryOne`, `execute`, `insert`, `update`, `delete`, транзакции).
@@ -78,6 +79,9 @@ PHP 8.2 (без фреймворка) · MySQL 8 utf8mb4 PDO · Apache mod_rewri
 - Шрифты Onest/Inter самохостятся (`assets/fonts/`, `assets/css/fonts.css`). Google Fonts не подключать.
 - utf8mb4 везде. Язык: русский (UI, комментарии, коммиты).
 - `.env` — НЕ коммитить.
+- **Весь репозиторий лежит в docroot** — Apache исполнит любой `.php` по прямой ссылке. Всё вне точек входа (`pages/`, `ajax/`, `api/`, `admin/`, `ai-consultant/` и корень) обязано начинаться с `if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }` — после `declare(strict_types=1)`, если он есть. `scripts/`, `cron/`, `database/`, `tests/`, `logs/` дополнительно закрыты в `.htaccess`; pre-commit хук режет коммит без guard'а. Повод: 10.08.2026 сканер выполнил `scripts/preview_html_emails.php` и `reset-test-data.php` из веба.
+- Рассылочный скрипт обязан требовать явный флаг `--send` (dry-run по умолчанию).
+- Отправка почты ограничена предохранителями в `EmailDispatcher`: рубильник `EMAIL_SENDING_ENABLED` и капы `EMAIL_CAP_RECIPIENT_HOUR|DAY`, `EMAIL_CAP_GLOBAL_HOUR`. Для служебных писем — `'bypass_cap' => true`. Аномалии ловит `cron/email-volume-alert.php` (Telegram + письмо).
 
 ## Команды
 ```bash
