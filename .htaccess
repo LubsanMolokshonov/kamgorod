@@ -391,7 +391,16 @@ RewriteRule ^komanda/?$ /team [R=301,L]
 ErrorDocument 404 /pages/404.php
 
 # Prevent direct access to sensitive files
-<FilesMatch "\.(env|sql|md|log)$">
+<FilesMatch "\.(env|sql|md|log|backup|bak|old|orig|swp)$">
+    Require all denied
+</FilesMatch>
+
+# Служебные PHP по имени: миграции, разовые фиксы, тестовые скрипты.
+# 10.08.2026 сканер выполнил из веба migrate.php, reset-test-data.php и fix-*.php
+# по 268 раз каждый — reset-test-data.php затёр название живого конкурса #1.
+# Сами файлы либо удалены, либо имеют CLI-guard; это правило — второй рубеж
+# на случай, если кто-то положит в корень новый такой скрипт.
+<FilesMatch "^(migrate|migrate_mysqli|reset-.*|fix[-_].*|test[-_].*|verify[-_].*)\.php$">
     Require all denied
 </FilesMatch>
 

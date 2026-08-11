@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Run Migration 018: Add certificate support to order_items
  */

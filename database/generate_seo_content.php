@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * SEO Content Generator for Competitions
  * Генерирует уникальные цели, задачи и SEO-описания для каждого конкурса

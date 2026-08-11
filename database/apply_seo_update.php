@@ -1,5 +1,11 @@
 #!/usr/bin/env php
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Быстрое применение SEO-обновлений
  * Этот скрипт автоматически применит миграцию и сгенерирует SEO-контент

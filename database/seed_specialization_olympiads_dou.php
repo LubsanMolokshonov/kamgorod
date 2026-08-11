@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Сидер: Предметные олимпиады ДОУ — 7 специализаций × 3 = 21 олимпиада
  * Запуск: docker exec pedagogy_web php /var/www/html/database/seed_specialization_olympiads_dou.php

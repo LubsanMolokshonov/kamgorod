@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Сидер олимпиад для пустых специализаций (Level 2 фильтры)
  * Заполняет: ДОУ, Начальная школа, Средняя/старшая школа

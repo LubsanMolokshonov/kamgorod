@@ -90,6 +90,12 @@
         </div>
 
         <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
         if (isset($_POST['run_migration'])) {
             require_once __DIR__ . '/../config/database.php';
 

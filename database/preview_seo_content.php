@@ -1,5 +1,11 @@
 #!/usr/bin/env php
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Предпросмотр SEO-контента БЕЗ применения к базе данных
  * Используйте этот скрипт чтобы увидеть, что будет сгенерировано

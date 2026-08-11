@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Seed Missing Competitions
  * Находит все пустые фильтры и создаёт по 3 конкурса в каждом

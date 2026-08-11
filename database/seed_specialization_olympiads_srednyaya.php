@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Сидер: Предметные олимпиады средней и старшей школы — 14 специализаций × 3 = 42 олимпиады
  * Запуск: docker exec pedagogy_web php /var/www/html/database/seed_specialization_olympiads_srednyaya.php

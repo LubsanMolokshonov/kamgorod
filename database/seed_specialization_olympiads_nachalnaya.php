@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Сидер: Предметные олимпиады начальной школы — 9 специализаций × 3 = 27 олимпиад
  * Запуск: docker exec pedagogy_web php /var/www/html/database/seed_specialization_olympiads_nachalnaya.php
