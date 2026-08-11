@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * РАЗОВЫЙ скрипт: отправляет 8 превью-писем редизайна на согласование.
  * После согласования — удалить.

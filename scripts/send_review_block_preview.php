@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Одноразовый превью-отправщик: рендерит payment-success письмо
  * с новым блоком «Оставьте отзыв» и шлёт на заданный адрес через Unisender Go.

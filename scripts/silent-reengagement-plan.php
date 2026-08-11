@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Построить план рассылки реактивации молчащих пользователей и создать
  * скидки 10% в email_campaign_discounts. Идемпотентно.

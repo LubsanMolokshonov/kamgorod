@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Контент ответов по support_alerts (срез 01.06.2026).
  * Ключ — alert_id, по которому шлём письмо (для дублей берём один «главный» алерт,

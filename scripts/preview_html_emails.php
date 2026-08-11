@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Превью HTML-писем — отправка одного экземпляра каждого шаблона на тестовый адрес
  * через Unisender Go (EmailDispatcher). Запускается один раз, после миграции на HTML.

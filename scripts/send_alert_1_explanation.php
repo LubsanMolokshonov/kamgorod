@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Одноразовый скрипт: ответ пользователю по support_alerts.id=1
  * (kaskinowa2017@yandex.ru — Азнабаев Кирилл, user_id=3920).

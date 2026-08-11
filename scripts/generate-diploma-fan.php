@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Генерация PNG-шаблона «веер дипломов» для рекламных картинок
  * Использует rsvg-convert для рендеринга SVG → PNG, затем GD для композиции

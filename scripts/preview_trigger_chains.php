@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Превью ВСЕХ триггерных email-цепочек по всем продуктам — отправка одного
  * экземпляра каждого письма на тестовые адреса через Unisender Go (EmailDispatcher).

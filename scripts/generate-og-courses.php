@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Генерация OG-картинки для раздела курсов
  * Запуск: php scripts/generate-og-courses.php

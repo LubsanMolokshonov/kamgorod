@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Разовый скрипт: ответы пользователям по неотвеченным support_alerts (срез на 01.06.2026).
  *

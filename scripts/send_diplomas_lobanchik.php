@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Разовый скрипт: пользователь lobanchik_30@mail.ru (user_id=5183) оплатила
  * 30.04.2026 две позиции конкурса «Ансамблевое пение» (заказы 2782 и 2784),

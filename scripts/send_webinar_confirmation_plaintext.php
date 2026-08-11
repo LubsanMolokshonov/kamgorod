@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Одноразовый скрипт: plain-text подтверждение регистрации на вебинар.
  * Используется как обход антиспама Яндекса (data not accepted) во время

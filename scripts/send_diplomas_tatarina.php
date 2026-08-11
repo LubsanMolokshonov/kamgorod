@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Разовый скрипт: повторная отправка документов Татариной Т.А. (user_id=3649, заказ 2250)
  * на оба адреса: shigapova71@mail.ru (заказчик) и shigapova1971@gmail.com (аккаунт Татариной).

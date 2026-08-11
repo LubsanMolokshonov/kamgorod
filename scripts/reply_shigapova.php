@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Разовый: ответ Шигаповой Е.Ф. по её вопросу о документах Татариной Т.А.
  */

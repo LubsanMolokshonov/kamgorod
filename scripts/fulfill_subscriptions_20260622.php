@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Разовый фулфилмент подписок, оплаченных, но НЕ активированных из-за бага вебхука.
  *

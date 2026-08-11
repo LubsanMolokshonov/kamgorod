@@ -6,6 +6,16 @@ RewriteEngine On
 RewriteBase /
 
 # ================================================
+# СЛУЖЕБНЫЕ КАТАЛОГИ — запрет прямого доступа из веба
+# ================================================
+# scripts/, tests/, database/, logs/ лежат под docroot, и Apache исполняет
+# лежащие там .php. 10.08.2026 сканер перебором путей запустил
+# scripts/preview_html_emails.php и scripts/send_email_redesign_preview.php
+# (~480 раз, 14.5k писем) и scripts/silent-reengagement-send.php (досыл 192
+# реальным пользователям). Правило стоит первым, до всех прочих RewriteRule.
+RewriteRule ^(scripts|tests|database|logs)/ - [F,L]
+
+# ================================================
 # ИИ-КОНСУЛЬТАНТ (изолированный контейнер)
 # ================================================
 # Проксируем /ai-chat/api/* → ai-consultant:80/api/* через mod_proxy.

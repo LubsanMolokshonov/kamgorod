@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Генерация логотипа «Sk Участник» программно через GD
  * Зелёный скруглённый квадрат + белый текст

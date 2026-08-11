@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Разовый ответ Балдановой Б.Х. по alert #88 — невидимые дипломы «Времена года».
  * Причина: квиз был пройден под inbox.ru (user 5920), регистрация и оплата — под yandex.ru (user 5921).

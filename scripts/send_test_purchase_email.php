@@ -1,4 +1,10 @@
 <?php
+// Prevent web access
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die('CLI only');
+}
+
 /**
  * Тестовый скрипт: отправка примера письма об успешной оплате с PDF-вложениями
  *
