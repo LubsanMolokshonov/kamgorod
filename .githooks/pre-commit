@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Pre-commit hook: блокируем коммит, если gitleaks нашёл секрет в staged-файлах.
+# Pre-commit hook:
+#   1) блокируем коммит, если gitleaks нашёл секрет в staged-файлах;
+#   2) блокируем новый служебный PHP в docroot без CLI-guard.
 #
 # Включается один раз на машине разработчика:
 #   git config core.hooksPath .githooks
@@ -8,6 +10,42 @@
 # Линукс:  https://github.com/gitleaks/gitleaks/releases
 
 set -euo pipefail
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. CLI-guard в служебных PHP
+#
+# Весь репозиторий лежит в docroot, поэтому Apache исполнит любой .php по прямой
+# ссылке. 10.08.2026 сканер так запустил scripts/preview_html_emails.php (14 498
+# писем) и reset-test-data.php (затёрло название живого конкурса).
+#
+# Боевые страницы живут в pages/, ajax/, api/, admin/, ai-consultant/ и в корне —
+# им guard не нужен. Всё остальное обязано начинаться с проверки php_sapi_name().
+# ─────────────────────────────────────────────────────────────────────────────
+UNGUARDED=""
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  case "$f" in
+    pages/*|ajax/*|api/*|admin/*|ai-consultant/*|includes/*|classes/*|vendor/*|tests/*) continue ;;
+    */*.php) ;;
+    *.php) continue ;;   # корень: index.php, sitemap.php, courses.php и т.п.
+    *) continue ;;
+  esac
+  if ! grep -q "php_sapi_name" "$f" 2>/dev/null; then
+    UNGUARDED="$UNGUARDED\n   $f"
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -n "$UNGUARDED" ]; then
+  echo ""
+  echo "🛑 Служебные PHP без CLI-guard:"
+  printf "%b\n" "$UNGUARDED"
+  echo ""
+  echo "   Добавьте первой инструкцией (после declare(strict_types), если он есть):"
+  echo "   if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }"
+  echo ""
+  echo "   Иначе файл можно будет выполнить по https://fgos.pro/<путь>."
+  exit 1
+fi
 
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "⚠️  gitleaks не установлен — пропускаю проверку секретов."

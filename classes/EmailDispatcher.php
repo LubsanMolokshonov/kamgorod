@@ -44,6 +44,7 @@ class EmailDispatcher {
      *     @var string $unsubscribe_url URL для List-Unsubscribe и пропуска rewrite (chain-письма).
      *     @var array  $extra_headers   Дополнительные заголовки [name=>value].
      *     @var bool   $skip_tracking   Не вставлять наш пиксель и не переписывать ссылки (для системных писем без аналитики).
+     *     @var bool   $bypass_cap      Пропустить капы по объёму (только для служебных алертов; рубильник всё равно действует).
      *     @var array  $meta {
      *         @var string $email_type      Тип письма для email_events (journey/webinar/publication/autowebinar/olympiad/course/course_promo/payment/other).
      *         @var string $touchpoint_code Код тач-поинта (touch_1h, payment_success, magic_link и т.д.).
@@ -117,6 +118,8 @@ class EmailDispatcher {
             'skip_unsubscribe' => !empty($params['skip_unsubscribe']) ? 1 : 0,
         ];
 
+        self::assertSendingAllowed($params);
+
         $client = self::client();
         $result = $client->sendEmail($sendParams);
 
@@ -145,6 +148,88 @@ class EmailDispatcher {
             'message_id'   => $messageId,
             'unisender_id' => $result['email_id'] ?? null,
         ];
+    }
+
+    /**
+     * Предохранители перед отправкой: рубильник и капы по объёму.
+     *
+     * Считаем по email_events — это единственный общий журнал отправок, поэтому
+     * лимит работает независимо от того, кто вызвал отправку: cron, страница или
+     * скрипт, запущенный не тем способом (см. инцидент 10.08.2026 — 14 498 писем
+     * на один адрес за два часа).
+     *
+     * Fail-open по БД: если $db недоступен, отправку не блокируем — иначе падение
+     * коннекта превратится в полную остановку почты. Fail-closed по рубильнику.
+     *
+     * @param array $params Параметры send(); 'bypass_cap' => true пропускает капы
+     *                      (для служебных алертов, но не для рубильника).
+     * @throws \RuntimeException если отправка запрещена
+     */
+    private static function assertSendingAllowed(array $params): void {
+        if (defined('EMAIL_SENDING_ENABLED') && !EMAIL_SENDING_ENABLED) {
+            throw new \RuntimeException('EmailDispatcher: отправка выключена рубильником EMAIL_SENDING_ENABLED');
+        }
+
+        if (!empty($params['bypass_cap'])) {
+            return;
+        }
+
+        global $db;
+        if (!($db instanceof \PDO)) {
+            return;
+        }
+
+        $to = $params['to_email'];
+
+        try {
+            $capRecipientHour = defined('EMAIL_CAP_RECIPIENT_HOUR') ? EMAIL_CAP_RECIPIENT_HOUR : 0;
+            if ($capRecipientHour > 0) {
+                $stmt = $db->prepare(
+                    "SELECT COUNT(*) FROM email_events
+                     WHERE recipient_email = ? AND sent_at >= NOW() - INTERVAL 1 HOUR"
+                );
+                $stmt->execute([$to]);
+                $n = (int)$stmt->fetchColumn();
+                if ($n >= $capRecipientHour) {
+                    throw new \RuntimeException(
+                        "EmailDispatcher: кап на получателя — {$n} писем на {$to} за час (лимит {$capRecipientHour})"
+                    );
+                }
+            }
+
+            $capRecipientDay = defined('EMAIL_CAP_RECIPIENT_DAY') ? EMAIL_CAP_RECIPIENT_DAY : 0;
+            if ($capRecipientDay > 0) {
+                $stmt = $db->prepare(
+                    "SELECT COUNT(*) FROM email_events
+                     WHERE recipient_email = ? AND sent_at >= NOW() - INTERVAL 1 DAY"
+                );
+                $stmt->execute([$to]);
+                $n = (int)$stmt->fetchColumn();
+                if ($n >= $capRecipientDay) {
+                    throw new \RuntimeException(
+                        "EmailDispatcher: кап на получателя — {$n} писем на {$to} за сутки (лимит {$capRecipientDay})"
+                    );
+                }
+            }
+
+            $capGlobalHour = defined('EMAIL_CAP_GLOBAL_HOUR') ? EMAIL_CAP_GLOBAL_HOUR : 0;
+            if ($capGlobalHour > 0) {
+                // delivery_status в условии — чтобы попасть в индекс idx_email_events_delivery
+                $stmt = $db->query(
+                    "SELECT COUNT(*) FROM email_events
+                     WHERE delivery_status = 'sent' AND sent_at >= NOW() - INTERVAL 1 HOUR"
+                );
+                $n = (int)$stmt->fetchColumn();
+                if ($n >= $capGlobalHour) {
+                    throw new \RuntimeException(
+                        "EmailDispatcher: общий кап — {$n} писем за час (лимит {$capGlobalHour})"
+                    );
+                }
+            }
+        } catch (\PDOException $e) {
+            // Проблема с БД не должна останавливать почту — пишем в лог и пропускаем
+            error_log('EmailDispatcher: не удалось проверить капы: ' . $e->getMessage());
+        }
     }
 
     /**

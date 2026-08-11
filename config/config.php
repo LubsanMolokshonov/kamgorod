@@ -137,6 +137,26 @@ if (!defined('UNISENDER_SENDER_NAME'))  define('UNISENDER_SENDER_NAME',  $_ENV['
 // Секрет для проверки вебхука доставки (api/webhook/unisender.php). Пусто — проверка отключена.
 if (!defined('UNISENDER_WEBHOOK_SECRET')) define('UNISENDER_WEBHOOK_SECRET', $_ENV['UNISENDER_WEBHOOK_SECRET'] ?? '');
 
+// ── Предохранители отправки (EmailDispatcher) ────────────────────────────────
+// Заведены после 10.08.2026: скрипт превью, запущенный сканером из веба, отправил
+// 14 498 писем на один адрес за два часа, и остановить это было нечему.
+// Исторические пики за 60 дней: 376 писем/час всего, 5 на один адрес в час,
+// 6 на один адрес в сутки — капы ниже с многократным запасом.
+//
+// EMAIL_SENDING_ENABLED=false — рубильник на случай аварии: EmailDispatcher
+// перестаёт отправлять вообще, цепочки остаются в pending и уедут после включения.
+if (!defined('EMAIL_SENDING_ENABLED')) {
+    define('EMAIL_SENDING_ENABLED', !in_array(strtolower((string)($_ENV['EMAIL_SENDING_ENABLED'] ?? 'true')), ['0', 'false', 'no', 'off'], true));
+}
+if (!defined('EMAIL_CAP_RECIPIENT_HOUR')) define('EMAIL_CAP_RECIPIENT_HOUR', (int)($_ENV['EMAIL_CAP_RECIPIENT_HOUR'] ?? 12));
+if (!defined('EMAIL_CAP_RECIPIENT_DAY'))  define('EMAIL_CAP_RECIPIENT_DAY',  (int)($_ENV['EMAIL_CAP_RECIPIENT_DAY']  ?? 30));
+if (!defined('EMAIL_CAP_GLOBAL_HOUR'))    define('EMAIL_CAP_GLOBAL_HOUR',    (int)($_ENV['EMAIL_CAP_GLOBAL_HOUR']    ?? 2000));
+// Порог алерта об аномальном объёме (cron/email-volume-alert.php)
+if (!defined('EMAIL_ALERT_GLOBAL_HOUR'))    define('EMAIL_ALERT_GLOBAL_HOUR',    (int)($_ENV['EMAIL_ALERT_GLOBAL_HOUR']    ?? 700));
+if (!defined('EMAIL_ALERT_RECIPIENT_HOUR')) define('EMAIL_ALERT_RECIPIENT_HOUR', (int)($_ENV['EMAIL_ALERT_RECIPIENT_HOUR'] ?? 8));
+// Куда слать алерты по инфраструктуре
+if (!defined('ALERT_EMAIL')) define('ALERT_EMAIL', $_ENV['ALERT_EMAIL'] ?? 'lubsanmolokshonov@gmail.com');
+
 // ai.h1pro.ru — выгрузка расходов Яндекс.Директа (cron/sync-direct-spend.php)
 if (!defined('H1PRO_EXPORT_API_URL')) define('H1PRO_EXPORT_API_URL', $_ENV['H1PRO_EXPORT_API_URL'] ?? 'https://ai.h1pro.ru/api/export/v1');
 if (!defined('H1PRO_EXPORT_API_KEY')) define('H1PRO_EXPORT_API_KEY', $_ENV['H1PRO_EXPORT_API_KEY'] ?? '');
