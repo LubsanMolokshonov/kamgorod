@@ -16,6 +16,7 @@ require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/course-order-attribution.php';
 
 use YooKassa\Client;
 
@@ -150,6 +151,9 @@ try {
             $enrollmentUserId, $enrollmentId, $enrollment['title'], $price, $discountAmount, $loyaltyAmount
         );
 
+        // UTM-атрибуция заказа по заявке (иначе продажа уходит в РНП в «Другое»).
+        applyCourseOrderAttribution($db, (int)$orderId, $enrollmentId);
+
         // Обновить статус enrollment
         $dbObj = new Database($db);
         $dbObj->execute(
@@ -282,6 +286,10 @@ try {
     if (!$orderId) {
         throw new Exception('Не удалось создать заказ');
     }
+
+    // UTM-атрибуция заказа по заявке: utm заявки → её визит → первый визит юзера
+    // → cookie первого клика. Без этого курсовые оплаты падают в РНП в «Другое».
+    applyCourseOrderAttribution($db, (int)$orderId, $enrollmentId);
 
     // Email-атрибуция оплаты: если пользователь пришёл по клику из письма,
     // привязываем message_id к заказу для трекинга конверсий в email_events.

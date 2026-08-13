@@ -30,15 +30,10 @@ $dayReport  = $rnp->getReport($dateFrom, $dateTo, 'day', $basis);
 $weekReport = $rnp->getReport($dateFrom, $dateTo, 'week', $basis);
 
 // Оффлайн-продажи fgos.pro из CRM, не попавшие в orders (консультации + ручные
-// сделки без записи на сайте). Рассрочки, привязанные к заявкам, уже учтены в
-// таблице ниже через синтетический заказ (с разнесением по каналу/направлению).
-// Эти — без UTM/канала, поэтому показываем отдельной плашкой.
-require_once __DIR__ . '/../../classes/Bitrix24Integration.php';
-require_once __DIR__ . '/../../includes/offline-order-helper.php';
-$rnpOfflineCrm = (new Bitrix24Integration())->getFgosOfflineDeals(
-    $dateFrom, $dateTo, fgosMaterializedDealIds(new Database($db)),
-    $basis === 'created' ? 'DATE_CREATE' : 'CLOSEDATE'
-);
+// сделки без записи на сайте), теперь доклеиваются внутрь таблицы — в «Курсы Другое»
+// (см. RNPAnalytics::fetchOfflineCrmSplit). Здесь берём только сводку для подписи
+// под заголовком и предупреждения о недоступности Bitrix.
+$rnpOfflineCrm = $dayReport['offline_crm'];
 
 $csrfToken = generateCSRFToken();
 
@@ -285,23 +280,10 @@ include __DIR__ . '/../includes/header.php';
     </form>
 </div>
 
-<?php if (!empty($rnpOfflineCrm['count'])): ?>
-<div class="content-card rnp-card" style="border-left:4px solid #f59e0b;">
-    <div class="rnp-card-header">
-        <h2>Оффлайн-продажи (CRM, вне заказов)</h2>
-        <span class="rnp-card-meta">рассрочки/счета fgos.pro, закрытые в Bitrix вне сайта — без разнесения по каналу;
-            период по <?= $basis === 'created' ? 'дате создания сделки' : 'дате закрытия сделки' ?></span>
-    </div>
-    <div style="display:flex;gap:32px;padding:8px 4px;">
-        <div>
-            <div style="font-size:24px;font-weight:700;"><?= number_format((int)$rnpOfflineCrm['count'], 0, ',', ' ') ?></div>
-            <div style="color:#94a3b8;font-size:13px;">сделок</div>
-        </div>
-        <div>
-            <div style="font-size:24px;font-weight:700;"><?= number_format((float)$rnpOfflineCrm['revenue'], 0, ',', ' ') ?> ₽</div>
-            <div style="color:#94a3b8;font-size:13px;">выручка</div>
-        </div>
-    </div>
+<?php if ($rnpOfflineCrm['available'] === false): ?>
+<div class="content-card rnp-card" style="border-left:4px solid #ef4444;">
+    <strong>Bitrix24 не отвечает</strong> — оффлайн-продажи курсов (рассрочки, счета, сделки без заказа
+    на сайте) сейчас в таблицу не попали, цифры по курсам занижены. Обновите страницу позже.
 </div>
 <?php endif; ?>
 
@@ -311,6 +293,14 @@ include __DIR__ . '/../includes/header.php';
         <h2>Аналитика по каналам</h2>
         <span class="rnp-card-meta">Редактируйте расходы прямо в ячейках дневных столбцов</span>
     </div>
+    <?php if (!empty($rnpOfflineCrm['count'])): ?>
+    <p class="rnp-basis-hint">
+        Включая <strong><?= number_format((int)$rnpOfflineCrm['count'], 0, ',', ' ') ?></strong> оффлайн-сделок
+        CRM на <strong><?= number_format((float)$rnpOfflineCrm['revenue'], 0, ',', ' ') ?> ₽</strong>
+        (рассрочки, счета, продажи без заказа на сайте). У них нет UTM, поэтому они учтены в строке
+        «Курсы Другое»; период — по <?= $basis === 'created' ? 'дате создания сделки' : 'дате закрытия сделки в Bitrix' ?>.
+    </p>
+    <?php endif; ?>
     <div class="rnp-pivot-wrapper">
         <table class="rnp-pivot">
             <thead>

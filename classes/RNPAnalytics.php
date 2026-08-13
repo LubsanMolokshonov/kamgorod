@@ -76,6 +76,7 @@ class RNPAnalytics
         $costs = $this->fetchCosts($dateFrom, $dateTo, $granularity);
         $leadRows = $this->fetchCourseLeads($dateFrom, $dateTo, $granularity);
         $tokenRows = $this->fetchTokenSplit($dateFrom, $dateTo, $granularity);
+        $offline   = $this->fetchOfflineCrmSplit($dateFrom, $dateTo, $granularity, $basis);
         $periods = $this->buildPeriods($dateFrom, $dateTo, $granularity);
 
         // Индексы для быстрого слияния
@@ -123,14 +124,25 @@ class RNPAnalytics
                     $tokenRevenue  = $token ? (float)$token['revenue'] : 0.0;
                     $tokenPayments = $token ? (float)$token['payments'] : 0.0;
 
+                    // Оффлайн-продажи курсов из CRM (рассрочка/счёт/консультация без
+                    // заказа на сайте). У них нет UTM, поэтому весь объём идёт в
+                    // «Другое × Курсы». Сделки, уже материализованные в orders,
+                    // исключены на уровне выборки — задвоения нет.
+                    $off = ($channel === 'other' && $section === 'course')
+                        ? ($offline['periods'][$period['key']] ?? null)
+                        : null;
+                    $offRevenue  = $off ? (float)$off['revenue'] : 0.0;
+                    $offPayments = $off ? (float)$off['payments'] : 0.0;
+                    $offCreated  = $off ? (float)$off['created'] : 0.0;
+
                     $cell = [
                         'channel' => $channel,
                         'section' => $section,
                         'cost' => 0.0,
-                        'revenue' => ($paid['revenue'] ?? 0.0) + $tokenRevenue,
-                        'payments' => ($paid['payments'] ?? 0.0) + $tokenPayments,
-                        'created_orders' => ($created['orders_count'] ?? 0.0) + $tokenPayments,
-                        'paid_orders' => ($paid['orders_count'] ?? 0.0) + $tokenPayments,
+                        'revenue' => ($paid['revenue'] ?? 0.0) + $tokenRevenue + $offRevenue,
+                        'payments' => ($paid['payments'] ?? 0.0) + $tokenPayments + $offPayments,
+                        'created_orders' => ($created['orders_count'] ?? 0.0) + $tokenPayments + $offCreated,
+                        'paid_orders' => ($paid['orders_count'] ?? 0.0) + $tokenPayments + $offPayments,
                         'leads' => $leadsVal,
                     ];
                     $rows[$channel][$section] = $cell;
@@ -180,6 +192,13 @@ class RNPAnalytics
             'periods' => $report,
             'grand_total' => $grand['total'],
             'grand_rows' => $grand['cells'],
+            // Диагностика для дашборда: сколько оффлайн-сделок доклеено и жив ли Bitrix.
+            'offline_crm' => [
+                'available' => $offline['available'],
+                'count'     => $offline['count'],
+                'revenue'   => $offline['revenue'],
+                'deals'     => $offline['deals'],
+            ],
         ];
     }
 
@@ -460,6 +479,140 @@ class RNPAnalytics
             GROUP BY period_key, channel
         ";
         return $this->db->query($sql, [$dateFrom, $dateTo]);
+    }
+
+    /**
+     * Оффлайн-продажи курсов из Bitrix CRM, которых нет в orders.
+     *
+     * Это сделки, закрытые менеджером как WON (рассрочка, счёт, консультация без
+     * записи на сайте). Сделки, под которые уже есть оплаченный заказ на сайте —
+     * в том числе синтетические заказы `bitrix:<dealId>` — исключаются через
+     * fgosMaterializedDealIds(), иначе выручка задвоится.
+     *
+     * База времени:
+     *   - basis 'paid'    — выручка/оплаты по CLOSEDATE, «создано» по DATE_CREATE;
+     *   - basis 'created' — всё по DATE_CREATE (когортный режим).
+     *
+     * Bitrix отдаёт «наши» сделки списком в пару сотен строк, фильтр по датам на
+     * стороне API не работает (см. Bitrix24Integration::getFgosOfflineDeals), поэтому
+     * период режем здесь. Ответ кэшируется на время запроса: getReport вызывается
+     * несколько раз (дни, недели, график), ходить в API каждый раз незачем.
+     *
+     * @return array{periods: array<string, array{revenue: float, payments: float, created: float}>,
+     *               available: bool, count: int, revenue: float, deals: array}
+     */
+    private function fetchOfflineCrmSplit(string $dateFrom, string $dateTo, string $granularity, string $basis): array
+    {
+        $empty = ['periods' => [], 'available' => true, 'count' => 0, 'revenue' => 0.0, 'deals' => []];
+
+        $deals = $this->loadOfflineCrmDeals();
+        if ($deals === null) {
+            // Bitrix недоступен — не занижаем цифры молча, дашборд покажет предупреждение.
+            return ['periods' => [], 'available' => false, 'count' => 0, 'revenue' => 0.0, 'deals' => []];
+        }
+        if (!$deals) {
+            return $empty;
+        }
+
+        $periods  = [];
+        $count    = 0;
+        $revenue  = 0.0;
+        $inPeriod = [];
+
+        foreach ($deals as $deal) {
+            $closed  = $deal['closedate'];
+            $created = $deal['created'];
+            $amount  = (float)$deal['revenue'];
+
+            // Выручка/оплаты
+            $revenueDate = $basis === 'created' ? $created : $closed;
+            if ($revenueDate !== '' && $revenueDate >= $dateFrom && $revenueDate <= $dateTo) {
+                $key = $this->periodKeyForDate($revenueDate, $granularity);
+                $this->initOfflinePeriod($periods, $key);
+                $periods[$key]['revenue']  += $amount;
+                $periods[$key]['payments'] += $amount > 0 ? 1 : 0;
+                $count++;
+                $revenue += $amount;
+                $inPeriod[] = $deal;
+            }
+
+            // «Создано» — всегда по дате создания сделки.
+            if ($created !== '' && $created >= $dateFrom && $created <= $dateTo) {
+                $key = $this->periodKeyForDate($created, $granularity);
+                $this->initOfflinePeriod($periods, $key);
+                $periods[$key]['created'] += 1;
+            }
+        }
+
+        return [
+            'periods'   => $periods,
+            'available' => true,
+            'count'     => $count,
+            'revenue'   => $revenue,
+            'deals'     => $inPeriod,
+        ];
+    }
+
+    /**
+     * Список «наших» WON-сделок из CRM без заказа на сайте. null — Bitrix недоступен.
+     * Кэшируется в пределах запроса.
+     */
+    private function loadOfflineCrmDeals(): ?array
+    {
+        static $cache = null;
+        static $loaded = false;
+
+        if ($loaded) {
+            return $cache;
+        }
+        $loaded = true;
+
+        try {
+            require_once __DIR__ . '/Bitrix24Integration.php';
+            require_once __DIR__ . '/../includes/offline-order-helper.php';
+
+            $bitrix = new \Bitrix24Integration();
+            if (!$bitrix->isConfigured()) {
+                return $cache = [];
+            }
+
+            // Период берём заведомо широкий — фильтрация по датам идёт в вызывающем
+            // методе, а список «наших» сделок целиком укладывается в пару страниц.
+            $result = $bitrix->getFgosOfflineDeals(
+                '2000-01-01',
+                '2100-01-01',
+                fgosMaterializedDealIds($this->db)
+            );
+
+            if ($result['count'] === null) {
+                return $cache = null; // ошибка API
+            }
+            return $cache = $result['deals'];
+        } catch (\Throwable $e) {
+            error_log('[rnp] оффлайн-сделки CRM недоступны: ' . $e->getMessage());
+            return $cache = null;
+        }
+    }
+
+    private function initOfflinePeriod(array &$periods, string $key): void
+    {
+        if (!isset($periods[$key])) {
+            $periods[$key] = ['revenue' => 0.0, 'payments' => 0.0, 'created' => 0.0];
+        }
+    }
+
+    /**
+     * Ключ периода для даты — тот же формат, что даёт periodExpr() в SQL.
+     */
+    private function periodKeyForDate(string $date, string $granularity): string
+    {
+        $d = new \DateTimeImmutable($date);
+        return match ($granularity) {
+            'month' => $d->format('Y-m'),
+            // Соответствует DATE_FORMAT(col,'%x%v') из periodExpr() и ключу buildPeriods().
+            'week'  => sprintf('%04d%02d', (int)$d->format('o'), (int)$d->format('W')),
+            default => $d->format('Y-m-d'),
+        };
     }
 
     /**
