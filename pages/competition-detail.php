@@ -568,6 +568,10 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
   <div class="modal-content">
     <div class="modal-header">
       <h2 id="regulationsModalTitle">Положение о конкурсе</h2>
+      <a class="modal-download" href="/ajax/download-regulations.php?competition_id=<?php echo (int)$competition['id']; ?>" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Скачать PDF
+      </a>
       <button class="modal-close" onclick="closeRegulationsModal()" aria-label="Закрыть">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>

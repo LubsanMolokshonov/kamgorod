@@ -610,6 +610,29 @@
   font: 700 22px var(--font-sans);
   color: var(--ink-900);
   margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+/* Скачивание положения файлом — просили в поддержке, модалка была только на просмотр */
+.modal-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-right: 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--indigo-50);
+  color: var(--indigo-700);
+  text-decoration: none;
+  font: 600 14px var(--font-sans);
+  transition: background .2s, color .2s;
+}
+.modal-download:hover { background: var(--indigo-700); color: #fff; }
+@media (max-width: 560px) {
+  .modal-header h2 { font-size: 18px; }
+  .modal-download { padding: 8px 10px; font-size: 0; gap: 0; }
+  .modal-download svg { width: 18px; height: 18px; }
 }
 .modal-close {
   background: var(--ink-50);
