@@ -134,6 +134,27 @@ class EmailJourney {
                 continue;
             }
 
+            // Защита от дублирующих заявок на тот же конкурс с той же работой:
+            // человек оплатил, диплом выпущен, а рядом висит случайная вторая заявка —
+            // и цепочка пишет ему «заявка ещё активна, дооформите» поверх готового
+            // документа (алерты 178, 184, 203). Сравниваем по работе, а не только по
+            // конкурсу: одну и ту же номинацию можно законно пройти с разными работами.
+            $paidSibling = $this->db->queryOne(
+                "SELECT id FROM registrations
+                 WHERE user_id = ?
+                   AND competition_id = ?
+                   AND id != ?
+                   AND TRIM(COALESCE(work_title, '')) = TRIM(COALESCE(?, ''))
+                   AND status IN ('paid','diploma_ready')
+                 LIMIT 1",
+                [$email['user_id'], $email['competition_id'], $email['registration_id'], $email['work_title']]
+            );
+            if ($paidSibling) {
+                $this->updateEmailStatus($email['id'], 'skipped', 'Diploma already paid on a duplicate registration for the same work');
+                $results['skipped']++;
+                continue;
+            }
+
             if ($this->isUnsubscribed($email['email'])) {
                 $this->updateEmailStatus($email['id'], 'skipped', 'User unsubscribed');
                 $results['skipped']++;
