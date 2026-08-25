@@ -39,6 +39,7 @@
       <a href="/zhurnal/">Журнал публикаций</a>
       <a href="/opublikovat/">Опубликовать материал</a>
       <a href="/sertifikat-publikacii/">Получить сертификат</a>
+      <a href="/blog/">Блог</a>
       <h5 style="margin-top:24px;">Курсы</h5>
       <a href="/kursy/povyshenie-kvalifikatsii/">Повышение квалификации</a>
       <a href="/kursy/perepodgotovka/">Профессиональная переподготовка</a>

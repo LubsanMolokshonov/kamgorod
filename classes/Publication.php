@@ -180,6 +180,12 @@ class Publication {
             $params[] = $filters['user_id'];
         }
 
+        // Filter by source (e.g. 'blog' for editorial posts vs 'upload'/'generator' for UGC)
+        if (!empty($filters['source'])) {
+            $wheres[] = "p.source = ?";
+            $params[] = $filters['source'];
+        }
+
         // Audience filters (v2)
         if (!empty($filters['category_id'])) {
             $sql .= " JOIN publication_audience_categories pac ON p.id = pac.publication_id";
@@ -345,6 +351,11 @@ class Publication {
         if (!empty($filters['type_id'])) {
             $wheres[] = "p.publication_type_id = ?";
             $params[] = $filters['type_id'];
+        }
+
+        if (!empty($filters['source'])) {
+            $wheres[] = "p.source = ?";
+            $params[] = $filters['source'];
         }
 
         // Audience filters (v2)
@@ -579,6 +590,11 @@ class Publication {
         if (!empty($filters['type_id'])) {
             $wheres[] = "p.publication_type_id = ?";
             $params[] = $filters['type_id'];
+        }
+
+        if (!empty($filters['source'])) {
+            $wheres[] = "p.source = ?";
+            $params[] = $filters['source'];
         }
 
         // Audience filters (v2)
