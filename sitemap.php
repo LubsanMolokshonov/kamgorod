@@ -267,9 +267,15 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 // 6. ПУБЛИКАЦИИ
 // ========================================
 
-$stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' ORDER BY published_at DESC");
+$stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' AND source != 'blog' AND noindex = 0 ORDER BY published_at DESC");
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     sitemapUrl($baseUrl . '/publikaciya/' . $row['slug'] . '/', '0.7', 'monthly', $row['updated_at']);
+}
+
+// Статьи блога — отдельный префикс /blog/, не /publikaciya/
+$stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' AND source = 'blog' AND noindex = 0 ORDER BY published_at DESC");
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    sitemapUrl($baseUrl . '/blog/' . $row['slug'] . '/', '0.7', 'weekly', $row['updated_at']);
 }
 
 // ========================================

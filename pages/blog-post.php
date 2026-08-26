@@ -71,9 +71,12 @@ if ($articleHtml !== '' && $inlineCard) {
     $articleHtml = ccInjectAfterMiddleHeading($articleHtml, renderCourseCard($inlineCard, 'inline'));
 }
 
-$pageTitle = htmlspecialchars($publication['title']) . ' | ' . SITE_NAME;
-$pageDescription = htmlspecialchars(mb_substr($publication['annotation'], 0, 160));
+$seoTitle = !empty($publication['meta_title']) ? $publication['meta_title'] : $publication['title'];
+$seoDescription = !empty($publication['meta_description']) ? $publication['meta_description'] : $publication['annotation'];
+$pageTitle = htmlspecialchars($seoTitle) . ' | ' . SITE_NAME;
+$pageDescription = htmlspecialchars(mb_substr($seoDescription, 0, 160));
 $canonicalUrl = SITE_URL . '/blog/' . $publication['slug'] . '/';
+$noindex = !empty($publication['noindex']);
 
 $rdActivePage = 'blog';
 $additionalCSS = [
@@ -95,8 +98,8 @@ $ogImage = !empty($publication['cover_image_url'])
 $jsonLd = [
     '@context' => 'https://schema.org',
     '@type' => 'Article',
-    'headline' => $publication['title'],
-    'description' => mb_substr(strip_tags($publication['annotation']), 0, 300),
+    'headline' => $seoTitle,
+    'description' => mb_substr(strip_tags($seoDescription), 0, 300),
     'url' => SITE_URL . '/blog/' . $publication['slug'] . '/',
     'image' => $ogImage,
     'author' => [

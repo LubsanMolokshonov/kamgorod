@@ -6,12 +6,17 @@
  *   php scripts/add-blog-post.php --title="Заголовок" --content-file=path/to/article.html [опции]
  *
  * Опции:
- *   --title=            (обязательно) заголовок статьи
+ *   --title=            (обязательно) заголовок статьи (H1 на странице)
  *   --content-file=     (обязательно) путь к файлу с HTML-содержимым статьи
- *   --annotation=       краткое описание (если не задано — берётся начало content)
+ *   --annotation=       краткое описание для карточки в каталоге (если не задано — берётся начало content)
  *   --type=             slug типа публикации (methodology|article|research|program|
  *                       presentation|masterclass|project|experience), по умолчанию article
  *   --slug=             URL-слаг (если не задан — генерируется из title)
+ *   --tags=             список slug тегов через запятую (см. publication_tags), например mathematics,history-social
+ *   --meta-title=       SEO <title> (если не задан — используется title)
+ *   --meta-description= SEO meta description (если не задан — используется annotation)
+ *   --noindex           закрыть статью от индексации (noindex,nofollow + исключение из sitemap),
+ *                       использовать, если по теме не набралось содержательного семантического ядра
  */
 
 if (php_sapi_name() !== 'cli') {
@@ -32,14 +37,22 @@ function blogPostOpt(string $name, ?string $default = null): ?string {
     return $default;
 }
 
+function blogPostFlag(string $name): bool {
+    return in_array("--{$name}", $GLOBALS['argv'], true);
+}
+
 $title = blogPostOpt('title');
 $contentFile = blogPostOpt('content-file');
 $typeSlug = blogPostOpt('type', 'article');
 $slug = blogPostOpt('slug');
 $annotation = blogPostOpt('annotation');
+$tagsOpt = blogPostOpt('tags');
+$metaTitle = blogPostOpt('meta-title');
+$metaDescription = blogPostOpt('meta-description');
+$noindex = blogPostFlag('noindex');
 
 if (!$title || !$contentFile) {
-    fwrite(STDERR, "Usage: php scripts/add-blog-post.php --title=\"...\" --content-file=path/to/article.html [--annotation=\"...\"] [--type=article] [--slug=custom-slug]\n");
+    fwrite(STDERR, "Usage: php scripts/add-blog-post.php --title=\"...\" --content-file=path/to/article.html [--annotation=\"...\"] [--type=article] [--slug=custom-slug] [--tags=slug1,slug2] [--meta-title=\"...\"] [--meta-description=\"...\"] [--noindex]\n");
     exit(1);
 }
 
@@ -69,6 +82,21 @@ if (!$author) {
     exit(1);
 }
 
+$tagIds = [];
+if ($tagsOpt !== null) {
+    $tagSlugs = array_filter(array_map('trim', explode(',', $tagsOpt)));
+    foreach ($tagSlugs as $tagSlug) {
+        $tagRow = $db->prepare("SELECT id FROM publication_tags WHERE slug = ?");
+        $tagRow->execute([$tagSlug]);
+        $tag = $tagRow->fetch(PDO::FETCH_ASSOC);
+        if (!$tag) {
+            fwrite(STDERR, "Warning: unknown tag slug '{$tagSlug}', skipped\n");
+            continue;
+        }
+        $tagIds[] = $tag['id'];
+    }
+}
+
 $publicationObj = new Publication($db);
 $id = $publicationObj->create([
     'user_id' => $author['id'],
@@ -77,9 +105,16 @@ $id = $publicationObj->create([
     'content' => $content,
     'publication_type_id' => $type['id'],
     'slug' => $slug ?: $publicationObj->generateSlug($title),
+    'meta_title' => $metaTitle,
+    'meta_description' => $metaDescription,
+    'noindex' => $noindex ? 1 : 0,
     'source' => 'blog',
     'status' => 'published',
+    'tag_ids' => $tagIds,
 ]);
 
 echo "Created blog post #{$id}\n";
 echo "URL: /blog/" . $publicationObj->getById($id)['slug'] . "/\n";
+if ($noindex) {
+    echo "NOTE: published with noindex — excluded from sitemap and search indexing.\n";
+}
