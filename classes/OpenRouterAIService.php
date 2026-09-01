@@ -124,7 +124,11 @@ class OpenRouterAIService
         if ($json === null) {
             $retryOpts = $opts;
             $retryOpts['temperature'] = 0.2;
-            $retryOpts['max_tokens'] = max((int)($opts['max_tokens'] ?? 4000), 8000);
+            // Короткие интерактивные сценарии могут явно ограничить повтор тем же
+            // бюджетом; длинные генераторы сохраняют прежний безопасный минимум 8000.
+            $retryOpts['max_tokens'] = isset($opts['retry_max_tokens'])
+                ? max(1, (int)$opts['retry_max_tokens'])
+                : max((int)($opts['max_tokens'] ?? 4000), 8000);
             $retryMessages = $messages;
             $retryMessages[] = [
                 'role' => 'system',

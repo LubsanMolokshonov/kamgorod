@@ -65,6 +65,7 @@ services:
       - ADMIN_ALERT_EMAIL=${ADMIN_ALERT_EMAIL:-info@fgos.pro}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - TELEGRAM_ALERT_CHAT_ID=${TELEGRAM_ALERT_CHAT_ID:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
     volumes:
       - ./ai-consultant:/var/www/html
       - ./classes:/var/www/shared/classes:ro
@@ -73,6 +74,27 @@ services:
       - ./logs:/var/www/html/logs
     networks:
       - pedagogy_network
+    restart: unless-stopped
+
+  # Быстрая обработка очереди автоответов Telegram/MAX (webhook только ставит события в БД).
+  messenger-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pedagogy_messenger_worker
+    command: php /var/www/html/scripts/process-messenger-queue.php --loop --send
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_NAME=pedagogy_platform
+      - DB_USER=pedagogy_user
+      - DB_PASS=${DB_PASS:-pedagogy_pass}
+    networks:
+      - pedagogy_network
+      - mail_network
     restart: unless-stopped
 
   # phpMyAdmin (optional, for database management)
