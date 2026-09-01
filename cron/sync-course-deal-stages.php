@@ -158,12 +158,18 @@ try {
             $isWon  = $isOurFunnel && ($semantic === 'S' || ($category === $COURSE_PIPELINE && in_array($stageId, $PAID_STAGES, true)));
             $isLost = $isOurFunnel && ($semantic === 'F' || isset($loseStages[$stageId]));
 
+            // Провал сделки закрываем только для заявок, которые ещё «в работе».
+            // Заявку в статусе 'enrolled' (менеджер уже завёл человека на обучение)
+            // не отменяем автоматически: LOSE в CRM может быть переносом сделки, а
+            // 'cancelled' убирает курс из личного кабинета и гасит email-цепочку.
+            $lostApplies = in_array($r['status'], ['new', 'installment_requested'], true);
+
             $statusChange = null;
             if ($isWon && $r['status'] !== 'paid') {
                 $update['status'] = 'paid';
                 $statusChange = 'paid';
                 $paid++;
-            } elseif ($isLost && $r['status'] !== 'cancelled') {
+            } elseif ($isLost && $lostApplies && $r['status'] !== 'cancelled') {
                 $update['status'] = 'cancelled';
                 $statusChange = 'cancelled';
                 $lost++;
