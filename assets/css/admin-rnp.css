@@ -181,3 +181,14 @@ thead .rnp-pivot-col-week {
 .rnp-chart-box { background: #fff; border: 1px solid #eef0f3; border-radius: 8px; padding: 16px; min-height: 260px; display: flex; flex-direction: column; }
 .rnp-chart-box h3 { margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #374151; }
 .rnp-chart-box canvas { flex: 1; max-height: 260px; }
+
+/* Информационная строка «в т.ч. Оффлайн CRM» — часть «Курсы Другое», показанная
+   отдельно для сверки со сделками Bitrix; в суммы отчёта не входит. */
+.rnp-pivot-row.rnp-pivot-info-group td {
+    background: #fbfaf5;
+    color: #6b7280;
+    font-style: italic;
+}
+.rnp-pivot-row.rnp-pivot-info-group .rnp-pivot-group-label {
+    font-style: normal;
+}

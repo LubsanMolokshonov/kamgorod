@@ -158,6 +158,15 @@ $groups = [
         'cost_field' => 'other_course_cost',
     ],
     [
+        // Информационная строка: та же выручка, что уже сидит внутри «Курсы Другое»,
+        // но показанная отдельно — чтобы сверять РНП со сделками Bitrix. В суммы
+        // не входит (канал 'crm' не участвует ни в одном rnpSumChannels).
+        'key' => 'offline_crm', 'label' => 'в т.ч. Оффлайн CRM', 'is_sum' => false,
+        'channels' => [['crm','course']],
+        'cost_field' => null,
+        'is_info' => true,
+    ],
+    [
         'key' => 'total_direct', 'label' => 'ИТОГО ДИРЕКТ', 'is_sum' => true,
         'channels' => [['direct','portal'],['direct','course']],
         'cost_field' => null,
@@ -182,6 +191,11 @@ $metrics = [
 
 // Флаг «в группе есть курсовый канал» — для отображения метрик «Заявки / Цена заявки».
 foreach ($groups as &$__grp) {
+    // У информационной строки «Оффлайн CRM» заявок нет — прячем курсовые метрики.
+    if (!empty($__grp['is_info'])) {
+        $__grp['has_course'] = false;
+        continue;
+    }
     $__grp['has_course'] = false;
     foreach ($__grp['channels'] as [$__ch, $__sec]) {
         if ($__sec === 'course') { $__grp['has_course'] = true; break; }
@@ -325,7 +339,7 @@ include __DIR__ . '/../includes/header.php';
                     $isProfit = ($metric['key'] === 'profit');
                     $isEditable = !empty($metric['editable']) && $grp['cost_field'] !== null;
                 ?>
-                <tr class="rnp-pivot-row<?= $isFirst ? ' rnp-pivot-group-first' : '' ?><?= $isLast ? ' rnp-pivot-group-last' : '' ?><?= $grp['is_sum'] ? ' rnp-pivot-sum-group' : '' ?>">
+                <tr class="rnp-pivot-row<?= $isFirst ? ' rnp-pivot-group-first' : '' ?><?= $isLast ? ' rnp-pivot-group-last' : '' ?><?= $grp['is_sum'] ? ' rnp-pivot-sum-group' : '' ?><?= !empty($grp['is_info']) ? ' rnp-pivot-info-group' : '' ?>">
                     <?php if ($isFirst): ?>
                     <td class="rnp-pivot-sticky rnp-pivot-sticky-group rnp-pivot-group-label" rowspan="<?= $metricCount ?>">
                         <?= htmlspecialchars($grp['label']) ?>

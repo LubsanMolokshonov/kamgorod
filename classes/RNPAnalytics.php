@@ -104,6 +104,7 @@ class RNPAnalytics
 
         $report = [];
         $grandRows = $this->blankCellMatrix();
+        $grandOffline = ['revenue' => 0.0, 'payments' => 0.0, 'created' => 0.0];
 
         foreach ($periods as $period) {
             $rows = $this->blankCellMatrix();
@@ -176,6 +177,17 @@ class RNPAnalytics
 
             // Расчёт метрик и Итого по периоду
             $rows = $this->computeMetrics($rows);
+            // Информационная строка «в т.ч. Оффлайн CRM»: та же выручка, что уже
+            // доклеена в «Другое × Курсы», но показанная отдельно — чтобы сверять
+            // РНП со сделками Bitrix глазами. В суммы отчёта НЕ входит (канал 'crm'
+            // не перечислен в CHANNELS, computeMetrics его не трогает).
+            $offCell = $offline['periods'][$period['key']] ?? null;
+            $rows['cells']['crm']['course'] = $this->offlineCell($offCell);
+            if ($offCell) {
+                $grandOffline['revenue']  += (float)$offCell['revenue'];
+                $grandOffline['payments'] += (float)$offCell['payments'];
+                $grandOffline['created']  += (float)$offCell['created'];
+            }
             $report[] = [
                 'key' => $period['key'],
                 'label' => $period['label'],
@@ -187,6 +199,7 @@ class RNPAnalytics
         }
 
         $grand = $this->computeMetrics($grandRows);
+        $grand['cells']['crm']['course'] = $this->offlineCell($grandOffline);
 
         return [
             'periods' => $report,
@@ -198,6 +211,7 @@ class RNPAnalytics
                 'count'     => $offline['count'],
                 'revenue'   => $offline['revenue'],
                 'deals'     => $offline['deals'],
+                'periods'   => $offline['periods'],
             ],
         ];
     }
@@ -722,6 +736,39 @@ class RNPAnalytics
             WHEN LOWER($col) LIKE 'vk%' THEN 'vk'
             ELSE 'other'
         END";
+    }
+
+    /**
+     * Ячейка информационной строки «в т.ч. Оффлайн CRM» (канал 'crm' × 'course').
+     *
+     * Дублирует часть «Другое × Курсы», поэтому ни в какие суммы не включается —
+     * в admin/rnp/index.php эта группа выводится отдельной строкой и не входит
+     * ни в один rnpSumChannels().
+     *
+     * @param array{revenue: float, payments: float, created: float}|null $off
+     */
+    private function offlineCell(?array $off): array
+    {
+        $revenue  = $off ? (float)$off['revenue'] : 0.0;
+        $payments = $off ? (float)$off['payments'] : 0.0;
+        $created  = $off ? (float)$off['created'] : 0.0;
+
+        return [
+            'channel' => 'crm',
+            'section' => 'course',
+            'cost' => 0.0,
+            'revenue' => $revenue,
+            'payments' => $payments,
+            'created_orders' => $created,
+            'paid_orders' => $payments,
+            'leads' => 0.0,
+            'cpa' => null,          // расхода у оффлайн-сделок нет
+            'avg_check' => $payments > 0 ? $revenue / $payments : null,
+            'profit' => $revenue,
+            'romi' => null,
+            'conversion' => $created > 0 ? $payments / $created : null,
+            'lead_cost' => null,
+        ];
     }
 
     /**
