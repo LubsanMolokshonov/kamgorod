@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -q 'git commit'; then cd \"$PROJECT_DIR\" && STAGED=$(git diff --cached --name-only 2>/dev/null || true); if echo \"$STAGED\" | grep -qx '.env'; then echo 'BLOCKED: .env staged! Run: git reset HEAD .env'; exit 2; fi; for f in $(echo \"$STAGED\" | grep '.php$'); do if [ -f \"$f\" ] && grep -qE 'var_dump|print_r' \"$f\"; then echo \"BLOCKED: debug code in $f\"; exit 2; fi; done; for f in $(echo \"$STAGED\" | grep '.js$'); do if [ -f \"$f\" ] && grep -qE 'console.log' \"$f\"; then echo \"BLOCKED: console.log in $f\"; exit 2; fi; done; fi",
+            "statusMessage": "Pre-commit checks"
+          },
+          {
+            "type": "command",
+            "command": "CMD=\"$TOOL_INPUT\"; if echo \"$CMD\" | grep -qE 'git[[:space:]]+push'; then if echo \"$CMD\" | grep -qE '\\-\\-force|[[:space:]]\\-f([[:space:]]|$)|push.*[[:space:]](main|master)([[:space:]]|$|:)'; then echo 'CONFIRM: push to main/master или force-push. Подтвердите явно.'; exit 2; fi; fi",
+            "statusMessage": "Protect main from push"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(echo \"$TOOL_INPUT\" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get(\"file_path\",\"\"))' 2>/dev/null); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -q '.php$' && [ -f \"$FILE\" ]; then OUT=$(php -l \"$FILE\" 2>&1); if [ $? -ne 0 ]; then echo \"PHP syntax error: $OUT\"; exit 2; fi; fi",
+            "statusMessage": "PHP syntax check"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$PROJECT_DIR\" 2>/dev/null && CHANGED=$( (git diff --name-only HEAD 2>/dev/null; git diff --name-only --cached 2>/dev/null) ) && if echo \"$CHANGED\" | grep -qE '^(ajax|api|admin)/'; then echo 'Reminder: затронуты ajax/, api/ или admin/. Прогоните /check-security или агента php-security-reviewer перед коммитом.'; fi; exit 0",
+            "statusMessage": "Security reminder"
+          }
+        ]
+      }
+    ]
+  }
+}

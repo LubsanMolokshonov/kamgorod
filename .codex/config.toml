@@ -1,0 +1,27 @@
+[mcp_servers.mysql]
+command = "npx"
+args = [
+    "-y",
+    "@benborla29/mcp-server-mysql",
+]
+
+[mcp_servers.mysql.env]
+MYSQL_HOST = "127.0.0.1"
+MYSQL_PORT = "3306"
+MYSQL_USER = "pedagogy_user"
+MYSQL_PASS = "pedagogy_pass"
+MYSQL_DB = "pedagogy_platform"
+
+[mcp_servers.mysql-prod]
+command = "npx"
+args = [
+    "-y",
+    "@benborla29/mcp-server-mysql",
+]
+
+[mcp_servers.mysql-prod.env]
+MYSQL_HOST = "127.0.0.1"
+MYSQL_PORT = "3307"
+MYSQL_USER = "root"
+MYSQL_PASS = "IfZfb84WYtwlz8Y395UuQHgaLzVG"
+MYSQL_DB = "pedagogy_platform"
