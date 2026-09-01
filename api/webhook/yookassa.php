@@ -485,7 +485,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                             continue;
                         }
 
-                        $paidStage = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:UC_8RO3WZ';
+                        $paidStage = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:WON';
 
                         if (empty($enrollment['bitrix_lead_id'])) {
                             // Сделка ещё не создана — создаём с этапом "Оплата на сайте"

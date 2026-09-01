@@ -85,12 +85,24 @@ if (!defined('BITRIX24_COURSE_PIPELINE_ID')) define('BITRIX24_COURSE_PIPELINE_ID
 // выручку (рассрочки/счета), отделяя от оффлайн-бизнеса остального холдинга.
 // (BITRIX24_CDO_PIPELINE_ID=4 определён ниже, в блоке мониторинга ЦДО.)
 if (!defined('BITRIX24_FGOS_SOURCE_IDS')) define('BITRIX24_FGOS_SOURCE_IDS', $_ENV['BITRIX24_FGOS_SOURCE_IDS'] ?? '83,87');
+// Источник, который сайт проставляет создаваемым сделкам (курсы и консультации).
+// Раньше ставился 'WEB', а 83 дописывал робот/менеджер — сделки, до которых робот
+// не дошёл, выпадали из всех отчётов по оффлайн-выручке. Теперь метка ставится сразу.
+if (!defined('BITRIX24_FGOS_SOURCE_ID')) {
+    define('BITRIX24_FGOS_SOURCE_ID', $_ENV['BITRIX24_FGOS_SOURCE_ID']
+        ?? trim(explode(',', (string)BITRIX24_FGOS_SOURCE_IDS)[0] ?: '83'));
+}
 if (!defined('BITRIX24_COURSE_STAGE_NEW')) define('BITRIX24_COURSE_STAGE_NEW', 'C108:NEW');
 // Стадия успешно оплаченной сделки — воронка «ФГОС-Практикум (Курсы)»,
-// этап «Оплаченная сделка» (C108:UC_8RO3WZ). Раньше использовался C108:WON
-// («Сделка успешна»); оплаченные сделки переведены в отдельный этап.
+// этап «Сделка успешна» (C108:WON). С 26.08.2026 отдельный этап «Оплаченная
+// сделка» (C108:UC_8RO3WZ) выводится из использования — новые оплаты сразу
+// попадают в WON. Старый этап остаётся в LEGACY-константе, чтобы синхронизация
+// корректно распознавала уже созданные сделки.
 if (!defined('BITRIX24_COURSE_STAGE_PAID')) {
-    define('BITRIX24_COURSE_STAGE_PAID', $_ENV['BITRIX24_COURSE_STAGE_PAID'] ?? 'C108:UC_8RO3WZ');
+    define('BITRIX24_COURSE_STAGE_PAID', $_ENV['BITRIX24_COURSE_STAGE_PAID'] ?? 'C108:WON');
+}
+if (!defined('BITRIX24_COURSE_STAGE_PAID_LEGACY')) {
+    define('BITRIX24_COURSE_STAGE_PAID_LEGACY', 'C108:UC_8RO3WZ');
 }
 
 // Bitrix24: стадии email-цепочки курсов (pipeline 108)
