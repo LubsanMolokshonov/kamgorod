@@ -36,6 +36,14 @@
  *  --start=DATE   явная дата старта (YYYY-MM-DD)
  *  --no-ai        не вызывать ИИ (все отзывы только со звёздами) — для быстрого теста
  *  --dry-run      всё посчитать и показать сводку, но не писать в БД
+ *  --dump-plan=F  записать план (JSON) в файл и выйти, ничего не генерируя и не вставляя
+ *  --load-plan=F  вставить в очередь готовый план из файла (с уже заполненными текстами)
+ *
+ * Тексты пишет ИИ через OpenRouter. С прод-сервера OpenRouter и Yandex Cloud
+ * отдают 403 (блокировка по IP), поэтому боевой сценарий такой:
+ *   1) на проде:    seed-reviews.php ... --dump-plan=/tmp/plan.json
+ *   2) на машине с доступом к ИИ: scripts/fill-review-texts.py /tmp/plan.json
+ *   3) на проде:    seed-reviews.php --load-plan=/tmp/plan.filled.json
  *
  * Запуск:
  *   docker exec pedagogy_web php /var/www/html/scripts/seed-reviews.php --days=365 --per-day=5
@@ -65,6 +73,8 @@ $FORCE   = in_array('--force', $argv, true);
 $APPEND  = in_array('--append', $argv, true);
 $NO_AI   = in_array('--no-ai', $argv, true);
 $DRY     = in_array('--dry-run', $argv, true);
+$DUMP    = (string)$argOf('dump-plan', '');
+$LOAD    = (string)$argOf('load-plan', '');
 $DAYS    = max(1, (int)$argOf('days', 365));
 $PER_DAY = (float)$argOf('per-day', 5);
 $START   = (string)$argOf('start', '');
@@ -75,6 +85,33 @@ if ($PER_DAY <= 0) {
 }
 
 $dbw = new Database($db);
+
+// ── Режим --load-plan: вставить готовый план и выйти ──────────────────
+if ($LOAD !== '') {
+    $raw = @file_get_contents($LOAD);
+    if ($raw === false) { fwrite(STDERR, "Не читается файл плана: {$LOAD}\n"); exit(1); }
+    $plan = json_decode($raw, true);
+    if (!is_array($plan) || !isset($plan['rows'])) { fwrite(STDERR, "Некорректный JSON плана\n"); exit(1); }
+
+    $ins = 0; $withText = 0; $hist = [3 => 0, 4 => 0, 5 => 0]; $perType = [];
+    foreach ($plan['rows'] as $row) {
+        $text = (isset($row['review_text']) && trim((string)$row['review_text']) !== '')
+            ? mb_substr(trim((string)$row['review_text']), 0, 2000) : null;
+        $dbw->execute(
+            "INSERT INTO review_seed_queue (entity_type, entity_id, author_name, rating, review_text, scheduled_at)
+             VALUES (?, ?, ?, ?, ?, ?)",
+            [$row['entity_type'], (int)$row['entity_id'], $row['author_name'], (int)$row['rating'], $text, $row['scheduled_at']]
+        );
+        $ins++;
+        if ($text !== null) $withText++;
+        $hist[(int)$row['rating']] = ($hist[(int)$row['rating']] ?? 0) + 1;
+        $perType[$row['entity_type']] = ($perType[$row['entity_type']] ?? 0) + 1;
+    }
+    echo "Загружено из плана: {$ins} строк (с текстом: {$withText}).\n";
+    foreach ($perType as $t => $c) echo "  {$t}: {$c}\n";
+    echo "Оценки — 5★: {$hist[5]}, 4★: {$hist[4]}, 3★: {$hist[3]}\n";
+    exit(0);
+}
 
 // ── Параметры наполнения ──────────────────────────────────────────────
 $HOUR_FROM       = 8;   // окно публикации, UTC (= 11:00 МСК)
@@ -335,6 +372,33 @@ foreach ($dayOf as $i => $day) {
 $total = count($rows);
 echo "Запланировано отзывов: {$total}" . ($dropped ? " (пропущено из-за лимитов: {$dropped})" : '') . "\n";
 if ($total === 0) { fwrite(STDERR, "Нечего писать. Прерываю.\n"); exit(1); }
+
+// ── Режим --dump-plan: выгрузить план для внешней генерации текстов ───
+if ($DUMP !== '') {
+    $out = ['generated_at' => date('c'), 'rows' => []];
+    foreach ($rows as $row) {
+        $out['rows'][] = [
+            'entity_type'  => $row['entity_type'],
+            'entity_id'    => $row['entity_id'],
+            'title'        => $row['title'],
+            'label'        => $row['label'],
+            'rating'       => $row['rating'],
+            'author_name'  => $row['author_name'],
+            'scheduled_at' => $row['scheduled_at'],
+            'want_text'    => (bool)$row['has_text'],
+            'length_hint'  => $row['len']['hint'],
+            'review_text'  => null,
+        ];
+    }
+    if (@file_put_contents($DUMP, json_encode($out, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)) === false) {
+        fwrite(STDERR, "Не записывается файл плана: {$DUMP}\n");
+        exit(1);
+    }
+    $wantText = count(array_filter($out['rows'], fn($r) => $r['want_text']));
+    echo "План выгружен: {$DUMP} ({$total} строк, из них с текстом: {$wantText}).\n";
+    echo "Дальше: scripts/fill-review-texts.py на машине с доступом к OpenRouter, затем --load-plan.\n";
+    exit(0);
+}
 
 // ── Генерация текстов через ИИ (батчами по типу) ──────────────────────
 $textJobs = [];
