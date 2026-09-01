@@ -100,7 +100,26 @@ try {
     }
 
     $remaining = (int)($dbw->queryOne("SELECT COUNT(*) c FROM review_seed_queue WHERE published_review_id IS NULL")['c'] ?? 0);
+    $lastAt = $dbw->queryOne("SELECT MAX(scheduled_at) s FROM review_seed_queue WHERE published_review_id IS NULL")['s'] ?? null;
     echo date('Y-m-d H:i:s') . " - Done. Published: {$published}, Skipped: {$skipped}, Remaining in queue: {$remaining}\n";
+
+    // Очередь конечная: без предупреждения дрип однажды молча кончается
+    // (так и вышло 25.07.2026 — отзывы перестали появляться на месяц).
+    // Алертим раз в сутки, когда запаса осталось меньше 14 дней.
+    $daysLeft = $lastAt ? (int)floor((strtotime($lastAt) - time()) / 86400) : 0;
+    if ($daysLeft < 14 && (int)date('G') === 9) {
+        TelegramNotifier::instance($db)->alert(
+            'seeded_reviews_queue_low',
+            '[Отзывы] Очередь сидовых отзывов заканчивается',
+            [
+                'Осталось строк'   => $remaining,
+                'Запас в днях'     => $daysLeft,
+                'Последний слот'   => $lastAt ?? '—',
+                'Что делать'       => 'docker exec pedagogy_web php /var/www/html/scripts/seed-reviews.php --append --days=365 --per-day=5',
+            ],
+            'warning'
+        );
+    }
 
 } catch (Throwable $e) {
     echo date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n";

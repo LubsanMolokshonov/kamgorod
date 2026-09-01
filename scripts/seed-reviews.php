@@ -1,30 +1,48 @@
 #!/usr/bin/env php
 <?php
 /**
- * Генератор сидовых отзывов (однократный запуск).
+ * Генератор сидовых отзывов — наполняет очередь review_seed_queue на месяцы вперёд.
  *
- * Наполняет очередь review_seed_queue предсгенерированными отзывами так, чтобы
- * у каждого активного мероприятия со временем появилось 1–2 отзыва. Сами отзывы
- * НЕ публикуются здесь — их постепенно (пару раз в день, по разным страницам)
- * переносит в таблицу reviews cron/publish-seeded-reviews.php. Дрип маскирует
- * наполнение от антиспам-эвристик Google (важна скорость на ОДНОЙ странице).
+ * Сами отзывы НЕ публикуются здесь: их постепенно переносит в таблицу reviews
+ * cron/publish-seeded-reviews.php (ежечасно, публикует «дозревшие» строки).
+ * Дрип маскирует наполнение от антиспам-эвристик Google — важна скорость
+ * появления отзывов на ОДНОЙ странице, а не суммарный объём по сайту.
  *
  * Что делает:
  *  - берёт активные сущности 5 типов (конкурсы/олимпиады/курсы/вебинары/публикации);
- *  - каждой — 1 отзыв, ~40% — второй (разнесён ≥10 дней, на странице не бывает 2/день);
- *  - имена авторов — реальные «Фамилия И. О.» из базы (users + webinar_registrations);
+ *  - раскладывает --per-day отзывов в день на --days дней вперёд (день выбирается
+ *    случайно для каждого отзыва, поэтому суточное число «дышит» вокруг среднего,
+ *    как настоящий поток, а не ровно N штук каждый день);
+ *  - сущность под каждый отзыв выбирается взвешенно: доля по типу задана в
+ *    $TYPE_SHARE, внутри типа вес = 1 + ln(1 + популярность), так что у ходовых
+ *    продуктов отзывов больше — распределение степенное, а не «всем поровну»;
+ *  - на одну сущность не больше MAX_PER_ENTITY отзывов за прогон и не чаще
+ *    MIN_GAP_DAYS дней;
+ *  - имена авторов — реальные «Фамилия И. О.» из базы, каждое имя не более 2 раз
+ *    с учётом уже опубликованных отзывов;
  *  - оценки 65% 5★ / 28% 4★ / 7% 3★ (средняя ~4.5, не «все пятёрки»);
- *  - ~50% отзывов с текстом (ИИ, OpenRouter), ~50% только звёзды;
- *  - расписание scheduled_at равномерно по ~45 дням, 2 слота/день.
+ *  - ~50% отзывов с текстом (ИИ, OpenRouter), остальные — только звёзды;
+ *    длины текстов разные: короткие / средние / развёрнутые;
+ *  - модель для текста чередуется между несколькими — чтобы не было единого
+ *    узнаваемого стиля на весь сайт;
+ *  - время публикации — случайное в окне 08:00–18:59 UTC (11:00–21:59 МСК).
  *
  * Флаги:
- *  --force   очистить очередь и сгенерировать заново
- *  --no-ai   не вызывать ИИ (все отзывы только со звёздами) — для быстрого теста
+ *  --days=N       горизонт планирования в днях (по умолчанию 365)
+ *  --per-day=N    среднее число отзывов в сутки суммарно по всем направлениям (по умолчанию 5)
+ *  --append       дополнить очередь, начиная со следующего дня после последней
+ *                 запланированной строки (режим «продлить на ещё год»)
+ *  --force        очистить НЕопубликованный хвост очереди и сгенерировать заново
+ *  --start=DATE   явная дата старта (YYYY-MM-DD)
+ *  --no-ai        не вызывать ИИ (все отзывы только со звёздами) — для быстрого теста
+ *  --dry-run      всё посчитать и показать сводку, но не писать в БД
  *
- * Запуск:  docker exec pedagogy_web php /var/www/html/scripts/seed-reviews.php
+ * Запуск:
+ *   docker exec pedagogy_web php /var/www/html/scripts/seed-reviews.php --days=365 --per-day=5
  */
 
 if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
     die('CLI only');
 }
 set_time_limit(0);
@@ -36,46 +54,111 @@ require_once BASE_PATH . '/config/database.php';
 require_once BASE_PATH . '/classes/Database.php';
 require_once BASE_PATH . '/classes/OpenRouterAIService.php';
 
-$FORCE = in_array('--force', $argv, true);
-$NO_AI = in_array('--no-ai', $argv, true);
+// ── Разбор аргументов ─────────────────────────────────────────────────
+$argOf = function (string $name, $default) use ($argv) {
+    foreach ($argv as $a) {
+        if (strpos($a, "--{$name}=") === 0) return substr($a, strlen($name) + 3);
+    }
+    return $default;
+};
+$FORCE   = in_array('--force', $argv, true);
+$APPEND  = in_array('--append', $argv, true);
+$NO_AI   = in_array('--no-ai', $argv, true);
+$DRY     = in_array('--dry-run', $argv, true);
+$DAYS    = max(1, (int)$argOf('days', 365));
+$PER_DAY = (float)$argOf('per-day', 5);
+$START   = (string)$argOf('start', '');
+
+if ($PER_DAY <= 0) {
+    fwrite(STDERR, "--per-day должен быть больше нуля\n");
+    exit(1);
+}
 
 $dbw = new Database($db);
 
 // ── Параметры наполнения ──────────────────────────────────────────────
-$TARGET_DAYS        = 45;        // окно раската
-$SLOT_HOURS         = [11, 18];  // 2 слота в день
-$SECOND_REVIEW_PROB = 40;        // % сущностей со 2-м отзывом
-$TEXT_PROB          = 50;        // % отзывов с текстом
-$MIN_GAP_DAYS       = 10;        // минимум дней между двумя отзывами одной сущности
-$AI_BATCH           = 10;        // сущностей на один вызов ИИ
-$AI_MODEL           = 'google/gemini-2.5-flash'; // дешёвая быстрая модель OpenRouter (хороший русский)
+$HOUR_FROM       = 8;   // окно публикации, UTC (= 11:00 МСК)
+$HOUR_TO         = 18;  // включительно (= 21:59 МСК)
+$MAX_PER_ENTITY  = 8;   // не больше N отзывов на одну сущность за прогон
+$MIN_GAP_DAYS    = 21;  // минимум дней между двумя отзывами одной сущности
+$TEXT_PROB       = 50;  // % отзывов с текстом
+$AI_BATCH        = 10;  // сущностей на один вызов ИИ
+$NAME_MAX_USES   = 2;   // сколько раз одно имя может встретиться на сайте
 
-// тип => [таблица, условие активности, человекочитаемая метка для ИИ]
-$TYPES = [
-    'competition' => ['competitions', 'is_active = 1',                       'конкурс для педагогов'],
-    'olympiad'    => ['olympiads',    'is_active = 1',                       'олимпиада'],
-    'course'      => ['courses',      'is_active = 1',                       'курс повышения квалификации / профпереподготовки'],
-    'webinar'     => ['webinars',     "is_active = 1 AND status <> 'draft'", 'вебинар'],
-    'publication' => ['publications', "status = 'published'",                'публикация методического материала в журнале'],
+// Модели ротируем — единый стиль на 1800 отзывов выглядит синтетически.
+$AI_MODELS = [
+    'google/gemini-2.5-flash',
+    'openai/gpt-4o-mini',
+    'qwen/qwen-2.5-72b-instruct',
 ];
 
-// ── Идемпотентность ───────────────────────────────────────────────────
-$existing = (int)($dbw->queryOne("SELECT COUNT(*) c FROM review_seed_queue")['c'] ?? 0);
-if ($existing > 0) {
-    if (!$FORCE) {
-        fwrite(STDERR, "В review_seed_queue уже {$existing} строк. Запусти с --force чтобы перегенерировать.\n");
-        exit(1);
+// Профили длины текста: [доля %, минимум знаков, максимум знаков, подсказка ИИ]
+$LENGTH_PROFILES = [
+    ['share' => 35, 'min' => 40,  'max' => 95,  'hint' => 'одно короткое предложение, 40–90 знаков'],
+    ['share' => 45, 'min' => 90,  'max' => 210, 'hint' => 'два предложения, 100–200 знаков'],
+    ['share' => 20, 'min' => 200, 'max' => 420, 'hint' => 'развёрнутый отзыв 3–4 предложения, 250–400 знаков'],
+];
+
+// Доля отзывов по типам продукта (в сумме 100).
+$TYPE_SHARE = [
+    'competition' => 30,
+    'olympiad'    => 25,
+    'course'      => 20,
+    'publication' => 20,
+    'webinar'     => 5,
+];
+
+// тип => [таблица, условие активности, метка для ИИ, SQL популярности (id => cnt) | null]
+$TYPES = [
+    'competition' => ['competitions', 'is_active = 1', 'конкурс для педагогов',
+        'SELECT competition_id id, COUNT(*) cnt FROM registrations GROUP BY competition_id'],
+    'olympiad'    => ['olympiads', 'is_active = 1', 'олимпиада',
+        'SELECT olympiad_id id, COUNT(*) cnt FROM olympiad_registrations GROUP BY olympiad_id'],
+    'course'      => ['courses', 'is_active = 1', 'курс повышения квалификации / профпереподготовки', null],
+    'webinar'     => ['webinars', "is_active = 1 AND status <> 'draft'", 'вебинар',
+        'SELECT webinar_id id, COUNT(*) cnt FROM webinar_registrations GROUP BY webinar_id'],
+    'publication' => ['publications', "status = 'published'", 'публикация методического материала в журнале',
+        'SELECT id, views_count cnt FROM publications'],
+];
+
+// ── Точка старта и режим ──────────────────────────────────────────────
+$queueStats = $dbw->queryOne(
+    "SELECT COUNT(*) c, SUM(published_review_id IS NULL) pending, MAX(scheduled_at) last_at FROM review_seed_queue"
+);
+$pending = (int)($queueStats['pending'] ?? 0);
+$lastAt  = $queueStats['last_at'] ?? null;
+
+if ($FORCE) {
+    if (!$DRY) {
+        $dbw->execute("DELETE FROM review_seed_queue WHERE published_review_id IS NULL");
     }
-    echo "--force: очищаю очередь ({$existing} строк)...\n";
-    $dbw->execute("DELETE FROM review_seed_queue");
+    echo "--force: неопубликованный хвост очереди удалён ({$pending} строк).\n";
+    $pending = 0;
+    $lastAt = null;
+} elseif ($pending > 0 && !$APPEND) {
+    fwrite(STDERR, "В очереди ещё {$pending} неопубликованных строк (до {$lastAt}).\n"
+        . "Запусти с --append чтобы продлить график, или с --force чтобы перегенерировать хвост.\n");
+    exit(1);
 }
+
+if ($START !== '') {
+    $startTs = strtotime($START . ' 00:00:00');
+    if ($startTs === false) { fwrite(STDERR, "Некорректный --start\n"); exit(1); }
+} elseif ($APPEND && $lastAt !== null && strtotime($lastAt) > time()) {
+    $startTs = strtotime(date('Y-m-d', strtotime($lastAt)) . ' 00:00:00 +1 day');
+} else {
+    $startTs = strtotime('tomorrow');
+}
+
+$TOTAL = (int)round($DAYS * $PER_DAY);
+echo "Горизонт: {$DAYS} дн. с " . date('Y-m-d', $startTs) . ", темп {$PER_DAY}/день → {$TOTAL} отзывов.\n";
 
 // ── Пул имён авторов: «Фамилия И. О.» из реальной базы ────────────────
 echo "Загружаю пул имён...\n";
 $fioRegex = '^[А-ЯЁ][а-яё]+ [А-ЯЁ][а-яё]+ [А-ЯЁ][а-яё]+$';
 $rawNames = $dbw->query(
     "SELECT full_name FROM (
-        SELECT DISTINCT full_name FROM users               WHERE full_name REGEXP ?
+        SELECT DISTINCT full_name FROM users                 WHERE full_name REGEXP ?
         UNION
         SELECT DISTINCT full_name FROM webinar_registrations WHERE full_name REGEXP ?
      ) t",
@@ -94,16 +177,30 @@ if (count($namePool) < 100) {
     fwrite(STDERR, "Слишком мало имён в пуле (" . count($namePool) . "). Прерываю.\n");
     exit(1);
 }
-echo "Имён в пуле: " . count($namePool) . "\n";
 
-// Раздатчик имён: каждое имя не более 2 раз за весь прогон.
-$nameIdx = 0; $nameUse = [];
-$takeName = function () use (&$namePool, &$nameIdx, &$nameUse) {
+// Учитываем имена, уже засветившиеся в reviews и в неопубликованном хвосте очереди.
+$nameUse = [];
+foreach ($dbw->query("SELECT author_name, COUNT(*) c FROM reviews GROUP BY author_name") as $r) {
+    $nameUse[$r['author_name']] = (int)$r['c'];
+}
+foreach ($dbw->query("SELECT author_name, COUNT(*) c FROM review_seed_queue WHERE published_review_id IS NULL GROUP BY author_name") as $r) {
+    $nameUse[$r['author_name']] = ($nameUse[$r['author_name']] ?? 0) + (int)$r['c'];
+}
+$freeNames = 0;
+foreach ($namePool as $n) { $freeNames += max(0, $NAME_MAX_USES - ($nameUse[$n] ?? 0)); }
+echo "Имён в пуле: " . count($namePool) . " (свободных слотов: {$freeNames})\n";
+if ($freeNames < $TOTAL) {
+    fwrite(STDERR, "Имён не хватает на {$TOTAL} отзывов ({$freeNames} слотов). Уменьши --days/--per-day.\n");
+    exit(1);
+}
+
+$nameIdx = 0;
+$takeName = function () use (&$namePool, &$nameIdx, &$nameUse, $NAME_MAX_USES) {
     $n = count($namePool);
-    for ($tries = 0; $tries < $n * 2; $tries++) {
+    for ($tries = 0; $tries < $n * $NAME_MAX_USES + 10; $tries++) {
         $name = $namePool[$nameIdx % $n];
         $nameIdx++;
-        if (($nameUse[$name] ?? 0) < 2) {
+        if (($nameUse[$name] ?? 0) < $NAME_MAX_USES) {
             $nameUse[$name] = ($nameUse[$name] ?? 0) + 1;
             return $name;
         }
@@ -111,7 +208,7 @@ $takeName = function () use (&$namePool, &$nameIdx, &$nameUse) {
     return $namePool[array_rand($namePool)]; // запасной вариант (не должен срабатывать)
 };
 
-// ── Распределение оценок 65/28/7 ──────────────────────────────────────
+// ── Оценки 65/28/7 ────────────────────────────────────────────────────
 $pickRating = function () {
     $r = mt_rand(1, 100);
     if ($r <= 65) return 5;
@@ -119,63 +216,125 @@ $pickRating = function () {
     return 3;
 };
 
-// ── Сборка плана отзывов ──────────────────────────────────────────────
-$startTs = strtotime('tomorrow');   // первый слот — завтра, ничего не «дозреет» в прошлом
-$maxDay  = $TARGET_DAYS - 1;
-$rowsByDay = [];                    // day => [ rowRef, ... ]
-$rows = [];                         // плоский список финальных строк
+// ── Профиль длины ─────────────────────────────────────────────────────
+$pickLength = function () use ($LENGTH_PROFILES) {
+    $r = mt_rand(1, 100); $acc = 0;
+    foreach ($LENGTH_PROFILES as $p) {
+        $acc += $p['share'];
+        if ($r <= $acc) return $p;
+    }
+    return $LENGTH_PROFILES[0];
+};
 
-$plannedPerType = [];
-foreach ($TYPES as $type => [$table, $where, $label]) {
+// ── Сущности и их веса ────────────────────────────────────────────────
+echo "Собираю сущности...\n";
+$pool = [];       // type => [ ['id'=>, 'title'=>, 'w'=>float], ... ]
+$poolTotalW = []; // type => сумма весов
+foreach ($TYPES as $type => [$table, $where, $label, $popSql]) {
     $entities = $dbw->query("SELECT id, title FROM {$table} WHERE {$where}");
-    $plannedPerType[$type] = 0;
+    if (!$entities) { echo "  {$type}: активных нет, пропуск\n"; continue; }
 
-    foreach ($entities as $e) {
-        $count = (mt_rand(1, 100) <= $SECOND_REVIEW_PROB) ? 2 : 1;
-
-        // дни для отзывов этой сущности (≥ MIN_GAP_DAYS между двумя)
-        if ($count === 1) {
-            $days = [mt_rand(0, $maxDay)];
-        } else {
-            $a = mt_rand(0, $maxDay - $MIN_GAP_DAYS);
-            $b = mt_rand($a + $MIN_GAP_DAYS, $maxDay);
-            $days = [$a, $b];
-        }
-
-        foreach ($days as $day) {
-            $hasText = (mt_rand(1, 100) <= $TEXT_PROB);
-            $row = [
-                'entity_type' => $type,
-                'entity_id'   => (int)$e['id'],
-                'title'       => (string)$e['title'],
-                'label'       => $label,
-                'rating'      => $pickRating(),
-                'has_text'    => $hasText,
-                'author_name' => $takeName(),
-                'review_text' => null,
-                'day'         => $day,
-            ];
-            $rows[] = $row;
-            $rowsByDay[$day][] = count($rows) - 1; // индекс в $rows
-            $plannedPerType[$type]++;
+    $pop = [];
+    if ($popSql !== null) {
+        try {
+            foreach ($dbw->query($popSql) as $p) { $pop[(int)$p['id']] = (int)$p['cnt']; }
+        } catch (Throwable $e) {
+            fwrite(STDERR, "  популярность {$type} недоступна ({$e->getMessage()}), вес по умолчанию\n");
         }
     }
+
+    $sum = 0.0;
+    foreach ($entities as $e) {
+        $w = 1.0 + log(1 + max(0, $pop[(int)$e['id']] ?? 0));
+        $pool[$type][] = ['id' => (int)$e['id'], 'title' => (string)$e['title'], 'w' => $w];
+        $sum += $w;
+    }
+    $poolTotalW[$type] = $sum;
+    echo "  {$type}: " . count($pool[$type]) . " шт.\n";
 }
 
-// Внутри дня: перемешать и развести по 2 слотам. Одна сущность даёт ≤1 строку в день,
-// значит в слоте не окажется двух отзывов на одну страницу.
-foreach ($rowsByDay as $day => $idxs) {
-    shuffle($idxs);
-    foreach ($idxs as $pos => $rowIndex) {
-        $hour = $SLOT_HOURS[$pos % count($SLOT_HOURS)];
-        $ts = $startTs + $day * 86400;
-        $scheduled = date('Y-m-d', $ts) . sprintf(' %02d:%02d:%02d', $hour, mt_rand(0, 59), mt_rand(0, 59));
-        $rows[$rowIndex]['scheduled_at'] = $scheduled;
+$activeShares = array_intersect_key($TYPE_SHARE, $pool);
+$shareSum = array_sum($activeShares);
+if ($shareSum <= 0) { fwrite(STDERR, "Нет ни одной активной сущности. Прерываю.\n"); exit(1); }
+
+// Взвешенный выбор сущности внутри типа, с учётом лимитов.
+$assigned = [];  // "type|id" => [дни, когда уже назначен отзыв]
+$pickEntity = function (string $type, int $day) use (&$pool, &$poolTotalW, &$assigned, $MAX_PER_ENTITY, $MIN_GAP_DAYS) {
+    $list = $pool[$type];
+    for ($tries = 0; $tries < 40; $tries++) {
+        $r = mt_rand() / mt_getrandmax() * $poolTotalW[$type];
+        $acc = 0.0; $chosen = null;
+        foreach ($list as $e) {
+            $acc += $e['w'];
+            if ($acc >= $r) { $chosen = $e; break; }
+        }
+        if ($chosen === null) $chosen = $list[count($list) - 1];
+
+        $key = $type . '|' . $chosen['id'];
+        $days = $assigned[$key] ?? [];
+        if (count($days) >= $MAX_PER_ENTITY) continue;
+        $ok = true;
+        foreach ($days as $d) { if (abs($d - $day) < $MIN_GAP_DAYS) { $ok = false; break; } }
+        if (!$ok) continue;
+
+        $assigned[$key][] = $day;
+        return $chosen;
     }
+    return null; // не нашли подходящую — отзыв пропускаем
+};
+
+// ── Раскладка отзывов по дням ─────────────────────────────────────────
+// День для каждого отзыва выбирается независимо и равномерно, поэтому суточное
+// количество распределено ~пуассоновски вокруг --per-day: живее ровного графика.
+$dayOf = [];
+for ($i = 0; $i < $TOTAL; $i++) { $dayOf[] = mt_rand(0, $DAYS - 1); }
+sort($dayOf);
+
+$typeBag = [];  // очередь типов по долям, перемешанная
+foreach ($activeShares as $type => $share) {
+    $n = (int)round($TOTAL * $share / $shareSum);
+    for ($i = 0; $i < $n; $i++) $typeBag[] = $type;
+}
+while (count($typeBag) < $TOTAL) $typeBag[] = array_rand($activeShares);
+shuffle($typeBag);
+
+$rows = [];
+$dropped = 0;
+foreach ($dayOf as $i => $day) {
+    $type = $typeBag[$i];
+    $ent = $pickEntity($type, $day);
+    if ($ent === null) {
+        // тип «переполнен» на этот день — пробуем любой другой
+        foreach (array_keys($activeShares) as $alt) {
+            if ($alt === $type) continue;
+            $ent = $pickEntity($alt, $day);
+            if ($ent !== null) { $type = $alt; break; }
+        }
+    }
+    if ($ent === null) { $dropped++; continue; }
+
+    $hasText = (mt_rand(1, 100) <= $TEXT_PROB);
+    $len = $pickLength();
+    $ts = $startTs + $day * 86400;
+    $rows[] = [
+        'entity_type'  => $type,
+        'entity_id'    => $ent['id'],
+        'title'        => $ent['title'],
+        'label'        => $TYPES[$type][2],
+        'rating'       => $pickRating(),
+        'has_text'     => $hasText,
+        'len'          => $len,
+        'author_name'  => $takeName(),
+        'review_text'  => null,
+        'scheduled_at' => date('Y-m-d', $ts) . sprintf(
+            ' %02d:%02d:%02d', mt_rand($HOUR_FROM, $HOUR_TO), mt_rand(0, 59), mt_rand(0, 59)
+        ),
+    ];
 }
 
 $total = count($rows);
-echo "Запланировано отзывов: {$total}\n";
+echo "Запланировано отзывов: {$total}" . ($dropped ? " (пропущено из-за лимитов: {$dropped})" : '') . "\n";
+if ($total === 0) { fwrite(STDERR, "Нечего писать. Прерываю.\n"); exit(1); }
 
 // ── Генерация текстов через ИИ (батчами по типу) ──────────────────────
 $textJobs = [];
@@ -184,10 +343,11 @@ foreach ($rows as $i => $row) {
 }
 $textWanted = array_sum(array_map('count', $textJobs));
 $textDone = 0;
+$modelIdx = 0;
 
 if ($NO_AI) {
     echo "--no-ai: тексты не генерируются, все отзывы будут только со звёздами.\n";
-    foreach ($rows as $i => &$row) { $row['has_text'] = false; }
+    foreach ($rows as &$row) { $row['has_text'] = false; }
     unset($row);
 } else {
     echo "Генерирую тексты через ИИ ({$textWanted} шт)...\n";
@@ -196,19 +356,24 @@ if ($NO_AI) {
     foreach ($textJobs as $type => $idxs) {
         $label = $TYPES[$type][2];
         foreach (array_chunk($idxs, $AI_BATCH) as $chunk) {
+            $model = $AI_MODELS[$modelIdx % count($AI_MODELS)];
+            $modelIdx++;
+
             $list = '';
             foreach ($chunk as $n => $rowIndex) {
                 $r = $rows[$rowIndex];
-                $list .= $n . '. [оценка ' . $r['rating'] . '] ' . mb_substr($r['title'], 0, 160) . "\n";
+                $list .= $n . '. [оценка ' . $r['rating'] . '] [объём: ' . $r['len']['hint'] . '] '
+                    . mb_substr($r['title'], 0, 160) . "\n";
             }
 
             $system = 'Ты пишешь короткие реалистичные отзывы от лица российских педагогов '
                 . 'об образовательном портале. Пиши живо, естественно и по-разному, без канцелярита '
                 . 'и шаблонных штампов, как пишут учителя и воспитатели в реальных отзывах.';
             $user = "Тип продукта: {$label}.\n"
-                . "Ниже список позиций (индекс, оценка автора и название). Для КАЖДОЙ позиции напиши один "
-                . "отзыв 1–2 коротких предложения от лица педагога, который реально участвовал/прошёл/опубликовал.\n"
+                . "Ниже список позиций (индекс, оценка автора, требуемый объём и название). Для КАЖДОЙ позиции напиши "
+                . "один отзыв от лица педагога, который реально участвовал/прошёл/опубликовал.\n"
                 . "Требования:\n"
+                . "— соблюдай указанный для позиции объём;\n"
                 . "— разнообразь длину и формулировки, не повторяй структуру;\n"
                 . "— упоминай разные аспекты: организация, скорость получения диплома/сертификата, польза для аттестации и портфолио, удобство сайта и оплаты, оперативность поддержки;\n"
                 . "— оценка 5 — тёплый положительный тон; 4 — в целом доволен, но с лёгкой ноткой «можно лучше»; 3 — сдержанно-нейтральный с одним конкретным замечанием;\n"
@@ -218,10 +383,10 @@ if ($NO_AI) {
                 . "Позиции:\n" . $list;
 
             try {
-                $res = $ai->generateJson($AI_MODEL, [
+                $res = $ai->generateJson($model, [
                     ['role' => 'system', 'content' => $system],
                     ['role' => 'user',   'content' => $user],
-                ], ['temperature' => 0.9, 'max_tokens' => 1800]);
+                ], ['temperature' => 0.9, 'max_tokens' => 2600]);
 
                 $reviews = $res['data']['reviews'] ?? [];
                 $byIdx = [];
@@ -237,40 +402,51 @@ if ($NO_AI) {
                         $rows[$rowIndex]['has_text'] = false; // не пришёл текст — оставим звёзды
                     }
                 }
-                echo "  {$type}: батч готов ({$textDone}/{$textWanted})\n";
+                echo "  {$type}: батч готов ({$textDone}/{$textWanted}, {$model})\n";
             } catch (Throwable $ex) {
                 // ИИ упал на батче — эти строки станут «только звёзды», не прерываемся.
                 foreach ($chunk as $rowIndex) $rows[$rowIndex]['has_text'] = false;
-                fwrite(STDERR, "  ИИ-батч {$type} пропущен: " . $ex->getMessage() . "\n");
+                fwrite(STDERR, "  ИИ-батч {$type} пропущен ({$model}): " . $ex->getMessage() . "\n");
             }
         }
     }
 }
 
 // ── Вставка в очередь ─────────────────────────────────────────────────
-echo "Пишу в review_seed_queue...\n";
 $ratingHist = [3 => 0, 4 => 0, 5 => 0];
 $withText = 0;
+$perType = [];
+if ($DRY) {
+    echo "--dry-run: в БД ничего не пишу.\n";
+} else {
+    echo "Пишу в review_seed_queue...\n";
+}
 foreach ($rows as $row) {
-    $dbw->execute(
-        "INSERT INTO review_seed_queue (entity_type, entity_id, author_name, rating, review_text, scheduled_at)
-         VALUES (?, ?, ?, ?, ?, ?)",
-        [
-            $row['entity_type'], $row['entity_id'], $row['author_name'], $row['rating'],
-            ($row['has_text'] && $row['review_text'] !== null ? $row['review_text'] : null),
-            $row['scheduled_at'],
-        ]
-    );
+    $text = ($row['has_text'] && $row['review_text'] !== null) ? $row['review_text'] : null;
+    if (!$DRY) {
+        $dbw->execute(
+            "INSERT INTO review_seed_queue (entity_type, entity_id, author_name, rating, review_text, scheduled_at)
+             VALUES (?, ?, ?, ?, ?, ?)",
+            [$row['entity_type'], $row['entity_id'], $row['author_name'], $row['rating'], $text, $row['scheduled_at']]
+        );
+    }
     $ratingHist[$row['rating']]++;
-    if ($row['has_text'] && $row['review_text'] !== null) $withText++;
+    $perType[$row['entity_type']] = ($perType[$row['entity_type']] ?? 0) + 1;
+    if ($text !== null) $withText++;
 }
 
 // ── Сводка ────────────────────────────────────────────────────────────
-$avg = $total ? round((3 * $ratingHist[3] + 4 * $ratingHist[4] + 5 * $ratingHist[5]) / $total, 2) : 0;
+$avg = round((3 * $ratingHist[3] + 4 * $ratingHist[4] + 5 * $ratingHist[5]) / $total, 2);
+$entities = count($assigned);
+$maxOnOne = 0;
+foreach ($assigned as $d) { $maxOnOne = max($maxOnOne, count($d)); }
+
 echo "\n══════════ ГОТОВО ══════════\n";
-echo "Всего отзывов в очереди: {$total}\n";
-foreach ($plannedPerType as $type => $cnt) echo "  {$type}: {$cnt}\n";
+echo "Отзывов добавлено: {$total}\n";
+foreach ($perType as $type => $cnt) echo "  {$type}: {$cnt}\n";
+echo "Задействовано сущностей: {$entities} (максимум на одну: {$maxOnOne})\n";
 echo "С текстом: {$withText} / только звёзды: " . ($total - $withText) . "\n";
 echo "Оценки — 5★: {$ratingHist[5]}, 4★: {$ratingHist[4]}, 3★: {$ratingHist[3]} (средняя {$avg})\n";
-echo "Окно раската: {$TARGET_DAYS} дней c " . date('Y-m-d', $startTs) . ", слоты " . implode(':00, ', $SLOT_HOURS) . ":00\n";
+echo "Окно: " . date('Y-m-d', $startTs) . " … " . date('Y-m-d', $startTs + ($DAYS - 1) * 86400)
+    . ", время {$HOUR_FROM}:00–{$HOUR_TO}:59 UTC, темп ~" . round($total / $DAYS, 2) . "/день\n";
 echo "════════════════════════════\n";
