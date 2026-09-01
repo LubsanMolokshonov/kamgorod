@@ -101,11 +101,11 @@ $LENGTH_PROFILES = [
 
 // Доля отзывов по типам продукта (в сумме 100).
 $TYPE_SHARE = [
-    'competition' => 30,
-    'olympiad'    => 25,
+    'competition' => 31,
+    'olympiad'    => 26,
     'course'      => 20,
     'publication' => 20,
-    'webinar'     => 5,
+    'webinar'     => 3,
 ];
 
 // тип => [таблица, условие активности, метка для ИИ, SQL популярности (id => cnt) | null]
