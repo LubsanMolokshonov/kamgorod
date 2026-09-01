@@ -173,6 +173,11 @@ $currentAdmin = Admin::verifySession();
                     <span>Расходы Директа</span>
                 </a>
 
+                <a href="/admin/bitrix-recon/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/bitrix-recon/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">🔁</span>
+                    <span>Сверка с Bitrix24</span>
+                </a>
+
                 <div class="nav-divider"></div>
 
                 <a href="/index.php" class="nav-item" target="_blank">

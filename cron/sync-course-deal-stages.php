@@ -41,11 +41,17 @@ if (file_exists($lockFile)) {
 }
 file_put_contents($lockFile, getmypid());
 
-$MAX_AGE_DAYS  = 90;
+$MAX_AGE_DAYS  = 180;  // менеджер закрывает рассрочки с большой задержкой
 $BATCH_SIZE    = 200;
 $COURSE_PIPELINE = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
 $CDO_PIPELINE    = defined('BITRIX24_CDO_PIPELINE_ID') ? (int)BITRIX24_CDO_PIPELINE_ID : 4;
-$STAGE_PAID    = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:UC_8RO3WZ';
+$STAGE_PAID    = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:WON';
+// Этапы воронки «Курсы», означающие оплату: текущий (WON) + выводимый из
+// использования «Оплаченная сделка» — по нему ещё висят ранее созданные сделки.
+$PAID_STAGES = array_values(array_unique(array_filter([
+    $STAGE_PAID,
+    defined('BITRIX24_COURSE_STAGE_PAID_LEGACY') ? BITRIX24_COURSE_STAGE_PAID_LEGACY : 'C108:UC_8RO3WZ',
+])));
 // Воронки, где менеджер закрывает наши курсовые сделки (рассрочки/счета).
 // ЦДО (4) — общий оффлайн-funnel; туда менеджер переносит рассрочки из «Курсов» (108).
 $OUR_PIPELINES = [$COURSE_PIPELINE, $CDO_PIPELINE];
@@ -88,14 +94,18 @@ try {
         }
     }
 
-    // 2) Выборка enrollments под опрос: те, по которым нет оплаты с сайта.
+    // 2) Выборка enrollments под опрос: всё, что ещё не оплачено.
+    // Раньше здесь были только 'new' и 'installment_requested' — заявки в статусах
+    // 'enrolled' (менеджер завёл на обучение) и 'cancelled' (отказ, который потом
+    // всё-таки закрыли сделкой) выпадали, и их оффлайн-оплата не материализовалась
+    // в orders. Проверено 01.09.2026: так потерялись сделки #1419186, #1424508, #1424228.
     // bitrix_stage = '__deal_deleted__' — сделка удалена в Bitrix (crm.deal.get → 400),
     // переопрашивать её бесполезно, исключаем из выборки.
     $rows = $dbObj->query(
         "SELECT id, bitrix_lead_id, status, bitrix_stage, bitrix_stage_updated_at
          FROM course_enrollments
          WHERE bitrix_lead_id IS NOT NULL
-           AND status IN ('new', 'installment_requested')
+           AND status <> 'paid'
            AND (bitrix_stage IS NULL OR bitrix_stage <> '__deal_deleted__')
            AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
          ORDER BY COALESCE(bitrix_stage_updated_at, '1970-01-01') ASC
@@ -145,7 +155,7 @@ try {
             //  - её семантика «успех» (S) — менеджер закрыл рассрочку/счёт как WON,
             //    в т.ч. в ЦДО, куда сделки переносятся из «Курсов».
             $isOurFunnel = in_array($category, $OUR_PIPELINES, true);
-            $isWon  = $isOurFunnel && ($semantic === 'S' || ($category === $COURSE_PIPELINE && $stageId === $STAGE_PAID));
+            $isWon  = $isOurFunnel && ($semantic === 'S' || ($category === $COURSE_PIPELINE && in_array($stageId, $PAID_STAGES, true)));
             $isLost = $isOurFunnel && ($semantic === 'F' || isset($loseStages[$stageId]));
 
             $statusChange = null;
