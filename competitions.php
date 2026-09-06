@@ -60,8 +60,9 @@ $audienceSpecializations = [];
 $selectedSpecData = null;
 
 if ($selectedCategory) {
-    // getBySlug может вернуть false для несуществующего слага — нормализуем в null,
-    // иначе false попадёт в строго типизированный buildAudienceSeoPhrase(?array) → TypeError 500.
+    // getBySlug отдаёт false для деактивированного/несуществующего слага (напр. типы,
+    // выключенные миграцией 162) — нормализуем в null, иначе false уходит в
+    // buildAudienceSeoPhrase(?array) → TypeError 500 на старых проиндексированных URL.
     $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory) ?: null;
     if ($selectedCategoryData) {
         // Специализации (предметы) — агрегированные по slug, доступны сразу после выбора аудитории

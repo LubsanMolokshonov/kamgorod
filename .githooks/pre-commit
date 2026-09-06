@@ -25,7 +25,8 @@ UNGUARDED=""
 while IFS= read -r f; do
   [ -z "$f" ] && continue
   case "$f" in
-    pages/*|ajax/*|api/*|admin/*|ai-consultant/*|includes/*|classes/*|vendor/*|tests/*) continue ;;
+    pages/*|ajax/*|api/*|admin/*|ai-consultant/*) continue ;;   # боевые точки входа
+    includes/*|classes/*|config/*|vendor/*|tests/*) continue ;; # подключаемые, не точки входа
     */*.php) ;;
     *.php) continue ;;   # корень: index.php, sitemap.php, courses.php и т.п.
     *) continue ;;

@@ -85,12 +85,24 @@ if (!defined('BITRIX24_COURSE_PIPELINE_ID')) define('BITRIX24_COURSE_PIPELINE_ID
 // выручку (рассрочки/счета), отделяя от оффлайн-бизнеса остального холдинга.
 // (BITRIX24_CDO_PIPELINE_ID=4 определён ниже, в блоке мониторинга ЦДО.)
 if (!defined('BITRIX24_FGOS_SOURCE_IDS')) define('BITRIX24_FGOS_SOURCE_IDS', $_ENV['BITRIX24_FGOS_SOURCE_IDS'] ?? '83,87');
+// Источник, который сайт проставляет создаваемым сделкам (курсы и консультации).
+// Раньше ставился 'WEB', а 83 дописывал робот/менеджер — сделки, до которых робот
+// не дошёл, выпадали из всех отчётов по оффлайн-выручке. Теперь метка ставится сразу.
+if (!defined('BITRIX24_FGOS_SOURCE_ID')) {
+    define('BITRIX24_FGOS_SOURCE_ID', $_ENV['BITRIX24_FGOS_SOURCE_ID']
+        ?? trim(explode(',', (string)BITRIX24_FGOS_SOURCE_IDS)[0] ?: '83'));
+}
 if (!defined('BITRIX24_COURSE_STAGE_NEW')) define('BITRIX24_COURSE_STAGE_NEW', 'C108:NEW');
 // Стадия успешно оплаченной сделки — воронка «ФГОС-Практикум (Курсы)»,
-// этап «Оплаченная сделка» (C108:UC_8RO3WZ). Раньше использовался C108:WON
-// («Сделка успешна»); оплаченные сделки переведены в отдельный этап.
+// этап «Сделка успешна» (C108:WON). С 26.08.2026 отдельный этап «Оплаченная
+// сделка» (C108:UC_8RO3WZ) выводится из использования — новые оплаты сразу
+// попадают в WON. Старый этап остаётся в LEGACY-константе, чтобы синхронизация
+// корректно распознавала уже созданные сделки.
 if (!defined('BITRIX24_COURSE_STAGE_PAID')) {
-    define('BITRIX24_COURSE_STAGE_PAID', $_ENV['BITRIX24_COURSE_STAGE_PAID'] ?? 'C108:UC_8RO3WZ');
+    define('BITRIX24_COURSE_STAGE_PAID', $_ENV['BITRIX24_COURSE_STAGE_PAID'] ?? 'C108:WON');
+}
+if (!defined('BITRIX24_COURSE_STAGE_PAID_LEGACY')) {
+    define('BITRIX24_COURSE_STAGE_PAID_LEGACY', 'C108:UC_8RO3WZ');
 }
 
 // Bitrix24: стадии email-цепочки курсов (pipeline 108)
@@ -186,6 +198,22 @@ if (!defined('OPENROUTER_MODEL_FAST'))      define('OPENROUTER_MODEL_FAST',     
 // ошибки, несоответствие темы классу, неверные ключи. Дороже генерации, но используется
 // только на ревью одного материала.
 if (!defined('OPENROUTER_MODEL_REVIEW'))    define('OPENROUTER_MODEL_REVIEW',    $_ENV['OPENROUTER_MODEL_REVIEW']    ?? 'google/gemini-2.5-pro');
+// Автоответчик Telegram/MAX. По умолчанию выключен; дополнительно каждый чат
+// должен быть разрешён в ai_messenger_chats.
+if (!defined('MESSENGER_AI_ACTIVE')) define('MESSENGER_AI_ACTIVE', filter_var($_ENV['MESSENGER_AI_ENABLED'] ?? 'false', FILTER_VALIDATE_BOOLEAN));
+if (!defined('MESSENGER_OPENROUTER_MODEL')) define('MESSENGER_OPENROUTER_MODEL', $_ENV['MESSENGER_OPENROUTER_MODEL'] ?? 'google/gemini-2.5-flash-lite');
+if (!defined('MESSENGER_MAX_INPUT_CHARS')) define('MESSENGER_MAX_INPUT_CHARS', max(500, (int)($_ENV['MESSENGER_MAX_INPUT_CHARS'] ?? 4000)));
+if (!defined('MESSENGER_MAX_OUTPUT_TOKENS')) define('MESSENGER_MAX_OUTPUT_TOKENS', max(200, (int)($_ENV['MESSENGER_MAX_OUTPUT_TOKENS'] ?? 900)));
+if (!defined('MESSENGER_DAILY_CAP')) define('MESSENGER_DAILY_CAP', max(0, (int)($_ENV['MESSENGER_DAILY_CAP'] ?? 500)));
+if (!defined('MESSENGER_DAILY_TOKEN_BUDGET')) define('MESSENGER_DAILY_TOKEN_BUDGET', max(0, (int)($_ENV['MESSENGER_DAILY_TOKEN_BUDGET'] ?? 500000)));
+if (!defined('MESSENGER_PER_CHAT_MINUTE')) define('MESSENGER_PER_CHAT_MINUTE', max(1, (int)($_ENV['MESSENGER_PER_CHAT_MINUTE'] ?? 6)));
+if (!defined('MESSENGER_CONFIDENCE_THRESHOLD')) define('MESSENGER_CONFIDENCE_THRESHOLD', (float)($_ENV['MESSENGER_CONFIDENCE_THRESHOLD'] ?? 0.72));
+if (!defined('TELEGRAM_WEBHOOK_SECRET')) define('TELEGRAM_WEBHOOK_SECRET', $_ENV['TELEGRAM_WEBHOOK_SECRET'] ?? '');
+if (!defined('TELEGRAM_BOT_USERNAME')) define('TELEGRAM_BOT_USERNAME', ltrim($_ENV['TELEGRAM_BOT_USERNAME'] ?? '', '@'));
+if (!defined('MAX_BOT_TOKEN')) define('MAX_BOT_TOKEN', $_ENV['MAX_BOT_TOKEN'] ?? '');
+if (!defined('MAX_BOT_USERNAME')) define('MAX_BOT_USERNAME', ltrim($_ENV['MAX_BOT_USERNAME'] ?? '', '@'));
+if (!defined('MAX_BOT_WEBHOOK_SECRET')) define('MAX_BOT_WEBHOOK_SECRET', $_ENV['MAX_BOT_WEBHOOK_SECRET'] ?? '');
+if (!defined('MAX_BOT_API_URL')) define('MAX_BOT_API_URL', rtrim($_ENV['MAX_BOT_API_URL'] ?? 'https://platform-api2.max.ru', '/'));
 // Методическая самопроверка материалов (второй проход ИИ-методиста по чек-листу ФГОС/ФОП).
 // Дороже по токенам — отключается значением 0/false/no в .env (по умолчанию включено).
 if (!defined('MATERIAL_SELFCHECK_ENABLED')) define('MATERIAL_SELFCHECK_ENABLED', !in_array(strtolower((string)($_ENV['MATERIAL_SELFCHECK_ENABLED'] ?? '1')), ['0', 'false', 'no', 'off', ''], true));

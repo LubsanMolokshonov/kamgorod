@@ -23,6 +23,7 @@ class TelegramNotifier
         'autowebinar_email_mass_failures' => 1800,
         'journey_email_mass_failures'  => 1800,
         'olympiad_email_mass_failures' => 1800,
+        'inbound_classifier_failing'   => 1800,
     ];
 
     private static ?TelegramNotifier $instance = null;

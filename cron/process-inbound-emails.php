@@ -166,6 +166,27 @@ try {
 
     echo date('Y-m-d H:i:s') . " - Done. " . json_encode($stats) . "\n";
 
+    // Классификатор лежит — надо знать сразу. Повод: 25.08-01.09.2026 YandexGPT отдавал 403
+    // (закрыт доступ к облачной папке), письма 10 дней крутились с classification='error',
+    // алерты не заводились, и в дашборде это выглядело как «обращений нет».
+    // Дедуп в TelegramNotifier (30 мин) не даёт спамить на каждом пятиминутном запуске.
+    if (!$dryRun && $stats['error'] > 0) {
+        try {
+            TelegramNotifier::instance($db)->alert(
+                'inbound_classifier_failing',
+                '[Поддержка] Входящие письма не классифицируются',
+                [
+                    'необработано'  => $stats['error'],
+                    'заведено'      => $stats['alert_new'],
+                    'причина'       => 'см. logs/ai-consultant.log — обычно YandexGPT недоступен',
+                    'последствие'   => 'обращения не попадают в /admin/alerts/, письма ждут в INBOX',
+                ],
+                'critical'
+            );
+        } catch (Throwable $ignored) {
+        }
+    }
+
 } catch (Throwable $e) {
     error_log('process-inbound-emails fatal: ' . $e->getMessage());
     echo date('Y-m-d H:i:s') . " - FATAL: " . $e->getMessage() . "\n";

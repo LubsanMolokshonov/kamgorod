@@ -60,7 +60,7 @@ try {
     $courseObj = new Course($db);
 
     $stageNew = defined('BITRIX24_COURSE_STAGE_NEW') ? BITRIX24_COURSE_STAGE_NEW : 'C108:NEW';
-    $stagePaid = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:UC_8RO3WZ';
+    $stagePaid = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:WON';
 
     // Выборка записей старше 10 минут без bitrix_lead_id
     $enrollments = $dbObj->query(

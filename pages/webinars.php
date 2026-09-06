@@ -43,7 +43,10 @@ $audienceSpecializations = [];
 $selectedSpecData = null;
 
 if ($selectedCategory) {
-    $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory);
+    // getBySlug отдаёт false для деактивированного/несуществующего слага (напр. типы,
+    // выключенные миграцией 162) — нормализуем в null, иначе false уходит в
+    // buildAudiencePhrase(?array) → TypeError 500 на старых проиндексированных URL.
+    $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory) ?: null;
     if ($selectedCategoryData) {
         $audienceSpecializations = $audienceCatObj->getSpecializations($selectedCategoryData['id']);
         if ($selectedSpec) {
@@ -63,7 +66,7 @@ if ($selectedSpec && !empty($audienceSpecializations)) {
     }
 }
 if ($selectedType) {
-    $selectedTypeData = $audienceTypeObj->getBySlug($selectedType);
+    $selectedTypeData = $audienceTypeObj->getBySlug($selectedType) ?: null;
 }
 
 $filters = [];

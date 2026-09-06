@@ -176,7 +176,7 @@ try {
                     [$enrollmentId]
                 );
 
-                $paidStage = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:EXECUTING';
+                $paidStage = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:WON';
 
                 if ($freshEnrollment && empty($freshEnrollment['bitrix_lead_id'])) {
                     $course = $courseObj->getById($freshEnrollment['course_id']);

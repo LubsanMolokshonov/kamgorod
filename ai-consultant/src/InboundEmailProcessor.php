@@ -15,6 +15,15 @@ declare(strict_types=1);
  */
 class InboundEmailProcessor
 {
+    /**
+     * Через сколько часов безуспешных попыток классификации письмо всё равно заводится
+     * алертом. Ретрай нужен на короткие сбои GPT (письмо не помечается \Seen и
+     * переклассифицируется), но при длинной аварии он превращается в тихую потерю:
+     * 25.08-01.09.2026 YandexGPT отдавал 403 десять дней, и живые обращения педагогов
+     * просто крутились в INBOX. Лучше алерт без категории, чем ненайденное обращение.
+     */
+    private const FAILOPEN_AFTER_HOURS = 2;
+
     private PDO $pdo;
     private AlertService $alertService;
     private float $confidenceThreshold;
@@ -25,6 +34,10 @@ class InboundEmailProcessor
         'yookassa.ru',
         'yandex.ru', // только если префикс выглядит системным — проверка ниже
         'sendpulse.com',
+        // биллинг сервисов, которыми пользуемся мы сами — их письма про «счёт оплачен»
+        // и «баланс пополнен» раньше жгли GPT-классификацию и дважды заводились алертами
+        'elama.ru',
+        'direct.yandex.ru',
         'unisender.com',
         'mailgun.org',
         'amazonses.com',
@@ -49,6 +62,7 @@ class InboundEmailProcessor
         'auto-confirm',
         'auto-reply',
         'autoreply',
+        'dmarc',        // dmarc_support@corp.mail.ru и подобные — машинные отчёты по домену
     ];
 
     public function __construct(PDO $pdo, AlertService $alertService, float $confidenceThreshold = 0.6, bool $dryRun = false)
@@ -118,6 +132,25 @@ class InboundEmailProcessor
         // 4) YandexGPT-классификация
         $classification = $this->classifyWithGpt($email);
         if ($classification === null) {
+            $receivedAt = strtotime((string)($email['received_at'] ?? '')) ?: time();
+            $ageHours = (time() - $receivedAt) / 3600;
+
+            // Классификатор лежит дольше FAILOPEN_AFTER_HOURS — заводим алерт вслепую.
+            // Шумные отправители сюда не доходят: их отсекает detectNoise() выше.
+            if (!$this->dryRun && $ageHours >= self::FAILOPEN_AFTER_HOURS) {
+                $alertId = $this->alertService->createFromEmail($email, [
+                    'summary'  => 'Классификатор был недоступен — обращение заведено автоматически, категорию проставьте вручную.',
+                    'category' => 'other',
+                ]);
+                ai_log('INBOUND', 'fail-open: алерт заведён без классификации', [
+                    'alert_id' => $alertId,
+                    'from' => $email['from_email'] ?? '',
+                    'age_hours' => round($ageHours, 1),
+                ]);
+                $this->logEntry($email, 'alert_new', 'gpt_failopen:' . round($ageHours, 1) . 'h', 'other', $alertId);
+                return $this->result('alert_new', 'gpt_failopen', $alertId, 'other');
+            }
+
             $this->logEntry($email, 'error', 'gpt_classification_failed', null, null);
             return $this->result('error', 'gpt_classification_failed');
         }

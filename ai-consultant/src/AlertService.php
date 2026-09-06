@@ -404,6 +404,51 @@ class AlertService
         return $alertId;
     }
 
+    /** Создать дедуплицированное обращение из Telegram или отдельного MAX-бота. */
+    public function createFromMessenger(array $event, array $classification): int
+    {
+        $channel = in_array($event['channel'] ?? '', ['telegram','max_bot'], true) ? $event['channel'] : 'telegram';
+        $chatId = mb_substr((string)($event['chat_id'] ?? ''), 0, 128);
+        $messengerUserId = mb_substr((string)($event['user_id'] ?? ''), 0, 128);
+        $providerId = mb_substr((string)($event['provider_message_id'] ?? $event['provider_update_id'] ?? ''), 0, 180);
+        $sourceMessageId = $channel . '_' . $providerId;
+
+        $dup = $this->pdo->prepare('SELECT id FROM support_alerts WHERE source = ? AND source_message_id = ? LIMIT 1');
+        $dup->execute([$channel, $sourceMessageId]);
+        if ($id = $dup->fetchColumn()) return (int)$id;
+
+        $fromName = self::sanitizeUtf8(mb_substr(trim((string)($event['user_name'] ?? '')) ?: strtoupper($channel) . ' user', 0, 255));
+        $description = self::sanitizeUtf8(mb_substr(trim((string)($event['message_text'] ?? '')) ?: '(пустое сообщение)', 0, 5000));
+        $syntheticEmail = ($messengerUserId !== '' ? $messengerUserId : 'unknown') . '@' . ($channel === 'telegram' ? 'telegram' : 'max-bot') . '.fgos.pro';
+        $category = in_array($classification['category'] ?? '', ['payment','technical','content','access','other'], true) ? $classification['category'] : 'other';
+        $summary = mb_substr((string)($classification['summary'] ?? $description), 0, 500);
+
+        $this->pdo->beginTransaction();
+        try {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO support_alerts
+                 (chat_session_id,source,source_message_id,messenger_channel,messenger_chat_id,messenger_user_id,
+                  user_name,user_email,description,ai_summary,ai_category,status)
+                 VALUES (NULL,?,?,?,?,?,?,?,?,?,?,\'new\')'
+            );
+            $stmt->execute([$channel,$sourceMessageId,$channel,$chatId,$messengerUserId?:null,$fromName,$syntheticEmail,$description,$summary,$category]);
+            $alertId=(int)$this->pdo->lastInsertId();
+            $stmt=$this->pdo->prepare("INSERT INTO alert_messages (alert_id,direction,from_email,from_name,to_email,body_text,message_id) VALUES (?,'inbound',?,?,?,?,?)");
+            $stmt->execute([$alertId,$syntheticEmail,$fromName,defined('SMTP_FROM_EMAIL')?SMTP_FROM_EMAIL:'info@fgos.pro',$description,$sourceMessageId]);
+            $this->pdo->commit();
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            // Параллельный worker мог успеть создать тот же алерт.
+            $dup->execute([$channel,$sourceMessageId]);
+            if ($id=$dup->fetchColumn()) return (int)$id;
+            throw $e;
+        }
+
+        $this->notifyAdmin($alertId,$fromName,$syntheticEmail,'',$description,null,$summary,$category);
+        $this->notifyTelegram($alertId,$fromName,$syntheticEmail,'',$description,null,$summary,$category);
+        return $alertId;
+    }
+
     /**
      * Добавить inbound-сообщение в существующий тред алерта (ответ пользователя).
      * Возвращает id вставленной записи alert_messages, либо 0 если уже сохранено (дедуп по message_id).

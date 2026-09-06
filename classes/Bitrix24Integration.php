@@ -417,8 +417,9 @@ class Bitrix24Integration {
      *
      * Это «оффлайн»-выручка: рассрочки и оплаты по счёту, которые менеджер
      * закрывает в CRM (как правило в воронке ЦДО) и которых нет в orders.
-     * «Нашими» считаем сделки с SOURCE_ID ∈ {83 «ФГОС-практикум», 87 «ФГОС-практикум ВК»} —
-     * иначе в воронку ЦДО попадёт оффлайн-бизнес всего холдинга (десятки тысяч сделок).
+     * «Наши» сделки определяет getFgosWonDeals(): воронка «Курсы» (108) целиком плюс
+     * сделки с источником ФГОС-практикум (83/87) в ЦДО — иначе в выборку попадёт
+     * оффлайн-бизнес всего холдинга (десятки тысяч сделок).
      *
      * ВАЖНО: фильтр Bitrix по CLOSEDATE через crm.deal.list по этому вебхуку НЕ работает
      * (игнорируется) — поэтому тянем все «наши» WON-сделки (их единицы) и фильтруем
@@ -435,14 +436,12 @@ class Bitrix24Integration {
      * @return array ['count'=>int, 'revenue'=>float, 'deals'=>array] | ['count'=>null,'revenue'=>null,'deals'=>[]] при ошибке
      */
     public function getFgosOfflineDeals(string $dateFrom, string $dateTo, array $excludeDealIds = [], string $dateField = 'CLOSEDATE'): array {
-        if (!$this->isConfigured()) {
-            return ['count' => null, 'revenue' => null, 'deals' => []];
-        }
         $dateField = $dateField === 'DATE_CREATE' ? 'DATE_CREATE' : 'CLOSEDATE';
 
-        $sources = defined('BITRIX24_FGOS_SOURCE_IDS')
-            ? array_filter(array_map('trim', explode(',', (string)BITRIX24_FGOS_SOURCE_IDS)))
-            : ['83', '87'];
+        $won = $this->getFgosWonDeals();
+        if ($won === null) {
+            return ['count' => null, 'revenue' => null, 'deals' => []];
+        }
 
         $from    = substr($dateFrom, 0, 10);
         $to      = substr($dateTo,   0, 10);
@@ -451,50 +450,130 @@ class Bitrix24Integration {
         $count   = 0;
         $revenue = 0.0;
         $deals   = [];
-        $start   = 0;
 
-        do {
-            $result = $this->call('crm.deal.list', [
-                'filter' => [
-                    // Массив значения = оператор IN (проверено: filter[SOURCE_ID][]=83&[]=87).
-                    'SOURCE_ID'         => array_values($sources),
-                    'STAGE_SEMANTIC_ID' => 'S',
-                ],
-                'select' => ['ID', 'OPPORTUNITY', 'CLOSEDATE', 'DATE_CREATE', 'TITLE', 'CATEGORY_ID'],
-                'start'  => $start,
-            ]);
-
-            if ($result === null || !isset($result['result'])) {
-                return ['count' => null, 'revenue' => null, 'deals' => []];
+        foreach ($won as $deal) {
+            if (isset($exclude[$deal['id']])) {
+                continue; // уже учтено в orders
             }
+            $filterDate = $dateField === 'DATE_CREATE' ? $deal['created'] : $deal['closedate'];
+            if ($filterDate === '' || $filterDate < $from || $filterDate > $to) {
+                continue; // вне периода (фильтруем здесь — API-фильтр по датам не работает)
+            }
+            $count++;
+            $revenue += $deal['revenue'];
+            $deals[] = $deal;
+        }
 
-            foreach ($result['result'] as $deal) {
-                $dealId = (int)($deal['ID'] ?? 0);
-                if (isset($exclude[$dealId])) {
-                    continue; // уже учтено в orders
+        return ['count' => $count, 'revenue' => $revenue, 'deals' => $deals];
+    }
+
+    /**
+     * Все выигранные (WON) «наши» сделки в CRM, без фильтра по датам.
+     *
+     * «Наши» = сделки воронки «ФГОС-Практикум (Курсы)» целиком (она полностью наша)
+     * ПЛЮС сделки с меткой источника ФГОС-практикум (83/87) в воронке ЦДО, куда
+     * менеджер переносит рассрочки и счета. Раньше учитывался только источник —
+     * сделки, которым робот не успел проставить метку (SOURCE_ID='WEB'), выпадали
+     * из отчётов; теперь воронка 108 берётся целиком.
+     *
+     * @return array<int,array{id:int,revenue:float,title:string,closedate:string,created:string,category:int,source:string}>|null
+     *         null — Bitrix недоступен (не занижаем цифры молча)
+     */
+    public function getFgosWonDeals(): ?array {
+        if (!$this->isConfigured()) {
+            return null;
+        }
+
+        $select = ['ID', 'OPPORTUNITY', 'CLOSEDATE', 'DATE_CREATE', 'TITLE', 'CATEGORY_ID', 'SOURCE_ID', 'STAGE_ID'];
+        $coursePipeline = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
+        $cdoPipeline    = defined('BITRIX24_CDO_PIPELINE_ID') ? (int)BITRIX24_CDO_PIPELINE_ID : 4;
+
+        // 1) Воронка курсов целиком, 2) наш источник в ЦДО (там же лежат «переехавшие» рассрочки).
+        $queries = [
+            ['CATEGORY_ID' => $coursePipeline, 'STAGE_SEMANTIC_ID' => 'S'],
+            [
+                'CATEGORY_ID'       => $cdoPipeline,
+                // Массив значения = оператор IN (проверено: filter[SOURCE_ID][]=83&[]=87).
+                'SOURCE_ID'         => self::fgosSourceIds(),
+                'STAGE_SEMANTIC_ID' => 'S',
+            ],
+        ];
+
+        $byId = [];
+        foreach ($queries as $filter) {
+            $rows = $this->listDeals($filter, $select);
+            if ($rows === null) {
+                return null;
+            }
+            foreach ($rows as $deal) {
+                $id = (int)($deal['ID'] ?? 0);
+                if ($id <= 0) {
+                    continue;
                 }
-                $filterDate = substr((string)($deal[$dateField] ?? ''), 0, 10);
-                if ($filterDate === '' || $filterDate < $from || $filterDate > $to) {
-                    continue; // вне периода (фильтруем здесь — API-фильтр по датам не работает)
-                }
-                $opp = (float)($deal['OPPORTUNITY'] ?? 0);
-                $count++;
-                $revenue += $opp;
-                $deals[] = [
-                    'id'        => $dealId,
-                    'revenue'   => $opp,
+                $byId[$id] = [
+                    'id'        => $id,
+                    'revenue'   => (float)($deal['OPPORTUNITY'] ?? 0),
                     'title'     => (string)($deal['TITLE'] ?? ''),
                     'closedate' => substr((string)($deal['CLOSEDATE'] ?? ''), 0, 10),
                     'created'   => substr((string)($deal['DATE_CREATE'] ?? ''), 0, 10),
                     'category'  => (int)($deal['CATEGORY_ID'] ?? 0),
+                    'source'    => (string)($deal['SOURCE_ID'] ?? ''),
+                    'stage'     => (string)($deal['STAGE_ID'] ?? ''),
                 ];
             }
+        }
 
+        return array_values($byId);
+    }
+
+    /**
+     * Постраничная выборка сделок (crm.deal.list). null — ошибка API.
+     *
+     * @param array $filter Фильтр crm.deal.list (значение-массив = оператор IN)
+     * @param array $select Поля
+     * @param int   $maxRows Предохранитель от выкачивания всего портала
+     * @return array<int,array>|null
+     */
+    public function listDeals(array $filter, array $select = ['ID'], int $maxRows = 5000): ?array {
+        if (!$this->isConfigured()) {
+            return null;
+        }
+
+        $out   = [];
+        $start = 0;
+        do {
+            $result = $this->call('crm.deal.list', [
+                'filter' => $filter,
+                'select' => $select,
+                'start'  => $start,
+            ]);
+            if ($result === null || !isset($result['result'])) {
+                return null;
+            }
+            foreach ($result['result'] as $row) {
+                $out[] = $row;
+            }
             $total = (int)($result['total'] ?? 0);
             $start += 50;
-        } while ($start < $total);
+            if (count($out) >= $maxRows) {
+                $this->log("listDeals: превышен лимит {$maxRows} строк, выборка обрезана: " . json_encode($filter), 'error');
+                break;
+            }
+        } while ($start < $total && !empty($result['result']));
 
-        return ['count' => $count, 'revenue' => $revenue, 'deals' => $deals];
+        return $out;
+    }
+
+    /** Источник, которым сайт помечает создаваемые сделки. */
+    public static function fgosSourceId(): string {
+        return defined('BITRIX24_FGOS_SOURCE_ID') ? (string)BITRIX24_FGOS_SOURCE_ID : '83';
+    }
+
+    /** Все источники, считающиеся «нашими» (83 «ФГОС-практикум», 87 «ФГОС-практикум ВК»). */
+    public static function fgosSourceIds(): array {
+        $raw = defined('BITRIX24_FGOS_SOURCE_IDS') ? (string)BITRIX24_FGOS_SOURCE_IDS : '83,87';
+        $ids = array_values(array_filter(array_map('trim', explode(',', $raw))));
+        return $ids ?: ['83', '87'];
     }
 
     /**
@@ -586,7 +665,9 @@ class Bitrix24Integration {
             'TITLE' => mb_substr($title, 0, 100),
             'CATEGORY_ID' => $categoryId,
             'STAGE_ID' => $stageId,
-            'SOURCE_ID' => 'WEB',
+            // Метка «ФГОС-практикум» ставится сразу: по ней отчёты (РНП, сверка)
+            // опознают наши сделки в общем funnel холдинга.
+            'SOURCE_ID' => self::fgosSourceId(),
             'SOURCE_DESCRIPTION' => $isInstallment
                 ? 'Заявка на рассрочку через Каменный город'
                 : 'Запись на курс через Каменный город',
@@ -680,7 +761,7 @@ class Bitrix24Integration {
             'TITLE' => 'Консультация по курсу — ' . $consultation['phone'],
             'CATEGORY_ID' => $categoryId,
             'STAGE_ID' => $stageId,
-            'SOURCE_ID' => 'WEB',
+            'SOURCE_ID' => self::fgosSourceId(),
             'SOURCE_DESCRIPTION' => 'Заявка на консультацию через Каменный город',
             'COMMENTS' => implode("\n", $comments),
             'OPENED' => 'Y',
