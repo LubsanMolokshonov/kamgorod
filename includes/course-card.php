@@ -284,7 +284,7 @@ function ccInjectAfterMiddleHeading(string $html, string $cardHtml): string
         return $html;
     }
 
-    $heading = ccFindMiddleOffset($html, '/<\/h[23]>/i', $totalChars);
+    $heading = ccFindMiddleOffset($html, '/<h[23][^>]*>.*?<\/h[23]>/is', $totalChars, true);
 
     // Заголовок рядом с серединой — лучшее место: карточка встаёт на границе раздела
     if ($heading !== null && $heading['diff'] <= $totalChars * CC_HEADING_TOLERANCE) {
@@ -318,7 +318,7 @@ function ccClosest(?array $a, ?array $b): ?array
  *                                            diff — на сколько символов промахнулись
  *                                            мимо середины. null, если тегов нет.
  */
-function ccFindMiddleOffset(string $html, string $pattern, int $totalChars): ?array
+function ccFindMiddleOffset(string $html, string $pattern, int $totalChars, bool $insertBeforeMatch = false): ?array
 {
     if (!preg_match_all($pattern, $html, $matches, PREG_OFFSET_CAPTURE)) {
         return null;
@@ -330,6 +330,7 @@ function ccFindMiddleOffset(string $html, string $pattern, int $totalChars): ?ar
     foreach ($matches[0] as $match) {
         [$tag, $byteOffset] = $match;
         $end         = $byteOffset + strlen($tag);
+        $insertAt    = $insertBeforeMatch ? $byteOffset : $end;
         $charsBefore = mb_strlen(strip_tags(substr($html, 0, $end)));
 
         // Слишком рано — карточка окажется в начале текста;
@@ -341,7 +342,7 @@ function ccFindMiddleOffset(string $html, string $pattern, int $totalChars): ?ar
 
         $diff = abs($charsBefore - $target);
         if ($best === null || $diff < $best['diff']) {
-            $best = ['offset' => $end, 'diff' => $diff];
+            $best = ['offset' => $insertAt, 'diff' => $diff];
         }
     }
 

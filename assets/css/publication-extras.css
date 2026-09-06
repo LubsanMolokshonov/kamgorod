@@ -288,3 +288,72 @@ a.author-topic:hover {
   border-radius: 16px;
   margin-bottom: 20px;
 }
+
+
+/* ===== Inline illustrations inside article body ===== */
+.pub-body figure.pub-inline-img {
+  margin: 28px 0;
+  text-align: center;
+}
+.pub-body figure.pub-inline-img img {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  margin: 0 auto;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--ink-200);
+  box-shadow: var(--sh-1);
+}
+.pub-body figure.pub-inline-img figcaption {
+  margin-top: 10px;
+  font: 500 13px/1.4 var(--font-sans);
+  color: var(--ink-500);
+}
+.pub-body figure.pub-inline-img.pub-inline-img--float-right {
+  float: right;
+  margin: 4px 0 16px 28px;
+  max-width: 300px;
+}
+.pub-body figure.pub-inline-img.pub-inline-img--float-right img { max-width: 100%; }
+@media (max-width: 640px) {
+  .pub-body figure.pub-inline-img.pub-inline-img--float-right {
+    float: none;
+    margin: 24px auto;
+    max-width: 320px;
+  }
+}
+
+
+/* Float-left variant for alternating inline illustrations */
+.pub-body figure.pub-inline-img.pub-inline-img--float-left {
+  float: left;
+  margin: 4px 28px 16px 0;
+  max-width: 300px;
+}
+.pub-body figure.pub-inline-img.pub-inline-img--float-left img { max-width: 100%; }
+@media (max-width: 640px) {
+  .pub-body figure.pub-inline-img.pub-inline-img--float-left {
+    float: none;
+    margin: 24px auto;
+    max-width: 320px;
+  }
+}
+
+/* Transparent PNG illustration (no card frame/shadow) at moderate width */
+.pub-body figure.pub-inline-img.pub-inline-img--plain img {
+  max-width: 280px;
+  border: none;
+  box-shadow: none;
+  background: none;
+}
+
+/* Wide panoramic cover-style illustration at the top of the article */
+.pub-body figure.pub-inline-img.pub-inline-img--wide {
+  clear: both;
+}
+.pub-body figure.pub-inline-img.pub-inline-img--wide img {
+  max-width: 100%;
+  aspect-ratio: 1536 / 283;
+  object-fit: cover;
+}

@@ -16,7 +16,9 @@ if ($path !== '' && (is_file($file) || is_dir($file))) {
 }
 
 $auds = 'pedagogi|doshkolnikam|shkolnikam|studentam-spo';
-$levels = 'dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|dopolnitelnoe-obrazovanie|doshkolniki|1-4-klassy|5-8-klassy|9-11-klassy|1-klass|2-klass|3-klass|4-klass|5-klass|6-klass|7-klass|8-klass|9-klass|10-klass|11-klass|studenty-spo';
+// Порядок важен: более длинные/специфичные альтернативы (pedagogam-1-klass) идут
+// раньше коротких (1-klass), иначе `1-klass` матчит «pedagogam-1-klass» частично.
+$levels = 'dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|dopolnitelnoe-obrazovanie|doshkolniki|1-4-klassy|5-8-klassy|9-11-klassy|pedagogam-1-klass|pedagogam-2-klass|pedagogam-3-klass|pedagogam-4-klass|pedagogam-5-klass|pedagogam-6-klass|pedagogam-7-klass|pedagogam-8-klass|pedagogam-9-klass|pedagogam-10-klass|pedagogam-11-klass|1-klass|2-klass|3-klass|4-klass|5-klass|6-klass|7-klass|8-klass|9-klass|10-klass|11-klass|studenty-spo';
 $vebLevels = 'dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo';
 $catsK = 'metodika|vneurochnaya|proekty|tvorchestvo';
 $statuses = 'predstoyashchie|zapisi|videolektsii';
@@ -60,6 +62,9 @@ $routes = [
 
     // ---- ОЛИМПИАДЫ ----
     ["#^olimpiady/?$#", 'olympiads.php', []],
+    // Порядок «класс → предмет» (ac/at/as): пользователь выбрал уровень раньше предмета.
+    // Ставим ДО общего ac/as/at, чтобы сегмент-уровень не ушёл в 'as'.
+    ["#^olimpiady/($auds)/($levels)/([a-z0-9-]+)/?$#", 'olympiads.php', ['ac', 'at', 'as']],
     ["#^olimpiady/($auds)/([a-z0-9-]+)/([a-z0-9-]+)/?$#", 'olympiads.php', ['ac', 'as', 'at']],
     ["#^olimpiady/($auds)/($levels)/?$#", 'olympiads.php', ['ac', 'at']],
     ["#^olimpiady/($auds)/([a-z0-9-]+)/?$#", 'olympiads.php', ['ac', 'as']],
@@ -178,6 +183,11 @@ $redirects = [
     ["#^kursyb(/.*)?$#", '/kursy$1'],
     ["#^konkurs/([a-z0-9-]+)/?$#", '/konkursy/$1'],
     ["#^(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo)/konkurs/([a-z0-9-]+)/?$#", '/konkursy/$2'],
+    // Конкурсы: старый порядок ac/at/as → канонический ac/as/at (аналог .htaccess строк 119–120).
+    // С категорией конкурса (cc) и без. У конкурсов НЕТ правил «архивный уровень → категория»
+    // (в отличие от олимпиад) — competitions.php сам игнорирует неактивный уровень (200).
+    ["#^konkursy/($catsK)/($auds)/($levels)/([a-z0-9-]+)/?$#", '/konkursy/$1/$2/$4/$3/'],
+    ["#^konkursy/($auds)/($levels)/([a-z0-9-]+)/?$#", '/konkursy/$1/$3/$2/'],
     ["#^publikaciya/([a-z0-9-]+)$#", '/publikaciya/$1/'],
     ["#^avtor/([0-9]+)$#", '/avtor/$1/'],
     ["#^material/([a-z0-9-]+)$#", '/material/$1/'],
@@ -186,6 +196,15 @@ $redirects = [
     ["#^olimpiady/pedagogam-shkol/?$#", '/olimpiady/pedagogi/'],
     ["#^olimpiady/pedagogam-ovz/?$#", '/olimpiady/pedagogi/'],
     ["#^olimpiady/logopedy/?$#", '/olimpiady/pedagogi/'],
+    // Опустевшие диапазонные уровни олимпиад (nachalnaya-shkola/srednyaya-starshaya-shkola/
+    // *-klassy) — после дробления на отдельные классы эти audience_types деактивированы
+    // (is_active=0) и олимпиад не содержат. Аналог .htaccess строк 175–183.
+    // ВАЖНО: эти два правила — ДО правила нормализации порядка ниже, иначе сегмент
+    // архивного уровня в позиции `at` уйдёт в ветку ac/at/as и редирект будет неверным.
+    ["#^olimpiady/(pedagogi|shkolnikam)/(nachalnaya-shkola|srednyaya-starshaya-shkola|1-4-klassy|5-8-klassy|9-11-klassy)/?$#", '/olimpiady/$1/'],
+    ["#^olimpiady/(pedagogi|shkolnikam)/([a-z0-9-]+)/(nachalnaya-shkola|srednyaya-starshaya-shkola|1-4-klassy|5-8-klassy|9-11-klassy)/?$#", '/olimpiady/$1/$2/'],
+    // Старый порядок сегментов ac/at/as → канонический ac/as/at. Аналог .htaccess строки 186.
+    ["#^olimpiady/($auds)/($levels)/([a-z0-9-]+)/?$#", '/olimpiady/$1/$3/$2/'],
     ["#^vebinary/avtovebinary/?$#", '/vebinary/videolektsii/'],
     ["#^kabinet/avtovebinar/(\d+)/?$#", '/kabinet/videolektsiya/$1/'],
     ["#^vebinar/leto-bez-stressa-osobye-deti/?$#", '/vebinar/poleznoe-leto-osobyj-rebenok/'],

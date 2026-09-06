@@ -102,6 +102,22 @@ if (!empty($audienceSpecializations) && $selectedCategoryData) {
     }));
 }
 
+// Разделяем объединённый список «Предмет / специализация» на две самостоятельные
+// категории фильтра: «Предмет» (specialization_type = subject) и «Специализация»
+// (specialization_type = role). Оба фильтруют каталог через один query-параметр `as`
+// (specialization_slug) — различие только визуальное, в аккордеоне фильтра.
+$specSubjects = [];
+$specRoles    = [];
+foreach ($audienceSpecializations as $as) {
+    if (($as['specialization_type'] ?? 'subject') === 'role') {
+        $specRoles[] = $as;
+    } else {
+        $specSubjects[] = $as;
+    }
+}
+// Тип выбранной специализации — чтобы раскрыть нужную группу и не открывать чужую.
+$selectedSpecType = $selectedSpecData['specialization_type'] ?? '';
+
 if (!empty($audienceTypes) && $selectedCategoryData) {
     $audienceTypeCounts = [];
     foreach ($audienceTypes as $at) {
@@ -393,46 +409,92 @@ include __DIR__ . '/includes/header-redesign.php';
       <aside class="rd-filters" id="rdFiltersPanel">
 
         <?php if (!empty($audienceCategories)): ?>
-        <h4>Аудитория</h4>
-        <div class="rd-chip-list">
-          <div class="rd-chip-row<?php echo empty($selectedCategory) ? ' active' : ''; ?>">
-            <label>
-              <a href="/olimpiady/" style="text-decoration:none;color:inherit;">Все олимпиады</a>
-            </label>
+        <?php // Аудитория — верхний уровень, всегда раскрыт ?>
+        <div class="rd-facet is-open" data-facet="audience">
+          <button type="button" class="rd-facet-head" aria-expanded="true">
+            <span>Аудитория</span>
+            <svg class="rd-facet-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="rd-facet-body">
+            <div class="rd-chip-list">
+              <div class="rd-chip-row<?php echo empty($selectedCategory) ? ' active' : ''; ?>">
+                <label>
+                  <a href="/olimpiady/" style="text-decoration:none;color:inherit;">Все олимпиады</a>
+                </label>
+              </div>
+              <?php foreach ($audienceCategories as $ac): ?>
+              <div class="rd-chip-row<?php echo $selectedCategory === $ac['slug'] ? ' active' : ''; ?>">
+                <label>
+                  <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $ac['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($ac['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+                </label>
+              </div>
+              <?php endforeach; ?>
+            </div>
           </div>
-          <?php foreach ($audienceCategories as $ac): ?>
-          <div class="rd-chip-row<?php echo $selectedCategory === $ac['slug'] ? ' active' : ''; ?>">
-            <label>
-              <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $ac['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($ac['name'], ENT_QUOTES, 'UTF-8'); ?></a>
-            </label>
-          </div>
-          <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
-        <?php if (!empty($audienceSpecializations)): ?>
-        <h4>Предмет / специализация</h4>
-        <div class="rd-chip-list">
-          <?php foreach ($audienceSpecializations as $as): ?>
-          <div class="rd-chip-row<?php echo $selectedSpec === $as['slug'] ? ' active' : ''; ?>">
-            <label>
-              <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'as' => $as['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($as['name'], ENT_QUOTES, 'UTF-8'); ?></a>
-            </label>
+        <?php // Дополнительные параметры доступны после выбора аудитории (напр. «Педагог»). ?>
+        <?php if (!empty($specSubjects)): ?>
+        <?php $subjOpen = ($selectedSpecType === 'subject'); ?>
+        <div class="rd-facet<?php echo $subjOpen ? ' is-open' : ''; ?>" data-facet="subject">
+          <button type="button" class="rd-facet-head" aria-expanded="<?php echo $subjOpen ? 'true' : 'false'; ?>">
+            <span>Предмет</span>
+            <svg class="rd-facet-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="rd-facet-body">
+            <div class="rd-chip-list">
+              <?php foreach ($specSubjects as $as): ?>
+              <div class="rd-chip-row<?php echo $selectedSpec === $as['slug'] ? ' active' : ''; ?>">
+                <label>
+                  <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'as' => $as['slug'], 'at' => $selectedType]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($as['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+                </label>
+              </div>
+              <?php endforeach; ?>
+            </div>
           </div>
-          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <?php if (!empty($specRoles)): ?>
+        <?php $roleOpen = ($selectedSpecType === 'role'); ?>
+        <div class="rd-facet<?php echo $roleOpen ? ' is-open' : ''; ?>" data-facet="role">
+          <button type="button" class="rd-facet-head" aria-expanded="<?php echo $roleOpen ? 'true' : 'false'; ?>">
+            <span>Специализация</span>
+            <svg class="rd-facet-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="rd-facet-body">
+            <div class="rd-chip-list">
+              <?php foreach ($specRoles as $as): ?>
+              <div class="rd-chip-row<?php echo $selectedSpec === $as['slug'] ? ' active' : ''; ?>">
+                <label>
+                  <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'as' => $as['slug'], 'at' => $selectedType]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($as['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+                </label>
+              </div>
+              <?php endforeach; ?>
+            </div>
+          </div>
         </div>
         <?php endif; ?>
 
         <?php if (!empty($audienceTypes)): ?>
-        <h4>Уровень</h4>
-        <div class="rd-chip-list">
-          <?php foreach ($audienceTypes as $at): ?>
-          <div class="rd-chip-row<?php echo $selectedType === $at['slug'] ? ' active' : ''; ?>">
-            <label>
-              <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'as' => $selectedSpec, 'at' => $at['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($at['name'], ENT_QUOTES, 'UTF-8'); ?></a>
-            </label>
+        <?php $lvlOpen = !empty($selectedType); ?>
+        <div class="rd-facet<?php echo $lvlOpen ? ' is-open' : ''; ?>" data-facet="level">
+          <button type="button" class="rd-facet-head" aria-expanded="<?php echo $lvlOpen ? 'true' : 'false'; ?>">
+            <span>Уровень</span>
+            <svg class="rd-facet-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="rd-facet-body">
+            <div class="rd-chip-list">
+              <?php foreach ($audienceTypes as $at): ?>
+              <div class="rd-chip-row<?php echo $selectedType === $at['slug'] ? ' active' : ''; ?>">
+                <label>
+                  <a href="<?php echo buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'as' => $selectedSpec, 'at' => $at['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($at['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+                </label>
+              </div>
+              <?php endforeach; ?>
+            </div>
           </div>
-          <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
@@ -698,6 +760,22 @@ function renderOlympiadCard(o) {
             loadMoreBtn.disabled = false;
             loadMoreBtn.textContent = 'Показать больше олимпиад';
         }
+    });
+})();
+
+// Аккордеон фильтра: клик по заголовку категории раскрывает/сворачивает её список.
+// Категории «Предмет», «Специализация», «Уровень» по умолчанию свёрнуты (класс is-open
+// проставляется на сервере только при активном выборе внутри группы).
+(function() {
+    var panel = document.getElementById('rdFiltersPanel');
+    if (!panel) return;
+    panel.addEventListener('click', function(e) {
+        var head = e.target.closest('.rd-facet-head');
+        if (!head || !panel.contains(head)) return;
+        var facet = head.closest('.rd-facet');
+        if (!facet) return;
+        var open = facet.classList.toggle('is-open');
+        head.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
 })();
 </script>

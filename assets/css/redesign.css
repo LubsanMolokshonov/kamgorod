@@ -1269,35 +1269,42 @@ h1.rd-hero-title-sm { font-size: clamp(34px, 4.4vw, 56px); line-height: 1.05; }
   grid-template-areas:
     "filters search"
     "filters cards";
+  /* Сайдбар .rd-filters спанит обе строки. Когда карточек мало, он выше правой
+     колонки, и грид раздавал бы его лишнюю высоту между обеими строками — из-за
+     чего строка "search" раздувалась, а карточки уезжали вниз (визуально "по
+     центру"). Явные grid-template-rows: строка поиска по контенту (auto), вся
+     лишняя высота уходит в строку карточек (1fr); .rd-catalog-main в ней
+     прижат к верху через align-self: start. */
+  grid-template-rows: auto 1fr;
   gap: 28px;
   align-items: start;
 }
 .rd-catalog > .rd-comp-search,
 .rd-catalog > .rd-course-search { grid-area: search; }
 .rd-catalog > .rd-filters { grid-area: filters; }
-.rd-catalog > .rd-catalog-main { grid-area: cards; }
+.rd-catalog > .rd-catalog-main { grid-area: cards; align-self: start; }
 .rd-filters {
   position: sticky;
   top: 80px;
   background: #fff;
   border: 1px solid var(--ink-200);
   border-radius: var(--r-lg);
-  padding: 18px;
+  padding: 14px 14px 10px;
   max-height: calc(100vh - 100px);
   overflow-y: auto;
   overflow-x: hidden;
   min-width: 0;
 }
 .rd-filters h4 {
-  font: 700 13px var(--font-sans);
+  font: 700 12px var(--font-sans);
   text-transform: uppercase;
-  letter-spacing: .06em;
+  letter-spacing: .05em;
   color: var(--ink-500);
-  margin: 28px 0 16px;
-  padding-top: 20px;
+  margin: 14px 0 8px;
+  padding-top: 12px;
   border-top: 1px solid var(--ink-100);
 }
-.rd-filters h4:first-child { margin-top: 0; padding-top: 0; border-top: 0; margin-bottom: 16px; }
+.rd-filters h4:first-child { margin-top: 0; padding-top: 0; border-top: 0; margin-bottom: 8px; }
 .rd-filter-toggle {
   display: none;
   align-items: center;
@@ -1310,28 +1317,28 @@ h1.rd-hero-title-sm { font-size: clamp(34px, 4.4vw, 56px); line-height: 1.05; }
   color: var(--ink-700);
   cursor: pointer;
 }
-.rd-chip-list { display: flex; flex-direction: column; gap: 4px; }
+.rd-chip-list { display: flex; flex-direction: column; gap: 1px; }
 .rd-chip-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background .15s;
   min-width: 0;
 }
 .rd-chip-row:hover { background: var(--ink-50); }
 .rd-chip-row.active { background: var(--indigo-50); color: var(--indigo-700); }
-.rd-chip-row label { display: flex; gap: 10px; align-items: center; font-size: 14px; cursor: pointer; flex: 1; min-width: 0; user-select: none; }
-.rd-chip-row label a { display: block; min-width: 0; flex: 1; overflow-wrap: anywhere; word-break: break-word; line-height: 1.3; }
+.rd-chip-row label { display: flex; gap: 8px; align-items: center; font-size: 13px; line-height: 1.25; cursor: pointer; flex: 1; min-width: 0; user-select: none; }
+.rd-chip-row label a { display: block; min-width: 0; flex: 1; overflow-wrap: anywhere; word-break: break-word; line-height: 1.25; }
 .rd-chip-row input { accent-color: var(--indigo-600); }
-.rd-chip-row .count { font-size: 12px; color: var(--ink-400); }
+.rd-chip-row .count { font-size: 11px; color: var(--ink-400); }
 .rd-chip-row.active .count { color: var(--indigo-600); }
 .rd-reset-btn {
   width: 100%;
-  padding: 10px;
-  margin-top: 14px;
+  padding: 8px;
+  margin-top: 10px;
   background: transparent;
   color: var(--ink-700);
   border: 1px dashed var(--ink-300);
@@ -1343,6 +1350,36 @@ h1.rd-hero-title-sm { font-size: clamp(34px, 4.4vw, 56px); line-height: 1.05; }
   text-align: center;
 }
 .rd-reset-btn:hover { border-color: var(--indigo-400); color: var(--indigo-700); opacity: 1; }
+
+/* --- Аккордеон фильтра каталога (Аудитория / Предмет / Специализация / Уровень) --- */
+.rd-facet { border-top: 1px solid var(--ink-100); }
+.rd-facet:first-child { border-top: 0; }
+.rd-facet-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0 8px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: 700 12px var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--ink-500);
+  text-align: left;
+}
+.rd-facet:first-child .rd-facet-head { padding-top: 2px; }
+.rd-facet-head:hover { color: var(--ink-700); }
+.rd-facet-caret {
+  flex-shrink: 0;
+  transition: transform .18s ease;
+  color: var(--ink-400);
+}
+.rd-facet.is-open > .rd-facet-head .rd-facet-caret { transform: rotate(180deg); }
+.rd-facet-body { display: none; padding-bottom: 6px; }
+.rd-facet.is-open > .rd-facet-body { display: block; }
 
 .rd-catalog-main { min-width: 0; }
 .rd-catalog-toolbar {
@@ -1520,7 +1557,7 @@ h1.rd-hero-title-sm { font-size: clamp(34px, 4.4vw, 56px); line-height: 1.05; }
   .rd-hero-art,
   .rd-hero-art-cat { display: none; }
 
-  .rd-catalog { grid-template-columns: 1fr; grid-template-areas: none; }
+  .rd-catalog { grid-template-columns: 1fr; grid-template-rows: none; grid-template-areas: none; }
   .rd-catalog > .rd-comp-search,
   .rd-catalog > .rd-course-search,
   .rd-catalog > .rd-filters,
@@ -1611,10 +1648,11 @@ h1.rd-hero-title-sm { font-size: clamp(34px, 4.4vw, 56px); line-height: 1.05; }
   .rd-tc p { font-size: 11px; }
 
   /* Фильтры (если открыты — компактнее) */
-  .rd-filters { padding: 14px; border-radius: 14px; }
-  .rd-filters h4 { font-size: 12px; margin: 12px 0 8px; }
-  .rd-chip-row { padding: 6px 8px; }
-  .rd-chip-row label { font-size: 13px; gap: 8px; }
+  .rd-filters { padding: 12px 12px 8px; border-radius: 14px; }
+  .rd-filters h4 { font-size: 11.5px; margin: 10px 0 6px; padding-top: 10px; }
+  .rd-facet-head { font-size: 11.5px; padding: 9px 0 7px; }
+  .rd-chip-row { padding: 4px 8px; }
+  .rd-chip-row label { font-size: 12.5px; gap: 8px; }
 
   /* Секции — компактнее */
   .rd-section { padding: 36px 0; }

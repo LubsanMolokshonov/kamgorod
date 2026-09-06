@@ -60,7 +60,9 @@ $audienceSpecializations = [];
 $selectedSpecData = null;
 
 if ($selectedCategory) {
-    $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory);
+    // getBySlug может вернуть false для несуществующего слага — нормализуем в null,
+    // иначе false попадёт в строго типизированный buildAudienceSeoPhrase(?array) → TypeError 500.
+    $selectedCategoryData = $audienceCatObj->getBySlug($selectedCategory) ?: null;
     if ($selectedCategoryData) {
         // Специализации (предметы) — агрегированные по slug, доступны сразу после выбора аудитории
         $audienceSpecializations = $audienceCatObj->getSpecializations($selectedCategoryData['id']);
@@ -82,7 +84,10 @@ if ($selectedSpec && !empty($audienceSpecializations)) {
     }
 }
 if ($selectedType) {
-    $selectedTypeData = $audienceTypeObj->getBySlug($selectedType);
+    // ?: null — getBySlug отдаёт false для несуществующего/архивного (is_active=0) типа
+    // (напр. опустевший диапазонный уровень nachalnaya-shkola), а buildAudienceSeoPhrase
+    // ждёт ?array → иначе TypeError 500.
+    $selectedTypeData = $audienceTypeObj->getBySlug($selectedType) ?: null;
 }
 
 $hasAnyFilter = ($category !== 'all') || !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
