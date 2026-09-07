@@ -20,6 +20,17 @@ $olympiadObj = new Olympiad($db);
 $olympiad = $olympiadObj->getBySlug($slug);
 
 if (!$olympiad) {
+    // Удалённые/перезаписанные олимпиады (дробление по классам, migrate_olympiads_to_grades.php)
+    // — 301 на каталог предмета/роли. Таблица наполнена миграцией 169 (см. её шапку).
+    $rstmt = $db->prepare("SELECT target_url FROM olympiad_slug_redirects WHERE old_slug = ?");
+    $rstmt->execute([$slug]);
+    if ($to = $rstmt->fetchColumn()) {
+        header('Location: ' . $to, true, 301);
+        exit;
+    }
+}
+
+if (!$olympiad) {
     http_response_code(404);
     $pageTitle = 'Олимпиада не найдена | ' . SITE_NAME;
     $pageDescription = 'Запрашиваемая олимпиада не найдена';
