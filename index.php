@@ -57,29 +57,58 @@ $publicationObj = new Publication($db);
 $olympiadObj    = new Olympiad($db);
 $courseObj      = new Course($db);
 
-$totalCompetitions = count($competitionObj->getActiveCompetitions('all'));
-$topCompetitions   = $competitionObj->getTopCompetitions(6);
-$webinarCounts     = $webinarObj->countByStatus();
-$topWebinars       = $webinarObj->getTopWebinars(6);
-$totalWebinars     = ($webinarCounts['upcoming'] ?? 0) + ($webinarCounts['recordings'] ?? 0) + ($webinarCounts['autowebinars'] ?? 0);
+// Главная не должна падать в 500 из-за одного проблемного запроса — каждый блок
+// изолирован, при сбое секция просто отрисуется с нулевыми/пустыми данными.
+try {
+    $totalCompetitions = count($competitionObj->getActiveCompetitions('all'));
+    $topCompetitions   = $competitionObj->getTopCompetitions(6);
+} catch (Throwable $e) {
+    error_log('index.php competitions block: ' . $e->getMessage());
+    $totalCompetitions = 0;
+    $topCompetitions   = [];
+}
+
+try {
+    $webinarCounts = $webinarObj->countByStatus();
+    $topWebinars   = $webinarObj->getTopWebinars(6);
+} catch (Throwable $e) {
+    error_log('index.php webinars block: ' . $e->getMessage());
+    $webinarCounts = [];
+    $topWebinars   = [];
+}
+$totalWebinars = ($webinarCounts['upcoming'] ?? 0) + ($webinarCounts['recordings'] ?? 0) + ($webinarCounts['autowebinars'] ?? 0);
 
 try {
     $publicationCount = $publicationObj->getPublishedCount();
     $topPublications  = $publicationObj->getPopular(6);
-} catch (Exception $e) {
+} catch (Throwable $e) {
+    error_log('index.php publications block: ' . $e->getMessage());
     $publicationCount = 0;
     $topPublications  = [];
 }
 
-$totalOlympiads = $olympiadObj->count();
-$topOlympiads   = $olympiadObj->getTopOlympiads(6);
-$totalCourses   = $courseObj->count();
-$topCourses     = array_slice($courseObj->getActiveCourses(), 0, 6);
+try {
+    $totalOlympiads = $olympiadObj->count();
+    $topOlympiads   = $olympiadObj->getTopOlympiads(6);
+} catch (Throwable $e) {
+    error_log('index.php olympiads block: ' . $e->getMessage());
+    $totalOlympiads = 0;
+    $topOlympiads   = [];
+}
+
+try {
+    $totalCourses = $courseObj->count();
+    $topCourses   = array_slice($courseObj->getActiveCourses(), 0, 6);
+} catch (Throwable $e) {
+    error_log('index.php courses block: ' . $e->getMessage());
+    $totalCourses = 0;
+    $topCourses   = [];
+}
 
 try {
     $totalMaterials = (int)$db->query("SELECT COUNT(*) AS c FROM materials WHERE status = 'published'")
         ->fetch(PDO::FETCH_ASSOC)['c'];
-} catch (Exception $e) {
+} catch (Throwable $e) {
     $totalMaterials = 0;
 }
 

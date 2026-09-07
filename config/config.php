@@ -500,6 +500,71 @@ if (YOOKASSA_MODE === 'sandbox') {
     ini_set('display_errors', 0);
     ini_set('log_errors', 1);
     ini_set('error_log', BASE_PATH . '/logs/error.log');
+
+    // Глобальная подстраховка от «белого» HTTP 500. Без неё любой неперехваченный
+    // Throwable / fatal на публичной странице отдаёт пустой ответ с кодом 500 —
+    // Google помечает URL как «Ошибка сервера (5xx)» и выкидывает из индекса.
+    // Здесь мы логируем трейс и отдаём pages/500.php со статусом 503 + Retry-After
+    // (для краулера — «зайди позже», страница остаётся в индексе).
+    //
+    // Не трогаем CLI (там свои обработчики в cron/scripts). JSON-эндпоинты
+    // (AJAX/API) получают {success:false} вместо HTML-заглушки.
+    if (PHP_SAPI !== 'cli' && !defined('SUPPRESS_GLOBAL_ERROR_PAGE')) {
+
+        $renderErrorPage = static function (): void {
+            if (defined('GLOBAL_ERROR_PAGE_RENDERED')) {
+                return;
+            }
+            define('GLOBAL_ERROR_PAGE_RENDERED', true);
+
+            // JSON-эндпоинт уже начал отдавать application/json — не подмешиваем HTML.
+            foreach (headers_list() as $h) {
+                if (stripos($h, 'Content-Type: application/json') === 0) {
+                    if (!headers_sent()) {
+                        http_response_code(503);
+                        header('Retry-After: 3600');
+                    }
+                    echo '{"success":false,"error":"server_error"}';
+                    return;
+                }
+            }
+
+            // Сбрасываем частично отрисованный HTML, чтобы заглушка была цельной.
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
+            $errorPage = BASE_PATH . '/pages/500.php';
+            if (is_file($errorPage)) {
+                include $errorPage;
+            } elseif (!headers_sent()) {
+                http_response_code(503);
+                header('Retry-After: 3600');
+                echo 'Временная ошибка. Попробуйте позже.';
+            }
+        };
+
+        set_exception_handler(static function (\Throwable $e) use ($renderErrorPage): void {
+            error_log(sprintf(
+                'Uncaught %s: %s in %s:%d | URI: %s',
+                get_class($e), $e->getMessage(), $e->getFile(), $e->getLine(),
+                $_SERVER['REQUEST_URI'] ?? '-'
+            ));
+            $renderErrorPage();
+        });
+
+        register_shutdown_function(static function () use ($renderErrorPage): void {
+            $err = error_get_last();
+            if ($err !== null && ($err['type'] & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR))) {
+                error_log(sprintf(
+                    'Fatal (type %d): %s in %s:%d | URI: %s',
+                    $err['type'], $err['message'], $err['file'], $err['line'],
+                    $_SERVER['REQUEST_URI'] ?? '-'
+                ));
+                $renderErrorPage();
+            }
+        });
+    }
 }
 
 // Timezone
