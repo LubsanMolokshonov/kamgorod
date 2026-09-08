@@ -94,5 +94,6 @@ php scripts/build-search-index.php
 ## Подробные доки (читать по необходимости)
 - `docs/AUDIENCE_SEGMENTATION_GUIDE.md`, `docs/README_AUDIENCES.md`, `docs/ADMIN_GUIDE_AUDIENCES.md` — аудитория
 - `docs/DEPLOYMENT.md` — деплой
+- `docs/NGINX_PROD.md` — прод-nginx: настройки вне репозитория (схема в Location и т.п.)
 - `docs/INTEGRATION_README.md` — интеграции
 - `docs/выбор_курсов_переподготовки.md` — бизнес-логика курсов ПП
