@@ -187,6 +187,30 @@ class Review {
     }
 
     /**
+     * Одобренные отзывы сразу по набору сущностей одного типа
+     * (для каталоговых страниц: отзывы всех курсов среза). Только с текстом.
+     * @param int[] $entityIds
+     * @return array строки: id, entity_id, author_name, rating, review_text, created_at
+     */
+    public function getApprovedForEntities($entityType, array $entityIds, $limit = 24) {
+        if (!self::isValidType($entityType) || empty($entityIds)) {
+            return [];
+        }
+        $ids = array_values(array_unique(array_map('intval', $entityIds)));
+        $ph  = implode(',', array_fill(0, count($ids), '?'));
+        $limit = max(1, min(100, (int)$limit)); // safe: int, интерполяция в LIMIT безопасна
+        return $this->db->query(
+            "SELECT id, entity_id, author_name, rating, review_text, created_at
+             FROM reviews
+             WHERE entity_type = ? AND entity_id IN ($ph) AND status = 'approved'
+               AND review_text IS NOT NULL AND review_text <> ''
+             ORDER BY created_at DESC
+             LIMIT {$limit}",
+            array_merge([$entityType], $ids)
+        );
+    }
+
+    /**
      * Проверить, оставлял ли уже этот токен отзыв по сущности.
      */
     public function hasReviewed($entityType, $entityId, $voteToken) {

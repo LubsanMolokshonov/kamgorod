@@ -96,11 +96,12 @@ $allCourses = !empty($filters)
 $totalCourses = count($allCourses);
 $courses      = array_slice($allCourses, 0, $perPage);
 $hasMore      = $totalCourses > $perPage;
+$courseIdsAll = array_column($allCourses, 'id'); // id всех курсов текущего среза
 
 // Преподаватели курсов из текущей выборки (только с реальной фотографией)
 $categoryExperts = [];
-if (!empty($allCourses)) {
-    $courseIds = array_column($allCourses, 'id');
+if (!empty($courseIdsAll)) {
+    $courseIds = $courseIdsAll;
     $placeholders = implode(',', array_fill(0, count($courseIds), '?'));
     $stmt = $db->prepare(
         "SELECT DISTINCT ce.id, ce.full_name, ce.slug, ce.credentials, ce.photo_url, ce.display_order
@@ -303,8 +304,38 @@ $faqVars = [
 $faqItems = buildLandingFaq(coursesLandingFaqPool(), $pageKey, $faqVars, 6);
 $jsonLdArray = [buildFaqJsonLd($faqItems)];
 
-// Витрина отзывов посадочной (только на страницах со специализацией).
-$landingReviews = !empty($selectedSpecData) ? getLandingReviews($db, $pageKey) : [];
+// Витрина отзывов каталоговой страницы: реальные отзывы курсов среза,
+// затем добивка существующими сид-отзывами посадочной (landing_reviews) до 12.
+require_once __DIR__ . '/classes/Review.php';
+$reviewObj = new Review($db);
+
+$realCourseReviews = !empty($courseIdsAll)
+    ? $reviewObj->getApprovedForEntities('course', $courseIdsAll, 24)
+    : [];
+
+// нормализация ключей под renderLandingReviews / buildLandingReviewsProductJsonLd
+$landingReviews = array_map(fn($r) => [
+    'author_name' => $r['author_name'],
+    'rating'      => (int)$r['rating'],
+    'review_text' => $r['review_text'],
+    'review_date' => $r['created_at'],
+], $realCourseReviews);
+
+if (count($landingReviews) < 12) {
+    $seedPool = getLandingReviews($db, $pageKey, 12);
+    $seen = [];
+    foreach ($landingReviews as $r) {
+        $seen[mb_strtolower(trim($r['author_name'] . '|' . $r['review_text']))] = true;
+    }
+    foreach ($seedPool as $s) {
+        if (count($landingReviews) >= 12) break;
+        $k = mb_strtolower(trim(($s['author_name'] ?? '') . '|' . ($s['review_text'] ?? '')));
+        if (isset($seen[$k])) continue;
+        $landingReviews[] = $s;
+        $seen[$k] = true;
+    }
+}
+
 // Уникальный SEO-текст посадочной (если сгенерирован под этот page_key).
 $landingSeoHtml = getLandingSeoHtml($db, $pageKey);
 
