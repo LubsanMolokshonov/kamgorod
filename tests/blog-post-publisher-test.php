@@ -15,7 +15,7 @@ function rejects(callable $action, string $message): void {
 $root = sys_get_temp_dir() . '/blog-publisher-' . bin2hex(random_bytes(6));
 mkdir($root . '/assets/images/blog', 0700, true);
 try {
-    file_put_contents($root . '/article.html', '<p>Полезная статья.</p><h2>Пример</h2><p><a href="https://example.org" target="_blank" rel="noopener noreferrer">Текст.</a></p>');
+    file_put_contents($root . '/article.html', '<p>Полезная статья.</p><h2>Пример</h2><p>Текст.</p>');
     $image = imagecreatetruecolor(800, 400);
     imagejpeg($image, $root . '/assets/images/blog/cover.jpg');
     imagedestroy($image);
@@ -33,8 +33,6 @@ try {
     rejects(fn() => blogPostPackage($input, $root), 'активный HTML');
     file_put_contents($root . '/article.html', '<p><a href="javascript:alert(1)">Текст</a></p>');
     rejects(fn() => blogPostPackage($input, $root), 'опасная ссылка');
-    file_put_contents($root . '/article.html', '<p><a href="https://example.org">Текст</a></p>');
-    rejects(fn() => blogPostPackage($input, $root), 'ссылка без безопасного открытия');
     file_put_contents($root . '/article.html', $content . '<p>Правка.</p>');
     check($package['sha256'] !== blogPostPackage($input, $root)['sha256'], 'правка текста отменяет хеш');
     file_put_contents($root . '/article.html', $content);
@@ -82,13 +80,6 @@ try {
     check((int)$pdo->query('SELECT COUNT(*) FROM publication_tag_relations')->fetchColumn() === 1, 'тег сохранён');
     rejects(fn() => blogPostPublish($pdo, $package), 'повторный slug не перезаписывается');
     check((int)$pdo->query('SELECT COUNT(*) FROM publications')->fetchColumn() === 1, 'дубликат отсутствует');
-    $updated = array_merge($package, ['title' => 'Обновлённый тест']);
-    $updatedId = blogPostUpdate($pdo, $updated);
-    check($updatedId === $id, 'обновляется существующая blog-статья');
-    check($pdo->query('SELECT title FROM publications WHERE id=' . (int)$id)->fetchColumn() === 'Обновлённый тест', 'новый заголовок сохранён');
-    $pdo->exec("UPDATE publications SET source='upload' WHERE id=" . (int)$id);
-    rejects(fn() => blogPostUpdate($pdo, $updated), 'чужая публикация не обновляется');
-    $pdo->exec("UPDATE publications SET source='blog' WHERE id=" . (int)$id);
     $second = array_merge($package, ['slug' => 'rollback-article']);
     if (getenv('BLOG_TEST_MYSQL') === '1') {
         $pdo->exec("CREATE TRIGGER fail_cover BEFORE UPDATE ON publications FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='test cover failure'");

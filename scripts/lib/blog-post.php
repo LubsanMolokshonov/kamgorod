@@ -43,27 +43,12 @@ function blogPostPackage(array $input, string $root): array {
             throw new InvalidArgumentException('Недопустимый HTML-элемент: ' . $node->tagName);
         }
         foreach ($node->attributes as $attr) {
-            if (!in_array($attr->name, ['id', 'href', 'title', 'scope', 'colspan', 'rowspan', 'align', 'target', 'rel'], true)) {
+            if (!in_array($attr->name, ['id', 'href', 'title', 'scope', 'colspan', 'rowspan'], true)) {
                 throw new InvalidArgumentException('Недопустимый HTML-атрибут: ' . $attr->name);
             }
             if ($attr->name === 'href' && !preg_match('~^(https?://[^\s]+|/(?!/)[^\s]*|#[a-zA-Z0-9_-]+)$~D', $attr->value)) {
                 throw new InvalidArgumentException('Недопустимая ссылка в HTML.');
             }
-            if ($attr->name === 'target' && $attr->value !== '_blank') {
-                throw new InvalidArgumentException('Ссылки могут использовать только target="_blank".');
-            }
-            if ($attr->name === 'rel' && $attr->value !== 'noopener noreferrer') {
-                throw new InvalidArgumentException('Ссылки должны использовать rel="noopener noreferrer".');
-            }
-            if ($attr->name === 'align' && (!in_array($node->tagName, ['th', 'td'], true)
-                || !in_array($attr->value, ['left', 'center', 'right'], true))) {
-                throw new InvalidArgumentException('Недопустимое выравнивание таблицы.');
-            }
-        }
-        if ($node->tagName === 'a'
-            && ($node->getAttribute('target') !== '_blank'
-                || $node->getAttribute('rel') !== 'noopener noreferrer')) {
-            throw new InvalidArgumentException('Каждая ссылка должна открываться в новой вкладке с безопасным rel.');
         }
     }
     $cover = $input['cover-image'];
@@ -125,29 +110,6 @@ function blogPostReferences(PDO $pdo, array $package): array {
     return ['user_id' => $authorId, 'publication_type_id' => $typeId, 'tag_ids' => $tagIds];
 }
 
-function blogPostUpdateReferences(PDO $pdo, array $package): array {
-    $q = $pdo->prepare("SELECT id FROM publications WHERE slug = ? AND source = 'blog' AND status = 'published'");
-    $q->execute([$package['slug']]);
-    $id = $q->fetchColumn();
-    if ($id === false) {
-        throw new RuntimeException('Опубликованная blog-статья с таким slug не найдена.');
-    }
-    $type = $pdo->prepare('SELECT id FROM publication_types WHERE slug = ?');
-    $type->execute([$package['type']]);
-    $typeId = $type->fetchColumn();
-    if (!$typeId) { throw new RuntimeException('Неизвестный тип публикации.'); }
-    $tagIds = [];
-    foreach ($package['tags'] as $tag) {
-        $q = $pdo->prepare('SELECT id FROM publication_tags WHERE slug = ?');
-        $q->execute([$tag]);
-        $tagId = $q->fetchColumn();
-        if (!$tagId) { throw new RuntimeException('Неизвестный тег: ' . $tag); }
-        $tagIds[] = (int)$tagId;
-    }
-    $pdo->query('SELECT cover_image_url, cover_status FROM publications LIMIT 0');
-    return ['id' => (int)$id, 'publication_type_id' => (int)$typeId, 'tag_ids' => $tagIds];
-}
-
 function blogPostPublish(PDO $pdo, array $package): int {
     $locked = false;
     try {
@@ -164,41 +126,6 @@ function blogPostPublish(PDO $pdo, array $package): int {
         $q->execute([$package['cover_image_url'], $id]);
         $pdo->commit();
         return (int)$id;
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) { $pdo->rollBack(); }
-        throw $e;
-    } finally {
-        if ($locked) {
-            $q = $pdo->prepare('SELECT RELEASE_LOCK(?)');
-            $q->execute(['fgos_editorial_blog_publish']);
-        }
-    }
-}
-
-function blogPostUpdate(PDO $pdo, array $package): int {
-    $locked = false;
-    try {
-        $q = $pdo->prepare('SELECT GET_LOCK(?, 10)');
-        $q->execute(['fgos_editorial_blog_publish']);
-        $locked = (int)$q->fetchColumn() === 1;
-        if (!$locked) { throw new RuntimeException('Публикация занята другим процессом. Повторите позже.'); }
-        $pdo->beginTransaction();
-        $references = blogPostUpdateReferences($pdo, $package);
-        $q = $pdo->prepare("UPDATE publications SET title = ?, annotation = ?, content = ?,
-            publication_type_id = ?, meta_title = ?, meta_description = ?, noindex = ?,
-            cover_image_url = ?, cover_status = 'done' WHERE id = ? AND source = 'blog'");
-        $q->execute([$package['title'], $package['annotation'], $package['content'],
-            $references['publication_type_id'], $package['meta_title'], $package['meta_description'],
-            $package['noindex'], $package['cover_image_url'], $references['id']]);
-        if ($q->rowCount() !== 1) { throw new RuntimeException('Статья не обновлена.'); }
-        $q = $pdo->prepare('DELETE FROM publication_tag_relations WHERE publication_id = ?');
-        $q->execute([$references['id']]);
-        foreach ($references['tag_ids'] as $tagId) {
-            $q = $pdo->prepare('INSERT INTO publication_tag_relations (publication_id, tag_id) VALUES (?, ?)');
-            $q->execute([$references['id'], $tagId]);
-        }
-        $pdo->commit();
-        return $references['id'];
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) { $pdo->rollBack(); }
         throw $e;
