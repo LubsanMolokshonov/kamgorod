@@ -135,6 +135,74 @@ if (!empty($audienceTypes) && $selectedCategoryData) {
 
 $hasOlympFilter = !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpec);
 if ($totalOlympiads === 0 && $hasOlympFilter) {
+    // Пустой каталог — это soft-404: страница отдаёт 200 со списком «Найдено: 0». Такие URL остались
+    // от консолидации предметов 06.09.2026 и дробления олимпиад по классам, они до сих пор в индексе
+    // и получают трафик. Отдаём 301 (карта — миграция 172):
+    //   1) явная карта olympiad_catalog_redirects: старый предмет → консолидированный преемник;
+    //   2) если в карте пусто — «лестница» вверх ac/as/at → ac/as → ac → /olimpiady/,
+    //      первая ступень с непустым инвентарём.
+    // Запросы выполняются только на пустой странице, обычный каталог их не делает.
+    $redirectTarget = null;
+
+    $lookupPaths = [];
+    if ($selectedCategory !== '') {
+        if ($selectedSpec !== '' && $selectedType !== '') {
+            $lookupPaths[] = $selectedCategory . '/' . $selectedSpec . '/' . $selectedType;
+        }
+        if ($selectedSpec !== '') $lookupPaths[] = $selectedCategory . '/' . $selectedSpec;
+        if ($selectedType !== '') $lookupPaths[] = $selectedCategory . '/' . $selectedType;
+        $lookupPaths[] = $selectedCategory;
+    }
+    if (!empty($lookupPaths)) {
+        try {
+            $placeholders = implode(',', array_fill(0, count($lookupPaths), '?'));
+            $redirStmt = $db->prepare("SELECT old_path, target_url FROM olympiad_catalog_redirects WHERE old_path IN ($placeholders)");
+            $redirStmt->execute($lookupPaths);
+            $redirMap = $redirStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+            foreach ($lookupPaths as $lookupPath) { // от самого частного пути к самому общему
+                if (!empty($redirMap[$lookupPath])) {
+                    $redirectTarget = $redirMap[$lookupPath];
+                    break;
+                }
+            }
+        } catch (PDOException $e) {
+            // Таблицы ещё нет (код задеплоен раньше миграции) — остаётся лестница ниже.
+            error_log('olympiad_catalog_redirects lookup failed: ' . $e->getMessage());
+        }
+    }
+
+    if ($redirectTarget === null && $selectedCategoryData) {
+        $ladder = [];
+        if ($selectedSpec !== '' && $selectedTypeData) {
+            $ladder[] = [
+                ['category_id' => $selectedCategoryData['id'], 'specialization_slug' => $selectedSpec],
+                buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'as' => $selectedSpec]),
+            ];
+        }
+        if ($selectedSpec !== '' || $selectedTypeData) {
+            $ladder[] = [
+                ['category_id' => $selectedCategoryData['id']],
+                buildSeoUrl('olimpiady', ['ac' => $selectedCategory]),
+            ];
+        }
+        foreach ($ladder as [$stepFilters, $stepUrl]) {
+            if (count($olympiadObj->getFilteredOlympiads($stepFilters)) > 0) {
+                $redirectTarget = $stepUrl;
+                break;
+            }
+        }
+        if ($redirectTarget === null) {
+            $redirectTarget = '/olimpiady/';
+        }
+    }
+
+    // Защита от петли — страница не должна редиректить сама на себя.
+    $currentPath = rtrim((string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), '/') . '/';
+    if ($redirectTarget !== null && rtrim($redirectTarget, '/') . '/' !== $currentPath) {
+        header('Location: ' . $redirectTarget, true, 301);
+        exit;
+    }
+
     $noindex = true;
 }
 
