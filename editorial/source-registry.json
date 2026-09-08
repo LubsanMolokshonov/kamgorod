@@ -1,0 +1,45 @@
+{
+  "policy": "Это указатели, а не бессрочно подтверждённые нормы. Перепроверять перед каждой статьёй.",
+  "sources": [
+    {
+      "id": "S1",
+      "document": "Приказ Минпросвещения России от 06.11.2024 № 779",
+      "url": "https://publication.pravo.gov.ru/document/0001202412050007",
+      "last_checked": "2026-09-08",
+      "evidence": "editorial/articles/ktp-shkolnomu-uchitelyu/sources.json",
+      "scope": "ДОУ и школа различены по подразделам"
+    },
+    {
+      "id": "S2",
+      "document": "Приказ Минпросвещения России от 18.06.2025 № 467",
+      "url": "https://publication.pravo.gov.ru/document/0001202507170012",
+      "last_checked": "2026-09-08",
+      "evidence": "editorial/articles/ktp-shkolnomu-uchitelyu/sources.json",
+      "scope": "Обновлённые ФГОС НОО (286) и ООО (287); не СОО"
+    },
+    {
+      "id": "S3",
+      "document": "Федеральный закон от 29.12.2012 № 273-ФЗ",
+      "url": "http://kremlin.ru/acts/bank/36698/print",
+      "last_checked": "2026-09-08",
+      "evidence": "editorial/articles/ktp-shkolnomu-uchitelyu/sources.json",
+      "scope": "Образовательные организации; региональные перечни — для основных общеобразовательных программ"
+    },
+    {
+      "id": "S4",
+      "document": "ЕДСОО: Рабочие программы",
+      "url": "https://edsoo.ru/rabochie-programmy/",
+      "last_checked": "2026-09-08",
+      "evidence": "editorial/articles/ktp-shkolnomu-uchitelyu/sources.json",
+      "scope": "Навигация, не нормативные часы предмета"
+    },
+    {
+      "id": "S5",
+      "document": "ЕДСОО: Конструктор рабочих программ",
+      "url": "https://edsoo.ru/konstruktor-rabochih-programm/",
+      "last_checked": "2026-09-08",
+      "evidence": "editorial/articles/ktp-shkolnomu-uchitelyu/sources.json",
+      "scope": "Описание сервиса; авторизованные функции не проверялись"
+    }
+  ]
+}

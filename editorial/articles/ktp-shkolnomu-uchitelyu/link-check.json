@@ -1,0 +1,35 @@
+{
+  "checked_at": "2026-09-08",
+  "results": [
+    {
+      "url": "http://kremlin.ru/acts/bank/36698/print",
+      "status": 200,
+      "final_url": "http://kremlin.ru/acts/bank/36698/print",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "url": "https://edsoo.ru/konstruktor-rabochih-programm/",
+      "status": 200,
+      "final_url": "https://edsoo.ru/konstruktor-rabochih-programm/",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "url": "https://edsoo.ru/rabochie-programmy/",
+      "status": 200,
+      "final_url": "https://edsoo.ru/rabochie-programmy/",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "url": "https://minjust.consultant.ru/files/53820",
+      "status": 200,
+      "final_url": "https://minjust.consultant.ru/files/53820",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://minjust.consultant.ru/files/56114",
+      "status": 200,
+      "final_url": "https://minjust.consultant.ru/files/56114",
+      "content_type": "application/pdf"
+    }
+  ]
+}

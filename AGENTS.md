@@ -89,10 +89,24 @@ docker-compose up -d         # web:8080, phpmyadmin:8081
 php migrate.php              # миграции (трекинг — таблица migrations)
 php scripts/build-search-index.php
 ```
-Деплой: скилл `/deploy` (git-based, через `docker exec pedagogy_web` на 141.105.69.45).
+Деплой: навык `.agents/skills/fgos-deploy/SKILL.md` (git-based, через
+`docker exec pedagogy_web` на 141.105.69.45).
 
 ## Подробные доки (читать по необходимости)
 - `docs/AUDIENCE_SEGMENTATION_GUIDE.md`, `docs/README_AUDIENCES.md`, `docs/ADMIN_GUIDE_AUDIENCES.md` — аудитория
-- `docs/DEPLOYMENT.md` — деплой
+- `.claude/commands/deploy.md` — поддерживаемая процедура production-деплоя
+- `docs/DEPLOYMENT.md` — устаревшая инструкция ЮKassa, не использовать для текущего деплоя
 - `docs/INTEGRATION_README.md` — интеграции
 - `docs/выбор_курсов_переподготовки.md` — бизнес-логика курсов ПП
+
+## Редакционные статьи блога
+При создании, проверке и публикации редакционных педагогических статей прочитай
+`.agents/skills/pedagogical-articles/SKILL.md`. Это рабочий процесс в VS Code;
+пользовательский генератор на YandexGPT — отдельный продукт. Служебные материалы
+хранятся в закрытом каталоге `editorial/`. Структуру отдельно не согласовывать:
+пользователь согласует готовую статью и обложку перед публикацией.
+
+## Деплой production
+При запросе на развёртывание или публикацию на сервере прочитай
+`.agents/skills/fgos-deploy/SKILL.md`. Пользователь должен явно запросить деплой;
+одобрение статьи само по себе не разрешает коммит, push и изменение production.

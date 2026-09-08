@@ -1,120 +1,68 @@
 <?php
 /**
- * CLI скрипт: добавить статью в блог (source='blog').
- *
- * Запуск:
- *   php scripts/add-blog-post.php --title="Заголовок" --content-file=path/to/article.html [опции]
- *
- * Опции:
- *   --title=            (обязательно) заголовок статьи (H1 на странице)
- *   --content-file=     (обязательно) путь к файлу с HTML-содержимым статьи
- *   --annotation=       краткое описание для карточки в каталоге (если не задано — берётся начало content)
- *   --type=             slug типа публикации (methodology|article|research|program|
- *                       presentation|masterclass|project|experience), по умолчанию article
- *   --slug=             URL-слаг (если не задан — генерируется из title)
- *   --tags=             список slug тегов через запятую (см. publication_tags), например mathematics,history-social
- *   --meta-title=       SEO <title> (если не задан — используется title)
- *   --meta-description= SEO meta description (если не задан — используется annotation)
- *   --noindex           закрыть статью от индексации (noindex,nofollow + исключение из sitemap),
- *                       использовать, если по теме не набралось содержательного семантического ядра
+ * Редакционная публикация блога. По умолчанию — проверка без записи в БД.
+ * php scripts/add-blog-post.php --manifest=editorial/articles/<slug>/metadata.json
+ * --validate-only: только проверка файлов, без подключения к БД.
+ * --publish --approved-sha256=<hash>: публикация согласованной версии.
+ * Вместо manifest допустимы --title= --slug= --content-file= --cover-image=
+ * и необязательные --annotation= --type= --tags= --meta-title= --meta-description= --noindex.
+ * Пути content-file в manifest считаются от его каталога, CLI — от текущего каталога.
  */
+if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }
+require_once __DIR__ . '/lib/blog-post.php';
 
-if (php_sapi_name() !== 'cli') {
-    http_response_code(403);
-    die('CLI only');
-}
-
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../classes/Database.php';
-require_once __DIR__ . '/../classes/Publication.php';
-
-function blogPostOpt(string $name, ?string $default = null): ?string {
-    foreach ($GLOBALS['argv'] as $arg) {
-        if (strpos($arg, "--{$name}=") === 0) {
-            return substr($arg, strlen($name) + 3);
+try {
+    $options = [];
+    $valueOptions = ['manifest', 'title', 'slug', 'content-file', 'cover-image', 'annotation',
+        'type', 'tags', 'meta-title', 'meta-description', 'approved-sha256'];
+    foreach (array_slice($argv, 1) as $argument) {
+        if (!preg_match('/^--([a-z0-9-]+)(?:=(.*))?$/sD', $argument, $m)) {
+            throw new InvalidArgumentException('Ожидался параметр --имя=значение.');
+        }
+        $key = $m[1];
+        if (array_key_exists($key, $options)) { throw new InvalidArgumentException('Повтор параметра: ' . $key); }
+        if (in_array($key, $valueOptions, true) && isset($m[2])) { $options[$key] = $m[2]; }
+        elseif (in_array($key, ['publish', 'validate-only', 'noindex'], true) && !isset($m[2])) { $options[$key] = true; }
+        else { throw new InvalidArgumentException('Неизвестный параметр или неверный формат: ' . $key); }
+    }
+    if (isset($options['publish'], $options['validate-only'])) {
+        throw new InvalidArgumentException('--publish несовместим с --validate-only.');
+    }
+    $input = $options;
+    if (isset($options['manifest'])) {
+        if (!is_file($options['manifest'])) { throw new InvalidArgumentException('Manifest отсутствует.'); }
+        $input = json_decode(file_get_contents($options['manifest']), true, 512, JSON_THROW_ON_ERROR);
+        if (!is_array($input)) { throw new InvalidArgumentException('Manifest должен быть JSON-объектом.'); }
+        foreach ($options as $key => $value) {
+            if (!in_array($key, ['manifest', 'publish', 'validate-only', 'approved-sha256'], true)) {
+                throw new InvalidArgumentException('Не смешивайте manifest и поля статьи.');
+            }
+        }
+        if (isset($input['content-file']) && is_string($input['content-file']) && !str_starts_with($input['content-file'], '/')) {
+            $input['content-file'] = dirname(realpath($options['manifest'])) . '/' . $input['content-file'];
         }
     }
-    return $default;
-}
-
-function blogPostFlag(string $name): bool {
-    return in_array("--{$name}", $GLOBALS['argv'], true);
-}
-
-$title = blogPostOpt('title');
-$contentFile = blogPostOpt('content-file');
-$typeSlug = blogPostOpt('type', 'article');
-$slug = blogPostOpt('slug');
-$annotation = blogPostOpt('annotation');
-$tagsOpt = blogPostOpt('tags');
-$metaTitle = blogPostOpt('meta-title');
-$metaDescription = blogPostOpt('meta-description');
-$noindex = blogPostFlag('noindex');
-
-if (!$title || !$contentFile) {
-    fwrite(STDERR, "Usage: php scripts/add-blog-post.php --title=\"...\" --content-file=path/to/article.html [--annotation=\"...\"] [--type=article] [--slug=custom-slug] [--tags=slug1,slug2] [--meta-title=\"...\"] [--meta-description=\"...\"] [--noindex]\n");
-    exit(1);
-}
-
-if (!file_exists($contentFile)) {
-    fwrite(STDERR, "Content file not found: {$contentFile}\n");
-    exit(1);
-}
-
-$content = file_get_contents($contentFile);
-if ($annotation === null) {
-    $annotation = mb_substr(trim(strip_tags($content)), 0, 300);
-}
-
-$typeRow = $db->prepare("SELECT id FROM publication_types WHERE slug = ?");
-$typeRow->execute([$typeSlug]);
-$type = $typeRow->fetch(PDO::FETCH_ASSOC);
-if (!$type) {
-    fwrite(STDERR, "Unknown publication type slug: {$typeSlug}\n");
-    exit(1);
-}
-
-$authorRow = $db->prepare("SELECT id FROM users WHERE email = ?");
-$authorRow->execute(['blog@fgos.pro']);
-$author = $authorRow->fetch(PDO::FETCH_ASSOC);
-if (!$author) {
-    fwrite(STDERR, "System blog author (blog@fgos.pro) not found — run migration 164_add_blog_source.sql first.\n");
-    exit(1);
-}
-
-$tagIds = [];
-if ($tagsOpt !== null) {
-    $tagSlugs = array_filter(array_map('trim', explode(',', $tagsOpt)));
-    foreach ($tagSlugs as $tagSlug) {
-        $tagRow = $db->prepare("SELECT id FROM publication_tags WHERE slug = ?");
-        $tagRow->execute([$tagSlug]);
-        $tag = $tagRow->fetch(PDO::FETCH_ASSOC);
-        if (!$tag) {
-            fwrite(STDERR, "Warning: unknown tag slug '{$tagSlug}', skipped\n");
-            continue;
-        }
-        $tagIds[] = $tag['id'];
+    $package = blogPostPackage($input, dirname(__DIR__));
+    echo "Комплект SHA256: {$package['sha256']}\nURL: /blog/{$package['slug']}/\n";
+    if (!empty($options['validate-only'])) { echo "Файлы проверены. БД не проверялась; записи нет.\n"; exit(0); }
+    if (!empty($options['publish']) && !hash_equals($package['sha256'], $options['approved-sha256'] ?? '')) {
+        throw new RuntimeException('Для публикации нужен --approved-sha256 согласованного комплекта.');
     }
-}
-
-$publicationObj = new Publication($db);
-$id = $publicationObj->create([
-    'user_id' => $author['id'],
-    'title' => $title,
-    'annotation' => $annotation,
-    'content' => $content,
-    'publication_type_id' => $type['id'],
-    'slug' => $slug ?: $publicationObj->generateSlug($title),
-    'meta_title' => $metaTitle,
-    'meta_description' => $metaDescription,
-    'noindex' => $noindex ? 1 : 0,
-    'source' => 'blog',
-    'status' => 'published',
-    'tag_ids' => $tagIds,
-]);
-
-echo "Created blog post #{$id}\n";
-echo "URL: /blog/" . $publicationObj->getById($id)['slug'] . "/\n";
-if ($noindex) {
-    echo "NOTE: published with noindex — excluded from sitemap and search indexing.\n";
+    require_once __DIR__ . '/../config/config.php';
+    // В отличие от web-конфига, ошибка подключения должна давать ненулевой exit code.
+    $db = new PDO('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET,
+        DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false]);
+    require_once __DIR__ . '/../classes/Database.php';
+    require_once __DIR__ . '/../classes/Publication.php';
+    if (empty($options['publish'])) {
+        blogPostReferences($db, $package);
+        echo "Dry-run: файлы и БД проверены, ничего не опубликовано.\n";
+        exit(0);
+    }
+    $id = blogPostPublish($db, $package);
+    echo "Опубликована статья #{$id}: /blog/{$package['slug']}/\n";
+} catch (Throwable $e) {
+    fwrite(STDERR, 'Ошибка: ' . $e->getMessage() . "\n");
+    exit(1);
 }

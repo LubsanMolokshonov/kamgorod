@@ -156,7 +156,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 <section class="rd-section" style="padding-top:0;">
   <div class="rd-wrap">
     <div class="pub-detail-layout">
-      <article class="pub-article">
+      <article class="pub-article pub-article--blog">
         <?php if (!empty($publication['cover_image_url'])): ?>
           <img class="pub-cover" src="<?php echo htmlspecialchars($publication['cover_image_url']); ?>"
                alt="<?php echo htmlspecialchars($publication['title']); ?>" loading="eager">
@@ -213,7 +213,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <?php endif; ?>
 
         <?php if ($articleHtml !== ''): ?>
-          <div class="pub-body"><?php echo $articleHtml; ?></div>
+          <div class="pub-body pub-body--blog"><?php echo $articleHtml; ?></div>
         <?php else: ?>
           <div class="pub-body pub-body--empty"><p>Содержание статьи недоступно для просмотра.</p></div>
         <?php endif; ?>

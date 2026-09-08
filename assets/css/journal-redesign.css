@@ -795,3 +795,11 @@
   .rd-form-card { padding: 20px; }
   .rd-gen-promo { flex-direction: column; align-items: flex-start; padding: 16px; }
 }
+
+/* Таблицы редакционных статей прокручиваются внутри блока на телефоне. */
+.pub-article--blog { min-width: 0; }
+.pub-body--blog table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
