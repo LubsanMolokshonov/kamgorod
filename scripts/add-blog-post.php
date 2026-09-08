@@ -4,6 +4,7 @@
  * php scripts/add-blog-post.php --manifest=editorial/articles/<slug>/metadata.json
  * --validate-only: только проверка файлов, без подключения к БД.
  * --publish --approved-sha256=<hash>: публикация согласованной версии.
+ * --update-existing: вместе с --publish обновляет существующую опубликованную blog-статью.
  * Вместо manifest допустимы --title= --slug= --content-file= --cover-image=
  * и необязательные --annotation= --type= --tags= --meta-title= --meta-description= --noindex.
  * Пути content-file в manifest считаются от его каталога, CLI — от текущего каталога.
@@ -22,7 +23,7 @@ try {
         $key = $m[1];
         if (array_key_exists($key, $options)) { throw new InvalidArgumentException('Повтор параметра: ' . $key); }
         if (in_array($key, $valueOptions, true) && isset($m[2])) { $options[$key] = $m[2]; }
-        elseif (in_array($key, ['publish', 'validate-only', 'noindex'], true) && !isset($m[2])) { $options[$key] = true; }
+        elseif (in_array($key, ['publish', 'validate-only', 'noindex', 'update-existing'], true) && !isset($m[2])) { $options[$key] = true; }
         else { throw new InvalidArgumentException('Неизвестный параметр или неверный формат: ' . $key); }
     }
     if (isset($options['publish'], $options['validate-only'])) {
@@ -34,7 +35,7 @@ try {
         $input = json_decode(file_get_contents($options['manifest']), true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($input)) { throw new InvalidArgumentException('Manifest должен быть JSON-объектом.'); }
         foreach ($options as $key => $value) {
-            if (!in_array($key, ['manifest', 'publish', 'validate-only', 'approved-sha256'], true)) {
+            if (!in_array($key, ['manifest', 'publish', 'validate-only', 'approved-sha256', 'update-existing'], true)) {
                 throw new InvalidArgumentException('Не смешивайте manifest и поля статьи.');
             }
         }
@@ -56,12 +57,14 @@ try {
     require_once __DIR__ . '/../classes/Database.php';
     require_once __DIR__ . '/../classes/Publication.php';
     if (empty($options['publish'])) {
-        blogPostReferences($db, $package);
+        if (!empty($options['update-existing'])) { blogPostUpdateReferences($db, $package); }
+        else { blogPostReferences($db, $package); }
         echo "Dry-run: файлы и БД проверены, ничего не опубликовано.\n";
         exit(0);
     }
-    $id = blogPostPublish($db, $package);
-    echo "Опубликована статья #{$id}: /blog/{$package['slug']}/\n";
+    $updating = !empty($options['update-existing']);
+    $id = $updating ? blogPostUpdate($db, $package) : blogPostPublish($db, $package);
+    echo ($updating ? 'Обновлена' : 'Опубликована') . " статья #{$id}: /blog/{$package['slug']}/\n";
 } catch (Throwable $e) {
     fwrite(STDERR, 'Ошибка: ' . $e->getMessage() . "\n");
     exit(1);
