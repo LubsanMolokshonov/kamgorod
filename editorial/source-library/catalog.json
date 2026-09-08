@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "policy": "Полные документы кэшируются локально в ignored editorial/source-library/raw/. В Git остаются реквизиты, хеши и короткие выдержки.",
+  "sources": [
+    {
+      "id": "FGOS-NOO-2025",
+      "title": "ФГОС начального общего образования, приказ Минпросвещения России от 31.05.2021 № 286",
+      "url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№286-от-31.05.2021-ФГОС_НОО.pdf",
+      "edition": "редакция от 18.06.2025",
+      "status_url": "https://www.consultant.ru/document/cons_doc_LAW_389561/",
+      "checked_at": "2026-09-08",
+      "raw_file": "raw/fgos-noo-2025.pdf",
+      "raw_sha256": "9cf39405d839469bd7caf9fbd9ef4ad23579a806ce41d4417625f2a5b528559d",
+      "claims": [
+        {
+          "id": "system-activity",
+          "point": "пункт 5",
+          "scope": "НОО, 1–4 классы",
+          "excerpt": "Единство обязательных требований к результатам освоения программ начального общего образования реализуется во ФГОС на основе системно-деятельностного подхода.",
+          "evidence_file": "evidence/fgos-noo-system-activity.md"
+        }
+      ]
+    },
+    {
+      "id": "FGOS-OOO-2025",
+      "title": "ФГОС основного общего образования, приказ Минпросвещения России от 31.05.2021 № 287",
+      "url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№-287-от-31.05.2021-ФГОС_ООО.pdf",
+      "edition": "редакция от 18.06.2025",
+      "status_url": "https://www.consultant.ru/document/cons_doc_LAW_389560/",
+      "checked_at": "2026-09-08",
+      "raw_file": "raw/fgos-ooo-2025.pdf",
+      "raw_sha256": "1403b921b9fed103d865a4c01789ead7887fc86fac7384da1f564f90c752518b",
+      "claims": [
+        {
+          "id": "system-activity",
+          "point": "пункт 4",
+          "scope": "ООО, 5–9 классы",
+          "excerpt": "Единство обязательных требований к результатам освоения программ основного общего образования реализуется во ФГОС на основе системно-деятельностного подхода.",
+          "evidence_file": "evidence/fgos-ooo-system-activity.md"
+        }
+      ]
+    },
+    {
+      "id": "FGOS-SOO-2025",
+      "title": "ФГОС среднего общего образования, приказ Минобрнауки России от 17.05.2012 № 413",
+      "url": "https://docs.edu.gov.ru/document/bf0ceabdc94110049a583890956abbfa/",
+      "edition": "редакция от 12.02.2025",
+      "status_url": "https://www.consultant.ru/document/cons_doc_LAW_131131/",
+      "checked_at": "2026-09-08",
+      "raw_file": "raw/fgos-soo-2025.pdf",
+      "raw_sha256": "2fda6b2ddacd7ebff11df5708f72a4c868c571c4729ba9b744eb548440771177",
+      "claims": [
+        {
+          "id": "system-activity",
+          "point": "пункт 4",
+          "scope": "СОО, 10–11 классы",
+          "excerpt": "Методологической основой Стандарта является системно-деятельностный подход.",
+          "evidence_file": "evidence/fgos-soo-system-activity.md"
+        }
+      ]
+    },
+    {
+      "id": "FOP-OOO-MATH-2026",
+      "title": "Федеральная рабочая программа «Математика. 5–9 классы», базовый уровень",
+      "url": "https://edsoo.ru/wp-content/uploads/2025/07/2025_ooo_frp_matematika-5-9_baza.pdf",
+      "edition": "2025; содержание сверено с ФОП ООО в редакции от 10.11.2025, действующей с 01.09.2026",
+      "status_url": "https://sudact.ru/law/prikaz-minprosveshcheniia-rossii-ot-18052023-n-370/federalnaia-obrazovatelnaia-programma-osnovnogo-obshchego/iii/146/146.4/",
+      "checked_at": "2026-09-08",
+      "raw_file": "raw/fop-ooo-math-5-9-2026.pdf",
+      "raw_sha256": "a7afed6d5b67bea7b22ec680a2a736473e408b7835f927659d0e0cc840203d4f",
+      "claims": [
+        {
+          "id": "fractions-grade-5",
+          "point": "страница 14, раздел «Дроби»",
+          "scope": "ООО, математика, 5 класс, базовый уровень",
+          "excerpt": "В содержание 5 класса включены обыкновенные дроби и сравнение дробей.",
+          "evidence_file": "evidence/fop-ooo-math-fractions-grade-5.md"
+        }
+      ]
+    },
+    {
+      "id": "MINPROS-03-320-2026",
+      "title": "Приложение к письму Минпросвещения России от 02.03.2026 № 03-320",
+      "url": "https://edsoo.ru/wp-content/uploads/2026/03/03-320-prilozhenie-versiya-2.pdf",
+      "edition": "02.03.2026",
+      "checked_at": "2026-09-08",
+      "raw_file": "raw/minpros-03-320-appendix-2026.pdf",
+      "raw_sha256": "a1fb8afa4c945838972902571d60fa4dc2ae011783ec6c0637256097968ede47",
+      "claims": [
+        {
+          "id": "no-homework-grade-1",
+          "point": "страница 1",
+          "scope": "НОО, 1 класс",
+          "excerpt": "В первом классе обучение проводится без домашних заданий.",
+          "evidence_file": "evidence/minpros-03-320-no-homework-grade-1.md"
+        }
+      ]
+    }
+  ]
+}

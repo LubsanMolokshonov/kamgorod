@@ -1,0 +1,10 @@
+{
+  "sources": [
+    {
+      "library_id": "SOURCE-ID",
+      "claim_id": "CLAIM-ID",
+      "used_for": "Какое утверждение статьи подтверждает карточка"
+    }
+  ],
+  "article_specific_sources": []
+}

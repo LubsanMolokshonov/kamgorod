@@ -77,6 +77,9 @@ Thumbs.db
 # Runtime OG cache
 /uploads/og-cache/
 
+# Полные первичные документы для редакционной библиотеки — локальный кэш, не production.
+/editorial/source-library/raw/
+
 # DB dumps and backup archives
 /*.sql
 /*.sql.gz

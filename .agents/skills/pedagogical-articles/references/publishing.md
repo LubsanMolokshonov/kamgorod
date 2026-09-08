@@ -5,11 +5,13 @@
 Локально (если PHP доступен только в Docker, используй образ проекта):
 
 ```bash
+php scripts/editorial-check.php --article=<slug>
 php scripts/add-blog-post.php --manifest=editorial/articles/<slug>/metadata.json --validate-only
 php scripts/add-blog-post.php --manifest=editorial/articles/<slug>/metadata.json
 ```
 
-Первая команда проверяет только файлы и выводит SHA256. Вторая проверяет БД и занятость
+Первая команда проверяет компактный комплект, ссылки и карточки библиотеки источников.
+Вторая проверяет только файлы и выводит SHA256. Третья проверяет БД и занятость
 slug без записи. Dry-run не резервирует slug; при записи проверка повторяется под
 MySQL GET_LOCK. CLI требует обложку и явный slug. Старые вызовы без --publish больше
 не создают статью. `--approved-sha256` защищает версию, но не заменяет согласие человека.
@@ -29,6 +31,7 @@ MySQL GET_LOCK. CLI требует обложку и явный slug. Стары
 Сначала серверный dry-run, затем:
 
 ```bash
+docker exec -w /var/www/html pedagogy_web php scripts/editorial-check.php --article=<slug>
 docker exec -w /var/www/html pedagogy_web php scripts/add-blog-post.php --manifest=editorial/articles/<slug>/metadata.json --publish --approved-sha256=<согласованный-хеш>
 ```
 
@@ -43,6 +46,10 @@ docker exec -w /var/www/html pedagogy_web php scripts/add-blog-post.php --manife
 canonical, robots, Open Graph и Article JSON-LD, каталог `/blog/` и sitemap.
 Проверить на мобильном ширину таблиц, читаемость и изображение; не публиковать
 служебные пути (доступ к editorial и .agents должен возвращать 403).
+На фактически отрендеренной странице проверить все элементы `<a>`, включая навигацию,
+ссылки статьи и автоматически вставленные рекомендации: каждый открывается в новой
+вкладке через `target="_blank"` и содержит `rel="noopener noreferrer"`. Отсутствие
+атрибутов хотя бы у одной ссылки зафиксировать как дефект приёмки.
 
 Если запись прошла, а страница неисправна, сначала зафиксировать ID. Убрать из
 публикации только эту новую запись до исправления; не удалять другие статьи.
