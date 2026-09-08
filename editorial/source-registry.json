@@ -40,6 +40,14 @@
       "last_checked": "2026-09-08",
       "evidence": "editorial/articles/ktp-shkolnomu-uchitelyu/sources.json",
       "scope": "Описание сервиса; авторизованные функции не проверялись"
+    },
+    {
+      "id": "LESSON-STAGES-2026",
+      "document": "ФРП математики 5–9, ФГОС НОО/ООО/СОО и приложение 03-320",
+      "url": "https://edsoo.ru/rabochie-programmy/",
+      "last_checked": "2026-09-08",
+      "evidence": "editorial/articles/etapy-uroka-po-fgos/sources.json",
+      "scope": "Сравнение дробей 5 класса; системно-деятельностный подход по уровням; первый класс без домашних заданий по официальному разъяснению"
     }
   ]
 }

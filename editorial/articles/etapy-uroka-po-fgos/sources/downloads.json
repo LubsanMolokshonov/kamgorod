@@ -1,0 +1,38 @@
+[
+  {
+    "id": "fgos-noo",
+    "url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№286-от-31.05.2021-ФГОС_НОО.pdf",
+    "file": "fgos-noo.pdf",
+    "sha256": "9cf39405d839469bd7caf9fbd9ef4ad23579a806ce41d4417625f2a5b528559d"
+  },
+  {
+    "id": "fgos-ooo",
+    "url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№-287-от-31.05.2021-ФГОС_ООО.pdf",
+    "file": "fgos-ooo.pdf",
+    "sha256": "1403b921b9fed103d865a4c01789ead7887fc86fac7384da1f564f90c752518b"
+  },
+  {
+    "id": "fgos-soo",
+    "url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№-413-от-17.05.2012-ФГОС_СОО.pdf",
+    "file": "fgos-soo.pdf",
+    "sha256": "2fda6b2ddacd7ebff11df5708f72a4c868c571c4729ba9b744eb548440771177"
+  },
+  {
+    "id": "change-732",
+    "url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№-732-от-12.08.2022.pdf",
+    "file": "change-732.pdf",
+    "sha256": "47c7ac00931c13731de7af15b7479766e89933a97a8eab63db34d596bd9970ac"
+  },
+  {
+    "id": "change-93",
+    "url": "https://edsoo.ru/wp-content/uploads/2025/03/prikaz_93_12.02.2025.pdf",
+    "file": "change-93.pdf",
+    "sha256": "77a426f66d197a196a7681e373b1f228de62bd8e1bf3cf94782aceccfdcd82e4"
+  },
+  {
+    "id": "math",
+    "url": "https://edsoo.ru/wp-content/uploads/2025/07/2025_ooo_frp_matematika-5-9_baza.pdf",
+    "file": "math.pdf",
+    "sha256": "a7afed6d5b67bea7b22ec680a2a736473e408b7835f927659d0e0cc840203d4f"
+  }
+]

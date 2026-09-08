@@ -21,6 +21,9 @@ $(document).ready(function() {
 
     // Smooth scroll for anchor links
     $('a[href^="#"]').on('click', function(e) {
+        if (this.target === '_blank') {
+            return;
+        }
         e.preventDefault();
         var target = $(this.hash);
         if (target.length) {

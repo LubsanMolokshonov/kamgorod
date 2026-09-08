@@ -51,7 +51,8 @@ $tags = $publicationObj->getTags($publication['id']);
 $related = $publicationObj->getPublished(4, 0, ['source' => 'blog']);
 $related = array_values(array_filter($related, fn($p) => $p['id'] !== $publication['id']));
 
-$recommendedCourses = $publicationObj->getRecommendedCourses($publication['id'], 2);
+// Без тематических тегов случайный предметный курс не соответствует общей статье.
+$recommendedCourses = !empty($tags) ? $publicationObj->getRecommendedCourses($publication['id'], 2) : [];
 $inlineCourse = $recommendedCourses[0] ?? null;
 $inlineCard = $inlineCourse ? buildCourseCardData($inlineCourse, $db) : null;
 
@@ -138,6 +139,22 @@ $months = ['января', 'февраля', 'марта', 'апреля', 'ма
 $pubDate = new DateTime($publication['published_at']);
 $pubDateStr = $pubDate->format('d') . ' ' . $months[$pubDate->format('n') - 1] . ' ' . $pubDate->format('Y');
 
+// Редакционные страницы открывают все ссылки в новой вкладке, включая шаблонные.
+// Пропускаем скрипты, стили и комментарии: их содержимое не является HTML-ссылками.
+ob_start(static function (string $html): string {
+    return preg_replace_callback(
+        '~<!--.*?-->(*SKIP)(*F)|<(script|style)\b[^>]*>.*?</\1\s*>(*SKIP)(*F)|<a\b(?:[^>\x22\x27]|\x22[^\x22]*\x22|\x27[^\x27]*\x27)*>~is',
+        static function (array $match): string {
+            $tag = preg_replace(
+                '~\x22[^\x22]*\x22(*SKIP)(*F)|\x27[^\x27]*\x27(*SKIP)(*F)|\s+(?:target|rel)\s*=\s*(?:\x22[^\x22]*\x22|\x27[^\x27]*\x27|[^\s>]+)~i',
+                '',
+                $match[0]
+            );
+            return substr($tag, 0, -1) . ' target="_blank" rel="noopener noreferrer">';
+        },
+        $html
+    ) ?? $html;
+});
 include __DIR__ . '/../includes/header-redesign.php';
 ?>
 
@@ -260,4 +277,4 @@ include __DIR__ . '/../includes/header-redesign.php';
 
 <?php echo renderCourseCardModal(); ?>
 
-<?php include __DIR__ . '/../includes/footer-redesign.php'; ?>
+<?php include __DIR__ . '/../includes/footer-redesign.php'; ob_end_flush(); ?>

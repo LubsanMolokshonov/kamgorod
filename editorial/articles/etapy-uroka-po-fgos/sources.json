@@ -1,0 +1,172 @@
+[
+  {
+    "id": "fgos-noo",
+    "url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№286-от-31.05.2021-ФГОС_НОО.pdf",
+    "file": "sources/fgos-noo.pdf",
+    "sha256": "9cf39405d839469bd7caf9fbd9ef4ad23579a806ce41d4417625f2a5b528559d",
+    "checked_at": "2026-09-08",
+    "read_url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№286-от-31.05.2021-ФГОС_НОО.pdf",
+    "document": "ФГОС НОО, приказ №286",
+    "provisions": "п.5, PDF с.5–6",
+    "scope": "НОО, 1–4 классы",
+    "status_check": "Ред.18.06.2025; основание подхода п.5 сверено со сканом и перечнем изменений 467"
+  },
+  {
+    "id": "fgos-ooo",
+    "url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№-287-от-31.05.2021-ФГОС_ООО.pdf",
+    "file": "sources/fgos-ooo.pdf",
+    "sha256": "1403b921b9fed103d865a4c01789ead7887fc86fac7384da1f564f90c752518b",
+    "checked_at": "2026-09-08",
+    "read_url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№-287-от-31.05.2021-ФГОС_ООО.pdf",
+    "document": "ФГОС ООО, приказ №287",
+    "provisions": "п.4, PDF с.6",
+    "scope": "ООО, 5–9 классы",
+    "status_check": "Ред.18.06.2025; п.4 сверено со сканом и разделом 3 изменений 467"
+  },
+  {
+    "id": "fgos-soo",
+    "url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№-413-от-17.05.2012-ФГОС_СОО.pdf",
+    "file": "sources/fgos-soo.pdf",
+    "sha256": "2fda6b2ddacd7ebff11df5708f72a4c868c571c4729ba9b744eb548440771177",
+    "checked_at": "2026-09-08",
+    "read_url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№-413-от-17.05.2012-ФГОС_СОО.pdf",
+    "document": "ФГОС СОО, приказ №413",
+    "provisions": "п.4",
+    "scope": "СОО, 10–11 классы",
+    "status_check": "Сохранённый PDF — ранний текст; использован только п.4. Статус сверяется с редакцией 12.02.2025, 93 меняет п.18.3.1"
+  },
+  {
+    "id": "change-732",
+    "url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№-732-от-12.08.2022.pdf",
+    "file": "sources/change-732.pdf",
+    "sha256": "47c7ac00931c13731de7af15b7479766e89933a97a8eab63db34d596bd9970ac",
+    "checked_at": "2026-09-08",
+    "read_url": "https://edsoo.ru/wp-content/uploads/2023/08/Приказ-№-732-от-12.08.2022.pdf",
+    "document": "Приказ №732 от 12.08.2022",
+    "provisions": "начало приложения, замена главы II",
+    "scope": "СОО",
+    "status_check": "Проверен предмет изменений, не источник авторской таблицы этапов"
+  },
+  {
+    "id": "change-93",
+    "url": "https://edsoo.ru/wp-content/uploads/2025/03/prikaz_93_12.02.2025.pdf",
+    "file": "sources/change-93.pdf",
+    "sha256": "77a426f66d197a196a7681e373b1f228de62bd8e1bf3cf94782aceccfdcd82e4",
+    "checked_at": "2026-09-08",
+    "read_url": "https://edsoo.ru/wp-content/uploads/2025/03/prikaz_93_12.02.2025.pdf",
+    "document": "Приказ №93 от 12.02.2025",
+    "provisions": "п.18.3.1 СОО",
+    "scope": "СОО",
+    "status_check": "Изменение от 12.02.2025; не относится к п.4"
+  },
+  {
+    "id": "math",
+    "url": "https://edsoo.ru/wp-content/uploads/2025/07/2025_ooo_frp_matematika-5-9_baza.pdf",
+    "file": "sources/math.pdf",
+    "sha256": "a7afed6d5b67bea7b22ec680a2a736473e408b7835f927659d0e0cc840203d4f",
+    "checked_at": "2026-09-08",
+    "read_url": "https://edsoo.ru/wp-content/uploads/2025/07/2025_ooo_frp_matematika-5-9_baza.pdf",
+    "document": "ФРП Математика 5–9, базовый уровень, 2025",
+    "provisions": "с.14, раздел Дроби; с.17 результаты",
+    "scope": "ООО, 5 класс, базовый уровень",
+    "status_check": "Текущая ссылка ЕДСОО 08.09.2026; содержание сравнения дробей совпадает с ФОП ред.10.11.2025, действующей с 01.09.2026"
+  },
+  {
+    "id": "467",
+    "document": "Приказ №467",
+    "url": "https://publication.pravo.gov.ru/document/0001202507170012",
+    "read_url": "https://minjust.consultant.ru/files/56114",
+    "file": "sources/467.pdf",
+    "sha256": "70e36d0530f5d1860ac1b9616afcf9740f42d9a68b707a931d4cbe7667082e01",
+    "checked_at": "2026-09-08",
+    "provisions": "п.2 приказа; разделы 2 и 3 приложения",
+    "scope": "НОО/ООО",
+    "status_check": "Вступил в силу 01.09.2025; не меняет п.5 НОО и п.4 ООО"
+  },
+  {
+    "id": "729",
+    "document": "Приказ №729",
+    "url": "https://publication.pravo.gov.ru/document/0001202512040010",
+    "read_url": "https://obrnadzor.tatarstan.ru/file/pub/pub_4843138.pdf",
+    "file": "sources/729-readable.pdf",
+    "sha256": "28c92b37b7a7e51f6d6975ff966cce9f097ec48988660c8dc28fc30fc6d4607f",
+    "checked_at": "2026-09-08",
+    "provisions": "разделы изменений ООО и НОО",
+    "scope": "НОО/ООО/СОО",
+    "status_check": "Последующие изменения сверены с 808; отдельный переходный срок для СОО указан в п.3 — не применялся к примеру 5 класса"
+  },
+  {
+    "id": "808",
+    "document": "Приказ №808",
+    "url": "https://obrnadzor.tatarstan.ru/file/pub/pub_4932219.pdf",
+    "read_url": "https://obrnadzor.tatarstan.ru/file/pub/pub_4932219.pdf",
+    "file": "sources/808.pdf",
+    "sha256": "e7dd51c9a35eaabec76379d978c23c0e6c963c43f2304646b37917670368d4ad",
+    "checked_at": "2026-09-08",
+    "provisions": "п.2 приказа, изменения ООО",
+    "scope": "НОО/ООО/СОО",
+    "status_check": "Часть положений действует с 01.09.2026, перечень в п.2; содержание сравнения дробей 5 класса не изменено"
+  },
+  {
+    "id": "letter-appendix",
+    "document": "Приложение к письму 03-320",
+    "url": "https://edsoo.ru/wp-content/uploads/2026/03/03-320-prilozhenie-versiya-2.pdf",
+    "read_url": "https://edsoo.ru/wp-content/uploads/2026/03/03-320-prilozhenie-versiya-2.pdf",
+    "file": "sources/letter-appendix.pdf",
+    "sha256": "a1fb8afa4c945838972902571d60fa4dc2ae011783ec6c0637256097968ede47",
+    "checked_at": "2026-09-08",
+    "provisions": "с.1, абзац о первом классе",
+    "scope": "НОО, 1 класс",
+    "status_check": "Официальное разъяснение на 2026/27, не отдельный нормативный акт"
+  },
+  {
+    "id": "edition-noo",
+    "url": "https://www.consultant.ru/document/cons_doc_LAW_389561/",
+    "file": "sources/edition-noo.txt",
+    "sha256": "b0f9451d03d9b25e3ba1921a4dba883aa4a9e58bcf2e8e199100e8b8225cb254",
+    "checked_at": "2026-09-08",
+    "role": "Проверка статуса/навигация"
+  },
+  {
+    "id": "edition-ooo",
+    "url": "https://www.consultant.ru/document/cons_doc_LAW_389560/",
+    "file": "sources/edition-ooo.txt",
+    "sha256": "541c0951079195c4dbae8e3022257eeb20f0990e9d5939cb4daff8ef560f0b8e",
+    "checked_at": "2026-09-08",
+    "role": "Проверка статуса/навигация"
+  },
+  {
+    "id": "edition-soo",
+    "url": "https://www.consultant.ru/document/cons_doc_LAW_131131/",
+    "file": "sources/edition-soo.txt",
+    "sha256": "13e057648b0139bb1b7f068ce7975565803f3e127de3e0c7787327b8118973d8",
+    "checked_at": "2026-09-08",
+    "role": "Проверка статуса/навигация"
+  },
+  {
+    "id": "math-current",
+    "url": "https://sudact.ru/law/prikaz-minprosveshcheniia-rossii-ot-18052023-n-370/federalnaia-obrazovatelnaia-programma-osnovnogo-obshchego/iii/146/146.4/",
+    "file": "sources/math-current.txt",
+    "sha256": "e62d67293a9d29870c91a0d2e714064d18d48455dbffc2ed36513c377653d3ff",
+    "checked_at": "2026-09-08",
+    "role": "Проверка статуса/навигация"
+  },
+  {
+    "id": "program-list",
+    "url": "https://edsoo.ru/rabochie-programmy/",
+    "file": "sources/program-list.txt",
+    "sha256": "74046c074edcba68a8d7b8a74f859bd6b0144eb6503afcecd6b935e2abb73b98",
+    "checked_at": "2026-09-08",
+    "role": "Проверка статуса/навигация"
+  },
+  {
+    "id": "method",
+    "url": "https://centristra.ggtu.ru/images/documents/rez/tip_fgos.pdf",
+    "file": "sources/method-excerpt.md",
+    "sha256": "201719b5295849c8a42eaeda678f44a8bddf860956bd0695da59d5c006032491",
+    "checked_at": "2026-09-08",
+    "provisions": "с.1, таблица из девяти этапов",
+    "scope": "Методическая модель, не нормативное предписание",
+    "status_check": "Прочитано web.open, прямая загрузка из локальной сети недоступна"
+  }
+]
