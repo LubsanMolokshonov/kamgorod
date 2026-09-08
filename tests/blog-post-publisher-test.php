@@ -29,6 +29,8 @@ try {
     rejects(fn() => blogPostPackage(array_merge($input, ['cover-image' => '/assets/images/blog/fake.jpg']), $root), 'ложное расширение обложки');
     rejects(fn() => blogPostPackage(array_merge($input, ['slug' => '../bad']), $root), 'неверный slug');
     $content = file_get_contents($root . '/article.html');
+    file_put_contents($root . '/article.html', '<p><a href="https://edsoo.ru/rabochie-programmy/">Источник</a></p>');
+    check(strlen(blogPostPackage($input, $root)['sha256']) === 64, 'ссылка без target/rel допустима: атрибуты добавляет шаблон');
     file_put_contents($root . '/article.html', '<p onclick="alert(1)">Текст</p>');
     rejects(fn() => blogPostPackage($input, $root), 'активный HTML');
     file_put_contents($root . '/article.html', '<p><a href="javascript:alert(1)">Текст</a></p>');

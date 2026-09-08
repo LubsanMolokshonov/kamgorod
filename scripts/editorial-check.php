@@ -74,13 +74,9 @@ try {
     libxml_use_internal_errors(true);
     $dom->loadHTML('<?xml encoding="UTF-8"><html><body>' . $articleHtml . '</body></html>', LIBXML_NONET);
     libxml_clear_errors();
-    $linkCount = 0;
-    foreach ($dom->getElementsByTagName('a') as $link) {
-        $linkCount++;
-        if ($link->getAttribute('target') !== '_blank' || $link->getAttribute('rel') !== 'noopener noreferrer') {
-            editorialCheckFail($errors, 'Ссылка #' . $linkCount . ' не содержит безопасного target/rel.');
-        }
-    }
+    $linkCount = $dom->getElementsByTagName('a')->length;
+    // HTML и ссылки проверяет общий валидатор пакета ниже.
+    // Безопасные target/rel добавляет pages/blog-post.php при выводе страницы.
     require_once $root . '/scripts/lib/blog-post.php';
     try {
         $input = $metadata;
