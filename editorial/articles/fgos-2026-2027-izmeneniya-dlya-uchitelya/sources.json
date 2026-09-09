@@ -1,0 +1,96 @@
+{
+  "sources": [
+    {
+      "library_id": "MINPROS-03-320-2026",
+      "claim_id": "no-homework-grade-1",
+      "purpose": "Подтверждение ранее установленного режима первого класса"
+    }
+  ],
+  "unique_sources": [
+    {
+      "id": "729",
+      "url": "https://edsoo.ru/wp-content/uploads/2026/02/prikaz-729.pdf",
+      "checked_at": "2026-09-09",
+      "document": "пункты 2–3, PDF стр. 1–2: переход обществознания СОО в 2026/2027 и отмена прежней программы в 2027",
+      "edition": "опубликованный документ по указанному URL; пределы проверки в research.md",
+      "file": "sources/729.pdf",
+      "sha256": "e4d08cef9a0576dcbd0b01b5ae3e308aa22a60e7b447e054edba45296b3c3850",
+      "evidence": "пункты 2–3, PDF стр. 1–2: переход обществознания СОО в 2026/2027 и отмена прежней программы в 2027"
+    },
+    {
+      "id": "808",
+      "url": "https://edsoo.ru/wp-content/uploads/2026/04/prikaz_ministerstva_prosveschenia_rossiyskoy_federatsii_ot_10.pdf",
+      "checked_at": "2026-09-09",
+      "document": "пункт 2, PDF стр. 1: отдельные положения по иностранному языку и ДНКР с 01.09.2026",
+      "edition": "опубликованный документ по указанному URL; пределы проверки в research.md",
+      "file": "sources/808.pdf",
+      "sha256": "74232694e29aba047ca6e1507d9cff29b2955022b4ce2ea7afc5265c6a78316c",
+      "evidence": "пункт 2, PDF стр. 1: отдельные положения по иностранному языку и ДНКР с 01.09.2026"
+    },
+    {
+      "id": "history",
+      "url": "https://edsoo.ru/wp-content/uploads/2026/08/istoriya.pdf",
+      "checked_at": "2026-09-09",
+      "document": "стр. 2–5: последовательность, часы 5–9, переход 9 класса",
+      "edition": "опубликованный документ по указанному URL; пределы проверки в research.md",
+      "file": "sources/history.pdf",
+      "sha256": "eb4cf382acd32c3fa9d8e3b2bef7cb652780dc99a79ddd556a3e56451911fa03",
+      "evidence": "стр. 2–5: последовательность, часы 5–9, переход 9 класса"
+    },
+    {
+      "id": "social",
+      "url": "https://edsoo.ru/wp-content/uploads/2026/08/obshhestvoznanie.pdf",
+      "checked_at": "2026-09-09",
+      "document": "стр. 2, 6–7: 9 класс 34 часа, 10 новый 68, 11 прежний 68; переход 11 с 2027/2028",
+      "edition": "опубликованный документ по указанному URL; пределы проверки в research.md",
+      "file": "sources/social.pdf",
+      "sha256": "97a882708ea47ecdcf514bef46dc32a008faf4337c8afaa0a5ab2a9d366f12fe",
+      "evidence": "стр. 2, 6–7: 9 класс 34 часа, 10 новый 68, 11 прежний 68; переход 11 с 2027/2028"
+    },
+    {
+      "id": "foreign",
+      "url": "https://edsoo.ru/wp-content/uploads/2026/08/inostrannyj-yazyk.pdf",
+      "checked_at": "2026-09-09",
+      "document": "стр. 3–4: 5 класс 68 часов, 6–9 по 102; 6–7 по 68 с 2027/2028",
+      "edition": "опубликованный документ по указанному URL; пределы проверки в research.md",
+      "file": "sources/foreign.pdf",
+      "sha256": "c2e1ead813dde86ceca1da46aa6bf430a57cae265a385e9d969ba88b33a6c131",
+      "evidence": "стр. 3–4: 5 класс 68 часов, 6–9 по 102; 6–7 по 68 с 2027/2028"
+    },
+    {
+      "id": "1566",
+      "url": "https://edsoo.ru/wp-content/uploads/2026/08/pismo-v-regiony-po-obzr_03-1566-ot-20.08.2026.pdf",
+      "checked_at": "2026-09-09",
+      "document": "стр. 2–3: перераспределение ОБЗР; приказ 576 на регистрации на дату письма",
+      "edition": "опубликованный документ по указанному URL; пределы проверки в research.md",
+      "file": "sources/1566.pdf",
+      "sha256": "94e268a56403a3886fcf6dc2c7d777ad7417b114d6b7f16f05f22683d9e55d76",
+      "evidence": "стр. 2–3: перераспределение ОБЗР; приказ 576 на регистрации на дату письма"
+    },
+    {
+      "id": "320-context",
+      "url": "https://edsoo.ru/wp-content/uploads/2026/03/03-320-prilozhenie-versiya-2.pdf",
+      "checked_at": "2026-09-09",
+      "document": "Приложение к письму 02.03.2026 № 03-320",
+      "file": "../../source-library/raw/minpros-03-320-appendix-2026.pdf",
+      "points": "стр. 1–6",
+      "evidence": "Предметные уточнения НОО/ООО/СОО; статья ограничивает их статус уже внесёнными правками.",
+      "sha256": "a1fb8afa4c945838972902571d60fa4dc2ae011783ec6c0637256097968ede47"
+    },
+    {
+      "id": "704-letter",
+      "url": "https://edsoo.ru/wp-content/uploads/2025/08/informatsiia.pdf",
+      "checked_at": "2026-09-09",
+      "points": "стр. 1–4",
+      "evidence": "Разъяснение 2025 года: оценочные процедуры, практические работы, история 5–7, обществознание 8–9.",
+      "file": "sources/704-letter.pdf",
+      "sha256": "f8e4f784ecc92c121ca4feed3649ff331a0a3bb88e416a724b0716fa849bcff6"
+    },
+    {
+      "id": "dnkr",
+      "url": "https://t.me/s/minprosrf?before=18069",
+      "checked_at": "2026-09-09",
+      "evidence": "Официальный канал: старт в 5 классе со второго полугодия 2026/27, 17 часов; 6–7 с 2027/28 по 34."
+    }
+  ]
+}
