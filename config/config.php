@@ -27,7 +27,9 @@ if (file_exists($envFile)) {
 
             // Store in $_ENV and define as constant
             $_ENV[$key] = $value;
-            if (!defined($key)) {
+            // Этап оплаченного курса вычисляется ниже: устаревший .env не должен
+            // возвращать оплаты на промежуточный этап «Оплаченная сделка».
+            if ($key !== 'BITRIX24_COURSE_STAGE_PAID' && !defined($key)) {
                 define($key, $value);
             }
         }
@@ -99,7 +101,7 @@ if (!defined('BITRIX24_COURSE_STAGE_NEW')) define('BITRIX24_COURSE_STAGE_NEW', '
 // попадают в WON. Старый этап остаётся в LEGACY-константе, чтобы синхронизация
 // корректно распознавала уже созданные сделки.
 if (!defined('BITRIX24_COURSE_STAGE_PAID')) {
-    define('BITRIX24_COURSE_STAGE_PAID', $_ENV['BITRIX24_COURSE_STAGE_PAID'] ?? 'C108:WON');
+    define('BITRIX24_COURSE_STAGE_PAID', 'C' . (int)BITRIX24_COURSE_PIPELINE_ID . ':WON');
 }
 if (!defined('BITRIX24_COURSE_STAGE_PAID_LEGACY')) {
     define('BITRIX24_COURSE_STAGE_PAID_LEGACY', 'C108:UC_8RO3WZ');

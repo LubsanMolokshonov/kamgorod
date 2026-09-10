@@ -488,7 +488,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                         $paidStage = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:WON';
 
                         if (empty($enrollment['bitrix_lead_id'])) {
-                            // Сделка ещё не создана — создаём с этапом "Оплата на сайте"
+                            // Сделка ещё не создана — создаём на успешном этапе WON.
                             $course = $courseObj->getById($enrollment['course_id']);
                             if ($course) {
                                 // OPPORTUNITY = фактически уплачено (order_items.price уже
@@ -519,7 +519,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                                 }
                             }
                         } else {
-                            // Сделка уже создана (cron-ом или ajax-ом) — пытаемся перевести в "Оплаченная сделка".
+                            // Сделка уже создана (cron-ом или ajax-ом) — переводим на успешный этап WON.
                             // Сначала проверяем CATEGORY_ID: если сделка перенесена менеджером в чужую воронку
                             // (например, ЦДО для подготовки документов), не трогаем — она уже в работе.
                             $coursePipelineId = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
@@ -530,7 +530,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                                 // Сделка перенесена менеджером в чужую воронку (например, ЦДО).
                                 // Перенести её обратно через API нельзя (crm.deal.update игнорирует
                                 // CATEGORY_ID), поэтому создаём НОВУЮ сделку в воронке курсов на
-                                // этапе «Оплаченная сделка», а в старой сделке оставляем комментарий.
+                                // успешном этапе WON, а в старой сделке оставляем комментарий.
                                 $course = $courseObj->getById($enrollment['course_id']);
                                 $oldDealId = $enrollment['bitrix_lead_id'];
                                 if ($course) {
@@ -558,7 +558,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                                         try {
                                             $bitrix->addDealComment($oldDealId,
                                                 "Клиент оплатил этот курс онлайн на сайте (" . number_format($paidAmount, 2, ',', ' ') . " ₽). "
-                                                . "Оплата отражена новой сделкой #{$newDealId} в воронке «ФГОС-Практикум (Курсы)» → «Оплаченная сделка». "
+                                                . "Оплата отражена новой сделкой #{$newDealId} в воронке «ФГОС-Практикум (Курсы)» → «Сделка успешно». "
                                                 . "Эта сделка в воронке #{$dealCategory} — возможный дубль.");
                                         } catch (Exception $e) {
                                             logWebhook('WARNING', $paymentId, "Bitrix24 addDealComment failed for old deal {$oldDealId}: " . $e->getMessage(), '');
