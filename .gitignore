@@ -80,6 +80,12 @@ Thumbs.db
 # Полные первичные документы для редакционной библиотеки — локальный кэш, не production.
 /editorial/source-library/raw/
 
+# Локальные HTML-превью статей с абсолютными путями к ассетам.
+/editorial/articles/*/preview.html
+
+# Дубли исходных обложек: оригиналы хранятся в editorial/articles/*/cover-original.png.
+/assets/images/blog/*-original.png
+
 # DB dumps and backup archives
 /*.sql
 /*.sql.gz

@@ -1,0 +1,21 @@
+{
+  "viewport": 390,
+  "width": 390,
+  "tables": [
+    {
+      "width": 320,
+      "scroll": 320,
+      "overflow": "auto"
+    },
+    {
+      "width": 320,
+      "scroll": 585,
+      "overflow": "auto"
+    },
+    {
+      "width": 320,
+      "scroll": 611,
+      "overflow": "auto"
+    }
+  ]
+}
