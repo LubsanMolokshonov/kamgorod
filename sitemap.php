@@ -267,13 +267,13 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 // 6. ПУБЛИКАЦИИ
 // ========================================
 
-$stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' AND source IN ('upload', 'generator') AND noindex = 0 AND indexable_at IS NOT NULL AND indexable_at <= NOW() ORDER BY published_at DESC");
+$stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' AND source IN ('upload', 'generator') AND noindex = 0 AND indexable_at IS NOT NULL AND indexable_at <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 3 HOUR) ORDER BY published_at DESC");
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     sitemapUrl($baseUrl . '/publikaciya/' . $row['slug'] . '/', '0.7', 'monthly', $row['updated_at']);
 }
 
 // Статьи блога — отдельный префикс /blog/, не /publikaciya/
-$stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' AND source = 'blog' AND noindex = 0 AND indexable_at IS NOT NULL AND indexable_at <= NOW() ORDER BY published_at DESC");
+$stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' AND source = 'blog' AND noindex = 0 AND indexable_at IS NOT NULL AND indexable_at <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 3 HOUR) ORDER BY published_at DESC");
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     sitemapUrl($baseUrl . '/blog/' . $row['slug'] . '/', '0.7', 'weekly', $row['updated_at']);
 }

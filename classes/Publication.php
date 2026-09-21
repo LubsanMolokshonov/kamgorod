@@ -693,7 +693,9 @@ class Publication {
     }
 
     private function indexableSql(string $alias): string {
-        return "{$alias}.noindex = 0 AND {$alias}.indexable_at IS NOT NULL AND {$alias}.indexable_at <= NOW()";
+        // DATETIME в проекте записывается в Europe/Moscow, а MySQL на production работает в UTC.
+        return "{$alias}.noindex = 0 AND {$alias}.indexable_at IS NOT NULL "
+            . "AND {$alias}.indexable_at <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 3 HOUR)";
     }
 
     /**
