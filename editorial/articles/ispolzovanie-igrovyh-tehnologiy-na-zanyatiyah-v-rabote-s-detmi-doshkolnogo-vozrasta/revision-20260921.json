@@ -2,12 +2,14 @@
   "publication_id": 764,
   "user_id": 9124,
   "slug": "ispolzovanie-igrovyh-tehnologiy-na-zanyatiyah-v-rabote-s-detmi-doshkolnogo-vozrasta",
-  "expected_content_sha256": "b8a5bf58f89355c955f93cfb31620201ee54287950bcb114b2ca5783146f0bca",
-  "new_html_sha256": "e2b4b23fdf778c83e6cfef26c014e90351b4342c948d3ad0618962b3c316cfea",
-  "approved_package_sha256": "8197dd6a9341d43e6be2e2532bcad09f14e18e394f92e5a7251f4f082c4900e3",
+  "expected_content_sha256": "e2b4b23fdf778c83e6cfef26c014e90351b4342c948d3ad0618962b3c316cfea",
+  "previous_deployed_html_sha256": "e2b4b23fdf778c83e6cfef26c014e90351b4342c948d3ad0618962b3c316cfea",
+  "original_content_sha256": "b8a5bf58f89355c955f93cfb31620201ee54287950bcb114b2ca5783146f0bca",
+  "new_html_sha256": "ce1c8d1153e145060b26bc2310aa1aaec0e302073db3fc471814ffeb0b29930c",
+  "approved_package_sha256": "291e41fe8ed929aee614291c8978cf887d5760279a8e03cfa23020c9171a07d0",
   "cover_sha256": "495e8f20559eeae804c064e699481a3d712a3a020fcd35504e885bf917482a86",
   "inline_image_sha256": "a6c073fae176ccdee403066aaa927fffb5a3261cec15a1386dea9d611ccf510a",
   "status": "approved_for_production",
   "approved_at": "2026-09-21",
-  "approval_note": "Пользователь явно запросил деплой статьи для проверки на production."
+  "approval_note": "Пользователь явно запросил деплой статьи для проверки на production; после мобильной приёмки исправлено только размещение CSS-класса внутренней иллюстрации."
 }
