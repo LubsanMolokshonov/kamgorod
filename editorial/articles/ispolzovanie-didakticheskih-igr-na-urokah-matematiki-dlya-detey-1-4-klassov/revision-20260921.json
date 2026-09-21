@@ -1,0 +1,21 @@
+{
+  "publication_id": 790,
+  "user_id": 9324,
+  "slug": "ispolzovanie-didakticheskih-igr-na-urokah-matematiki-dlya-detey-1-4-klassov",
+  "url": "https://fgos.pro/publikaciya/ispolzovanie-didakticheskih-igr-na-urokah-matematiki-dlya-detey-1-4-klassov/",
+  "source": "generator",
+  "publication_type_id": 2,
+  "published_at": "2026-09-03 16:13:04",
+  "certificate_status": "pending",
+  "expected_content_sha256": "3fdf7a66129ab9f3ef4ae63b68377bdec3d02834ea7093e2347f52f524f9416e",
+  "original_content_sha256": "3fdf7a66129ab9f3ef4ae63b68377bdec3d02834ea7093e2347f52f524f9416e",
+  "new_html_sha256": "38c05f031d8f3ff6fc300b8ee2063ec033e38e82c80ba2947df122a182ba1fc9",
+  "cover_sha256": "aa0d717188aacdb56ebb7524bc034148c6fa38b4bd37a443604b6e098c5c4840",
+  "prepared_package_sha256": "be818de9d85c947cd502e87dbf3da988f925ff25186c41fdd679fbadcd787e86",
+  "package_hash_scope": "publication package fields plus closed cover-original.png SHA256; public cover URL reserved but asset not created",
+  "status": "prepared_for_review",
+  "prepared_at": "2026-09-21",
+  "approved_package_sha256": "fb4ebaeaba9d5926e46205e521b6cce6207f7d4197fe411d49f5728a2671a50e",
+  "production_authorized": true,
+  "note": "Closed regeneration package only. Preserve ID, slug, user_id, source, published_at, pending certificate status and related entities. No production, public asset, commit, push or deploy changes were made."
+}

@@ -1,0 +1,21 @@
+{
+  "publication_id": 793,
+  "user_id": 9364,
+  "slug": "ispolzovanie-tehnologii-triz-v-doshkolnom-obrazovanii",
+  "url": "https://fgos.pro/publikaciya/ispolzovanie-tehnologii-triz-v-doshkolnom-obrazovanii/",
+  "source": "generator",
+  "publication_type_id": 2,
+  "published_at": "2026-09-04 15:34:03",
+  "certificate_status": "ready",
+  "expected_content_sha256": "6ebf39fa427e5098b90537cb7ae0f4ce3b56c941db3896d1c06937a759e0d944",
+  "original_content_sha256": "6ebf39fa427e5098b90537cb7ae0f4ce3b56c941db3896d1c06937a759e0d944",
+  "new_html_sha256": "bc8190913084056aa51f951f80963e923fbab6810200677a79d1b1aba32627f7",
+  "cover_sha256": "25b5e5f497cd071db56fe4208aafc1d7b53e9efe57bfcc55084cf3c188baf922",
+  "prepared_package_sha256": "0affe3d6ed88a98453256934ddbaefc62a1c0426b73c30e8123d53c2a1348bdf",
+  "package_hash_scope": "publication package fields plus closed cover-original.png SHA256; public cover URL reserved but asset not created",
+  "status": "prepared_for_review",
+  "prepared_at": "2026-09-21",
+  "approved_package_sha256": "26a34b443762e3e388536c64cc755448dcc81761bd00f18bb4bbf57712e03850",
+  "production_authorized": true,
+  "note": "Closed regeneration package only. Preserve ID, slug, user_id, source, published_at, certificate and related entities. No production, public asset, commit, push or deploy changes were made."
+}

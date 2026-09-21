@@ -1,0 +1,13 @@
+{
+  "publication_id": 795,
+  "user_id": 9381,
+  "slug": "innovatsionnye-metody-v-vospitanii-patrioticheskogo-duha-v-shkolnike",
+  "expected_content_sha256": "697b5016cc1d97782c191e72be28600f5ad9a0374a01502fb1918e2236bda46b",
+  "new_html_sha256": "020481cd781a5ca9f82681a802129a1c01bb39a3435b2157f16d517ae95ecc25",
+  "cover_sha256": "f777d5373c47249a72ff22c73f3a95eec9a1117f69ae6d246ae6b217d8d811f9",
+  "candidate_package_sha256": "d1e6ac0ccfa2926094e8ea40edbda529b532e66051edfb3ec905e649d3baa4fa",
+  "approved_package_sha256": "412e781395a83a0fb3ab87572bd5c7f73c72b9d2ed7b2cbb9711e52cbe3c3de9",
+  "approval_status": "approved_for_production",
+  "production_authorized": true,
+  "prepared_at": "2026-09-21"
+}

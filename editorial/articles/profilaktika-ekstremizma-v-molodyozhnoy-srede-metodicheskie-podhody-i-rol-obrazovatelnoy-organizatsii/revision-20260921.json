@@ -1,0 +1,20 @@
+{
+  "publication_id": 794,
+  "user_id": 9367,
+  "slug": "profilaktika-ekstremizma-v-molodyozhnoy-srede-metodicheskie-podhody-i-rol-obrazovatelnoy-organizatsii",
+  "url": "https://fgos.pro/publikaciya/profilaktika-ekstremizma-v-molodyozhnoy-srede-metodicheskie-podhody-i-rol-obrazovatelnoy-organizatsii/",
+  "source": "upload",
+  "publication_type_id": 1,
+  "published_at": "2026-09-04 17:58:47",
+  "certificate_status": "ready",
+  "original_content_sha256": "40a7bbded86867b565c36fda00937916335d2d830435e3164929c8872f5444c8",
+  "new_html_sha256": "5f6b67b6c11c840ea83fad229594a9ec33eb5384d0233e882ab7a3025953d2ea",
+  "cover_original_sha256": "c236f8c0693a87df1928db5e56d961bde447d34fe52c69d0811bc97e19b13329",
+  "preparation_package_sha256": "5a7fe59936f4a1a00c40607e318fc7613c4c34d9766cce36a1cce302fdda9a2a",
+  "package_hash_scope": "SHA256 of the sorted sha256sum manifest for article.html, metadata.json and cover-original.png",
+  "status": "draft_for_review",
+  "prepared_at": "2026-09-21",
+  "approved_package_sha256": "2ed45316a740af84bc823aae69d10b8922b78d420a761a7814bb0c34d4991273",
+  "production_authorized": true,
+  "production_changed": false
+}

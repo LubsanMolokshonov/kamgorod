@@ -1,0 +1,20 @@
+{
+  "publication_id": 797,
+  "user_id": 9418,
+  "slug": "teoreticheskie-osnovy-obucheniya-multiplikatsii",
+  "url": "https://fgos.pro/publikaciya/teoreticheskie-osnovy-obucheniya-multiplikatsii/",
+  "source": "upload",
+  "publication_type_id": 2,
+  "published_at": "2026-09-07 21:07:55",
+  "certificate_status": "ready",
+  "original_content_sha256": "043b67e453614c1497cfa80caed2341e818e3d35376ec3e288d62540d49ee603",
+  "new_html_sha256": "934c0acd5442dfa878972358d61ad714d25116e480bf8573b0b9c97f30adba66",
+  "cover_original_sha256": "105fe658ba8382fdab4dd467e68eb8af383d66809913a9088b5135ba78ba589a",
+  "preparation_package_sha256": "331b316522476e743a5c0a62cf57f122417dbe625973f0402abc59fd5a301dd7",
+  "package_hash_scope": "SHA256 of the sorted sha256sum manifest for article.html, metadata.json and cover-original.png",
+  "status": "draft_for_review",
+  "prepared_at": "2026-09-21",
+  "approved_package_sha256": "a09703c171456dc724e8b75a1a023bd96025f7c97a01ccdcc41ba990b0ea9cbd",
+  "production_authorized": true,
+  "production_changed": false
+}

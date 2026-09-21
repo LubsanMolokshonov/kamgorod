@@ -1,0 +1,20 @@
+[
+  {
+    "id": "frp-english-2-4-2025",
+    "title": "Федеральная рабочая программа начального общего образования. Иностранный (английский) язык. 2–4 классы",
+    "publisher": "Институт содержания и методов обучения",
+    "url": "https://edsoo.ru/wp-content/uploads/2025/07/2025_noo_frp_anglijskij-yazyk_2-4.pdf",
+    "source_type": "official_program",
+    "verified_at": "2026-09-21",
+    "used_for": ["цели курса", "виды речевой деятельности", "ориентиры для 2–4 классов", "проектная работа"]
+  },
+  {
+    "id": "edsoo-program-index",
+    "title": "Федеральные рабочие программы",
+    "publisher": "Институт содержания и методов обучения",
+    "url": "https://edsoo.ru/rabochie-programmy/",
+    "source_type": "official_index",
+    "verified_at": "2026-09-21",
+    "used_for": ["проверка официального происхождения программы"]
+  }
+]

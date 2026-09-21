@@ -1,0 +1,13 @@
+{
+  "publication_id": 792,
+  "user_id": 9356,
+  "slug": "igrovye-tehnologii-obucheniya-grammatike-na-urokah-angliyskogo-yazyka-v-nachalnoy-shkole",
+  "expected_content_sha256": "0bef50f1253704bd7148c407f6effae743bf115ef2447930ff3ca815127dfe04",
+  "new_html_sha256": "c61a2dbe663e2c6f4584aaed76207846962c5c7808d56759708e014e0d8adcc1",
+  "cover_sha256": "69a51f20e42a0438dc59f2b40e4c94bc9aca79d0bd00d9db8a62b0160be90941",
+  "candidate_package_sha256": "6106dd72bbbcda8fcf5762cea2e37fa03228accc0182f811ff4aac5c45f40633",
+  "approved_package_sha256": "f881af6f99aa8feb375d3e4769a0ebdbf2358e76a143f2e54d6064e51c0ab4bb",
+  "approval_status": "approved_for_production",
+  "production_authorized": true,
+  "prepared_at": "2026-09-21"
+}

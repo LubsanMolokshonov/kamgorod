@@ -1,0 +1,97 @@
+{
+  "batch": "user-publications-20260921",
+  "approved_at": "2026-09-21",
+  "approval_context": "Явная команда пользователя «Деплой проекта» после отчёта по 10 комплектам",
+  "articles": [
+    {
+      "id": 799,
+      "user_id": 9424,
+      "slug": "vzaimodeystvie-so-sledstvennym-komitetom-psihologicheskoe-soprovozhdenie-sledstvennogo-protsessa",
+      "source": "generator",
+      "status": "published",
+      "expected_content_sha256": "43e89b82883dce930f24ac0e3783111a1230e522b40135c567ebf29e0d9affac",
+      "approved_package_sha256": "efefe34668084f3b17c6079869e913bc94298f04e5a33b6ae337e4b11855261c"
+    },
+    {
+      "id": 797,
+      "user_id": 9418,
+      "slug": "teoreticheskie-osnovy-obucheniya-multiplikatsii",
+      "source": "upload",
+      "status": "published",
+      "expected_content_sha256": "043b67e453614c1497cfa80caed2341e818e3d35376ec3e288d62540d49ee603",
+      "approved_package_sha256": "a09703c171456dc724e8b75a1a023bd96025f7c97a01ccdcc41ba990b0ea9cbd"
+    },
+    {
+      "id": 796,
+      "user_id": 9381,
+      "slug": "sozdanie-shkolnogo-aktiva-programma-i-meropriyatiya",
+      "source": "generator",
+      "status": "published",
+      "expected_content_sha256": "33a5e73646d96400e3f6afca457535e965c589c01dfc3eadf0c0cba5b9d023e3",
+      "approved_package_sha256": "b9c7d3e31c5141b6e2391b2b7ebc96c776d8c52cd4f881b8206e0127e95c157a"
+    },
+    {
+      "id": 795,
+      "user_id": 9381,
+      "slug": "innovatsionnye-metody-v-vospitanii-patrioticheskogo-duha-v-shkolnike",
+      "source": "generator",
+      "status": "published",
+      "expected_content_sha256": "697b5016cc1d97782c191e72be28600f5ad9a0374a01502fb1918e2236bda46b",
+      "approved_package_sha256": "412e781395a83a0fb3ab87572bd5c7f73c72b9d2ed7b2cbb9711e52cbe3c3de9"
+    },
+    {
+      "id": 794,
+      "user_id": 9367,
+      "slug": "profilaktika-ekstremizma-v-molodyozhnoy-srede-metodicheskie-podhody-i-rol-obrazovatelnoy-organizatsii",
+      "source": "upload",
+      "status": "published",
+      "expected_content_sha256": "40a7bbded86867b565c36fda00937916335d2d830435e3164929c8872f5444c8",
+      "approved_package_sha256": "2ed45316a740af84bc823aae69d10b8922b78d420a761a7814bb0c34d4991273"
+    },
+    {
+      "id": 793,
+      "user_id": 9364,
+      "slug": "ispolzovanie-tehnologii-triz-v-doshkolnom-obrazovanii",
+      "source": "generator",
+      "status": "published",
+      "expected_content_sha256": "6ebf39fa427e5098b90537cb7ae0f4ce3b56c941db3896d1c06937a759e0d944",
+      "approved_package_sha256": "26a34b443762e3e388536c64cc755448dcc81761bd00f18bb4bbf57712e03850"
+    },
+    {
+      "id": 792,
+      "user_id": 9356,
+      "slug": "igrovye-tehnologii-obucheniya-grammatike-na-urokah-angliyskogo-yazyka-v-nachalnoy-shkole",
+      "source": "generator",
+      "status": "published",
+      "expected_content_sha256": "0bef50f1253704bd7148c407f6effae743bf115ef2447930ff3ca815127dfe04",
+      "approved_package_sha256": "f881af6f99aa8feb375d3e4769a0ebdbf2358e76a143f2e54d6064e51c0ab4bb"
+    },
+    {
+      "id": 791,
+      "user_id": 9347,
+      "slug": "pravopisanie-slozhnyh-imyon-prilagatelnyh-konspekt",
+      "source": "upload",
+      "status": "published",
+      "expected_content_sha256": "811e9cb413fc0971cd7425ee3a8dda4e3512571736f510da02b23f4aacd1b2a3",
+      "approved_package_sha256": "48145ded4dd457bb39fb47790d9c673638c73b6e0f133a28ae6a165f17a633e9"
+    },
+    {
+      "id": 790,
+      "user_id": 9324,
+      "slug": "ispolzovanie-didakticheskih-igr-na-urokah-matematiki-dlya-detey-1-4-klassov",
+      "source": "generator",
+      "status": "published",
+      "expected_content_sha256": "3fdf7a66129ab9f3ef4ae63b68377bdec3d02834ea7093e2347f52f524f9416e",
+      "approved_package_sha256": "fb4ebaeaba9d5926e46205e521b6cce6207f7d4197fe411d49f5728a2671a50e"
+    },
+    {
+      "id": 789,
+      "user_id": 9308,
+      "slug": "ispolzovanie-igrovyh-tehnologiy-na-urokah-angliyskogo-yazyka-v-nachalnyh-klassah",
+      "source": "generator",
+      "status": "published",
+      "expected_content_sha256": "d751f63a65a6e9c59875c349dc92ddd1213fd051377548f8a28057453201e8e8",
+      "approved_package_sha256": "19a676fafcbc2871c91eba79878d3bc44cc7ee6302b19d37bf0058b25f1a35a7"
+    }
+  ]
+}

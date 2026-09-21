@@ -1,0 +1,5 @@
+# Промпт обложки
+
+Use case: ads-marketing. Asset type: finished cover for a Russian educational publication on fgos.pro, landscape 16:9. Create a polished editorial cover about practical patriotic education of schoolchildren through local-history projects, dialogue, and reflection. Left 56%: quiet near-white warm gradient with generous safe margins. Right 44%: realistic modern school library scene, a female teacher and three middle-school students examining a local-history map and archival-style photographs without readable text. Text exactly, in Russian Cyrillic, and no other text: «Патриотическое воспитание школьников»; «От идеи к действию»; «Проекты, диалог и рефлексия». Main headline large bold dark navy sans serif; second line in a pale-blue rounded rectangle; final line smaller dark navy. No flags, emblems, political symbols, weapons, uniforms, official insignia, logos, watermarks, pseudotext or identifiable real children. Spell every Cyrillic letter exactly and keep all text fully visible.
+
+Результат проверен: три текстовых блока написаны без ошибок, лишних надписей нет, композиция и безопасные поля сохранены.

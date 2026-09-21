@@ -1,0 +1,21 @@
+{
+  "publication_id": 796,
+  "user_id": 9381,
+  "slug": "sozdanie-shkolnogo-aktiva-programma-i-meropriyatiya",
+  "url": "https://fgos.pro/publikaciya/sozdanie-shkolnogo-aktiva-programma-i-meropriyatiya/",
+  "source": "generator",
+  "publication_type_id": 2,
+  "published_at": "2026-09-06 11:15:41",
+  "certificate_status": "ready",
+  "expected_content_sha256": "33a5e73646d96400e3f6afca457535e965c589c01dfc3eadf0c0cba5b9d023e3",
+  "original_content_sha256": "33a5e73646d96400e3f6afca457535e965c589c01dfc3eadf0c0cba5b9d023e3",
+  "new_html_sha256": "a4dd7a6b13ea3c76e74073fd4ae5a19c57c303dc4df2d28ba0faaba3a1831a68",
+  "cover_sha256": "67cc9de97c6f8d460cab3e8a892e846d61a9b18c5cdbbdc27ecac7cdd40fdcc9",
+  "prepared_package_sha256": "cfd873b0f751f66ef59ff12315190ebe38b803638f63c5c4ded95d2814479ee3",
+  "package_hash_scope": "publication package fields plus closed cover-original.png SHA256; public cover URL reserved but asset not created",
+  "status": "prepared_for_review",
+  "prepared_at": "2026-09-21",
+  "approved_package_sha256": "b9c7d3e31c5141b6e2391b2b7ebc96c776d8c52cd4f881b8206e0127e95c157a",
+  "production_authorized": true,
+  "note": "Closed regeneration package only. Preserve ID, slug, user_id, source, published_at, certificate and related entities. No production, public asset, commit, push or deploy changes were made."
+}

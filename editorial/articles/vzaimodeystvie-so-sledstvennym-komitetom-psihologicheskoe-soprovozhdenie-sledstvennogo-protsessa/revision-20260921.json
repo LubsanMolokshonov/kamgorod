@@ -1,0 +1,22 @@
+{
+  "publication_id": 799,
+  "user_id": 9424,
+  "slug": "vzaimodeystvie-so-sledstvennym-komitetom-psihologicheskoe-soprovozhdenie-sledstvennogo-protsessa",
+  "url": "https://fgos.pro/publikaciya/vzaimodeystvie-so-sledstvennym-komitetom-psihologicheskoe-soprovozhdenie-sledstvennogo-protsessa/",
+  "source": "generator",
+  "publication_type_id": 2,
+  "published_at": "2026-09-08 08:40:44",
+  "expected_content_sha256": "43e89b82883dce930f24ac0e3783111a1230e522b40135c567ebf29e0d9affac",
+  "original_content_sha256": "43e89b82883dce930f24ac0e3783111a1230e522b40135c567ebf29e0d9affac",
+  "new_html_sha256": "2f523b2e8bae6826abd476f5517d57f4ff3666768f0e795d13a8b089433e98b9",
+  "cover_original_sha256": "f8b52af7fb49cddb20e5a83d11d1cbcdbdf08e17ee2dd6a67b848484b9f2e267",
+  "cover_web_candidate_sha256": "5006f0efead1669ad41427b251176cbff8c55ea397408ac22d457ab3d8de7ee3",
+  "prepared_package_sha256": "efefe34668084f3b17c6079869e913bc94298f04e5a33b6ae337e4b11855261c",
+  "package_hash_scope": "Validated publication package fields and article.html plus cover-1200x675.jpg copied under the reserved public path in an isolated temporary root",
+  "status": "prepared_for_review",
+  "prepared_at": "2026-09-21",
+  "approved_package_sha256": "efefe34668084f3b17c6079869e913bc94298f04e5a33b6ae337e4b11855261c",
+  "production_authorized": true,
+  "production_changed": false,
+  "note": "Closed regeneration package only. Preserve ID, slug, user_id, source, published_at, authorship, certificates and all related entities. No public asset, database, commit, push or deployment change was made."
+}

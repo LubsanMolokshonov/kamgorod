@@ -1,0 +1,35 @@
+[
+  {
+    "id": "unesco-mil-curriculum",
+    "title": "Media and Information Literate Citizens: Think Critically, Click Wisely!",
+    "publisher": "UNESCO",
+    "url": "https://www.unesco.org/mil4teachers/sites/default/files/medias/fichiers/2023/10/Part_1_CI%20MIL_CURRICULUM.pdf",
+    "checked_at": "2026-09-21",
+    "used_for": "Раскадровка и создание анимации как формы производства медиатекста; обсуждение замысла, аудитории и выразительных средств."
+  },
+  {
+    "id": "stop-motion-studio-guide",
+    "title": "The Magic of Stop Motion",
+    "publisher": "Stop Motion Studio / Cateater",
+    "url": "https://www.cateater.com/help/stopmotion-windows/en/",
+    "checked_at": "2026-09-21",
+    "used_for": "Определение stop motion: небольшое изменение объекта между отдельно снятыми кадрами."
+  },
+  {
+    "id": "adobe-cutout-guide",
+    "title": "Cut-Out Animation: How Does Cutout Animation Work?",
+    "publisher": "Adobe",
+    "url": "https://www.adobe.com/uk/creativecloud/animation/discover/cut-out-animation.html",
+    "checked_at": "2026-09-21",
+    "used_for": "Фиксация камеры, постоянство съёмочной площадки и доступность бумажной перекладки для начинающих."
+  },
+  {
+    "id": "government-concept-678r",
+    "title": "Концепция развития дополнительного образования детей до 2030 года",
+    "publisher": "Правительство Российской Федерации",
+    "document": "Распоряжение Правительства РФ от 31.03.2022 № 678-р",
+    "url": "https://government.ru/docs/all/140314/",
+    "checked_at": "2026-09-21",
+    "used_for": "Общий контекст дополнительного образования детей; без нормативных предписаний к конкретному занятию."
+  }
+]
