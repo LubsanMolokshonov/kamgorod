@@ -30,9 +30,9 @@ $currentAdmin = Admin::verifySession();
             </div>
 
             <nav class="sidebar-nav">
-                <a href="/admin/index.php" class="nav-item <?php echo $_SERVER['PHP_SELF'] === '/admin/index.php' ? 'active' : ''; ?>">
-                    <span class="nav-icon">📊</span>
-                    <span>Дашборд</span>
+                <a href="/admin/rnp/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/rnp/') !== false ? 'active' : ''; ?>">
+                    <span class="nav-icon">💰</span>
+                    <span>РНП</span>
                 </a>
 
                 <a href="/admin/competitions/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/competitions/') !== false ? 'active' : ''; ?>">
@@ -156,11 +156,6 @@ $currentAdmin = Admin::verifySession();
                 <a href="/admin/materials-analytics/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/materials-analytics/') !== false ? 'active' : ''; ?>">
                     <span class="nav-icon">📚</span>
                     <span>Материалы ФОП</span>
-                </a>
-
-                <a href="/admin/rnp/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/rnp/') !== false ? 'active' : ''; ?>">
-                    <span class="nav-icon">💰</span>
-                    <span>РНП</span>
                 </a>
 
                 <a href="/admin/directions/" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/directions/') !== false ? 'active' : ''; ?>">

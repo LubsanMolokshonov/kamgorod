@@ -13,9 +13,9 @@ require_once __DIR__ . '/../includes/rate-limit.php';
 
 session_start();
 
-// If already logged in, redirect to dashboard
+// If already logged in, redirect to the primary admin section.
 if (isset($_SESSION['admin_id'])) {
-    header('Location: /admin/index.php');
+    header('Location: /admin/rnp/');
     exit;
 }
 
@@ -50,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 rateLimitReset($rlKey);
 
-                // Redirect to dashboard
-                header('Location: /admin/index.php');
+                // Redirect to the primary admin section.
+                header('Location: /admin/rnp/');
                 exit;
             } else {
                 rateLimitRegisterFailure($rlKey, 900);
