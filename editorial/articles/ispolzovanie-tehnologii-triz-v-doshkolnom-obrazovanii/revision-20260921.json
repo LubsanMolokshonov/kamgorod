@@ -17,5 +17,9 @@
   "prepared_at": "2026-09-21",
   "approved_package_sha256": "26a34b443762e3e388536c64cc755448dcc81761bd00f18bb4bbf57712e03850",
   "production_authorized": true,
+  "production_changed": true,
+  "deployed_at": "2026-09-21",
+  "deployed_commit": "f85193a",
+  "production_backup": "editorial/backups/publication-793-20260921-124544-0480d2b4.json",
   "note": "Closed regeneration package only. Preserve ID, slug, user_id, source, published_at, certificate and related entities. No production, public asset, commit, push or deploy changes were made."
 }

@@ -20,5 +20,8 @@
   "approval_status": "approved_for_production",
   "production_authorized": true,
   "prepared_at": "2026-09-21",
-  "production_changed": false
+  "production_changed": true,
+  "deployed_at": "2026-09-21",
+  "deployed_commit": "f85193a",
+  "production_backup": "editorial/backups/publication-789-20260921-124545-c784afd1.json"
 }

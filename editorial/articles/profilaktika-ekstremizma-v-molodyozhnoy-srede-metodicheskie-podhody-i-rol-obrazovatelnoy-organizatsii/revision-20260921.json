@@ -16,5 +16,8 @@
   "prepared_at": "2026-09-21",
   "approved_package_sha256": "2ed45316a740af84bc823aae69d10b8922b78d420a761a7814bb0c34d4991273",
   "production_authorized": true,
-  "production_changed": false
+  "production_changed": true,
+  "deployed_at": "2026-09-21",
+  "deployed_commit": "f85193a",
+  "production_backup": "editorial/backups/publication-794-20260921-124544-c31956a3.json"
 }

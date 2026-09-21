@@ -9,5 +9,9 @@
   "approved_package_sha256": "f881af6f99aa8feb375d3e4769a0ebdbf2358e76a143f2e54d6064e51c0ab4bb",
   "approval_status": "approved_for_production",
   "production_authorized": true,
+  "production_changed": true,
+  "deployed_at": "2026-09-21",
+  "deployed_commit": "f85193a",
+  "production_backup": "editorial/backups/publication-792-20260921-124544-b9fae7be.json",
   "prepared_at": "2026-09-21"
 }
