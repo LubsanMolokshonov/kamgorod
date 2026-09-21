@@ -4,8 +4,9 @@
  *
  * Воронка: Визиты → Регистрации → Сгенерировало → Токены → Оплаты → Выручка.
  * «Регистрации» — новые пользователи за период, у которых есть визит на лендинг материалов.
- * Покупки токенов идут мимо orders (вебхук кредитует через UserTokens::credit('purchase')),
- * поэтому выручка считается по token_packages.price_rub.
+ * Покупки токенов идут мимо orders (вебхук кредитует через UserTokens::credit('purchase')).
+ * Выручка берётся из token_transactions.amount_paid; для старых строк
+ * без суммы используется fallback на текущий прайс пакета.
  */
 class MaterialsAnalytics
 {
@@ -49,9 +50,10 @@ class MaterialsAnalytics
         )['c'] ?? 0);
 
         $payments = $this->db->queryOne(
-            "SELECT COUNT(*) AS cnt, COALESCE(SUM(tp.price_rub), 0) AS revenue
+            "SELECT COUNT(*) AS cnt,
+                    COALESCE(SUM(COALESCE(tt.amount_paid, tp.price_rub)), 0) AS revenue
              FROM token_transactions tt
-             JOIN token_packages tp ON tp.id = tt.package_id
+             LEFT JOIN token_packages tp ON tp.id = tt.package_id
              WHERE tt.reason = 'purchase' AND tt.created_at BETWEEN ? AND ?",
             [$startDate, $endDate]
         ) ?: [];
@@ -127,9 +129,9 @@ class MaterialsAnalytics
         foreach ($this->db->query(
             "SELECT DATE(tt.created_at) AS d,
                     COUNT(*) AS cnt,
-                    COALESCE(SUM(tp.price_rub), 0) AS revenue
+                    COALESCE(SUM(COALESCE(tt.amount_paid, tp.price_rub)), 0) AS revenue
              FROM token_transactions tt
-             JOIN token_packages tp ON tp.id = tt.package_id
+             LEFT JOIN token_packages tp ON tp.id = tt.package_id
              WHERE tt.reason = 'purchase' AND tt.created_at BETWEEN ? AND ?
              GROUP BY DATE(tt.created_at)",
             [$startDate, $endDate]
@@ -210,10 +212,11 @@ class MaterialsAnalytics
         $payByCampaign = [];
         foreach ($this->db->query(
             "SELECT COALESCE(NULLIF(u.utm_campaign, ''), ?) AS k,
-                    COUNT(*) AS cnt, COALESCE(SUM(tp.price_rub), 0) AS revenue
+                    COUNT(*) AS cnt,
+                    COALESCE(SUM(COALESCE(tt.amount_paid, tp.price_rub)), 0) AS revenue
              FROM token_transactions tt
              JOIN users u ON u.id = tt.user_id
-             JOIN token_packages tp ON tp.id = tt.package_id
+             LEFT JOIN token_packages tp ON tp.id = tt.package_id
              WHERE tt.reason = 'purchase' AND tt.created_at BETWEEN ? AND ?
              GROUP BY k",
             [$none, $startDate, $endDate]

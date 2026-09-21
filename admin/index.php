@@ -1,5 +1,10 @@
 <?php
 require_once __DIR__ . '/includes/auth.php'; // admin auth guard
+
+// Старый дашборд скрыт: стартовым разделом админки теперь является РНП.
+header('Location: /admin/rnp/');
+exit;
+
 /**
  * Admin Dashboard - Sales Analytics
  * Разделение: Педпортал (конкурсы, олимпиады, вебинары, публикации) и Курсы
@@ -150,45 +155,136 @@ $bitrixAvailable = ($offlineCrm['count'] !== null);
 $bitrixCount     = (int)($offlineCrm['count'] ?? 0);
 $bitrixRevenue   = (float)($offlineCrm['revenue'] ?? 0);
 
-// === ОБЩИЕ: Итого (включая Bitrix WON) ===
+// === ОБЩИЕ: авторитетный денежный итог ===
+// Считаем orders прямым запросом, а не суммой товарных блоков. Так в итог
+// попадают успешные заказы без order_items и с утраченной товарной связью.
+$stmtAllPaidOrders = $db->prepare("
+    SELECT COUNT(*) AS paid_count, COALESCE(SUM(final_amount), 0) AS revenue
+    FROM orders
+    WHERE payment_status = 'succeeded'
+      AND paid_at >= ? AND paid_at <= ?
+      AND final_amount > 0
+");
+$stmtAllPaidOrders->execute([$startDate, $endDate]);
+$allPaidOrders = $stmtAllPaidOrders->fetch(PDO::FETCH_ASSOC);
+$recordedPaidCount = (int)$allPaidOrders['paid_count'];
+$recordedRevenue   = (float)$allPaidOrders['revenue'];
+
+// Онлайн-оплаты Yookassa, которые нельзя разнести по товарным направлениям.
+// Они уже включены в $recordedRevenue, здесь нужны для прозрачности.
+$stmtUnclassified = $db->prepare("
+    SELECT COUNT(*) AS paid_count, COALESCE(SUM(o.final_amount), 0) AS revenue
+    FROM orders o
+    WHERE o.payment_status = 'succeeded'
+      AND o.paid_at >= ? AND o.paid_at <= ?
+      AND o.final_amount > 0
+      AND o.subscription_plan_id IS NULL
+      AND o.yookassa_payment_id IS NOT NULL
+      AND o.yookassa_payment_id <> ''
+      AND o.yookassa_payment_id NOT LIKE 'bitrix:%'
+      AND NOT EXISTS (
+          SELECT 1 FROM order_items oi
+          WHERE oi.order_id = o.id
+            AND (oi.registration_id IS NOT NULL
+                 OR oi.certificate_id IS NOT NULL
+                 OR oi.webinar_certificate_id IS NOT NULL
+                 OR oi.olympiad_registration_id IS NOT NULL
+                 OR oi.course_enrollment_id IS NOT NULL)
+      )
+");
+$stmtUnclassified->execute([$startDate, $endDate]);
+$unclassifiedOnline = $stmtUnclassified->fetch(PDO::FETCH_ASSOC);
+$unclassifiedPaidCount = (int)$unclassifiedOnline['paid_count'];
+$unclassifiedRevenue   = (float)$unclassifiedOnline['revenue'];
+
 $totalOrders  = $pedportalOrders + $coursesApps + $subscriptionsSold;
-$totalPaid    = $pedportalPaidCount + $coursesPaidCount + $subscriptionsSold + ($bitrixAvailable ? $bitrixCount : 0);
-$totalRevenue = $pedportalRevenue + $coursesRevenue + $subscriptionsRevenue + ($bitrixAvailable ? $bitrixRevenue : 0);
+$totalPaid    = $recordedPaidCount + (int)$materialsTotals['paid'] + ($bitrixAvailable ? $bitrixCount : 0);
+$totalRevenue = $recordedRevenue + (float)$materialsTotals['revenue'] + ($bitrixAvailable ? $bitrixRevenue : 0);
 $totalConversion = $totalOrders > 0 ? round(($pedportalPaidCount + $coursesPaidCount + $subscriptionsSold) / $totalOrders * 100, 1) : 0;
 $totalAvgCheck   = $totalPaid > 0 ? round($totalRevenue / $totalPaid) : 0;
 
 // === Breakdown по типам товаров ===
+// Разносим final_amount каждого заказа пропорционально суммам позиций.
+// Благодаря этому скидки не завышают разбивку, а её итог сходится с общей выручкой.
 $stmt = $db->prepare("
     SELECT
-        CASE
-            WHEN oi.registration_id IS NOT NULL THEN 'competitions'
-            WHEN oi.certificate_id IS NOT NULL THEN 'publications'
-            WHEN oi.webinar_certificate_id IS NOT NULL THEN 'webinars'
-            WHEN oi.olympiad_registration_id IS NOT NULL THEN 'olympiads'
-            WHEN oi.course_enrollment_id IS NOT NULL THEN 'courses'
-            ELSE 'unknown'
-        END as product_type,
-        COUNT(oi.id) as item_count,
-        COALESCE(SUM(oi.price), 0) as revenue,
-        SUM(CASE WHEN oi.is_free_promotion = 1 THEN 1 ELSE 0 END) as free_count
-    FROM order_items oi
-    JOIN orders o ON oi.order_id = o.id
+        o.id, o.final_amount, o.subscription_plan_id,
+        COALESCE(SUM(CASE WHEN oi.registration_id IS NOT NULL THEN oi.price ELSE 0 END), 0) AS competitions_raw,
+        COALESCE(SUM(CASE WHEN oi.certificate_id IS NOT NULL THEN oi.price ELSE 0 END), 0) AS publications_raw,
+        COALESCE(SUM(CASE WHEN oi.webinar_certificate_id IS NOT NULL THEN oi.price ELSE 0 END), 0) AS webinars_raw,
+        COALESCE(SUM(CASE WHEN oi.olympiad_registration_id IS NOT NULL THEN oi.price ELSE 0 END), 0) AS olympiads_raw,
+        COALESCE(SUM(CASE WHEN oi.course_enrollment_id IS NOT NULL THEN oi.price ELSE 0 END), 0) AS courses_raw,
+        SUM(oi.registration_id IS NOT NULL) AS competitions_count,
+        SUM(oi.certificate_id IS NOT NULL) AS publications_count,
+        SUM(oi.webinar_certificate_id IS NOT NULL) AS webinars_count,
+        SUM(oi.olympiad_registration_id IS NOT NULL) AS olympiads_count,
+        SUM(oi.course_enrollment_id IS NOT NULL) AS courses_count,
+        SUM(oi.registration_id IS NOT NULL AND oi.is_free_promotion = 1) AS competitions_free,
+        SUM(oi.certificate_id IS NOT NULL AND oi.is_free_promotion = 1) AS publications_free,
+        SUM(oi.webinar_certificate_id IS NOT NULL AND oi.is_free_promotion = 1) AS webinars_free,
+        SUM(oi.olympiad_registration_id IS NOT NULL AND oi.is_free_promotion = 1) AS olympiads_free,
+        SUM(oi.course_enrollment_id IS NOT NULL AND oi.is_free_promotion = 1) AS courses_free
+    FROM orders o
+    LEFT JOIN order_items oi ON oi.order_id = o.id
     WHERE o.payment_status = 'succeeded'
       AND o.paid_at >= ?
       AND o.paid_at <= ?
-    GROUP BY product_type
-    ORDER BY revenue DESC
+      AND o.final_amount > 0
+    GROUP BY o.id
 ");
 $stmt->execute([$startDate, $endDate]);
-$productBreakdown = $stmt->fetchAll(PDO::FETCH_ASSOC);
-if ($subscriptionsSold > 0) {
-    array_unshift($productBreakdown, [
-        'product_type' => 'subscriptions',
-        'item_count'   => $subscriptionsSold,
-        'revenue'      => $subscriptionsRevenue,
-        'free_count'   => 0,
-    ]);
+$paidOrdersForBreakdown = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$productAgg = [];
+$addProductRevenue = static function (string $type, int $count, float $revenue, int $free = 0) use (&$productAgg): void {
+    if (!isset($productAgg[$type])) {
+        $productAgg[$type] = ['product_type' => $type, 'item_count' => 0, 'revenue' => 0.0, 'free_count' => 0];
+    }
+    $productAgg[$type]['item_count'] += $count;
+    $productAgg[$type]['revenue'] += $revenue;
+    $productAgg[$type]['free_count'] += $free;
+};
+
+$productKeys = ['competitions', 'publications', 'webinars', 'olympiads', 'courses'];
+foreach ($paidOrdersForBreakdown as $paidOrder) {
+    $finalAmount = (float)$paidOrder['final_amount'];
+    if ($paidOrder['subscription_plan_id'] !== null) {
+        $addProductRevenue('subscriptions', 1, $finalAmount);
+        continue;
+    }
+
+    $rawByType = [];
+    $rawSum = 0.0;
+    foreach ($productKeys as $type) {
+        $rawByType[$type] = (float)$paidOrder[$type . '_raw'];
+        $rawSum += $rawByType[$type];
+    }
+    if ($rawSum <= 0) {
+        $addProductRevenue('unclassified', 1, $finalAmount);
+        continue;
+    }
+
+    $positiveTypes = array_keys(array_filter($rawByType, static fn(float $raw): bool => $raw > 0));
+    $remaining = $finalAmount;
+    $lastType = end($positiveTypes);
+    foreach ($positiveTypes as $type) {
+        $allocated = $type === $lastType ? $remaining : round($finalAmount * $rawByType[$type] / $rawSum, 2);
+        $remaining -= $allocated;
+        $addProductRevenue(
+            $type,
+            (int)$paidOrder[$type . '_count'],
+            $allocated,
+            (int)$paidOrder[$type . '_free']
+        );
+    }
 }
+
+$addProductRevenue('materials', (int)$materialsTotals['paid'], (float)$materialsTotals['revenue']);
+if ($bitrixAvailable) {
+    $addProductRevenue('offline_crm', $bitrixCount, $bitrixRevenue);
+}
+$productBreakdown = array_values(array_filter($productAgg, static fn(array $row): bool => $row['item_count'] > 0));
+usort($productBreakdown, static fn(array $a, array $b): int => $b['revenue'] <=> $a['revenue']);
 
 // === Дневной breakdown: Педпортал (заказы + оплаты по дням) ===
 // Заказы по дням (уникальные заказы педпортала, любой статус)
@@ -480,6 +576,10 @@ include __DIR__ . '/includes/header.php';
             <div class="kpi-label">Средний чек</div>
         </div>
     </div>
+    <div style="color:#64748b;font-size:13px;margin-top:12px;">
+        Денежный итог: все успешные заказы, покупки токенов и оффлайн-сделки Bitrix CRM.
+        Суммы показаны до вычета комиссии Yookassa.
+    </div>
 </div>
 
 <!-- KPI: Педпортал и Курсы -->
@@ -544,6 +644,30 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
+
+<?php if ($unclassifiedPaidCount > 0): ?>
+<!-- Успешные Yookassa-заказы без сохранённой товарной связи -->
+<div class="content-card" style="margin-bottom:32px;border:1px solid #fde68a;background:#fffbeb;">
+    <div class="kpi-section-header">
+        <h2>Онлайн-оплаты без товарной категории</h2>
+        <span class="section-tag" style="background:#fef3c7;color:#92400e;">Yookassa · учтены в итоге</span>
+    </div>
+    <div class="kpi-grid">
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($unclassifiedPaidCount, 0, ',', ' '); ?></div>
+            <div class="kpi-label">Оплаты</div>
+        </div>
+        <div class="stat-card">
+            <div class="kpi-value-highlight"><?php echo number_format($unclassifiedRevenue, 0, ',', ' '); ?> &#8381;</div>
+            <div class="kpi-label">Выручка</div>
+        </div>
+    </div>
+    <div style="color:#92400e;font-size:13px;margin-top:12px;">
+        Эти платежи включены в общую выручку, но у заказов нет сохранённой связи с конкурсом,
+        публикацией, вебинаром, олимпиадой или курсом.
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- KPI: Оффлайн-продажи fgos.pro (Bitrix CRM) -->
 <div class="content-card" style="margin-bottom: 32px;">
@@ -662,7 +786,9 @@ include __DIR__ . '/includes/header.php';
                 'webinars' => 'Сертификаты вебинаров',
                 'olympiads' => 'Олимпиады',
                 'courses' => 'Курсы',
-                'unknown' => 'Другое'
+                'materials' => 'Материалы ФОП',
+                'offline_crm' => 'Оффлайн-сделки Bitrix CRM',
+                'unclassified' => 'Без товарной категории'
             ];
             $typeBadges = [
                 'subscriptions' => 'badge-purple',
@@ -671,7 +797,9 @@ include __DIR__ . '/includes/header.php';
                 'webinars' => 'badge-purple',
                 'olympiads' => 'badge-warning',
                 'courses' => 'badge-primary',
-                'unknown' => 'badge-secondary'
+                'materials' => 'badge-info',
+                'offline_crm' => 'badge-warning',
+                'unclassified' => 'badge-secondary'
             ];
             $totalRevenueAll = $totalRevenue ?: 1;
             $totalItems = array_sum(array_column($productBreakdown, 'item_count'));
@@ -680,7 +808,7 @@ include __DIR__ . '/includes/header.php';
                 <thead>
                     <tr>
                         <th>Тип товара</th>
-                        <th>Кол-во продаж</th>
+                        <th>Кол-во / позиций</th>
                         <th>Бесплатных (акция)</th>
                         <th>Выручка</th>
                         <th>Доля</th>

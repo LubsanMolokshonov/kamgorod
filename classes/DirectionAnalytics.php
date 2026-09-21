@@ -9,7 +9,7 @@
  *   - webinars      — order_items.webinar_certificate_id
  *   - courses       — order_items.course_enrollment_id
  *   - materials     — отдельный поток: покупки токенов (token_transactions.reason='purchase'),
- *                     выручка = token_packages.price_rub (материалы + ФОП объединены).
+ *                     выручка = amount_paid с fallback на прайс пакета.
  *
  * Выручка смешанных заказов делится пропорционально сумме price позиций каждого направления.
  *
@@ -283,10 +283,10 @@ class DirectionAnalytics
         $sql = "
             SELECT
                 {$periodExpr} AS period_key,
-                SUM(tp.price_rub) AS revenue,
+                COALESCE(SUM(COALESCE(tt.amount_paid, tp.price_rub)), 0) AS revenue,
                 COUNT(*) AS payments
             FROM token_transactions tt
-            JOIN token_packages tp ON tp.id = tt.package_id
+            LEFT JOIN token_packages tp ON tp.id = tt.package_id
             WHERE tt.reason = 'purchase'
               AND DATE(tt.created_at) BETWEEN ? AND ?
             GROUP BY period_key
