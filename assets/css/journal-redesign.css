@@ -95,6 +95,12 @@
   aspect-ratio: 16 / 9;
   object-fit: cover;
 }
+.rd-card.pub-card .pub-card-cover[src*="ktp2026"] {
+  object-position: top;
+}
+.rd-card.pub-card .pub-card-cover[src*="razgovory-o-vazhnom-2026-2027"] {
+  object-position: center top;
+}
 @media (max-width: 600px) {
   .rd-card.pub-card .pub-card-cover { width: calc(100% + 24px); margin: -12px -12px 10px; }
 }
