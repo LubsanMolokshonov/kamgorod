@@ -235,6 +235,7 @@
 }
 
 .pub-article {
+  min-width: 0;
   background: #fff;
   border: 1px solid var(--ink-200);
   border-radius: 20px;
@@ -798,6 +799,11 @@
 @media (max-width: 768px) {
   .pub-article { padding: 22px 18px; }
   .pub-article h1 { font-size: 26px; }
+  .pub-body table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
   .rd-form-card { padding: 20px; }
   .rd-gen-promo { flex-direction: column; align-items: flex-start; padding: 16px; }
 }
