@@ -53,3 +53,21 @@
 - Проверены H1, title, description, canonical, robots, Open Graph image и Article JSON-LD. Страница штатно имеет `noindex, nofollow` до `indexable_at=2026-09-28 08:00:02`.
 - Desktop: обложка, заголовок, автор и аннотация отображаются без дефектов. Mobile 390×844: документ 390 px без горизонтального переполнения; статья 358 px; внутренняя иллюстрация 320×214 без обрезки; широкие таблицы прокручиваются внутри блока.
 - Миграции не требовались. `pedagogy_web` перезапущен и имеет статус Up. Apache configtest: Syntax OK; предупреждение о глобальном `ServerName` существовало ранее и на работу vhost не влияет. Новых ошибок приложения в свежих логах не обнаружено; запись `authz_core:error` соответствует ожидаемому HTTP 403 для закрытого `editorial/`.
+
+### Итог замены обложки v2
+
+- Новая обложка опубликована коммитом `8d90860`; production-БД указывает на
+  `/assets/images/blog/igrovye-tehnologii-dlya-doshkolnikov-v2.jpg`.
+- Перед записью успешно выполнен серверный dry-run с хешем комплекта
+  `8af1498b16aed20f5dae886db8ded57bc291e81afbf969eecd339079f4d4a10c`.
+- Резервная копия строки:
+  `editorial/backups/publication-764-20260921-112522-8823bff1.json`, права 0600.
+- После записи сохранены ID 764, user ID 9124, slug, `published_at`, `source`, статус,
+  статус сертификата, SHA256 content
+  `022948dfa513243d667bad4039b9a878ea5d46f9b1ba38ae8c251e6d49bc2140` и SHA256
+  `content_original` `b8a5bf58f89355c955f93cfb31620201ee54287950bcb114b2ca5783146f0bca`.
+- HTTP 200 получен для главной, `/kursy/`, публикации и нового JPG; страница содержит
+  новый путь в основной обложке и `og:image`. Закрытые `editorial/` и `.agents/`
+  возвращают 403.
+- Миграции не требовались. `pedagogy_web` перезапущен и имеет статус Up; Apache
+  configtest — Syntax OK, новых ошибок приложения в свежих логах не обнаружено.
