@@ -14,6 +14,23 @@ Alt обложки: педагог проводит с дошкольникам�
 
 Визуальная проверка: постороннего текста, логотипов и водяных знаков нет; действие соответствует теме; лица и руки выглядят естественно; кадр имеет точное соотношение 16:9.
 
+### Кандидат на замену обложки v2
+
+Подготовлен после замечания пользователя о том, что обложка должна соответствовать
+серии с заголовком. Оригинал: `cover-v2-original.png`. Веб-кандидат:
+`/assets/images/blog/igrovye-tehnologii-dlya-doshkolnikov-v2.jpg`, 1200×675.
+Production пока не изменён.
+
+Alt обложки: игровые технологии для дошкольников — конструктор занятия со сценариями, адаптацией и наблюдением.
+
+Промпт:
+
+> Use case: ads-marketing. Asset type: finished cover for a Russian educational publication on fgos.pro, landscape 16:9. Create a polished photorealistic editorial cover in the established regenerated-publication series for preschool educators. Composition: left 58% is a clean near-white warm gradient with generous safe margins and strong readable typography; right 42% is an authentic bright preschool classroom scene. On the right, an adult female educator sits at children's eye level and facilitates a calm learning game with three preschool-aged children using large safe colored geometric cards; natural attentive interaction, realistic faces and hands, restrained warm neutrals with gentle blue, green and ochre accents, soft daylight. Text exactly, in Russian Cyrillic, with these line groups and no other text: «Игровые технологии для дошкольников»; «Конструктор занятия»; «Сценарии, адаптация и наблюдение». Typography: bold dark navy sans-serif main headline, large and readable; «Конструктор занятия» inside a soft light-blue rounded rectangle; final line smaller dark navy; clean professional hierarchy similar to a modern teachers' editorial card. Keep every word fully visible and spell every Cyrillic letter exactly. No extra words, pseudotext, letters or numbers in the scene, logos, trademarks, watermarks, official insignia, screens, clutter, glossy stock-photo posing or exaggerated smiles. Children must not resemble identifiable real people. Output a finished cohesive cover, not a mockup.
+
+Визуальная проверка: все три русские надписи воспроизведены дословно и без
+ошибок; заголовок читается в размере карточки; лишнего текста и водяных знаков нет;
+лица и руки естественные; важные элементы не попадают под обрезку 16:9.
+
 ## Иллюстрация «Наблюдение за самостоятельной игрой»
 
 Оригинал: `observation-original.png`. Веб-копия: `/assets/images/blog/igrovye-tehnologii-dlya-doshkolnikov-nablyudenie.jpg`, 1200×800.

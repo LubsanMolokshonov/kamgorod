@@ -1,0 +1,4 @@
+interface:
+  display_name: "Регенерация публикаций"
+  short_description: "Качественно обновляет публикации пользователей"
+  default_prompt: "Используй $user-publication-regeneration, чтобы переработать существующую пользовательскую публикацию fgos.pro."
