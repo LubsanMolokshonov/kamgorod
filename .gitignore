@@ -74,6 +74,16 @@ Thumbs.db
 /uploads/publications/certificates/*.pdf
 /uploads/publications/20*/**
 
+# PDF, создаваемый скриптом тестовой отправки письма об оплате.
+/uploads/test_certificate_example.pdf
+
+# Состояние выполнения генерации и миграции олимпиад.
+/database/progress_grade_olympiads.json
+/database/progress_migrate_olympiads.json
+
+# Резервные копии статей перед изменениями в БД.
+/editorial/backups/
+
 # Runtime OG cache
 /uploads/og-cache/
 
