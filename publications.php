@@ -105,7 +105,9 @@ $publications      = array_slice($allPublications, 0, $perPage);
 $hasMore           = $totalPublications > $perPage;
 
 // Полный пул под клиентский поиск (audience-фильтр сохраняется)
-$searchPool = $publicationObj->getPublished(1000, 0, $filters);
+$searchFilters = $filters;
+$searchFilters['indexable_only'] = true;
+$searchPool = $publicationObj->getPublished(1000, 0, $searchFilters);
 $allForSearch = [];
 foreach ($searchPool as $p) {
     $allForSearch[] = [

@@ -201,7 +201,9 @@ if (!empty($landingReviews)) {
 // Готовим данные для клиентского поиска по публикациям (когда показан каталог)
 $allForSearch = [];
 if (!$showLanding) {
-    $searchPool = $publicationObj->getPublished(1000, 0, $filters);
+    $searchFilters = $filters;
+    $searchFilters['indexable_only'] = true;
+    $searchPool = $publicationObj->getPublished(1000, 0, $searchFilters);
     foreach ($searchPool as $p) {
         $allForSearch[] = [
             'id' => $p['id'],

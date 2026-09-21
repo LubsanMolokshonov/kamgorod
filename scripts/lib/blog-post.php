@@ -37,17 +37,33 @@ function blogPostPackage(array $input, string $root): array {
     libxml_use_internal_errors($previous);
     $allowed = ['html', 'body', 'p', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'strong', 'em',
         'a', 'table', 'caption', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'blockquote',
-        'br', 'hr', 'figure', 'figcaption', 'code', 'pre', 'sup', 'sub'];
+        'br', 'hr', 'figure', 'figcaption', 'img', 'code', 'pre', 'sup', 'sub'];
     foreach ($dom->getElementsByTagName('*') as $node) {
         if (!in_array($node->tagName, $allowed, true)) {
             throw new InvalidArgumentException('Недопустимый HTML-элемент: ' . $node->tagName);
         }
         foreach ($node->attributes as $attr) {
-            if (!in_array($attr->name, ['id', 'href', 'title', 'scope', 'colspan', 'rowspan'], true)) {
+            if (!in_array($attr->name, ['id', 'href', 'title', 'scope', 'colspan', 'rowspan',
+                'class', 'src', 'alt', 'loading'], true)) {
                 throw new InvalidArgumentException('Недопустимый HTML-атрибут: ' . $attr->name);
             }
             if ($attr->name === 'href' && !preg_match('~^(https?://[^\s]+|/(?!/)[^\s]*|#[a-zA-Z0-9_-]+)$~D', $attr->value)) {
                 throw new InvalidArgumentException('Недопустимая ссылка в HTML.');
+            }
+            if ($attr->name === 'class'
+                && !preg_match('/^pub-inline-img(?: pub-inline-img--(?:wide|plain|float-left|float-right))?$/D', $attr->value)) {
+                throw new InvalidArgumentException('Недопустимый CSS-класс в HTML.');
+            }
+            if ($attr->name === 'src'
+                && ($node->tagName !== 'img'
+                    || !preg_match('~^/assets/images/blog/[a-z0-9/-]+\.(?:webp|jpg|png)$~D', $attr->value))) {
+                throw new InvalidArgumentException('Недопустимый путь изображения в HTML.');
+            }
+            if ($attr->name === 'alt' && ($node->tagName !== 'img' || mb_strlen($attr->value) > 300)) {
+                throw new InvalidArgumentException('Недопустимое описание изображения в HTML.');
+            }
+            if ($attr->name === 'loading' && ($node->tagName !== 'img' || $attr->value !== 'lazy')) {
+                throw new InvalidArgumentException('Недопустимый режим загрузки изображения в HTML.');
             }
         }
     }

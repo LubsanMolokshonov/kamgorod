@@ -100,6 +100,7 @@ $authorUrl = '/avtor/' . (int)$publication['user_id'] . '/';
 $pageTitle = htmlspecialchars($publication['title']) . ' | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr($publication['annotation'], 0, 160));
 $canonicalUrl = SITE_URL . '/publikaciya/' . $publication['slug'] . '/';
+$noindex = !$publicationObj->isIndexable($publication);
 
 $rdActivePage = 'zhurnal';
 $additionalCSS = [

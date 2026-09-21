@@ -17,6 +17,10 @@ class Publication {
      * @return int Publication ID
      */
     public function create($data) {
+        $source = $data['source'] ?? 'upload';
+        $status = $data['status'] ?? 'published';
+        $publishedAt = date('Y-m-d H:i:s');
+
         $insertData = [
             'user_id' => $data['user_id'],
             'title' => $data['title'],
@@ -31,10 +35,13 @@ class Publication {
             'meta_title' => $data['meta_title'] ?? null,
             'meta_description' => $data['meta_description'] ?? null,
             'noindex' => $data['noindex'] ?? 0,
-            'source' => $data['source'] ?? 'upload',
-            'status' => $data['status'] ?? 'published', // Auto-publish publications
+            'source' => $source,
+            'status' => $status, // Auto-publish publications
             'certificate_status' => $data['certificate_status'] ?? 'none',
-            'published_at' => date('Y-m-d H:i:s') // Set publish date
+            'published_at' => $publishedAt,
+            'indexable_at' => $status === 'published'
+                ? $this->calculateIndexableAt($source, $publishedAt)
+                : null,
         ];
 
         $publicationId = $this->db->insert('publications', $insertData);
@@ -75,9 +82,16 @@ class Publication {
             return 0;
         }
 
-        // Handle status change to published
+        // Назначаем дату первой публикации только при фактическом переходе в published.
+        // Последующие правки и перегенерации не должны сдвигать окно индексации.
         if (isset($data['status']) && $data['status'] === 'published') {
-            $updateData['published_at'] = date('Y-m-d H:i:s');
+            $current = $this->getById($id);
+            if ($current && $current['status'] !== 'published' && empty($current['indexable_at'])) {
+                $publishedAt = date('Y-m-d H:i:s');
+                $source = $updateData['source'] ?? $current['source'] ?? 'upload';
+                $updateData['published_at'] = $publishedAt;
+                $updateData['indexable_at'] = $this->calculateIndexableAt($source, $publishedAt);
+            }
         }
 
         $result = $this->db->update('publications', $updateData, 'id = ?', [$id]);
@@ -148,6 +162,23 @@ class Publication {
     }
 
     /**
+     * Whether a publication may be exposed to search engines and internal search.
+     * Manual noindex always takes precedence over the automatic opening date.
+     */
+    public function isIndexable(array $publication, ?DateTimeInterface $now = null): bool {
+        if (($publication['status'] ?? null) !== 'published' || !empty($publication['noindex'])) {
+            return false;
+        }
+
+        if (empty($publication['indexable_at'])) {
+            return false;
+        }
+
+        $now = $now ?? new DateTimeImmutable();
+        return new DateTimeImmutable($publication['indexable_at']) <= $now;
+    }
+
+    /**
      * Get published publications with pagination
      * @param int $limit Limit
      * @param int $offset Offset
@@ -163,6 +194,10 @@ class Publication {
 
         $wheres = ["p.status = 'published'"];
         $params = [];
+
+        if (!empty($filters['indexable_only'])) {
+            $wheres[] = $this->indexableSql('p');
+        }
 
         // Filter by tag
         if (!empty($filters['tag_id'])) {
@@ -341,7 +376,11 @@ class Publication {
                 LEFT JOIN publication_types pt ON p.publication_type_id = pt.id
                 LEFT JOIN users u ON p.user_id = u.id";
 
-        $wheres = ["p.status = 'published'", "MATCH(p.title, p.annotation) AGAINST(? IN NATURAL LANGUAGE MODE)"];
+        $wheres = [
+            "p.status = 'published'",
+            $this->indexableSql('p'),
+            "MATCH(p.title, p.annotation) AGAINST(? IN NATURAL LANGUAGE MODE)",
+        ];
         $params = [$query, $query];
 
         // Apply filters
@@ -407,9 +446,27 @@ class Publication {
      * @return bool Success
      */
     public function approve($id) {
+        $publication = $this->getById($id);
+        if (!$publication) {
+            return false;
+        }
+        if ($publication['status'] === 'published') {
+            return true;
+        }
+
+        $updateData = ['status' => 'published'];
+        if (empty($publication['indexable_at'])) {
+            $publishedAt = date('Y-m-d H:i:s');
+            $updateData['published_at'] = $publishedAt;
+            $updateData['indexable_at'] = $this->calculateIndexableAt(
+                $publication['source'] ?? 'upload',
+                $publishedAt
+            );
+        }
+
         $result = $this->db->update(
             'publications',
-            ['status' => 'published', 'published_at' => date('Y-m-d H:i:s')],
+            $updateData,
             'id = ?',
             [$id]
         );
@@ -584,6 +641,10 @@ class Publication {
         $wheres = ["p.status = 'published'"];
         $params = [];
 
+        if (!empty($filters['indexable_only'])) {
+            $wheres[] = $this->indexableSql('p');
+        }
+
         if (!empty($filters['tag_id'])) {
             $sql .= " JOIN publication_tag_relations ptr ON p.id = ptr.publication_id";
             $wheres[] = "ptr.tag_id = ?";
@@ -621,6 +682,18 @@ class Publication {
 
         $result = $this->db->queryOne($sql, $params);
         return $result['total'] ?? 0;
+    }
+
+    private function calculateIndexableAt(string $source, string $publishedAt): string {
+        if ($source === 'blog') {
+            return $publishedAt;
+        }
+
+        return (new DateTimeImmutable($publishedAt))->modify('+35 days')->format('Y-m-d H:i:s');
+    }
+
+    private function indexableSql(string $alias): string {
+        return "{$alias}.noindex = 0 AND {$alias}.indexable_at IS NOT NULL AND {$alias}.indexable_at <= NOW()";
     }
 
     /**

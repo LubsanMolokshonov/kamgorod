@@ -1,0 +1,29 @@
+{
+  "width": 1440,
+  "scrollWidth": 1440,
+  "images": [
+    {
+      "loaded": true,
+      "natural": [
+        1200,
+        675
+      ],
+      "box": [
+        982,
+        552.375
+      ],
+      "fit": "cover"
+    }
+  ],
+  "tables": [
+    {
+      "width": 982,
+      "overflow": "visible"
+    },
+    {
+      "width": 982,
+      "overflow": "visible"
+    }
+  ],
+  "h1": 1
+}

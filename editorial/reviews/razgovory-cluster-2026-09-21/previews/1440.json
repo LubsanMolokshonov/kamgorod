@@ -1,0 +1,44 @@
+{
+  "width": 1440,
+  "scrollWidth": 1440,
+  "images": [
+    {
+      "loaded": true,
+      "natural": [
+        1200,
+        675
+      ],
+      "box": [
+        454,
+        255.375
+      ],
+      "fit": "cover"
+    },
+    {
+      "loaded": true,
+      "natural": [
+        1200,
+        675
+      ],
+      "box": [
+        454,
+        255.375
+      ],
+      "fit": "cover"
+    },
+    {
+      "loaded": true,
+      "natural": [
+        1200,
+        675
+      ],
+      "box": [
+        454,
+        255.375
+      ],
+      "fit": "cover"
+    }
+  ],
+  "tables": [],
+  "h1": 1
+}

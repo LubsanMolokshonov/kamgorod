@@ -65,20 +65,26 @@ try {
     $pdo->exec("CREATE TABLE publications (id {$idType}, user_id INT, title TEXT, annotation TEXT,
         content TEXT, file_path TEXT, file_original_name TEXT, file_size INT, file_type TEXT,
         publication_type_id INT, slug VARCHAR(255) UNIQUE, meta_title TEXT, meta_description TEXT,
-        noindex INT, source TEXT, status TEXT, certificate_status TEXT, published_at TEXT,
+        noindex INT, source TEXT, status TEXT, certificate_status TEXT, published_at TEXT, indexable_at TEXT,
         cover_image_url TEXT, cover_status TEXT)");
-    $pdo->exec('CREATE TABLE users (id INT PRIMARY KEY, email VARCHAR(255), publications_count INT DEFAULT 0)');
-    $pdo->exec('CREATE TABLE publication_types (id INT PRIMARY KEY, slug VARCHAR(255))');
-    $pdo->exec('CREATE TABLE publication_tags (id INT PRIMARY KEY, slug VARCHAR(255))');
+    $pdo->exec('CREATE TABLE users (id INT PRIMARY KEY, email VARCHAR(255), full_name TEXT, organization TEXT, publications_count INT DEFAULT 0)');
+    $pdo->exec('CREATE TABLE publication_types (id INT PRIMARY KEY, slug VARCHAR(255), name TEXT)');
+    $pdo->exec('CREATE TABLE publication_tags (
+        id INT PRIMARY KEY,
+        slug VARCHAR(255),
+        display_order INT DEFAULT 0,
+        publications_count INT DEFAULT 0
+    )');
     $pdo->exec('CREATE TABLE publication_tag_relations (publication_id INT, tag_id INT)');
     $pdo->exec("INSERT INTO users (id,email) VALUES (1,'blog@fgos.pro')");
-    $pdo->exec("INSERT INTO publication_types VALUES (1,'article')");
-    $pdo->exec("INSERT INTO publication_tags VALUES (1,'methodology')");
+    $pdo->exec("INSERT INTO publication_types (id, slug, name) VALUES (1,'article','Статья')");
+    $pdo->exec("INSERT INTO publication_tags (id, slug) VALUES (1,'methodology')");
     blogPostReferences($pdo, $package);
     check((int)$pdo->query('SELECT COUNT(*) FROM publications')->fetchColumn() === 0, 'dry-run не создаёт записей');
     $id = blogPostPublish($pdo, $package);
     $row = $pdo->query('SELECT * FROM publications')->fetch(PDO::FETCH_ASSOC);
     check($row['source'] === 'blog' && $row['status'] === 'published' && $row['cover_status'] === 'done', 'текст и обложка опубликованы вместе');
+    check($row['indexable_at'] === $row['published_at'], 'статья блога индексируется сразу');
     check((int)$pdo->query('SELECT COUNT(*) FROM publication_tag_relations')->fetchColumn() === 1, 'тег сохранён');
     rejects(fn() => blogPostPublish($pdo, $package), 'повторный slug не перезаписывается');
     check((int)$pdo->query('SELECT COUNT(*) FROM publications')->fetchColumn() === 1, 'дубликат отсутствует');
@@ -95,6 +101,40 @@ try {
     $pdo->exec('DROP TRIGGER fail_cover');
     $id = blogPostPublish($pdo, $second);
     check($id > 0, 'замок освобождён после ошибки');
+
+    $publication = new Publication($pdo);
+    $ugcId = $publication->create(array_merge($package, [
+        'slug' => 'user-publication',
+        'source' => 'upload',
+        'status' => 'published',
+        'user_id' => 1,
+        'publication_type_id' => 1,
+    ]));
+    $ugc = $pdo->query('SELECT * FROM publications WHERE id = ' . (int)$ugcId)->fetch(PDO::FETCH_ASSOC);
+    $expectedIndexableAt = (new DateTimeImmutable($ugc['published_at']))->modify('+35 days')->format('Y-m-d H:i:s');
+    check($ugc['indexable_at'] === $expectedIndexableAt, 'пользовательская публикация получает задержку 35 суток');
+    check(!$publication->isIndexable($ugc), 'новая пользовательская публикация закрыта от поиска');
+    check($publication->isIndexable($ugc, new DateTimeImmutable($ugc['indexable_at'])), 'публикация открывается ровно через 35 суток');
+    $publication->update($ugcId, ['title' => 'Обновлённый материал', 'status' => 'published']);
+    $ugcAfterUpdate = $pdo->query('SELECT * FROM publications WHERE id = ' . (int)$ugcId)->fetch(PDO::FETCH_ASSOC);
+    check($ugcAfterUpdate['indexable_at'] === $ugc['indexable_at'], 'редактирование не сдвигает дату индексации');
+    $ugc['noindex'] = 1;
+    check(!$publication->isIndexable($ugc, new DateTimeImmutable('+100 days')), 'ручной noindex имеет приоритет');
+
+    $pendingId = $publication->create(array_merge($package, [
+        'slug' => 'pending-publication',
+        'source' => 'upload',
+        'status' => 'pending',
+        'user_id' => 1,
+        'publication_type_id' => 1,
+    ]));
+    $pending = $pdo->query('SELECT * FROM publications WHERE id = ' . (int)$pendingId)->fetch(PDO::FETCH_ASSOC);
+    check($pending['indexable_at'] === null, 'ожидающая модерации публикация не получает дату индексации');
+    check($publication->approve($pendingId), 'ожидающая публикация одобряется');
+    $approved = $pdo->query('SELECT * FROM publications WHERE id = ' . (int)$pendingId)->fetch(PDO::FETCH_ASSOC);
+    $expectedApprovedAt = (new DateTimeImmutable($approved['published_at']))->modify('+35 days')->format('Y-m-d H:i:s');
+    check($approved['indexable_at'] === $expectedApprovedAt, '35 суток отсчитываются от одобрения');
+
     if (getenv('BLOG_TEST_MYSQL') === '1') { $pdo->exec('DROP DATABASE editorial_publisher_test'); }
 } finally {
     foreach (glob($root . '/assets/images/blog/*') as $file) { unlink($file); }
