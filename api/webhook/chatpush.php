@@ -150,6 +150,12 @@ try {
         . ' alert_id=' . ($result['alert_id'] ?? '-'));
 } catch (Throwable $e) {
     error_log('[ChatPush webhook] ошибка обработки: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    if ($e instanceof MaxMarketingSuppressionException) {
+        // Не подтверждаем «Стоп» до записи suppression: провайдер сможет повторить webhook.
+        http_response_code(503);
+        echo 'retry';
+        exit;
+    }
 }
 
 echo 'ok';

@@ -5,6 +5,8 @@ declare(strict_types=1);
 // его не видит, поэтому подключаем явно по относительному пути к корню проекта.
 require_once __DIR__ . '/../../classes/ChatpushClient.php';
 
+class MaxMarketingSuppressionException extends RuntimeException {}
+
 /**
  * Обработка входящего сообщения пользователя в мессенджере «Макс» (через ChatPush).
  *
@@ -45,6 +47,30 @@ class MaxInboundProcessor
 
         if ($phone === '') {
             return $this->result('skipped', 'no_phone');
+        }
+
+        // Отписка важнее дедупа и журнала: сохраняем suppression первым,
+        // чтобы дубль webhook или сбой max_messages не потеряли команду «Стоп».
+        if (self::isMarketingOptOutText($text)) {
+            try {
+                $stmt = $this->pdo->prepare(
+                    'INSERT INTO max_marketing_suppressions (phone, reason, provider_message_id)
+                     VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE reason=\'user_stop\''
+                );
+                $stmt->execute([$phone, 'user_stop', $providerMessageId !== '' ? $providerMessageId : null]);
+            } catch (Throwable $e) {
+                throw new MaxMarketingSuppressionException('MAX opt-out persistence failed', 0, $e);
+            }
+
+            $this->logMessage([
+                'phone' => $phone,
+                'user_id' => $userId,
+                'direction' => 'in',
+                'author' => 'user',
+                'text' => $text,
+                'provider_message_id' => $providerMessageId !== '' ? $providerMessageId : null,
+            ]);
+            return $this->result('skipped', 'marketing_opt_out');
         }
 
         // Если провайдер не прислал id — UNIQUE по NULL не защищает от дублей при ретраях.
@@ -267,6 +293,12 @@ class MaxInboundProcessor
             return 'too_short';
         }
         return null;
+    }
+
+    public static function isMarketingOptOutText(string $text): bool
+    {
+        $normalized = mb_strtolower(trim((string)preg_replace('/[\s.!?,;:\-]+/u', ' ', $text)));
+        return in_array($normalized, ['стоп', 'stop', 'отписаться', 'отписка'], true);
     }
 
     private function result(string $status, ?string $reason, bool $replySent = false, ?int $alertId = null): array

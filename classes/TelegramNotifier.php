@@ -24,6 +24,7 @@ class TelegramNotifier
         'journey_email_mass_failures'  => 1800,
         'olympiad_email_mass_failures' => 1800,
         'inbound_classifier_failing'   => 1800,
+        'max_course_recommendation_failures' => 21600,
     ];
 
     private static ?TelegramNotifier $instance = null;

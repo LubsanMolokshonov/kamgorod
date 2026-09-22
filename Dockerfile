@@ -56,9 +56,12 @@ RUN echo "*/5 * * * * www-data php /var/www/html/cron/process-email-journey.php 
     && echo "*/5 * * * * www-data php /var/www/html/cron/process-publication-images.php >> /var/log/cron-pub-images.log 2>&1" >> /etc/cron.d/email-automation \
     && echo "*/5 * * * * www-data php /var/www/html/cron/process-course-emails.php >> /var/log/cron-course.log 2>&1" >> /etc/cron.d/email-automation \
     && echo "*/15 * * * * www-data php /var/www/html/cron/payment-recovery.php >> /var/log/cron-payment-recovery.log 2>&1" >> /etc/cron.d/email-automation \
+    && echo "*/10 * * * * www-data php /var/www/html/cron/process-max-course-recommendations.php --send >> /var/log/cron-max-course-recommendations.log 2>&1" >> /etc/cron.d/email-automation \
     && echo "* * * * * www-data php /var/www/html/cron/process-material-generations.php >> /var/log/cron-material-gen.log 2>&1" >> /etc/cron.d/email-automation \
     && echo "0 * * * * www-data php /var/www/html/cron/subscription-reminders.php >> /var/log/cron-subscription.log 2>&1" >> /etc/cron.d/email-automation \
-    && chmod 0644 /etc/cron.d/email-automation
+    && chmod 0644 /etc/cron.d/email-automation \
+    && touch /var/log/cron-max-course-recommendations.log \
+    && chown www-data:www-data /var/log/cron-max-course-recommendations.log
 
 # Expose port 80
 EXPOSE 80

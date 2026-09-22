@@ -399,6 +399,17 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
         $orderItems = $fulfillResult['order_items'];
         $allDocsReady = $fulfillResult['all_docs_ready'];
 
+        // Один строго релевантный курс в MAX через 24 часа. Сам webhook
+        // ничего не подбирает и не отправляет: только ставит оплаченный заказ в очередь.
+        try {
+            require_once BASE_PATH . '/classes/MaxCourseRecommendationChain.php';
+            $scheduled = (new MaxCourseRecommendationChain($GLOBALS['db']))
+                ->schedule((int)$orderId);
+            logWebhook('INFO', $paymentId, 'MAX course recommendation: ' . ($scheduled ? 'scheduled' : 'disabled or already scheduled'), '');
+        } catch (\Throwable $e) {
+            logWebhook('WARNING', $paymentId, 'MAX course recommendation schedule failed: ' . $e->getMessage(), '');
+        }
+
         // Email-атрибуция: связать оплату с конкретным письмом.
         // 1) Прямая привязка по orders.email_message_id (установлен на клике из письма).
         // 2) Fallback: если orders.utm_source='email', ищем последнее письмо этому user_id

@@ -29,6 +29,7 @@ require_once __DIR__ . '/SubscriptionService.php';
 require_once __DIR__ . '/TelegramNotifier.php';
 require_once __DIR__ . '/UserTokens.php';
 require_once __DIR__ . '/TokenPackage.php';
+require_once __DIR__ . '/MaxCourseRecommendationChain.php';
 require_once __DIR__ . '/../includes/order-fulfillment.php';
 require_once __DIR__ . '/../includes/email-helper.php';
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -145,6 +146,7 @@ class PaymentReconciliation
             fulfillOrderItems($this->pdo, $orderId, 'reconcile', static function (string $l, string $m) use ($log): void {
                 $log($l, $m);
             });
+            $this->bestEffort(fn() => (new MaxCourseRecommendationChain($this->pdo))->schedule($orderId));
             $this->emit('RECOVER', "order {$o['order_number']} дофулфилен (документы выданы)");
             $this->alertRecovered($o, "заказ дофулфилен (документы выданы)");
         }
