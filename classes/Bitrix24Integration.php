@@ -485,10 +485,16 @@ class Bitrix24Integration {
 
         $select = ['ID', 'OPPORTUNITY', 'CLOSEDATE', 'DATE_CREATE', 'TITLE', 'CATEGORY_ID', 'SOURCE_ID', 'STAGE_ID'];
         $coursePipeline = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
-        // Только собственная воронка курсов. C4:WON в общей воронке ЦДО означает
-        // заключённую сделку, а не подтверждённую бухгалтерией оплату.
+        $legacyPaidStage = defined('BITRIX24_COURSE_STAGE_PAID_LEGACY')
+            ? (string)BITRIX24_COURSE_STAGE_PAID_LEGACY
+            : 'C108:UC_8RO3WZ';
+
+        // Только собственная воронка курсов. Legacy-этап «Оплаченная сделка»
+        // добавляем отдельно: в Bitrix у него ошибочно стоит семантика F, поэтому
+        // фильтр STAGE_SEMANTIC_ID=S его не возвращает.
         $queries = [
             ['CATEGORY_ID' => $coursePipeline, 'STAGE_SEMANTIC_ID' => 'S'],
+            ['CATEGORY_ID' => $coursePipeline, 'STAGE_ID' => $legacyPaidStage],
         ];
 
         $byId = [];
