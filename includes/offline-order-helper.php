@@ -43,10 +43,38 @@ if (!function_exists('materializeOfflineCourseOrder')) {
 
         // Идемпотентность: заказ за эту сделку уже материализован?
         $existing = $db->queryOne(
-            "SELECT id FROM orders WHERE yookassa_payment_id = ? LIMIT 1",
+            "SELECT id, payment_status FROM orders WHERE yookassa_payment_id = ? LIMIT 1",
             [$marker]
         );
         if ($existing) {
+            // Обратная сверка могла снять синтетическую оплату после провала сделки.
+            // Если менеджер затем вернул её в действительно оплаченный этап,
+            // восстанавливаем тот же заказ вместо создания дубля.
+            if (($existing['payment_status'] ?? '') !== 'succeeded'
+                && Bitrix24Integration::isFgosPaidDeal($deal)) {
+                $amount = (float)($deal['OPPORTUNITY'] ?? 0);
+                if ($amount <= 0) {
+                    return null;
+                }
+                $closeRaw = (string)($deal['CLOSEDATE'] ?? '');
+                $ts = $closeRaw !== '' ? strtotime($closeRaw) : false;
+                $paidAt = $ts ? date('Y-m-d H:i:s', $ts) : date('Y-m-d H:i:s');
+                $db->update(
+                    'orders',
+                    [
+                        'total_amount'   => $amount,
+                        'final_amount'   => $amount,
+                        'payment_status' => 'succeeded',
+                        'paid_at'        => $paidAt,
+                    ],
+                    'id = ?',
+                    [(int)$existing['id']]
+                );
+                $db->execute(
+                    'UPDATE order_items SET price = ? WHERE order_id = ? AND course_enrollment_id IS NOT NULL',
+                    [$amount, (int)$existing['id']]
+                );
+            }
             return (int)$existing['id'];
         }
 
@@ -146,7 +174,10 @@ if (!function_exists('fgosMaterializedDealIds')) {
 
         // 2) Любой синтетический заказ-маркер bitrix:<dealId> (на случай отвязки заявки).
         $marked = $db->query(
-            "SELECT yookassa_payment_id FROM orders WHERE yookassa_payment_id LIKE 'bitrix:%'"
+            "SELECT yookassa_payment_id
+             FROM orders
+             WHERE yookassa_payment_id LIKE 'bitrix:%'
+               AND payment_status = 'succeeded'"
         );
         foreach ($marked as $row) {
             $ids[(int)substr($row['yookassa_payment_id'], 7)] = true;

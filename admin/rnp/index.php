@@ -296,7 +296,7 @@ include __DIR__ . '/../includes/header.php';
 
 <?php if ($rnpOfflineCrm['available'] === false): ?>
 <div class="content-card rnp-card" style="border-left:4px solid #ef4444;">
-    <strong>Bitrix24 не отвечает</strong> — оффлайн-продажи курсов (рассрочки, счета, сделки без заказа
+    <strong>Bitrix24 не отвечает</strong> — подтверждённые CRM-продажи курсов (рассрочки, счета, сделки без заказа
     на сайте) сейчас в таблицу не попали, цифры по курсам занижены. Обновите страницу позже.
 </div>
 <?php endif; ?>
@@ -311,7 +311,7 @@ include __DIR__ . '/../includes/header.php';
     <p class="rnp-basis-hint">
         Включая <strong><?= number_format((int)$rnpOfflineCrm['count'], 0, ',', ' ') ?></strong> оффлайн-сделок
         CRM на <strong><?= number_format((float)$rnpOfflineCrm['revenue'], 0, ',', ' ') ?> ₽</strong>
-        (рассрочки, счета, продажи без заказа на сайте). У них нет UTM, поэтому они учтены в строке
+        (подтверждённые продажи воронки «Курсы» без заказа на сайте). ЦДО без подтверждения оплаты из 1С не входит в этот слой. У сделок нет UTM, поэтому они учтены в строке
         «Курсы Другое»; период — по <?= $basis === 'created' ? 'дате создания сделки' : 'дате закрытия сделки в Bitrix' ?>.
     </p>
     <?php endif; ?>

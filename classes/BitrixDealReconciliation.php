@@ -9,7 +9,8 @@
  * заявка меняет статус и выпадает из выборки cron'а — и в отчётах (РНП, дашборд)
  * продажи нет, хотя в Bitrix сделка выиграна.
  *
- * Класс отвечает на один вопрос: «какие выигранные в CRM сделки не видит сайт».
+ * Класс отвечает на два вопроса: «какие подтверждённые сделки не видит сайт» и
+ * «не осталась ли синтетическая оплата после явного провала сделки в CRM».
  * Каждой WON-сделке присваивается состояние:
  *   - in_orders   — есть успешная оплата в orders (Yookassa или синтетический заказ);
  *   - crm_layer   — заказа нет, но сделка попадает в оффлайн-слой отчётов
@@ -169,6 +170,159 @@ class BitrixDealReconciliation
             ];
         }
         return $created;
+    }
+
+    /**
+     * Проверить уже созданные синтетические оплаты по текущему этапу Bitrix.
+     *
+     * Если сделка явно провалена, заказ не удаляется: он переводится в failed,
+     * paid_at очищается, а заявка отменяется только при отсутствии другой успешной
+     * оплаты. Так сохраняется полный аудит и заказ можно восстановить, если сделка
+     * позднее снова перейдёт в подтверждённый оплаченный этап.
+     *
+     * C4:WON сам по себе не подтверждает оплату, но исторические заказы на этом
+     * этапе массово не аннулируются без сверки с 1С. Новые заказы по C4:WON больше
+     * не создаются; автоматически снимаются только сделки с семантикой провала F.
+     *
+     * @return array{
+     *   checked:int,
+     *   unavailable:int,
+     *   invalidated:array<int,array{deal_id:int,order_id:int,enrollment_id:int,amount:float,stage:string}>
+     * }
+     */
+    public function reconcileSyntheticOrders(int $limit = 500, ?int $staleHours = null, bool $apply = true): array
+    {
+        $limit = max(1, min(2000, $limit));
+        $params = [];
+        $staleSql = '';
+        if ($staleHours !== null) {
+            $threshold = date('Y-m-d H:i:s', strtotime('-' . max(1, $staleHours) . ' hours'));
+            $staleSql = ' AND (ce.bitrix_stage_updated_at IS NULL OR ce.bitrix_stage_updated_at <= ?)';
+            $params[] = $threshold;
+        }
+
+        $rows = $this->db->query(
+            "SELECT o.id AS order_id, o.yookassa_payment_id, o.final_amount,
+                    oi.course_enrollment_id AS enrollment_id,
+                    ce.status AS enrollment_status
+             FROM orders o
+             LEFT JOIN order_items oi ON oi.order_id = o.id AND oi.course_enrollment_id IS NOT NULL
+             LEFT JOIN course_enrollments ce ON ce.id = oi.course_enrollment_id
+             WHERE o.payment_status = 'succeeded'
+               AND o.yookassa_payment_id LIKE 'bitrix:%'{$staleSql}
+             ORDER BY COALESCE(ce.bitrix_stage_updated_at, '1970-01-01') ASC, o.id ASC
+             LIMIT {$limit}",
+            $params
+        );
+
+        $checked = 0;
+        $unavailable = 0;
+        $invalidated = [];
+        $seenOrders = [];
+
+        foreach ($rows as $row) {
+            $orderId = (int)$row['order_id'];
+            if (isset($seenOrders[$orderId])) {
+                continue;
+            }
+            $seenOrders[$orderId] = true;
+
+            $marker = (string)$row['yookassa_payment_id'];
+            $dealId = (int)substr($marker, 7);
+            if ($dealId <= 0) {
+                continue;
+            }
+
+            $deal = $this->bitrix->getDeal((string)$dealId);
+            if (!$deal) {
+                $unavailable++;
+                continue;
+            }
+            $checked++;
+
+            $stageId = (string)($deal['STAGE_ID'] ?? '');
+            $enrollmentId = (int)($row['enrollment_id'] ?? 0);
+            $isFailed = Bitrix24Integration::isFgosDealFailed($deal);
+
+            if (!$apply) {
+                if ($isFailed) {
+                    $invalidated[] = [
+                        'deal_id'       => $dealId,
+                        'order_id'      => $orderId,
+                        'enrollment_id' => $enrollmentId,
+                        'amount'        => (float)$row['final_amount'],
+                        'stage'         => $stageId,
+                    ];
+                }
+                continue;
+            }
+
+            $this->db->beginTransaction();
+            try {
+                if ($enrollmentId > 0) {
+                    $this->db->update(
+                        'course_enrollments',
+                        ['bitrix_stage' => $stageId, 'bitrix_stage_updated_at' => date('Y-m-d H:i:s')],
+                        'id = ?',
+                        [$enrollmentId]
+                    );
+                }
+
+                if (!$isFailed) {
+                    $this->db->commit();
+                    continue;
+                }
+
+                $changed = $this->db->update(
+                    'orders',
+                    ['payment_status' => 'failed', 'paid_at' => null],
+                    "id = ? AND payment_status = 'succeeded'",
+                    [$orderId]
+                );
+
+                if ($changed > 0 && $enrollmentId > 0) {
+                    $otherPaid = $this->db->queryOne(
+                        "SELECT 1
+                         FROM order_items oi
+                         JOIN orders o ON o.id = oi.order_id
+                         WHERE oi.course_enrollment_id = ?
+                           AND o.id <> ?
+                           AND o.payment_status = 'succeeded'
+                         LIMIT 1",
+                        [$enrollmentId, $orderId]
+                    );
+                    if (!$otherPaid && ($row['enrollment_status'] ?? '') === 'paid') {
+                        $this->db->update(
+                            'course_enrollments',
+                            ['status' => 'cancelled'],
+                            'id = ?',
+                            [$enrollmentId]
+                        );
+                    }
+                }
+
+                $this->db->commit();
+
+                if ($changed > 0) {
+                    $invalidated[] = [
+                        'deal_id'       => $dealId,
+                        'order_id'      => $orderId,
+                        'enrollment_id' => $enrollmentId,
+                        'amount'        => (float)$row['final_amount'],
+                        'stage'         => $stageId,
+                    ];
+                }
+            } catch (Throwable $e) {
+                $this->db->rollback();
+                throw $e;
+            }
+        }
+
+        return [
+            'checked'     => $checked,
+            'unavailable' => $unavailable,
+            'invalidated' => $invalidated,
+        ];
     }
 
     // ==================== внутреннее ====================

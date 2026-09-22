@@ -72,7 +72,21 @@ function log_line(string $msg): void {
 $dealUrl = fn(int $id) => "https://eduregion.bitrix24.ru/crm/deal/details/{$id}/";
 
 try {
-    $recon  = new BitrixDealReconciliation($db);
+    $bitrix = new Bitrix24Integration();
+    $recon  = new BitrixDealReconciliation($db, $bitrix);
+
+    // Сначала снимаем синтетические оплаты, чьи сделки после создания заказа
+    // были явно провалены. Заказы сохраняются для аудита со статусом failed.
+    $reverse = $recon->reconcileSyntheticOrders(500, null, !$dryRun);
+    foreach ($reverse['invalidated'] as $item) {
+        log_line(sprintf(
+            '%s | сделка #%d | заявка #%d | заказ #%d | %.0f ₽ | этап %s | %s',
+            $dryRun ? 'DRY_RUN_REVERSE' : 'OFFLINE_ORDER_REVERSED',
+            $item['deal_id'], $item['enrollment_id'], $item['order_id'],
+            $item['amount'], $item['stage'], $dealUrl($item['deal_id'])
+        ));
+    }
+
     $report = $recon->report($dateFrom, $dateTo);
 
     if (!$report['available']) {
@@ -153,11 +167,12 @@ try {
 
     // 3) Алерт — только когда есть что чинить руками.
     $lostAmount = array_sum(array_column($stillLost, 'amount'));
-    if (!$quiet && ($stillLost || $created)) {
+    if (!$quiet && !$dryRun && ($stillLost || $created || $reverse['invalidated'])) {
         $context = [
             'Период'          => "{$dateFrom} — {$dateTo}",
             'WON в Bitrix'    => sprintf('%d сделок на %.0f ₽', $t['won_count'], $t['won_amount']),
             'Досоздано заказов' => count($created) . ' на ' . sprintf('%.0f ₽', array_sum(array_column($created, 'amount'))),
+            'Снято ложных оплат' => count($reverse['invalidated']) . ' на ' . sprintf('%.0f ₽', array_sum(array_column($reverse['invalidated'], 'amount'))),
             'Не видно в отчётах' => sprintf('%d сделок на %.0f ₽', count($stillLost), $lostAmount),
         ];
         foreach (array_slice($stillLost, 0, 5) as $m) {
@@ -172,8 +187,9 @@ try {
     }
 
     log_line(sprintf(
-        'DONE | создано заказов: %d | осталось невидимых: %d (%.0f ₽) | только CRM-слой: %d | сделок не закрыто менеджером: %d%s',
-        count($created), count($stillLost), $lostAmount, count($stillCrm), $t['not_won_count'], $dryRun ? ' | DRY-RUN' : ''
+        'DONE | создано заказов: %d | снято ложных оплат: %d | осталось невидимых: %d (%.0f ₽) | только CRM-слой: %d | сделок не закрыто менеджером: %d%s',
+        count($created), count($reverse['invalidated']), count($stillLost), $lostAmount,
+        count($stillCrm), $t['not_won_count'], $dryRun ? ' | DRY-RUN' : ''
     ));
 } catch (Throwable $e) {
     log_line('FATAL: ' . $e->getMessage());

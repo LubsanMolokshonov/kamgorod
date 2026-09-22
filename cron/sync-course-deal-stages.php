@@ -27,6 +27,7 @@ require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/database.php';
 require_once BASE_PATH . '/classes/Database.php';
 require_once BASE_PATH . '/classes/Bitrix24Integration.php';
+require_once BASE_PATH . '/classes/BitrixDealReconciliation.php';
 require_once BASE_PATH . '/includes/offline-order-helper.php';
 
 $lockFile = '/tmp/sync_course_deal_stages_cron.lock';
@@ -45,13 +46,6 @@ $MAX_AGE_DAYS  = 180;  // менеджер закрывает рассрочки
 $BATCH_SIZE    = 200;
 $COURSE_PIPELINE = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
 $CDO_PIPELINE    = defined('BITRIX24_CDO_PIPELINE_ID') ? (int)BITRIX24_CDO_PIPELINE_ID : 4;
-$STAGE_PAID    = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:WON';
-// Этапы воронки «Курсы», означающие оплату: текущий (WON) + выводимый из
-// использования «Оплаченная сделка» — по нему ещё висят ранее созданные сделки.
-$PAID_STAGES = array_values(array_unique(array_filter([
-    $STAGE_PAID,
-    defined('BITRIX24_COURSE_STAGE_PAID_LEGACY') ? BITRIX24_COURSE_STAGE_PAID_LEGACY : 'C108:UC_8RO3WZ',
-])));
 // Воронки, где менеджер закрывает наши курсовые сделки (рассрочки/счета).
 // ЦДО (4) — общий оффлайн-funnel; туда менеджер переносит рассрочки из «Курсов» (108).
 $OUR_PIPELINES = [$COURSE_PIPELINE, $CDO_PIPELINE];
@@ -142,7 +136,6 @@ try {
 
             $stageId  = (string)($deal['STAGE_ID']    ?? '');
             $category = (int)($deal['CATEGORY_ID'] ?? -1);
-            $semantic = (string)($deal['STAGE_SEMANTIC_ID'] ?? '');
             $oldStage = $r['bitrix_stage'] ?? '';
 
             $update = [
@@ -150,13 +143,13 @@ try {
                 'bitrix_stage_updated_at' => date('Y-m-d H:i:s'),
             ];
 
-            // Выигранной (оплаченной) считаем сделку нашей воронки (Курсы/ЦДО), если:
-            //  - она дошла до явной стадии «Оплаченная сделка» в Курсах (Yookassa-путь), ИЛИ
-            //  - её семантика «успех» (S) — менеджер закрыл рассрочку/счёт как WON,
-            //    в т.ч. в ЦДО, куда сделки переносятся из «Курсов».
+            // Оплатой считаем только подтверждённый этап собственной воронки
+            // «Курсы». C4:WON в ЦДО называется «Сделка заключена» и не доказывает
+            // поступление денег в 1С, поэтому синтетический заказ по нему не создаём.
             $isOurFunnel = in_array($category, $OUR_PIPELINES, true);
-            $isWon  = $isOurFunnel && ($semantic === 'S' || ($category === $COURSE_PIPELINE && in_array($stageId, $PAID_STAGES, true)));
-            $isLost = $isOurFunnel && ($semantic === 'F' || isset($loseStages[$stageId]));
+            $isWon  = Bitrix24Integration::isFgosPaidDeal($deal);
+            $isLost = Bitrix24Integration::isFgosDealFailed($deal)
+                || ($isOurFunnel && isset($loseStages[$stageId]));
 
             // Провал сделки закрываем только для заявок, которые ещё «в работе».
             // Заявку в статусе 'enrolled' (менеджер уже завёл человека на обучение)
@@ -198,7 +191,24 @@ try {
         }
     }
 
-    log_line("DONE | Synced: {$synced} | Paid: {$paid} | Lost: {$lost} | Errors: {$errors}");
+    // 3) Оплаченные заявки раньше выпадали из опроса навсегда. Раз в шесть часов
+    // перепроверяем синтетические заказы и снимаем оплату при явном провале сделки.
+    $reverse = (new BitrixDealReconciliation($db, $bitrix))
+        ->reconcileSyntheticOrders(50, 6);
+    foreach ($reverse['invalidated'] as $item) {
+        log_line(
+            "OFFLINE_ORDER_REVERSED | Enrollment #{$item['enrollment_id']}"
+            . " | Deal #{$item['deal_id']} | order #{$item['order_id']}"
+            . " | stage={$item['stage']} | sum={$item['amount']}"
+        );
+    }
+
+    log_line(
+        "DONE | Synced: {$synced} | Paid: {$paid} | Lost: {$lost} | Errors: {$errors}"
+        . " | Synthetic checked: {$reverse['checked']}"
+        . " | reversed: " . count($reverse['invalidated'])
+        . " | unavailable: {$reverse['unavailable']}"
+    );
 
 } catch (Exception $e) {
     log_line('FATAL: ' . $e->getMessage());

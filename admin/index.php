@@ -140,12 +140,10 @@ $stmtFreeDocs = $db->prepare("
 $stmtFreeDocs->execute([$startDate, $endDate]);
 $freeDocsDelivered = (int)$stmtFreeDocs->fetchColumn();
 
-// === BITRIX CRM: оффлайн-выручка fgos.pro (рассрочки/счета вне сайта) ===
-// Менеджер закрывает их как WON в CRM (обычно в воронке ЦДО). «Наши» сделки —
-// только с SOURCE_ID ∈ {83 ФГОС-практикум, 87 ВК}, иначе сюда попал бы весь
-// оффлайн-бизнес холдинга. Рассрочки, привязанные к заявкам, уже материализованы
-// синтетическими заказами (cron sync-course-deal-stages) и посчитаны выше по orders —
-// исключаем их, чтобы не задвоить. В CRM-слое остаются консультации и ручные сделки.
+// === BITRIX CRM: подтверждённая выручка в собственной воронке «Курсы» ===
+// Общая воронка ЦДО не входит в CRM-слой: C4:WON означает заключённую сделку,
+// но не подтверждает поступление денег. Оплаты, уже материализованные в orders,
+// исключаем, чтобы не задвоить выручку.
 require_once __DIR__ . '/../classes/Bitrix24Integration.php';
 require_once __DIR__ . '/../includes/offline-order-helper.php';
 $bitrix = new Bitrix24Integration();

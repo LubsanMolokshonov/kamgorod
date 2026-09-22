@@ -415,11 +415,9 @@ class Bitrix24Integration {
     /**
      * Сводка по выигранным (WON) оффлайн-сделкам fgos.pro в Bitrix CRM за период.
      *
-     * Это «оффлайн»-выручка: рассрочки и оплаты по счёту, которые менеджер
-     * закрывает в CRM (как правило в воронке ЦДО) и которых нет в orders.
-     * «Наши» сделки определяет getFgosWonDeals(): воронка «Курсы» (108) целиком плюс
-     * сделки с источником ФГОС-практикум (83/87) в ЦДО — иначе в выборку попадёт
-     * оффлайн-бизнес всего холдинга (десятки тысяч сделок).
+     * Это подтверждённая CRM-выручка в собственной воронке «Курсы», которой ещё
+     * нет в orders. Общая воронка ЦДО не используется: её успешный этап означает
+     * заключение сделки, но не подтверждает поступление денег в 1С.
      *
      * ВАЖНО: фильтр Bitrix по CLOSEDATE через crm.deal.list по этому вебхуку НЕ работает
      * (игнорируется) — поэтому тянем все «наши» WON-сделки (их единицы) и фильтруем
@@ -470,11 +468,12 @@ class Bitrix24Integration {
     /**
      * Все выигранные (WON) «наши» сделки в CRM, без фильтра по датам.
      *
-     * «Наши» = сделки воронки «ФГОС-Практикум (Курсы)» целиком (она полностью наша)
-     * ПЛЮС сделки с меткой источника ФГОС-практикум (83/87) в воронке ЦДО, куда
-     * менеджер переносит рассрочки и счета. Раньше учитывался только источник —
-     * сделки, которым робот не успел проставить метку (SOURCE_ID='WEB'), выпадали
-     * из отчётов; теперь воронка 108 берётся целиком.
+     * «Наши оплаченные» = успешные сделки воронки «ФГОС-Практикум (Курсы)».
+     * Воронка ЦДО (4) намеренно не входит в выборку: её C4:WON называется
+     * «Сделка заключена» и не подтверждает поступление денег. До 22.09.2026 этот
+     * этап ошибочно считался оплатой, из-за чего в РНП попадали неоплаченные
+     * договоры. ЦДО можно вернуть в отчёт только после появления отдельного,
+     * надёжного признака оплаты из 1С.
      *
      * @return array<int,array{id:int,revenue:float,title:string,closedate:string,created:string,category:int,source:string}>|null
      *         null — Bitrix недоступен (не занижаем цифры молча)
@@ -486,17 +485,10 @@ class Bitrix24Integration {
 
         $select = ['ID', 'OPPORTUNITY', 'CLOSEDATE', 'DATE_CREATE', 'TITLE', 'CATEGORY_ID', 'SOURCE_ID', 'STAGE_ID'];
         $coursePipeline = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
-        $cdoPipeline    = defined('BITRIX24_CDO_PIPELINE_ID') ? (int)BITRIX24_CDO_PIPELINE_ID : 4;
-
-        // 1) Воронка курсов целиком, 2) наш источник в ЦДО (там же лежат «переехавшие» рассрочки).
+        // Только собственная воронка курсов. C4:WON в общей воронке ЦДО означает
+        // заключённую сделку, а не подтверждённую бухгалтерией оплату.
         $queries = [
             ['CATEGORY_ID' => $coursePipeline, 'STAGE_SEMANTIC_ID' => 'S'],
-            [
-                'CATEGORY_ID'       => $cdoPipeline,
-                // Массив значения = оператор IN (проверено: filter[SOURCE_ID][]=83&[]=87).
-                'SOURCE_ID'         => self::fgosSourceIds(),
-                'STAGE_SEMANTIC_ID' => 'S',
-            ],
         ];
 
         $byId = [];
@@ -574,6 +566,55 @@ class Bitrix24Integration {
         $raw = defined('BITRIX24_FGOS_SOURCE_IDS') ? (string)BITRIX24_FGOS_SOURCE_IDS : '83,87';
         $ids = array_values(array_filter(array_map('trim', explode(',', $raw))));
         return $ids ?: ['83', '87'];
+    }
+
+    /**
+     * Можно ли считать сделку подтверждённой оплатой для сайта и РНП.
+     *
+     * Важно: успешная семантика принимается только в собственной воронке курсов.
+     * C4:WON в ЦДО означает «Сделка заключена» и оплатой не является.
+     */
+    public static function isFgosPaidDeal(array $deal): bool {
+        $category = (int)($deal['CATEGORY_ID'] ?? -1);
+        $stageId  = (string)($deal['STAGE_ID'] ?? '');
+        $semantic = (string)($deal['STAGE_SEMANTIC_ID'] ?? '');
+
+        $coursePipeline = defined('BITRIX24_COURSE_PIPELINE_ID')
+            ? (int)BITRIX24_COURSE_PIPELINE_ID
+            : 108;
+        if ($category !== $coursePipeline) {
+            return false;
+        }
+
+        $paidStages = array_values(array_unique(array_filter([
+            defined('BITRIX24_COURSE_STAGE_PAID')
+                ? (string)BITRIX24_COURSE_STAGE_PAID
+                : 'C108:WON',
+            defined('BITRIX24_COURSE_STAGE_PAID_LEGACY')
+                ? (string)BITRIX24_COURSE_STAGE_PAID_LEGACY
+                : 'C108:UC_8RO3WZ',
+        ])));
+
+        return $semantic === 'S' || in_array($stageId, $paidStages, true);
+    }
+
+    /** Явно ли сделка провалена и синтетическую оплату нужно аннулировать. */
+    public static function isFgosDealFailed(array $deal): bool {
+        if (self::isFgosPaidDeal($deal)) {
+            return false;
+        }
+
+        $category = (int)($deal['CATEGORY_ID'] ?? -1);
+        $semantic = (string)($deal['STAGE_SEMANTIC_ID'] ?? '');
+        $coursePipeline = defined('BITRIX24_COURSE_PIPELINE_ID')
+            ? (int)BITRIX24_COURSE_PIPELINE_ID
+            : 108;
+        $cdoPipeline = defined('BITRIX24_CDO_PIPELINE_ID')
+            ? (int)BITRIX24_CDO_PIPELINE_ID
+            : 4;
+
+        return in_array($category, [$coursePipeline, $cdoPipeline], true)
+            && $semantic === 'F';
     }
 
     /**
