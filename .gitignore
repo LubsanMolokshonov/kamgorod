@@ -69,6 +69,9 @@ Thumbs.db
 # Content folder
 /Контент/
 
+# Локальные выгрузки и рабочие таблицы
+/outputs/
+
 # Uploaded certificates and publications
 /uploads/webinars/certificates/*.pdf
 /uploads/publications/certificates/*.pdf
@@ -83,6 +86,10 @@ Thumbs.db
 
 # Резервные копии статей перед изменениями в БД.
 /editorial/backups/
+
+# Доказательства SEO-аудита: в Git хранится только итоговый README.
+/editorial/seo-technical-20260923/*
+!/editorial/seo-technical-20260923/README.md
 
 # Runtime OG cache
 /uploads/og-cache/
