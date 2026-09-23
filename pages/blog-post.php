@@ -200,7 +200,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <?php if (!empty($tags)): ?>
         <div class="pub-tags">
           <?php foreach ($tags as $tag): ?>
-            <a href="/blog?tag=<?php echo urlencode($tag['slug']); ?>" class="pub-tag"><?php echo htmlspecialchars($tag['name']); ?></a>
+            <a href="/blog/?tag=<?php echo urlencode($tag['slug']); ?>" class="pub-tag"><?php echo htmlspecialchars($tag['name']); ?></a>
           <?php endforeach; ?>
         </div>
         <?php endif; ?>
