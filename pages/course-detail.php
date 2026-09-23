@@ -36,7 +36,7 @@ if (!$course) {
         <div class="rd-wrap" style="text-align:center;">
           <h1 style="font:700 36px var(--font-sans);color:var(--ink-900);margin-bottom:12px;">Курс не найден</h1>
           <p style="color:var(--ink-500);margin-bottom:24px;">Возможно, он был удалён или перемещён.</p>
-          <a href="/kursy" class="rd-btn rd-btn-primary">Все курсы</a>
+          <a href="/kursy/" class="rd-btn rd-btn-primary">Все курсы</a>
         </div>
       </section>
     </main>
@@ -76,7 +76,8 @@ $pageTitle = htmlspecialchars($course['title']) . ' — ' . $programLabel . ' | 
 $pageDescription = htmlspecialchars(mb_substr(strip_tags($course['description']), 0, 120))
     . '. ' . Course::formatHours($course['hours']) . '. ' . $credentialType . '.';
 
-$courseUrl = SITE_URL . '/kursy/' . $course['slug'] . '/';
+require_once __DIR__ . '/../includes/url-helper.php';
+$courseUrl = SITE_URL . getCourseUrl($course['slug'], $course['id']);
 $canonicalUrl = $courseUrl;
 $ogImage = SITE_URL . '/og-image/course/' . $course['slug'] . '.jpg';
 $ogType = 'article';
@@ -196,17 +197,7 @@ $installment = calculateInstallment($abPrice);
 <!-- HERO -->
 <section class="cd-hero">
   <div class="rd-wrap">
-    <div class="cd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/kursy">Курсы</a>
-      <?php if ($programTypeSlug): ?>
-        <span class="sep">/</span>
-        <a href="/kursy/<?php echo $programTypeSlug; ?>/"><?php echo htmlspecialchars($programTypeLabel); ?></a>
-      <?php endif; ?>
-      <span class="sep">/</span>
-      <strong><?php echo htmlspecialchars($course['title']); ?></strong>
-    </div>
+
 
     <div class="cd-hero-grid">
       <div class="cd-hero-content">

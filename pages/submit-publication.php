@@ -53,13 +53,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 <!-- HERO -->
 <section class="rd-hero-catalog" style="padding-bottom:32px;">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/zhurnal/">Журнал</a>
-      <span class="sep">/</span>
-      <strong>Опубликовать</strong>
-    </div>
+
   </div>
   <div class="rd-wrap" style="margin-top:24px;text-align:center;">
     <div class="rd-pill-row reveal-stagger" style="justify-content:center;">

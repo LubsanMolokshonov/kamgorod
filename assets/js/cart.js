@@ -144,17 +144,17 @@ function buildRecommendationCard(rec, willBeFree) {
         // Browse link — route depends on type
         var url, btnText;
         if (rec.type === 'olympiad') {
-            url = '/olimpiady/' + encodeURIComponent(rec.slug);
+            url = '/olimpiady/' + encodeURIComponent(rec.slug) + '/';
             btnText = 'Подробнее &rarr;';
         } else if (rec.type === 'webinar_browse') {
-            url = '/vebinar/' + encodeURIComponent(rec.slug);
+            url = '/vebinar/' + encodeURIComponent(rec.slug) + '/';
             btnText = 'Подробнее &rarr;';
         } else if (rec.type === 'webinar_listing_cta') {
             url = '/vebinary/';
             btnText = 'Все вебинары &rarr;';
         } else {
             // Default: competition
-            url = '/konkursy/' + encodeURIComponent(rec.slug);
+            url = '/konkursy/' + encodeURIComponent(rec.slug) + '/';
             btnText = 'Подробнее &rarr;';
         }
         buttonHtml = '<a href="' + url + '" class="rec-btn rec-btn-link">' +

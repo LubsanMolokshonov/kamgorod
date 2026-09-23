@@ -84,10 +84,17 @@ function buildSeoUrl($section, $options = []) {
         }
     }
 
+    if ($section === 'kursy' && empty($options['ac']) && empty($options['at']) && !empty($options['as']) && !empty($options['program_type'])) {
+        $path .= '/' . rawurlencode($options['as']);
+    }
+    if (in_array($section, ['kursy', 'publikacii', 'olimpiady'], true) && isset($options['page']) && ctype_digit((string)$options['page']) && (int)$options['page'] > 1) {
+        $path .= '/page/' . (int)$options['page'];
+    }
     $path .= '/';
 
     // Оставшиеся параметры → query string
     $consumedKeys = ['category', 'status', 'program_type', 'ac', 'at', 'as'];
+    if (in_array($section, ['kursy', 'publikacii', 'olimpiady'], true)) $consumedKeys[] = 'page';
     // 'type' ушёл в путь только если это zhurnal без выбранной аудитории (см. выше) —
     // иначе оставляем его в query string, иначе комбинация «тип+аудитория» потеряется.
     if ($section === 'zhurnal' && empty($options['ac']) && !empty($options['type'])) {

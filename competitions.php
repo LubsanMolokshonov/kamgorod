@@ -28,6 +28,10 @@ $selectedCategory = $_GET['ac'] ?? '';
 $selectedType     = $_GET['at'] ?? '';
 $selectedSpec     = $_GET['as'] ?? '';
 
+require_once __DIR__ . '/includes/catalog-seo.php';
+$catalogOptions = ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec, 'category' => $category !== 'all' ? $category : ''];
+if (!catalogOptionsExist($db, $catalogOptions)) catalogNotFound();
+
 redirectToSeoUrl('konkursy', [
     'category' => $category !== 'all' ? $category : '',
     'ac' => $selectedCategory,
@@ -195,7 +199,7 @@ if ($hasAnyFilter && $audienceSeoPhrase !== '') {
         'base'             => $catalogBase,
         'audiencePhrase'   => buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData),
         'hasFilter'        => $hasAnyFilter,
-        'titleSuffix'      => ' 2025-2026 | ' . SITE_NAME,
+        'titleSuffix'      => ' | ' . SITE_NAME,
         'descriptionTpl'   => '{h1}. Бесплатное участие, официальный диплом за 30 секунд. Дипломы соответствуют ФГОС и принимаются при аттестации.',
         'h1FallbackPrefix' => 'Конкурсы для педагогов с ',
         'h1FallbackAccent' => 'дипломом за&nbsp;30&nbsp;секунд',
@@ -263,17 +267,17 @@ if (!empty($landingReviews)) {
     $jsonLdArray[] = buildListingSchema($db, 'competition', 'konkursy', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
 }
 
+$catalogPolicy = catalogPolicy($db, 'konkursy', $catalogOptions, $totalCompetitions);
+$canonicalUrl = $catalogPolicy['canonical'];
+$robotsContent = $catalogPolicy['robots'];
+
 include __DIR__ . '/includes/header-redesign.php';
 ?>
 
 <!-- HERO каталога -->
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <strong>Конкурсы</strong>
-    </div>
+
   </div>
   <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
     <div>

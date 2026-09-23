@@ -120,15 +120,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/materialy/">Материалы ФОП</a>
-      <span class="sep">/</span>
-      <a href="/material-generator/">Генератор</a>
-      <span class="sep">/</span>
-      <strong><?= htmlspecialchars($type['name'], ENT_QUOTES, 'UTF-8') ?></strong>
-    </div>
+
     <h1 class="rd-hero-title rd-hero-title-sm" style="margin-top:18px;"><?= htmlspecialchars($type['name'], ENT_QUOTES, 'UTF-8') ?></h1>
     <p class="rd-hero-sub" style="max-width:640px;"><?= htmlspecialchars($type['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
     <?php if (!empty($benefits)): ?>
@@ -350,7 +342,7 @@ $presets = [
                               bindIncreaseLimit();
                               return;
                           }
-                          msg += ' <a href="/vhod?return=' + encodeURIComponent(location.pathname) + '">Зарегистрироваться →</a>';
+                          msg += ' <a href="/vhod/?return=' + encodeURIComponent(location.pathname) + '">Зарегистрироваться →</a>';
                       }
                       showError(msg);
                   })

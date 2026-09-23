@@ -110,11 +110,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 
 <section class="rd-section" style="padding:32px 0 24px;">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <strong>Блог</strong>
-    </div>
+
   </div>
 </section>
 

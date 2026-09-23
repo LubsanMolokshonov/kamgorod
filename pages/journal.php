@@ -240,11 +240,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 <!-- HERO -->
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <strong>Журнал</strong>
-    </div>
+
   </div>
   <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
     <div>
@@ -262,7 +258,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Принимается при аттестации педагога</div>
       </div>
       <div class="rd-hero-cta reveal">
-        <a href="/opublikovat" class="rd-btn rd-btn-primary">Опубликовать бесплатно
+        <a href="/opublikovat/" class="rd-btn rd-btn-primary">Опубликовать бесплатно
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
         <a href="/generator-statej/" class="rd-btn rd-btn-ghost">Сгенерировать статью за 3 мин</a>
@@ -417,7 +413,7 @@ include __DIR__ . '/../includes/header-redesign.php';
       </div>
     </div>
     <div style="text-align:center;margin-top:32px;">
-      <a href="/opublikovat" class="rd-btn rd-btn-primary">Начать публикацию
+      <a href="/opublikovat/" class="rd-btn rd-btn-primary">Начать публикацию
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
       </a>
     </div>
@@ -502,7 +498,7 @@ endif; ?>
         <p>Размещение бесплатное, свидетельство о&nbsp;публикации — за&nbsp;5&nbsp;минут.</p>
       </div>
       <div class="actions">
-        <a href="/opublikovat" class="rd-btn rd-btn-primary">Опубликовать бесплатно
+        <a href="/opublikovat/" class="rd-btn rd-btn-primary">Опубликовать бесплатно
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
         <a href="/zhurnal/" class="rd-btn rd-btn-ghost">Смотреть каталог</a>
@@ -525,7 +521,7 @@ endif; ?>
         </h1>
       </div>
       <p class="rd-section-sub">Найдено: <strong><?php echo $totalCount; ?></strong> <?php echo jr_publications_word($totalCount); ?>.<?php if ($currentTag && $currentTag['description']): ?> <?php echo htmlspecialchars($currentTag['description']); endif; ?></p>
-      <a href="/opublikovat" class="rd-btn rd-btn-primary head-cta">
+      <a href="/opublikovat/" class="rd-btn rd-btn-primary head-cta">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         Опубликовать
       </a>
@@ -622,7 +618,7 @@ endif; ?>
             <h3>Публикаций не&nbsp;найдено</h3>
             <p>Попробуйте сбросить фильтры или станьте первым автором в&nbsp;этом разделе!</p>
             <div class="actions">
-              <a href="/opublikovat" class="rd-btn rd-btn-primary">Опубликовать статью</a>
+              <a href="/opublikovat/" class="rd-btn rd-btn-primary">Опубликовать статью</a>
               <a href="/zhurnal/" class="rd-btn rd-btn-ghost">Сбросить фильтры</a>
             </div>
           </div>
@@ -709,7 +705,7 @@ endif; ?>
         <p>Размещение бесплатное, свидетельство — за&nbsp;5&nbsp;минут.</p>
       </div>
       <div class="actions">
-        <a href="/opublikovat" class="rd-btn rd-btn-primary">Опубликовать бесплатно</a>
+        <a href="/opublikovat/" class="rd-btn rd-btn-primary">Опубликовать бесплатно</a>
       </div>
     </div>
   </div>

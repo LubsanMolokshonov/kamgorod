@@ -915,7 +915,7 @@ include __DIR__ . '/../includes/header.php';
                 <p class="olympiad-cta-hint">Диплом будет сгенерирован автоматически с вашими данными</p>
                 <?php endif; ?>
 
-                <a href="/olimpiada-test/<?php echo $olympiadId; ?>" class="olympiad-cta-secondary">
+                <a href="/olimpiada-test/<?php echo $olympiadId; ?>/" class="olympiad-cta-secondary">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M4 4V9H4.582M4.582 9C5.247 6.603 7.414 4.83 10 4.83C13.038 4.83 15.5 7.292 15.5 10.33C15.5 13.368 13.038 15.83 10 15.83C7.95 15.83 6.163 14.68 5.233 12.987M4.582 9H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(2, 2)"/>
                     </svg>
@@ -944,7 +944,7 @@ include __DIR__ . '/../includes/header.php';
 
             <div class="olympiad-upsell-grid">
                 <?php foreach ($relatedOlympiads as $rel): ?>
-                    <a class="olympiad-upsell-card" href="/olimpiada-test/<?php echo (int)$rel['id']; ?>">
+                    <a class="olympiad-upsell-card" href="/olimpiada-test/<?php echo (int)$rel['id']; ?>/">
                         <div class="olympiad-upsell-card-body">
                             <?php if (!empty($rel['subject'])): ?>
                                 <span class="olympiad-upsell-tag"><?php echo htmlspecialchars($rel['subject']); ?></span>

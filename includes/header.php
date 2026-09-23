@@ -14,6 +14,23 @@ $pricingLabel   = PricingMode::label();        // 'control' | 'subscription'
 // легаси-страницы сохраняли свой вид и получили только новый хедер сверху.
 $useRedesignBody = $useRedesignBody ?? false;
 $rdActivePage    = $rdActivePage ?? '';
+// Одна цепочка служит источником и HTML, и JSON-LD на публичных шаблонах.
+$canonicalUrl = $canonicalUrl ?? (rtrim(SITE_URL, '/') . (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH)));
+$breadcrumbPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$pageBreadcrumbs = [];
+$useSharedBreadcrumbs = isset($db) && http_response_code() < 400 && (
+    preg_match('~^/(kursy|konkursy|olimpiady|vebinary|vebinar|publikaciya|publikacii|zhurnal|blog|material|materialy|material-generator|material-adapter|opublikovat|podpiska|team|o-portale|svedeniya|dou|spo|nachalnaya-shkola|srednyaya-starshaya-shkola)(/|$)~', $breadcrumbPath)
+    || $breadcrumbPath === '/pages/contacts.php');
+if ($useSharedBreadcrumbs) {
+    require_once __DIR__ . '/breadcrumb-jsonld-helper.php';
+    $crumbLabel = $material['title'] ?? $publication['title'] ?? $course['title'] ?? $competition['title'] ?? $olympiad['title'] ?? $webinar['title'] ?? null;
+    // Переменная карточки могла остаться после foreach в каталоге: для него берём заголовок страницы.
+    if (isset($catalogOptions) || $crumbLabel === null) $crumbLabel = trim(explode('|', html_entity_decode(strip_tags($pageTitle ?? ''), ENT_QUOTES, 'UTF-8'))[0]);
+    $pageBreadcrumbs = pageBreadcrumbs($db, $breadcrumbPath, $canonicalUrl, $crumbLabel, isset($catalogOptions) ? null : ($course['program_type'] ?? null));
+    $breadcrumbJsonLd = buildBreadcrumbJsonLd($pageBreadcrumbs, $canonicalUrl);
+    $additionalCSS[] = '/assets/css/seo-breadcrumbs.css';
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -22,17 +39,18 @@ $rdActivePage    = $rdActivePage ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($pageTitle ?? 'Педагогический портал', ENT_QUOTES, 'UTF-8'); ?></title>
     <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?? 'Всероссийские конкурсы для педагогов и школьников', ENT_QUOTES, 'UTF-8'); ?>">
-<?php if (!empty($noindex)): ?>
-    <meta name="robots" content="noindex, nofollow">
+<?php $resolvedRobots = $robotsContent ?? (!empty($noindex) ? 'noindex, nofollow' : null); ?>
+<?php if ($resolvedRobots): ?>
+    <meta name="robots" content="<?= htmlspecialchars($resolvedRobots, ENT_QUOTES, 'UTF-8') ?>">
 <?php endif; ?>
 <?php $canonicalUrl = $canonicalUrl ?? (SITE_URL . strtok($_SERVER['REQUEST_URI'], '?')); ?>
-    <link rel="canonical" href="<?php echo $canonicalUrl; ?>">
+    <link rel="canonical" href="<?php echo htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8'); ?>">
 
     <!-- Open Graph -->
 <?php if (empty($ogImage)) $ogImage = SITE_URL . '/assets/images/og-home.jpg'; ?>
     <meta property="og:title" content="<?php echo htmlspecialchars($pageTitle ?? SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
     <meta property="og:description" content="<?php echo htmlspecialchars($pageDescription ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-    <meta property="og:url" content="<?php echo $canonicalUrl; ?>">
+    <meta property="og:url" content="<?php echo htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8'); ?>">
     <meta property="og:type" content="<?php echo $ogType ?? 'website'; ?>">
     <meta property="og:site_name" content="<?php echo SITE_NAME; ?>">
     <meta property="og:locale" content="ru_RU">
@@ -136,13 +154,16 @@ if (!empty($jsonLdArray)) {
 } elseif (!empty($jsonLd)) {
     $allJsonLd = [$jsonLd];
 }
+if ($useSharedBreadcrumbs) {
+    $allJsonLd = array_values(array_filter($allJsonLd, static fn($node) => ($node['@type'] ?? '') !== 'BreadcrumbList'));
+}
 if (!empty($breadcrumbJsonLd)) {
     $allJsonLd[] = $breadcrumbJsonLd;
 }
 foreach ($allJsonLd as $ld):
 ?>
     <script type="application/ld+json">
-<?php echo json_encode($ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT); ?>
+<?php echo json_encode($ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_PRETTY_PRINT); ?>
     </script>
 <?php endforeach; ?>
 
@@ -274,3 +295,4 @@ $isLoggedIn = isset($_SESSION['user_email']);
 </div>
 
 <main>
+<?php if ($pageBreadcrumbs): ?><div class="rd-wrap seo-page-breadcrumbs"><?= renderBreadcrumbs($pageBreadcrumbs) ?></div><?php endif; ?>

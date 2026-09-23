@@ -43,7 +43,7 @@ if (!$olympiad) {
         <div class="rd-wrap" style="text-align:center;">
           <h1 style="font:700 36px var(--font-sans);color:var(--ink-900);margin-bottom:12px;">Олимпиада не найдена</h1>
           <p style="color:var(--ink-500);margin-bottom:24px;">Возможно, она была удалена или перемещена.</p>
-          <a href="/olimpiady" class="rd-btn rd-btn-primary">Все олимпиады</a>
+          <a href="/olimpiady/" class="rd-btn rd-btn-primary">Все олимпиады</a>
         </div>
       </section>
     </main>
@@ -85,7 +85,7 @@ $additionalCSS = [
     '/assets/css/olympiad-detail.css?v=' . filemtime(__DIR__ . '/../assets/css/olympiad-detail.css'),
 ];
 
-$testUrl = '/olimpiada-test/' . (int)$olympiad['id'];
+$testUrl = '/olimpiada-test/' . (int)$olympiad['id'] . '/';
 $groupRegistrationUrl = '/pages/group-registration.php?product_type=olympiad&product_id=' . (int)$olympiad['id'];
 
 // FAQ-блок + микроразметка Schema.org/FAQPage.
@@ -134,13 +134,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 <!-- HERO -->
 <section class="cd-hero">
   <div class="rd-wrap">
-    <div class="cd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/olimpiady">Олимпиады</a>
-      <span class="sep">/</span>
-      <strong><?php echo htmlspecialchars($olympiad['title']); ?></strong>
-    </div>
+
 
     <div class="cd-hero-grid">
       <div class="cd-hero-content">

@@ -254,19 +254,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/materialy/">Материалы ФОП</a>
-      <span class="sep">/</span>
-      <?php if ($isBaseCatalog): ?>
-        <strong>Каталог</strong>
-      <?php else: ?>
-        <a href="/materialy/katalog/">Каталог</a>
-        <span class="sep">/</span>
-        <strong><?= htmlspecialchars($h1, ENT_QUOTES, 'UTF-8') ?></strong>
-      <?php endif; ?>
-    </div>
+
     <h1 class="rd-hero-title rd-hero-title-sm" style="margin-top:18px;"><?= htmlspecialchars($h1, ENT_QUOTES, 'UTF-8') ?></h1>
     <p class="rd-hero-sub" style="max-width:640px;">Готовые материалы под ФОП и ФАОП ОВЗ. Не нашли нужного — <a href="/material-generator/" style="color:var(--indigo-600);font-weight:600;">сгенерируйте свой через ИИ</a>.</p>
   </div>

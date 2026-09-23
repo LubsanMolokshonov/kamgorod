@@ -12,6 +12,8 @@ require_once __DIR__ . '/classes/AudienceCategory.php';
 require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/url-helper.php';
 require_once __DIR__ . '/includes/seo-url.php';
+require_once __DIR__ . '/includes/catalog-seo.php';
+require_once __DIR__ . '/includes/catalog-cards.php';
 
 // Фильтры аудитории из URL
 $selectedCategory = $_GET['ac'] ?? '';
@@ -19,6 +21,10 @@ $selectedType     = $_GET['at'] ?? '';
 $selectedSpec     = $_GET['as'] ?? '';
 
 // 301-редирект со старых query-param URL на чистые SEO URL
+$catalogOptions = ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec];
+$catalogRequest = catalogRequest($db, 'publikacii', $catalogOptions);
+$catalogListing = new CatalogListing($db, 'publikacii', $catalogOptions, $catalogRequest['q']);
+
 redirectToSeoUrl('publikacii', [
     'ac' => $selectedCategory,
     'at' => $selectedType,
@@ -41,7 +47,7 @@ $additionalCSS = [
 $additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/assets/js/audience-filter.js')];
 
 // Пагинация
-$perPage = 21;
+$perPage = CatalogListing::PAGE_SIZE;
 
 // Аудитория (3-уровневая сегментация)
 $audienceCatObj = new AudienceCategory($db);
@@ -95,32 +101,17 @@ if (!empty($selectedSpec) && !empty($audienceSpecializations)) {
     }
 }
 
-// Получение публикаций
-$publicationObj    = new Publication($db);
-// Загружаем большую партию для client-side «Загрузить ещё», но общий счётчик берём отдельно,
-// чтобы LIMIT не занижал отображаемое число «Найдено: N».
-$allPublications   = $publicationObj->getPublished($perPage + 100, 0, $filters);
-$totalPublications = $publicationObj->countPublished($filters);
-$publications      = array_slice($allPublications, 0, $perPage);
-$hasMore           = $totalPublications > $perPage;
+$totalPublications = $catalogListing->count();
+if ($catalogRequest['page'] > max(1, (int)ceil($totalPublications / CatalogListing::PAGE_SIZE))) catalogNotFound();
+$publications = $catalogListing->page($catalogRequest['page']);
+$hasMore = $totalPublications > $catalogRequest['page'] * CatalogListing::PAGE_SIZE;
 
-// Полный пул под клиентский поиск (audience-фильтр сохраняется)
-$searchFilters = $filters;
-$searchFilters['indexable_only'] = true;
-$searchPool = $publicationObj->getPublished(1000, 0, $searchFilters);
-$allForSearch = [];
-foreach ($searchPool as $p) {
-    $allForSearch[] = [
-        'slug'          => $p['slug'] ?? '',
-        'title'         => $p['title'] ?? '',
-        'author_name'   => $p['author_name'] ?? '',
-        'type_name'     => $p['type_name'] ?? '',
-        'annotation'    => mb_substr(strip_tags($p['annotation'] ?? ''), 0, 160),
-        'published_at'  => $p['published_at'] ?? '',
-        'created_at'    => $p['created_at'] ?? '',
-        'views_count'   => (int)($p['views_count'] ?? 0),
-    ];
-}
+$catalogPolicy = catalogPolicy($db, 'publikacii', $catalogOptions, $totalPublications, $catalogRequest['page']);
+$canonicalUrl = $catalogPolicy['canonical'];
+$robotsContent = $catalogRequest['q'] !== '' ? 'noindex,follow' : $catalogPolicy['robots'];
+if ($catalogRequest['page'] > 1) $pageTitle .= ' — страница ' . $catalogRequest['page'];
+$additionalJS[] = '/assets/js/catalog-pagination.js';
+$additionalCSS[] = '/assets/css/catalog-pagination.css';
 
 include __DIR__ . '/includes/header-redesign.php';
 ?>
@@ -128,11 +119,7 @@ include __DIR__ . '/includes/header-redesign.php';
 <!-- HERO каталога -->
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <strong>Публикации</strong>
-    </div>
+
   </div>
   <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
     <div>
@@ -325,259 +312,25 @@ include __DIR__ . '/includes/header-redesign.php';
       <!-- Каталог + карточки -->
       <div class="rd-catalog-main">
         <?php if (empty($publications)): ?>
+          <div id="publicationsGrid" class="rd-grid"></div>
+          <?= renderCatalogPagination($catalogRequest, $totalPublications) ?>
           <div style="text-align:center;padding:60px 0;color:var(--ink-500);">
             <p style="font-size:18px;margin-bottom:16px;">Публикации не найдены</p>
             <p>Попробуйте выбрать другую категорию или <a href="/publikacii/" style="color:var(--indigo-600);">сбросить фильтры</a>.</p>
           </div>
         <?php else: ?>
           <div class="rd-grid reveal-stagger" id="publicationsGrid">
-            <?php foreach ($publications as $pub):
-                $pubDate = date('d.m.Y', strtotime($pub['published_at'] ?? $pub['created_at']));
-            ?>
-              <a class="rd-card" href="/publikaciya/<?php echo htmlspecialchars($pub['slug'], ENT_QUOTES, 'UTF-8'); ?>/">
-                <div class="rd-card-pat"></div>
-                <?php if (!empty($pub['type_name'])): ?>
-                <div class="rd-card-tags">
-                  <span class="rd-tag indigo"><?php echo htmlspecialchars($pub['type_name'], ENT_QUOTES, 'UTF-8'); ?></span>
-                </div>
-                <?php endif; ?>
-                <h4><?php echo htmlspecialchars($pub['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
-                <div class="rd-card-meta">
-                  <?php if (!empty($pub['author_name'])): ?>
-                    <?php echo htmlspecialchars($pub['author_name'], ENT_QUOTES, 'UTF-8'); ?> · <?php echo $pubDate; ?>
-                  <?php else: ?>
-                    <?php echo $pubDate; ?>
-                  <?php endif; ?>
-                  <?php if (!empty($pub['annotation'])): ?>
-                    <br><?php echo htmlspecialchars(mb_substr($pub['annotation'], 0, 120), ENT_QUOTES, 'UTF-8'); ?><?php echo mb_strlen($pub['annotation']) > 120 ? '…' : ''; ?>
-                  <?php endif; ?>
-                </div>
-                <div class="rd-card-foot">
-                  <span style="font-size:13px;color:var(--ink-500);display:flex;gap:10px;align-items:center;">
-                    <?php if ((int)($pub['rating_count'] ?? 0) > 0): ?>
-                      <span class="rd-card-rating">★ <?php echo number_format((float)$pub['rating_avg'], 1, '.', ''); ?></span>
-                    <?php endif; ?>
-                    <?php if (!empty($pub['views_count']) && $pub['views_count'] > 0): ?>
-                      <span>👁 <?php echo (int)$pub['views_count']; ?></span>
-                    <?php endif; ?>
-                  </span>
-                  <span class="rd-join-btn">Читать</span>
-                </div>
-              </a>
-            <?php endforeach; ?>
+            <?= renderCatalogCards('publikacii', $publications) ?>
           </div>
 
-          <?php if ($hasMore): ?>
-            <div id="loadMoreContainer" style="margin-top:24px;text-align:center;">
-              <button id="loadMoreBtn" class="rd-load-more" data-offset="<?php echo $perPage; ?>">
-                Показать больше публикаций
-              </button>
-            </div>
-          <?php endif; ?>
+          <?= renderCatalogPagination($catalogRequest, $totalPublications) ?>
         <?php endif; ?>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Клиентская пагинация -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var loadMoreBtn = document.getElementById('loadMoreBtn');
-    var grid = document.getElementById('publicationsGrid');
-    var loadMoreContainer = document.getElementById('loadMoreContainer');
-    var allPublications = <?php echo json_encode(array_slice($allPublications, $perPage), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;
-    var allPublicationsSearchData = <?php echo json_encode($allForSearch, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;
-    var hasMore = <?php echo $hasMore ? 'true' : 'false'; ?>;
-    var originalTotalCount = '<?php echo (int)$totalPublications; ?>';
-    var perPage = <?php echo $perPage; ?>;
-    var currentOffset = 0;
 
-    if (loadMoreBtn && allPublications.length > 0) {
-        loadMoreBtn.addEventListener('click', function() {
-            var btn = this;
-            var batch = allPublications.slice(currentOffset, currentOffset + perPage);
-            if (batch.length === 0) return;
-
-            btn.disabled = true;
-            btn.textContent = 'Загрузка...';
-
-            var html = '';
-            batch.forEach(function(pub) {
-                var date = pub.published_at || pub.created_at || '';
-                if (date) {
-                    var d = new Date(date);
-                    date = ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + d.getFullYear();
-                }
-                var annotation = pub.annotation || '';
-                if (annotation.length > 120) annotation = annotation.substring(0, 120) + '…';
-
-                html += '<a class="rd-card" href="/publikaciya/' + escapeHtml(pub.slug || '') + '/">';
-                html += '<div class="rd-card-pat"></div>';
-                if (pub.type_name) {
-                    html += '<div class="rd-card-tags"><span class="rd-tag indigo">' + escapeHtml(pub.type_name) + '</span></div>';
-                }
-                html += '<h4>' + escapeHtml(pub.title || '') + '</h4>';
-                html += '<div class="rd-card-meta">';
-                if (pub.author_name) {
-                    html += escapeHtml(pub.author_name) + ' · ' + date;
-                } else {
-                    html += date;
-                }
-                if (annotation) {
-                    html += '<br>' + escapeHtml(annotation);
-                }
-                html += '</div>';
-                html += '<div class="rd-card-foot">';
-                if (pub.views_count > 0) {
-                    html += '<span style="font-size:13px;color:var(--ink-500);">👁 ' + pub.views_count + '</span>';
-                } else {
-                    html += '<span></span>';
-                }
-                html += '<span class="rd-join-btn">Читать</span>';
-                html += '</div>';
-                html += '</a>';
-            });
-
-            grid.insertAdjacentHTML('beforeend', html);
-            currentOffset += perPage;
-
-            if (currentOffset >= allPublications.length) {
-                loadMoreContainer.style.display = 'none';
-            } else {
-                btn.disabled = false;
-                btn.textContent = 'Показать больше публикаций';
-            }
-        });
-    }
-
-    // Клиентский поиск по публикациям
-    (function() {
-        var input = document.getElementById('publicationSearchInput');
-        var clearBtn = document.getElementById('publicationSearchClear');
-        var status = document.getElementById('publicationSearchStatus');
-        var grid = document.getElementById('publicationsGrid');
-        var totalCountEl = document.getElementById('totalCount');
-        var loadMoreContainer = document.getElementById('loadMoreContainer');
-        if (!input || !grid) return;
-
-        var originalGridHtml = null;
-        var debounceTimer = null;
-
-        function _esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
-        function normalize(s) { return (s || '').toString().toLowerCase().replace(/ё/g, 'е').trim(); }
-
-        function fmtDate(iso) {
-            if (!iso) return '';
-            try {
-                var d = new Date(iso);
-                if (isNaN(d.getTime())) return '';
-                return ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + d.getFullYear();
-            } catch (e) { return ''; }
-        }
-
-        function renderCard(p) {
-            var date = fmtDate(p.published_at || p.created_at || '');
-            var ann = p.annotation || '';
-            if (ann.length > 120) ann = ann.substring(0, 120) + '…';
-
-            var html = '<a class="rd-card" href="/publikaciya/' + _esc(p.slug) + '/">';
-            html += '<div class="rd-card-pat"></div>';
-            if (p.type_name) {
-                html += '<div class="rd-card-tags"><span class="rd-tag indigo">' + _esc(p.type_name) + '</span></div>';
-            }
-            html += '<h4>' + _esc(p.title) + '</h4>';
-            html += '<div class="rd-card-meta">';
-            if (p.author_name) {
-                html += _esc(p.author_name) + ' · ' + date;
-            } else {
-                html += date;
-            }
-            if (ann) {
-                html += '<br>' + _esc(ann);
-            }
-            html += '</div>';
-            html += '<div class="rd-card-foot">';
-            if (p.views_count > 0) {
-                html += '<span style="font-size:13px;color:var(--ink-500);">👁 ' + p.views_count + '</span>';
-            } else {
-                html += '<span></span>';
-            }
-            html += '<span class="rd-join-btn">Читать</span>';
-            html += '</div>';
-            html += '</a>';
-            return html;
-        }
-
-        function pluralize(n) {
-            var lastDigit = n % 10;
-            var lastTwo = n % 100;
-            if (lastTwo >= 11 && lastTwo <= 19) return 'публикаций';
-            if (lastDigit === 1) return 'публикация';
-            if (lastDigit >= 2 && lastDigit <= 4) return 'публикации';
-            return 'публикаций';
-        }
-
-        function applyFilter(q) {
-            q = normalize(q);
-            if (!q) {
-                if (originalGridHtml !== null) { grid.innerHTML = originalGridHtml; originalGridHtml = null; }
-                status.style.display = 'none';
-                clearBtn.style.display = 'none';
-                if (totalCountEl) totalCountEl.textContent = originalTotalCount;
-                if (loadMoreContainer && hasMore) loadMoreContainer.style.display = '';
-                return;
-            }
-            if (originalGridHtml === null) originalGridHtml = grid.innerHTML;
-            clearBtn.style.display = '';
-            if (loadMoreContainer) loadMoreContainer.style.display = 'none';
-
-            var tokens = q.split(/\s+/).filter(Boolean);
-            var matches = allPublicationsSearchData.filter(function(p) {
-                var hay = normalize((p.title || '') + ' ' + (p.author_name || '') + ' ' + (p.annotation || '') + ' ' + (p.type_name || ''));
-                return tokens.every(function(t) { return hay.indexOf(t) !== -1; });
-            });
-
-            if (matches.length === 0) {
-                grid.innerHTML = '';
-                status.style.display = '';
-                status.innerHTML = 'По запросу «' + _esc(q) + '» ничего не найдено. <a href="#" id="pubSearchResetLink" style="color:var(--indigo-600);">Сбросить</a>';
-                if (totalCountEl) totalCountEl.textContent = '0';
-                var rl = document.getElementById('pubSearchResetLink');
-                if (rl) rl.addEventListener('click', function(e) { e.preventDefault(); input.value = ''; applyFilter(''); input.focus(); });
-                return;
-            }
-            grid.innerHTML = matches.map(renderCard).join('');
-            status.style.display = '';
-            status.textContent = 'Найдено: ' + matches.length + ' ' + pluralize(matches.length);
-            if (totalCountEl) totalCountEl.textContent = matches.length;
-        }
-
-        input.addEventListener('input', function() {
-            clearTimeout(debounceTimer);
-            var v = input.value;
-            debounceTimer = setTimeout(function() { applyFilter(v); }, 120);
-        });
-        clearBtn.addEventListener('click', function() { input.value = ''; applyFilter(''); input.focus(); });
-        input.addEventListener('keydown', function(e) { if (e.key === 'Escape' && input.value) { input.value = ''; applyFilter(''); } });
-    })();
-
-    // Toggle фильтров на мобильных
-    var filterToggle = document.getElementById('rdFilterToggle');
-    var filtersPanel = document.getElementById('rdFiltersPanel');
-    if (filterToggle && filtersPanel) {
-        filterToggle.addEventListener('click', function() {
-            filtersPanel.classList.toggle('open');
-        });
-    }
-
-    function escapeHtml(text) {
-        var div = document.createElement('div');
-        div.appendChild(document.createTextNode(text));
-        return div.innerHTML;
-    }
-});
-</script>
 
 <?php include __DIR__ . '/includes/social-links.php'; ?>
 

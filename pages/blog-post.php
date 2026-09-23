@@ -56,7 +56,8 @@ $recommendedCourses = !empty($tags) ? $publicationObj->getRecommendedCourses($pu
 $inlineCourse = $recommendedCourses[0] ?? null;
 $inlineCard = $inlineCourse ? buildCourseCardData($inlineCourse, $db) : null;
 
-$articleHtml = $publication['content'] ?? '';
+require_once __DIR__ . '/../includes/url-helper.php';
+$articleHtml = normalizeContentHtml($publication['content'] ?? '');
 if ($articleHtml !== '') {
     $articleHtml = preg_replace('/<strong>\s*-\s*<br\s*\/?>\s*<\/strong>/i', '<br>&ndash;&nbsp;', $articleHtml);
     $articleHtml = preg_replace('/;\s*-\s*<br\s*\/?>/i', ';<br>&ndash;&nbsp;', $articleHtml);
@@ -160,13 +161,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 
 <section class="rd-section" style="padding:32px 0 24px;">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/blog/">Блог</a>
-      <span class="sep">/</span>
-      <strong><?php echo htmlspecialchars(mb_substr($publication['title'], 0, 80)); ?><?php echo mb_strlen($publication['title']) > 80 ? '…' : ''; ?></strong>
-    </div>
+
   </div>
 </section>
 
@@ -244,7 +239,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           <ul class="rec-courses-list">
             <?php foreach ($recommendedCourses as $course): ?>
               <li class="rec-course-item">
-                <a href="/kursy/<?php echo urlencode($course['slug']); ?>/">
+                <a <?= getCourseUrl($course['slug'], $course['id']) ? 'href="' . htmlspecialchars(getCourseUrl($course['slug'], $course['id']), ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
                   <span class="rec-course-title"><?php echo htmlspecialchars($course['title'], ENT_QUOTES, 'UTF-8'); ?></span>
                   <span class="rec-course-meta"><?php echo (int)$course['hours']; ?> ч. · от <?php echo number_format((float)$course['price'], 0, '.', ' '); ?> ₽</span>
                 </a>

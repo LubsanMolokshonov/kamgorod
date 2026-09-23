@@ -1,0 +1,47 @@
+.ol-promo-2plus1 {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: linear-gradient(135deg, #FFF7ED, #FFE7C7);
+  border: 1px solid #FFD9A8;
+  border-radius: 20px;
+  padding: 20px 24px;
+  margin-top: 16px;
+}
+.ol-promo-2plus1 .ol-promo-ic {
+  font-size: 38px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.ol-promo-2plus1 .ol-promo-t {
+  font-size: 19px;
+  font-weight: 800;
+  color: #7C2D12;
+  margin-bottom: 4px;
+}
+.ol-promo-2plus1 .ol-promo-s {
+  font-size: 14px;
+  color: #9A5B2C;
+  line-height: 1.5;
+}
+.ol-promo-2plus1 .ol-promo-txt {
+  flex: 1;
+}
+.ol-promo-2plus1 .rd-btn {
+  flex-shrink: 0;
+  background: #EA580C;
+  border-color: #EA580C;
+  color: #fff;
+}
+.ol-promo-2plus1 .rd-btn:hover {
+  background: #C2410C;
+  border-color: #C2410C;
+}
+@media (max-width: 768px) {
+  .ol-promo-2plus1 {
+    flex-direction: column;
+    text-align: center;
+    gap: 14px;
+    padding: 20px;
+  }
+}

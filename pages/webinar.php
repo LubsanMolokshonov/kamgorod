@@ -121,13 +121,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 <!-- HERO деталки -->
 <section class="rd-hero">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/vebinary/">Вебинары</a>
-      <span class="sep">/</span>
-      <strong><?php echo htmlspecialchars(mb_substr($webinar['title'], 0, 60)); ?></strong>
-    </div>
+
   </div>
   <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
     <div>

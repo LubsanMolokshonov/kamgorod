@@ -91,11 +91,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 <!-- HERO -->
 <section class="rd-hero-catalog mat-hero">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <strong>Материалы ФОП</strong>
-    </div>
+
   </div>
   <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
     <div>

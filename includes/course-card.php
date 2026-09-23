@@ -14,6 +14,7 @@
 require_once __DIR__ . '/../classes/Course.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/installment-helper.php';
+require_once __DIR__ . '/url-helper.php';
 
 /** Учебная нагрузка в месяц, из которой считается срок обучения */
 const CC_HOURS_PER_MONTH = 72;
@@ -40,8 +41,12 @@ const CC_HEAD_MIN_SHARE = 0.25;
 function buildCourseCardData(array $course, $pdo): ?array
 {
     if (empty($course['id']) || empty($course['slug'])) {
+        getCourseUrl((string)($course['slug'] ?? ''), $course['id'] ?? null);
         return null;
     }
+
+    $courseUrl = getCourseUrl($course['slug'], $course['id']);
+    if ($courseUrl === null) return null;
 
     $programType = $course['program_type'] ?? 'kpk';
     $isPp        = $programType === 'pp';
@@ -64,7 +69,7 @@ function buildCourseCardData(array $course, $pdo): ?array
         'id'               => $courseId,
         'slug'             => $course['slug'],
         'title'            => $course['title'] ?? '',
-        'url'              => '/kursy/' . urlencode($course['slug']) . '/',
+        'url'              => $courseUrl,
         'hours'            => $hours,
         'hours_label'      => $hours > 0 ? Course::formatHours($hours) : '',
         'months_label'     => $hours > 0 ? ccFormatMonths(ccMonthsFromHours($hours)) : '',

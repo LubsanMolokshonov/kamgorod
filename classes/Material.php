@@ -359,12 +359,12 @@ class Material
 
     public function incrementViews(int $id): void
     {
-        $this->db->execute("UPDATE materials SET views_count = views_count + 1 WHERE id = ?", [$id]);
+        $this->db->execute("UPDATE materials SET views_count = views_count + 1, updated_at = updated_at WHERE id = ?", [$id]);
     }
 
     public function incrementDownloads(int $id): void
     {
-        $this->db->execute("UPDATE materials SET downloads_count = downloads_count + 1 WHERE id = ?", [$id]);
+        $this->db->execute("UPDATE materials SET downloads_count = downloads_count + 1, updated_at = updated_at WHERE id = ?", [$id]);
     }
 
     public function attachTags(int $materialId, array $tagIds): void

@@ -6,6 +6,8 @@
  */
 
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/catalog-seo.php';
+require_once __DIR__ . '/includes/url-helper.php';
 
 header('Content-Type: application/xml; charset=UTF-8');
 
@@ -18,6 +20,12 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 
 <?php
 function sitemapUrl($loc, $priority = '0.5', $changefreq = 'monthly', $lastmod = null) {
+    global $db;
+    static $seen = [];
+    if (isset($seen[$loc])) return;
+    $seen[$loc] = true;
+    $route = parseCatalogPath(parse_url($loc, PHP_URL_PATH));
+    if ($route && (!catalogOptionsExist($db, $route['options']) || !catalogPolicy($db, $route['section'], $route['options'])['sitemap'])) return;
     echo "    <url>\n";
     echo "        <loc>" . htmlspecialchars($loc) . "</loc>\n";
     if ($lastmod) {
@@ -32,7 +40,8 @@ function sitemapUrl($loc, $priority = '0.5', $changefreq = 'monthly', $lastmod =
 }
 
 function fileLastmod($absPath) {
-    return file_exists($absPath) ? filemtime($absPath) : null;
+    // mtime меняется при checkout/deploy и не доказывает изменение содержания.
+    return null;
 }
 
 // Префетч MAX(updated_at) по основным таблицам — для каталогов и главной
@@ -76,6 +85,7 @@ sitemapUrl($baseUrl . '/konkursy/', '0.9', 'weekly', $maxCompetitions);
 sitemapUrl($baseUrl . '/olimpiady/', '0.9', 'weekly', $maxOlympiads);
 sitemapUrl($baseUrl . '/vebinary/', '0.9', 'weekly', $maxWebinars);
 sitemapUrl($baseUrl . '/zhurnal/', '0.9', 'weekly', $maxPublications);
+sitemapUrl($baseUrl . '/publikacii/', '0.9', 'weekly', $maxPublications);
 sitemapUrl($baseUrl . '/materialy/', '0.8', 'monthly', fileLastmod($rootDir . '/pages/materials-landing.php'));
 sitemapUrl($baseUrl . '/materialy/katalog/', '0.9', 'weekly', $maxMaterials);
 
@@ -92,6 +102,7 @@ sitemapUrl($baseUrl . '/vebinary/videolektsii/', '0.8', 'weekly', $maxWebVideo);
 // Аудиторные лендинги — все через pages/audience.php
 $audienceLastmod = fileLastmod($rootDir . '/pages/audience.php');
 foreach (['dou', 'nachalnaya-shkola', 'srednyaya-starshaya-shkola', 'spo'] as $aud) {
+    if (!(new Database($db))->queryOne('SELECT id FROM audience_types WHERE slug = ? AND is_active = 1', [$aud])) continue;
     sitemapUrl($baseUrl . '/' . $aud . '/', '0.7', 'weekly', $audienceLastmod);
 }
 
@@ -267,13 +278,13 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 // 6. ПУБЛИКАЦИИ
 // ========================================
 
-$stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' AND source IN ('upload', 'generator') AND noindex = 0 AND indexable_at IS NOT NULL AND indexable_at <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 3 HOUR) ORDER BY published_at DESC");
+$stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' AND (redirect_to_slug IS NULL OR redirect_to_slug = '') AND source IN ('upload', 'generator') AND noindex = 0 AND indexable_at IS NOT NULL AND indexable_at <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 3 HOUR) ORDER BY published_at DESC");
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     sitemapUrl($baseUrl . '/publikaciya/' . $row['slug'] . '/', '0.7', 'monthly', $row['updated_at']);
 }
 
 // Статьи блога — отдельный префикс /blog/, не /publikaciya/
-$stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' AND source = 'blog' AND noindex = 0 AND indexable_at IS NOT NULL AND indexable_at <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 3 HOUR) ORDER BY published_at DESC");
+$stmt = $db->query("SELECT slug, updated_at FROM publications WHERE status = 'published' AND (redirect_to_slug IS NULL OR redirect_to_slug = '') AND source = 'blog' AND noindex = 0 AND indexable_at IS NOT NULL AND indexable_at <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 3 HOUR) ORDER BY published_at DESC");
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     sitemapUrl($baseUrl . '/blog/' . $row['slug'] . '/', '0.7', 'weekly', $row['updated_at']);
 }

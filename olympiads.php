@@ -12,11 +12,28 @@ require_once __DIR__ . '/classes/AudienceCategory.php';
 require_once __DIR__ . '/classes/AudienceType.php';
 require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/seo-url.php';
+require_once __DIR__ . '/includes/catalog-seo.php';
+require_once __DIR__ . '/includes/catalog-cards.php';
 require_once __DIR__ . '/includes/catalog-meta.php';
 
 $selectedCategory = $_GET['ac'] ?? '';
 $selectedType     = $_GET['at'] ?? '';
 $selectedSpec     = $_GET['as'] ?? '';
+
+$catalogOptions = ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec];
+// Ранее утверждённая карта сохраняется даже после деактивации исходного фасета.
+if (!array_filter($catalogOptions, static fn($v) => !is_string($v))) {
+    $legacyBase = buildSeoUrl('olimpiady', $catalogOptions);
+    try {
+        $redirect = (new Database($db))->queryOne('SELECT target_url FROM olympiad_catalog_redirects WHERE old_path = ?', [trim(substr($legacyBase, strlen('/olimpiady/')), '/')]);
+        if ($redirect && (new CatalogListing($db, 'olimpiady', $catalogOptions))->count() === 0
+            && $redirect['target_url'] !== $legacyBase && ($_GET['page'] ?? 1) == 1) {
+            header('Location: ' . normalizeInternalUrl($redirect['target_url']), true, 301); exit;
+        }
+    } catch (PDOException $e) { error_log('Карта олимпиад: ' . $e->getMessage()); }
+}
+$catalogRequest = catalogRequest($db, 'olimpiady', $catalogOptions);
+$catalogListing = new CatalogListing($db, 'olimpiady', $catalogOptions, $catalogRequest['q']);
 
 redirectToSeoUrl('olimpiady', [
     'ac' => $selectedCategory,
@@ -71,19 +88,16 @@ if (!empty($selectedSpec)) {
     $filters['specialization_slug'] = $selectedSpec;
 }
 
-$allOlympiads = !empty($filters)
-    ? $olympiadObj->getFilteredOlympiads($filters)
-    : $olympiadObj->getActiveOlympiads();
-
-$perPage           = 21;
-$totalOlympiads    = count($allOlympiads);
-$olympiads         = array_slice($allOlympiads, 0, $perPage);
-$hasMore           = $totalOlympiads > $perPage;
+$perPage = CatalogListing::PAGE_SIZE;
+$totalOlympiads = $catalogListing->count();
+if ($catalogRequest['page'] > max(1, (int)ceil($totalOlympiads / CatalogListing::PAGE_SIZE))) catalogNotFound();
+$olympiads = $catalogListing->page($catalogRequest['page']);
+$hasMore = $totalOlympiads > $catalogRequest['page'] * $perPage;
 
 // Counts per filter — скрываем пустые пункты + noindex пустых страниц
 $audienceCategoryCounts = [];
 foreach ($audienceCategories as $ac) {
-    $audienceCategoryCounts[$ac['slug']] = count($olympiadObj->getFilteredOlympiads(['category_id' => $ac['id']]));
+    $audienceCategoryCounts[$ac['slug']] = (new CatalogListing($db, 'olimpiady', ['ac' => $ac['slug']]))->count();
 }
 $audienceCategories = array_values(array_filter($audienceCategories, function($ac) use ($audienceCategoryCounts) {
     return ($audienceCategoryCounts[$ac['slug']] ?? 0) > 0;
@@ -92,10 +106,7 @@ $audienceCategories = array_values(array_filter($audienceCategories, function($a
 if (!empty($audienceSpecializations) && $selectedCategoryData) {
     $audienceSpecCounts = [];
     foreach ($audienceSpecializations as $as) {
-        $audienceSpecCounts[$as['slug']] = count($olympiadObj->getFilteredOlympiads([
-            'category_id'         => $selectedCategoryData['id'],
-            'specialization_slug' => $as['slug'],
-        ]));
+        $audienceSpecCounts[$as['slug']] = (new CatalogListing($db, 'olimpiady', ['ac' => $selectedCategory, 'as' => $as['slug']]))->count();
     }
     $audienceSpecializations = array_values(array_filter($audienceSpecializations, function($as) use ($audienceSpecCounts) {
         return ($audienceSpecCounts[$as['slug']] ?? 0) > 0;
@@ -126,99 +137,11 @@ if (!empty($audienceTypes) && $selectedCategoryData) {
             'audience_type_id' => $at['id'],
         ];
         if (!empty($selectedSpec)) $f['specialization_slug'] = $selectedSpec;
-        $audienceTypeCounts[$at['slug']] = count($olympiadObj->getFilteredOlympiads($f));
+        $audienceTypeCounts[$at['slug']] = (new CatalogListing($db, 'olimpiady', ['ac' => $selectedCategory, 'as' => $selectedSpec, 'at' => $at['slug']]))->count();
     }
     $audienceTypes = array_values(array_filter($audienceTypes, function($at) use ($audienceTypeCounts) {
         return ($audienceTypeCounts[$at['slug']] ?? 0) > 0;
     }));
-}
-
-$hasOlympFilter = !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpec);
-if ($totalOlympiads === 0 && $hasOlympFilter) {
-    // Пустой каталог — это soft-404: страница отдаёт 200 со списком «Найдено: 0». Такие URL остались
-    // от консолидации предметов 06.09.2026 и дробления олимпиад по классам, они до сих пор в индексе
-    // и получают трафик. Отдаём 301 (карта — миграция 172):
-    //   1) явная карта olympiad_catalog_redirects: старый предмет → консолидированный преемник;
-    //   2) если в карте пусто — «лестница» вверх ac/as/at → ac/as → ac → /olimpiady/,
-    //      первая ступень с непустым инвентарём.
-    // Запросы выполняются только на пустой странице, обычный каталог их не делает.
-    $redirectTarget = null;
-
-    $lookupPaths = [];
-    if ($selectedCategory !== '') {
-        if ($selectedSpec !== '' && $selectedType !== '') {
-            $lookupPaths[] = $selectedCategory . '/' . $selectedSpec . '/' . $selectedType;
-        }
-        if ($selectedSpec !== '') $lookupPaths[] = $selectedCategory . '/' . $selectedSpec;
-        if ($selectedType !== '') $lookupPaths[] = $selectedCategory . '/' . $selectedType;
-        $lookupPaths[] = $selectedCategory;
-    }
-    if (!empty($lookupPaths)) {
-        try {
-            $placeholders = implode(',', array_fill(0, count($lookupPaths), '?'));
-            $redirStmt = $db->prepare("SELECT old_path, target_url FROM olympiad_catalog_redirects WHERE old_path IN ($placeholders)");
-            $redirStmt->execute($lookupPaths);
-            $redirMap = $redirStmt->fetchAll(PDO::FETCH_KEY_PAIR);
-            foreach ($lookupPaths as $lookupPath) { // от самого частного пути к самому общему
-                if (!empty($redirMap[$lookupPath])) {
-                    $redirectTarget = $redirMap[$lookupPath];
-                    break;
-                }
-            }
-        } catch (PDOException $e) {
-            // Таблицы ещё нет (код задеплоен раньше миграции) — остаётся лестница ниже.
-            error_log('olympiad_catalog_redirects lookup failed: ' . $e->getMessage());
-        }
-    }
-
-    if ($redirectTarget === null && $selectedCategoryData) {
-        $ladder = [];
-        if ($selectedSpec !== '' && $selectedTypeData) {
-            $ladder[] = [
-                ['category_id' => $selectedCategoryData['id'], 'specialization_slug' => $selectedSpec],
-                buildSeoUrl('olimpiady', ['ac' => $selectedCategory, 'as' => $selectedSpec]),
-            ];
-        }
-        if ($selectedSpec !== '' || $selectedTypeData) {
-            $ladder[] = [
-                ['category_id' => $selectedCategoryData['id']],
-                buildSeoUrl('olimpiady', ['ac' => $selectedCategory]),
-            ];
-        }
-        foreach ($ladder as [$stepFilters, $stepUrl]) {
-            if (count($olympiadObj->getFilteredOlympiads($stepFilters)) > 0) {
-                $redirectTarget = $stepUrl;
-                break;
-            }
-        }
-        if ($redirectTarget === null) {
-            $redirectTarget = '/olimpiady/';
-        }
-    }
-
-    // Защита от петли — страница не должна редиректить сама на себя.
-    $currentPath = rtrim((string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), '/') . '/';
-    if ($redirectTarget !== null && rtrim($redirectTarget, '/') . '/' !== $currentPath) {
-        header('Location: ' . $redirectTarget, true, 301);
-        exit;
-    }
-
-    $noindex = true;
-}
-
-// Лёгкий массив для клиентского поиска
-$allOlympiadsJs = [];
-foreach ($allOlympiads as $o) {
-    $audienceLabel = Olympiad::getAudienceLabel($o['target_audience'] ?? '');
-    $allOlympiadsJs[] = [
-        'id'             => $o['id'],
-        'title'          => $o['title'],
-        'description'    => $o['description'] ?? '',
-        'audience_label' => $audienceLabel,
-        'subject'        => $o['subject'] ?? '',
-        'price'          => (float)($o['diploma_price'] ?? 229),
-        'url'            => '/olimpiady/' . urlencode($o['slug']) . '/',
-    ];
 }
 
 $hasAnyFilter      = !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
@@ -251,7 +174,7 @@ if ($hasAnyFilter && $audienceSeoPhrase !== '') {
         'base'             => 'Олимпиады',
         'audiencePhrase'   => buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData ?? null, 'педагогов и учеников'),
         'hasFilter'        => $hasAnyFilter,
-        'titleSuffix'      => ' 2025-2026 | ' . SITE_NAME,
+        'titleSuffix'      => ' | ' . SITE_NAME,
         'descriptionTpl'   => '{h1}. Бесплатное участие, тест за 5 минут, официальный диплом за 30 секунд.',
         'h1FallbackPrefix' => 'Олимпиады для педагогов и&nbsp;учеников с ',
         'h1FallbackAccent' => 'дипломом за&nbsp;30&nbsp;секунд',
@@ -295,8 +218,7 @@ $additionalCSS[] = '/assets/css/landing-seo.css?v=' . filemtime(__DIR__ . '/asse
 $additionalJS    = array_merge($additionalJS ?? [], ['/assets/js/landing-seo.js?v=' . filemtime(__DIR__ . '/assets/js/landing-seo.js')]);
 
 // FAQ — гибрид: поднабор из пула по seed + переменные страницы.
-$olPrices  = array_filter(array_map(fn($o) => (int)($o['diploma_price'] ?? 229), $allOlympiads), fn($p) => $p > 0);
-$olPriceMin = !empty($olPrices) ? number_format(min($olPrices), 0, '', ' ') : '229';
+$olPriceMin = number_format($catalogListing->minimumOlympiadPrice(), 0, '', ' ');
 $faqItems = buildLandingFaq(olympiadsLandingFaqPool(), $pageKey, [
     'count'     => $totalOlympiads,
     'price_min' => $olPriceMin,
@@ -312,17 +234,21 @@ if (!empty($landingReviews)) {
     $jsonLdArray[] = buildListingSchema($db, 'olympiad', 'olimpiady', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
 }
 
+$catalogPolicy = catalogPolicy($db, 'olimpiady', $catalogOptions, $totalOlympiads, $catalogRequest['page']);
+$canonicalUrl = $catalogPolicy['canonical'];
+$robotsContent = $catalogRequest['q'] !== '' ? 'noindex,follow' : $catalogPolicy['robots'];
+if ($catalogRequest['page'] > 1) $pageTitle .= ' — страница ' . $catalogRequest['page'];
+$additionalJS[] = '/assets/js/catalog-pagination.js';
+$additionalCSS[] = '/assets/css/catalog-pagination.css';
+$additionalCSS[] = '/assets/css/olympiad-catalog.css';
+
 include __DIR__ . '/includes/header-redesign.php';
 ?>
 
 <!-- HERO каталога -->
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <strong>Олимпиады</strong>
-    </div>
+
   </div>
   <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
     <div>
@@ -383,55 +309,7 @@ include __DIR__ . '/includes/header-redesign.php';
 </div>
 
 <!-- Промо-баннер «2+1» (рычаг 2: фрейм для рекламного трафика) -->
-<style>
-.ol-promo-2plus1 {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  background: linear-gradient(135deg, #FFF7ED, #FFE7C7);
-  border: 1px solid #FFD9A8;
-  border-radius: 20px;
-  padding: 20px 24px;
-  margin-top: 16px;
-}
-.ol-promo-2plus1 .ol-promo-ic {
-  font-size: 38px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-.ol-promo-2plus1 .ol-promo-t {
-  font-size: 19px;
-  font-weight: 800;
-  color: #7C2D12;
-  margin-bottom: 4px;
-}
-.ol-promo-2plus1 .ol-promo-s {
-  font-size: 14px;
-  color: #9A5B2C;
-  line-height: 1.5;
-}
-.ol-promo-2plus1 .ol-promo-txt {
-  flex: 1;
-}
-.ol-promo-2plus1 .rd-btn {
-  flex-shrink: 0;
-  background: #EA580C;
-  border-color: #EA580C;
-  color: #fff;
-}
-.ol-promo-2plus1 .rd-btn:hover {
-  background: #C2410C;
-  border-color: #C2410C;
-}
-@media (max-width: 768px) {
-  .ol-promo-2plus1 {
-    flex-direction: column;
-    text-align: center;
-    gap: 14px;
-    padding: 20px;
-  }
-}
-</style>
+
 <div class="rd-wrap">
   <div class="ol-promo-2plus1 reveal">
     <div class="ol-promo-ic">🎁</div>
@@ -572,46 +450,18 @@ include __DIR__ . '/includes/header-redesign.php';
       <!-- Каталог + карточки -->
       <div class="rd-catalog-main">
         <?php if (empty($olympiads)): ?>
+          <div id="olympiadsGrid" class="rd-grid"></div>
+          <?= renderCatalogPagination($catalogRequest, $totalOlympiads) ?>
           <div style="text-align:center;padding:60px 0;color:var(--ink-500);">
             <p style="font-size:18px;margin-bottom:16px;">Олимпиады не найдены</p>
             <p>Попробуйте выбрать другую аудиторию или <a href="/olimpiady/" style="color:var(--indigo-600);">сбросить фильтры</a>.</p>
           </div>
         <?php else: ?>
           <div class="rd-grid reveal-stagger" id="olympiadsGrid">
-            <?php foreach ($olympiads as $olympiad):
-                $audLabel = Olympiad::getAudienceLabel($olympiad['target_audience'] ?? '');
-                $oUrl     = '/olimpiady/' . urlencode($olympiad['slug']) . '/';
-                $oPrice   = (int)($olympiad['diploma_price'] ?? 229);
-            ?>
-              <a class="rd-card" href="<?php echo $oUrl; ?>">
-                <div class="rd-card-pat"></div>
-                <div class="rd-card-tags">
-                  <?php if (!empty($audLabel)): ?>
-                    <span class="rd-tag indigo"><?php echo htmlspecialchars($audLabel, ENT_QUOTES, 'UTF-8'); ?></span>
-                  <?php endif; ?>
-                  <?php if (!empty($olympiad['subject'])): ?>
-                    <span class="rd-tag"><?php echo htmlspecialchars($olympiad['subject'], ENT_QUOTES, 'UTF-8'); ?></span>
-                  <?php endif; ?>
-                </div>
-                <h4><?php echo htmlspecialchars($olympiad['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
-                <div class="rd-card-meta">
-                  <?php echo htmlspecialchars(mb_substr(strip_tags($olympiad['description'] ?? ''), 0, 120), ENT_QUOTES, 'UTF-8'); ?>…
-                </div>
-                <div class="rd-card-foot">
-                  <div class="rd-price-now">Бесплатное участие</div>
-                  <span class="rd-join-btn">Пройти →</span>
-                </div>
-              </a>
-            <?php endforeach; ?>
+            <?= renderCatalogCards('olimpiady', $olympiads) ?>
           </div>
 
-          <?php if ($hasMore): ?>
-            <div id="loadMoreContainer" style="margin-top:24px;text-align:center;">
-              <button id="loadMoreBtn" class="rd-load-more" data-offset="<?php echo $perPage; ?>">
-                Показать больше олимпиад
-              </button>
-            </div>
-          <?php endif; ?>
+          <?= renderCatalogPagination($catalogRequest, $totalOlympiads) ?>
         <?php endif; ?>
       </div>
     </div>
@@ -725,127 +575,6 @@ endif; ?>
   </div>
 </section>
 
-<script>
-var allOlympiadsData = <?php echo json_encode($allOlympiadsJs, JSON_UNESCAPED_UNICODE); ?>;
-var olympiadsPerPage = <?php echo $perPage; ?>;
 
-function _olFmtPrice(num) { return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
-function _olEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
-function renderOlympiadCard(o) {
-    var desc = o.description ? o.description.replace(/<[^>]*>/g, '').substring(0, 120) + '…' : '';
-    var tags = '';
-    if (o.audience_label) tags += '<span class="rd-tag indigo">' + _olEsc(o.audience_label) + '</span>';
-    if (o.subject) tags += '<span class="rd-tag">' + _olEsc(o.subject) + '</span>';
-    return '<a class="rd-card" href="' + _olEsc(o.url) + '">' +
-        '<div class="rd-card-pat"></div>' +
-        '<div class="rd-card-tags">' + tags + '</div>' +
-        '<h4>' + _olEsc(o.title) + '</h4>' +
-        '<div class="rd-card-meta">' + _olEsc(desc) + '</div>' +
-        '<div class="rd-card-foot">' +
-          '<div class="rd-price-now">Бесплатное участие</div>' +
-          '<span class="rd-join-btn">Пройти →</span>' +
-        '</div>' +
-      '</a>';
-}
-
-// Поиск по олимпиадам
-(function() {
-    var input = document.getElementById('olympiadSearchInput');
-    var clearBtn = document.getElementById('olympiadSearchClear');
-    var status = document.getElementById('olympiadSearchStatus');
-    var grid = document.getElementById('olympiadsGrid');
-    var loadMoreContainer = document.getElementById('loadMoreContainer');
-    if (!input || !grid) return;
-
-    var originalGridHtml = null;
-    var debounceTimer = null;
-
-    function normalize(s) { return (s || '').toString().toLowerCase().replace(/ё/g, 'е').trim(); }
-
-    function applyFilter(q) {
-        q = normalize(q);
-        if (!q) {
-            if (originalGridHtml !== null) { grid.innerHTML = originalGridHtml; originalGridHtml = null; }
-            if (loadMoreContainer) loadMoreContainer.style.display = '';
-            status.style.display = 'none';
-            clearBtn.style.display = 'none';
-            return;
-        }
-        if (originalGridHtml === null) originalGridHtml = grid.innerHTML;
-        clearBtn.style.display = '';
-        if (loadMoreContainer) loadMoreContainer.style.display = 'none';
-
-        var tokens = q.split(/\s+/).filter(Boolean);
-        var matches = allOlympiadsData.filter(function(o) {
-            var hay = normalize((o.title || '') + ' ' + (o.description || '') + ' ' + (o.audience_label || '') + ' ' + (o.subject || ''));
-            return tokens.every(function(t) { return hay.indexOf(t) !== -1; });
-        });
-
-        if (matches.length === 0) {
-            grid.innerHTML = '';
-            status.style.display = '';
-            status.innerHTML = 'По запросу «' + _olEsc(q) + '» ничего не найдено. Попробуйте другие слова или <a href="#" id="olSearchResetLink" style="color:var(--indigo-600);">сбросьте поиск</a>.';
-            var rl = document.getElementById('olSearchResetLink');
-            if (rl) rl.addEventListener('click', function(e) { e.preventDefault(); input.value = ''; applyFilter(''); input.focus(); });
-            return;
-        }
-        grid.innerHTML = matches.map(renderOlympiadCard).join('');
-        status.style.display = '';
-        var n = matches.length;
-        var word = (n % 10 === 1 && n % 100 !== 11) ? 'олимпиада' : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'олимпиады' : 'олимпиад');
-        status.textContent = 'Найдено: ' + n + ' ' + word;
-    }
-
-    input.addEventListener('input', function() {
-        clearTimeout(debounceTimer);
-        var v = input.value;
-        debounceTimer = setTimeout(function() { applyFilter(v); }, 120);
-    });
-    clearBtn.addEventListener('click', function() { input.value = ''; applyFilter(''); input.focus(); });
-    input.addEventListener('keydown', function(e) { if (e.key === 'Escape' && input.value) { input.value = ''; applyFilter(''); } });
-})();
-
-// Load more
-(function() {
-    var loadMoreBtn = document.getElementById('loadMoreBtn');
-    var grid = document.getElementById('olympiadsGrid');
-    var loadMoreContainer = document.getElementById('loadMoreContainer');
-    if (!loadMoreBtn || !grid) return;
-
-    var remaining = allOlympiadsData.slice(olympiadsPerPage);
-    var currentOffset = 0;
-
-    loadMoreBtn.addEventListener('click', function() {
-        var batch = remaining.slice(currentOffset, currentOffset + olympiadsPerPage);
-        if (batch.length === 0) return;
-        loadMoreBtn.disabled = true;
-        loadMoreBtn.textContent = 'Загрузка...';
-        grid.insertAdjacentHTML('beforeend', batch.map(renderOlympiadCard).join(''));
-        currentOffset += olympiadsPerPage;
-        if (currentOffset >= remaining.length) {
-            loadMoreContainer.style.display = 'none';
-        } else {
-            loadMoreBtn.disabled = false;
-            loadMoreBtn.textContent = 'Показать больше олимпиад';
-        }
-    });
-})();
-
-// Аккордеон фильтра: клик по заголовку категории раскрывает/сворачивает её список.
-// Категории «Предмет», «Специализация», «Уровень» по умолчанию свёрнуты (класс is-open
-// проставляется на сервере только при активном выборе внутри группы).
-(function() {
-    var panel = document.getElementById('rdFiltersPanel');
-    if (!panel) return;
-    panel.addEventListener('click', function(e) {
-        var head = e.target.closest('.rd-facet-head');
-        if (!head || !panel.contains(head)) return;
-        var facet = head.closest('.rd-facet');
-        if (!facet) return;
-        var open = facet.classList.toggle('is-open');
-        head.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-})();
-</script>
 
 <?php include __DIR__ . '/includes/footer-redesign.php'; ?>

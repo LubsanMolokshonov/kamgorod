@@ -49,13 +49,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/materialy/">Материалы ФОП</a>
-      <span class="sep">/</span>
-      <strong>Адаптация</strong>
-    </div>
+
     <h1 class="rd-hero-title rd-hero-title-sm" style="margin-top:18px;">Адаптировать материал</h1>
     <p class="rd-hero-sub" style="max-width:680px;">Вставьте свой материал и опишите, как его нужно адаптировать — под ОВЗ, ФАОП, другую возрастную группу, требования ФОП-2026 или просто короче. Получите переписанную версию за 15–30 секунд.</p>
   </div>
@@ -65,7 +59,7 @@ include __DIR__ . '/../includes/header-redesign.php';
   <div class="rd-wrap mat-form-wrap">
     <?php if (!$userId): ?>
       <div class="mat-notice">
-        <a href="/vhod?return=<?= urlencode('/material-adapter/') ?>">Войдите</a>
+        <a href="/vhod/?return=<?= urlencode('/material-adapter/') ?>">Войдите</a>
         или зарегистрируйтесь — <?= UserTokens::signupBonus() ?> токенов в подарок.
       </div>
     <?php else: ?>

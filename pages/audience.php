@@ -37,7 +37,7 @@ $competitionObj  = new Competition($db);
 // Получить тип аудитории
 $audienceType = $audienceTypeObj->getBySlug($audienceSlug);
 if (!$audienceType) {
-    header('Location: /konkursy');
+    header('Location: /konkursy/');
     exit;
 }
 
@@ -133,13 +133,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 <!-- HERO каталога -->
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/konkursy/">Конкурсы</a>
-      <span class="sep">/</span>
-      <strong><?php echo htmlspecialchars($audienceType['name'], ENT_QUOTES, 'UTF-8'); ?></strong>
-    </div>
+
   </div>
   <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
     <div>

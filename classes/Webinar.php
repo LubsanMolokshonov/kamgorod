@@ -175,7 +175,7 @@ class Webinar {
         // Status filter
         if (!empty($filters['status'])) {
             if ($filters['status'] === 'upcoming') {
-                $where[] = "w.status IN ('scheduled', 'live')";
+                $where[] = "w.status IN ('scheduled', 'live') AND (w.scheduled_at >= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 3 HOUR) OR w.status = 'live')";
             } elseif ($filters['status'] === 'recordings') {
                 $where[] = "(w.status = 'videolecture' OR (w.status = 'completed' AND w.video_url IS NOT NULL))";
             } elseif ($filters['status'] === 'videolecture') {
@@ -346,7 +346,7 @@ class Webinar {
      */
     public function incrementViews($id) {
         $this->db->execute(
-            "UPDATE webinars SET views_count = views_count + 1 WHERE id = ?",
+            "UPDATE webinars SET views_count = views_count + 1, updated_at = updated_at WHERE id = ?",
             [$id]
         );
     }

@@ -218,7 +218,7 @@ document.querySelectorAll('.sub-buy').forEach(function (btn) {
         if (document.getElementById('sub-logged').value !== '1') {
             // Гость: сохраняем выбор тарифа/периода, чтобы после входа продолжить в один клик.
             try { localStorage.setItem('pending_sub_choice', JSON.stringify({ plan: btn.dataset.plan, period: subPeriod })); } catch (e) {}
-            window.location.href = '/vhod?return=' + encodeURIComponent(window.location.pathname + window.location.search);
+            window.location.href = '/vhod/?return=' + encodeURIComponent(window.location.pathname + window.location.search);
             return;
         }
         var orig = btn.textContent;
@@ -234,7 +234,7 @@ document.querySelectorAll('.sub-buy').forEach(function (btn) {
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (res.success && res.confirmation_url) { window.location.href = res.confirmation_url; return; }
-                if (res.code === 'unauthorized') { window.location.href = '/vhod?return=' + encodeURIComponent(window.location.pathname + window.location.search); return; }
+                if (res.code === 'unauthorized') { window.location.href = '/vhod/?return=' + encodeURIComponent(window.location.pathname + window.location.search); return; }
                 alert(res.error || 'Не удалось создать платёж');
                 btn.disabled = false; btn.style.opacity = '1'; btn.textContent = orig;
             })

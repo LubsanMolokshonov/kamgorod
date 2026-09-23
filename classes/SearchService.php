@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/url-helper.php';
 /**
  * SearchService - Умный поиск конкурсов и олимпиад
  * Использует TNTSearch с fallback на MySQL FULLTEXT/LIKE
@@ -607,12 +608,12 @@ class SearchService {
                 'programTypeLabel' => $programTypeLabel,
                 'category' => $course['course_group'],
                 'categoryLabel' => $programTypeLabel . ' · ' . $course['hours'] . ' ч.',
-                'url' => '/kursy/' . urlencode($course['slug']),
+                'url' => getCourseUrl($course['slug'], $course['id']),
                 'highlight' => $this->highlightMatch($course['title'], $query)
             ];
         }
 
-        return $results;
+        return array_values(array_filter($results, static fn($row) => $row['url'] !== null));
     }
 
     // ========================================

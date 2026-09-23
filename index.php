@@ -9,6 +9,7 @@ require_once __DIR__ . '/classes/AudienceType.php';
 require_once __DIR__ . '/classes/Olympiad.php';
 require_once __DIR__ . '/classes/Course.php';
 require_once __DIR__ . '/includes/session.php';
+require_once __DIR__ . '/includes/url-helper.php';
 
 $pageTitle = 'ФГОС-Практикум — конкурсы, курсы и вебинары для педагогов';
 $pageDescription = 'Всероссийский педагогический портал. Конкурсы и олимпиады с официальными дипломами, курсы повышения квалификации и публикации в зарегистрированном СМИ. Резидент Сколково.';
@@ -120,7 +121,7 @@ $offersData = [
             'title' => $c['title'],
             'meta'  => $c['hours'] . ' ч · удостоверение/сертификат',
             'price' => number_format($c['price'], 0, ',', ' ') . ' ₽',
-            'url'   => '/kursy/' . $c['slug'],
+            'url'   => getCourseUrl($c['slug'], $c['id']),
         ];
     }, $topCourses),
     'konk' => array_map(function ($c) {
@@ -180,7 +181,7 @@ include __DIR__ . '/includes/header-redesign.php';
       <h1 class="rd-hero-title reveal">Найдите конкурс, курс или вебинар <span class="accent">за пару кликов</span></h1>
       <p class="rd-hero-sub reveal">Всероссийский педагогический портал. Конкурсы и олимпиады с официальными дипломами, курсы повышения квалификации и публикации в зарегистрированном СМИ.</p>
       <div class="rd-hero-cta reveal">
-        <a href="/konkursy" class="rd-btn rd-btn-primary">Подобрать конкурс
+        <a href="/konkursy/" class="rd-btn rd-btn-primary">Подобрать конкурс
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
         <a href="/kursy/perepodgotovka/" class="rd-btn rd-btn-ghost">Все курсы профессиональной переподготовки</a>
@@ -245,7 +246,7 @@ include __DIR__ . '/includes/header-redesign.php';
       <p class="rd-section-sub">Выберите формат — и переходите к участию. Все мероприятия с подтверждением: дипломы, сертификаты, удостоверения.</p>
     </div>
     <div class="rd-feat-grid reveal-stagger">
-      <a class="rd-feat rd-feat-1 span-6" href="/konkursy">
+      <a class="rd-feat rd-feat-1 span-6" href="/konkursy/">
         <div class="rd-feat-pat"></div>
         <div class="ic">🏆</div>
         <h3>Всероссийские конкурсы</h3>
@@ -255,7 +256,7 @@ include __DIR__ . '/includes/header-redesign.php';
           <div class="rd-feat-go">→</div>
         </div>
       </a>
-      <a class="rd-feat rd-feat-2 span-6" href="/olimpiady">
+      <a class="rd-feat rd-feat-2 span-6" href="/olimpiady/">
         <div class="rd-feat-pat"></div>
         <div class="ic">🎓</div>
         <h3>Всероссийские олимпиады</h3>
@@ -265,7 +266,7 @@ include __DIR__ . '/includes/header-redesign.php';
           <div class="rd-feat-go">→</div>
         </div>
       </a>
-      <a class="rd-feat rd-feat-3" href="/vebinary">
+      <a class="rd-feat rd-feat-3" href="/vebinary/">
         <div class="rd-feat-pat"></div>
         <div class="ic">🎤</div>
         <h3>Вебинары</h3>
@@ -275,7 +276,7 @@ include __DIR__ . '/includes/header-redesign.php';
           <div class="rd-feat-go">→</div>
         </div>
       </a>
-      <a class="rd-feat rd-feat-4" href="/zhurnal">
+      <a class="rd-feat rd-feat-4" href="/zhurnal/">
         <div class="rd-feat-pat"></div>
         <div class="ic">📝</div>
         <h3>Журнал</h3>
@@ -285,7 +286,7 @@ include __DIR__ . '/includes/header-redesign.php';
           <div class="rd-feat-go">→</div>
         </div>
       </a>
-      <a class="rd-feat rd-feat-5" href="/kursy">
+      <a class="rd-feat rd-feat-5" href="/kursy/">
         <div class="rd-feat-pat"></div>
         <div class="ic">📚</div>
         <h3>Курсы повышения квалификации и переподготовки</h3>
@@ -379,7 +380,7 @@ include __DIR__ . '/includes/header-redesign.php';
   </div>
 </section>
 <script>
-window.rdOffersData = <?php echo json_encode($offersData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+window.rdOffersData = <?php $offersData['kursy'] = array_values(array_filter($offersData['kursy'], static fn($card) => !empty($card['url']))); echo json_encode($offersData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
 
 <!-- Trust band -->

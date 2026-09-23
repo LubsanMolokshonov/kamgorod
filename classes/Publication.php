@@ -192,7 +192,7 @@ class Publication {
                 LEFT JOIN publication_types pt ON p.publication_type_id = pt.id
                 LEFT JOIN users u ON p.user_id = u.id";
 
-        $wheres = ["p.status = 'published'"];
+        $wheres = ["p.status = 'published'", "(p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')"];
         $params = [];
 
         if (!empty($filters['indexable_only'])) {
@@ -336,7 +336,7 @@ class Publication {
              FROM publications p
              LEFT JOIN publication_types pt ON p.publication_type_id = pt.id
              LEFT JOIN users u ON p.user_id = u.id
-             WHERE p.status = 'published'
+             WHERE p.status = 'published' AND (p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')
              ORDER BY p.published_at DESC
              LIMIT ?",
             [$limit]
@@ -354,7 +354,7 @@ class Publication {
              FROM publications p
              LEFT JOIN publication_types pt ON p.publication_type_id = pt.id
              LEFT JOIN users u ON p.user_id = u.id
-             WHERE p.status = 'published'
+             WHERE p.status = 'published' AND (p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')
              ORDER BY p.views_count DESC
              LIMIT ?",
             [$limit]
@@ -500,7 +500,7 @@ class Publication {
      */
     public function incrementViews($id) {
         $this->db->execute(
-            "UPDATE publications SET views_count = views_count + 1 WHERE id = ?",
+            "UPDATE publications SET views_count = views_count + 1, updated_at = updated_at WHERE id = ?",
             [$id]
         );
     }
@@ -511,7 +511,7 @@ class Publication {
      */
     public function incrementDownloads($id) {
         $this->db->execute(
-            "UPDATE publications SET downloads_count = downloads_count + 1 WHERE id = ?",
+            "UPDATE publications SET downloads_count = downloads_count + 1, updated_at = updated_at WHERE id = ?",
             [$id]
         );
     }
@@ -638,7 +638,7 @@ class Publication {
      */
     public function countPublished($filters = []) {
         $sql = "SELECT COUNT(DISTINCT p.id) as total FROM publications p";
-        $wheres = ["p.status = 'published'"];
+        $wheres = ["p.status = 'published'", "(p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')"];
         $params = [];
 
         if (!empty($filters['indexable_only'])) {
@@ -694,7 +694,7 @@ class Publication {
 
     private function indexableSql(string $alias): string {
         // DATETIME в проекте записывается в Europe/Moscow, а MySQL на production работает в UTC.
-        return "{$alias}.noindex = 0 AND {$alias}.indexable_at IS NOT NULL "
+        return "({$alias}.redirect_to_slug IS NULL OR {$alias}.redirect_to_slug = '') AND {$alias}.noindex = 0 AND {$alias}.indexable_at IS NOT NULL "
             . "AND {$alias}.indexable_at <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 3 HOUR)";
     }
 
@@ -724,7 +724,7 @@ class Publication {
              LEFT JOIN users u ON p.user_id = u.id
              JOIN publication_tag_relations ptr ON p.id = ptr.publication_id
              WHERE ptr.tag_id IN ($placeholders)
-             AND p.id != ? AND p.status = 'published'
+             AND p.id != ? AND p.status = 'published' AND (p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')
              GROUP BY p.id
              ORDER BY tag_matches DESC, p.views_count DESC
              LIMIT ?",

@@ -13,6 +13,8 @@ require_once __DIR__ . '/classes/AudienceCategory.php';
 require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/url-helper.php';
 require_once __DIR__ . '/includes/seo-url.php';
+require_once __DIR__ . '/includes/catalog-seo.php';
+require_once __DIR__ . '/includes/catalog-cards.php';
 require_once __DIR__ . '/classes/CoursePriceAB.php';
 require_once __DIR__ . '/includes/installment-helper.php';
 
@@ -30,6 +32,10 @@ $selectedCategory = $_GET['ac'] ?? '';
 $selectedType     = $_GET['at'] ?? '';
 $selectedSpec     = $_GET['as'] ?? '';
 
+$catalogOptions = ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec, 'program_type' => $programType !== 'all' ? $programType : ''];
+$catalogRequest = catalogRequest($db, 'kursy', $catalogOptions);
+$catalogListing = new CatalogListing($db, 'kursy', $catalogOptions, $catalogRequest['q']);
+
 redirectToSeoUrl('kursy', [
     'program_type' => $programType !== 'all' ? $programType : '',
     'ac' => $selectedCategory,
@@ -37,7 +43,7 @@ redirectToSeoUrl('kursy', [
     'as' => $selectedSpec,
 ]);
 
-$perPage = 21;
+$perPage = CatalogListing::PAGE_SIZE;
 
 $audienceCatObj = new AudienceCategory($db);
 $audienceTypeObj = new AudienceType($db);
@@ -89,14 +95,12 @@ if (!empty($selectedType))  $filters['audience_type']     = $selectedType;
 if (!empty($selectedSpec))  $filters['specialization']    = $selectedSpec;
 if ($programType !== 'all') $filters['program_type']      = $programType;
 
-$allCourses = !empty($filters)
-    ? $courseObj->getFilteredCourses($filters)
-    : $courseObj->getActiveCourses($programType);
-
-$totalCourses = count($allCourses);
-$courses      = array_slice($allCourses, 0, $perPage);
-$hasMore      = $totalCourses > $perPage;
-$courseIdsAll = array_column($allCourses, 'id'); // id всех курсов текущего среза
+$totalCourses = $catalogListing->count();
+if ($catalogRequest['page'] > max(1, (int)ceil($totalCourses / CatalogListing::PAGE_SIZE))) catalogNotFound();
+$courses = $catalogListing->page($catalogRequest['page']);
+$courseMetadata = $catalogListing->courseMetadata();
+$courseIdsAll = array_column($courseMetadata, 'id');
+$hasMore = $totalCourses > $catalogRequest['page'] * CatalogListing::PAGE_SIZE;
 
 // Преподаватели курсов из текущей выборки (только с реальной фотографией)
 $categoryExperts = [];
@@ -217,7 +221,7 @@ if ($programType === 'kpk') {
     $heroFcTitle   = 'ФИС ФРДО';
 }
 
-$pageTitle       = $h1Text . ' 2025-2026 | ' . SITE_NAME;
+$pageTitle       = $h1Text . ' | ' . SITE_NAME;
 $pageDescription = $h1Text . '. Дистанционное обучение с удостоверением установленного образца, внесение в ФИС ФРДО.';
 
 // Canonical для /kursy/.
@@ -255,7 +259,7 @@ if (!empty($categoryExperts)) {
 }
 
 // Диапазон цен текущей выборки — для переменных FAQ.
-$coursePrices = array_filter(array_map(fn($c) => (float)($c['price'] ?? 0), $allCourses), fn($p) => $p > 0);
+$coursePrices = array_filter(array_map(fn($c) => (float)($c['price'] ?? 0), $courseMetadata), fn($p) => $p > 0);
 $landingPriceMin = !empty($coursePrices) ? number_format(min($coursePrices), 0, '', ' ') : '';
 $landingPriceMax = !empty($coursePrices) ? number_format(max($coursePrices), 0, '', ' ') : '';
 
@@ -350,13 +354,13 @@ if (!empty($landingReviews)) {
 }
 
 // ItemList: карточки текущего среза каталога (даёт краулеру URL курсов из листинга)
-if (!empty($allCourses)) {
+if (!empty($courses)) {
     $itemListElements = [];
-    foreach ($allCourses as $i => $c) {
+    foreach ($courses as $i => $c) {
         $itemListElements[] = [
             '@type'    => 'ListItem',
-            'position' => $i + 1,
-            'url'      => SITE_URL . '/kursy/' . rawurlencode($c['slug']) . '/',
+            'position' => ($catalogRequest['page'] - 1) * $perPage + $i + 1,
+            'url'      => SITE_URL . getCourseUrl($c['slug'], $c['id']),
             'name'     => $c['title'],
         ];
     }
@@ -369,45 +373,12 @@ if (!empty($allCourses)) {
     ];
 }
 
-// Хлебные крошки (видимые + BreadcrumbList JSON-LD) — динамические по выбранному срезу
-require_once __DIR__ . '/includes/breadcrumb-jsonld-helper.php';
-$courseCrumbs = [
-    ['label' => 'Главная', 'url' => '/'],
-    ['label' => 'Курсы',   'url' => '/kursy/'],
-];
-$crumbTypeSlug = ($programType !== 'all' && !empty($courseTypeUrlMap[$programType])) ? $courseTypeUrlMap[$programType] : '';
-if ($crumbTypeSlug) {
-    $courseCrumbs[] = [
-        'label' => COURSE_PROGRAM_TYPES[$programType] ?? $baseTitle,
-        'url'   => '/kursy/' . $crumbTypeSlug . '/',
-    ];
-}
-// Категория аудитории — кроме схлопнутого «pedagogi» (каноникалится на родителя)
-if ($selectedCategoryData && $canonicalCategory !== '' && !empty($selectedCategoryData['name'])) {
-    $courseCrumbs[] = [
-        'label' => $selectedCategoryData['name'],
-        'url'   => buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '', 'ac' => $selectedCategory]),
-    ];
-}
-// Уровень
-if ($selectedTypeData && !empty($selectedTypeData['name'])) {
-    $courseCrumbs[] = [
-        'label' => $selectedTypeData['name'],
-        'url'   => buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '', 'ac' => $selectedCategory, 'at' => $selectedType]),
-    ];
-}
-// Специализация (предмет)
-if ($selectedSpecData && !empty($selectedSpecData['name'])) {
-    $courseCrumbs[] = [
-        'label' => $selectedSpecData['name'],
-        'url'   => buildKursyUrl(['program_type' => $programType !== 'all' ? $programType : '', 'ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec]),
-    ];
-}
-// В JSON-LD последний элемент — текущая страница (без ссылки)
-$jsonLdCrumbs = $courseCrumbs;
-$lastCrumbIdx = count($jsonLdCrumbs) - 1;
-unset($jsonLdCrumbs[$lastCrumbIdx]['url']);
-$breadcrumbJsonLd = buildBreadcrumbJsonLd($jsonLdCrumbs);
+$catalogPolicy = catalogPolicy($db, 'kursy', $catalogOptions, $totalCourses, $catalogRequest['page']);
+$canonicalUrl = $catalogPolicy['canonical'];
+$robotsContent = $catalogRequest['q'] !== '' ? 'noindex,follow' : $catalogPolicy['robots'];
+if ($catalogRequest['page'] > 1) $pageTitle .= ' — страница ' . $catalogRequest['page'];
+$additionalJS[] = '/assets/js/catalog-pagination.js';
+$additionalCSS[] = '/assets/css/catalog-pagination.css';
 
 include __DIR__ . '/includes/header-redesign.php';
 ?>
@@ -415,16 +386,7 @@ include __DIR__ . '/includes/header-redesign.php';
 <!-- HERO каталога -->
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <?php foreach ($courseCrumbs as $ci => $crumb): ?>
-        <?php if ($ci > 0): ?><span class="sep">/</span><?php endif; ?>
-        <?php if ($ci === count($courseCrumbs) - 1 || empty($crumb['url'])): ?>
-          <strong><?php echo htmlspecialchars($crumb['label'], ENT_QUOTES, 'UTF-8'); ?></strong>
-        <?php else: ?>
-          <a href="<?php echo htmlspecialchars($crumb['url'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($crumb['label'], ENT_QUOTES, 'UTF-8'); ?></a>
-        <?php endif; ?>
-      <?php endforeach; ?>
-    </div>
+
   </div>
   <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
     <div>
@@ -605,60 +567,18 @@ include __DIR__ . '/includes/header-redesign.php';
         <?php endif; ?>
 
         <?php if (empty($courses)): ?>
+          <div id="coursesGrid" class="rd-grid"></div>
+          <?= renderCatalogPagination($catalogRequest, $totalCourses) ?>
           <div style="text-align:center;padding:60px 0;color:var(--ink-500);">
             <p style="font-size:18px;margin-bottom:16px;">Курсы не найдены</p>
             <p>Попробуйте выбрать другую категорию или <a href="/kursy/" style="color:var(--indigo-600);">сбросить фильтры</a>.</p>
           </div>
         <?php else: ?>
           <div class="rd-grid reveal-stagger" id="coursesGrid">
-            <?php foreach ($courses as $course):
-                $basePrice = (float)$course['price'];
-                $coursePT = $course['program_type'] ?? null;
-                $abPrice = CoursePriceAB::getAdjustedPrice($basePrice, $abVariant, $coursePT);
-                $itemDiscountPercent = CoursePriceAB::getDiscountPercent($abVariant, $coursePT);
-                $ptLabel = Course::getProgramTypeLabel($course['program_type']);
-                $hoursLabel = Course::formatHours($course['hours']);
-            ?>
-              <a class="rd-card" href="/kursy/<?php echo htmlspecialchars($course['slug']); ?>/" data-course-id="<?php echo $course['id']; ?>">
-                <div class="rd-card-pat"></div>
-                <div class="rd-card-tags">
-                  <span class="rd-tag indigo"><?php echo htmlspecialchars($ptLabel, ENT_QUOTES, 'UTF-8'); ?></span>
-                  <span class="rd-tag"><?php echo htmlspecialchars($hoursLabel, ENT_QUOTES, 'UTF-8'); ?></span>
-                </div>
-                <h4><?php echo htmlspecialchars($course['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
-                <div class="rd-card-meta">
-                  <?php echo htmlspecialchars(mb_substr(strip_tags($course['description'] ?? ''), 0, 120), ENT_QUOTES, 'UTF-8'); ?>…
-                </div>
-                <?php $installment = calculateInstallment($abPrice); ?>
-                <div class="rd-card-foot">
-                  <div class="rd-card-price-block">
-                    <div class="rd-price-now">
-                      <?php if ($itemDiscountPercent > 0): ?>
-                        <span class="rd-price-old"><?php echo number_format($basePrice, 0, ',', ' '); ?> ₽</span><?php echo number_format($abPrice, 0, ',', ' '); ?> ₽
-                      <?php else: ?>
-                        <?php echo number_format($abPrice, 0, ',', ' '); ?> ₽
-                      <?php endif; ?>
-                    </div>
-                    <?php if ($installment['available']): ?>
-                      <div class="rd-price-installment">
-                        <span class="rd-price-prefix">от</span><strong><?php echo formatRub($installment['monthly']); ?>/мес</strong>
-                        <span class="rd-installment-badge">рассрочка 0%</span>
-                      </div>
-                    <?php endif; ?>
-                  </div>
-                  <span class="rd-join-btn">К программе</span>
-                </div>
-              </a>
-            <?php endforeach; ?>
+            <?= renderCatalogCards('kursy', $courses) ?>
           </div>
 
-          <?php if ($hasMore): ?>
-            <div id="loadMoreContainer" style="margin-top:24px;text-align:center;">
-              <button id="loadMoreBtn" class="rd-load-more" data-offset="<?php echo $perPage; ?>">
-                Показать больше курсов
-              </button>
-            </div>
-          <?php endif; ?>
+          <?= renderCatalogPagination($catalogRequest, $totalCourses) ?>
         <?php endif; ?>
       </div>
     </div>
@@ -1097,149 +1017,6 @@ function submitConsultation(e) {
     });
 }
 
-// Полный массив всех курсов (для поиска)
-var allCoursesData = <?php echo json_encode($allCourses, JSON_UNESCAPED_UNICODE); ?>;
-var discountByType = {
-    kpk: <?php echo CoursePriceAB::getDiscountPercent($abVariant, 'kpk'); ?>,
-    pp:  <?php echo CoursePriceAB::getDiscountPercent($abVariant, 'pp'); ?>
-};
-window.COURSE_INSTALLMENT_MIN_PRICE = <?php echo (int)COURSE_INSTALLMENT_MIN_PRICE; ?>;
-window.COURSE_INSTALLMENT_MONTHS = <?php echo (int)COURSE_INSTALLMENT_MONTHS; ?>;
-
-function _coursesFmtPrice(num) { return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
-function _coursesEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
-function _coursesAbPrice(basePrice, course) {
-    var d = discountByType[course.program_type] || 0;
-    return d > 0 ? Math.round(basePrice * (1 - d / 100)) : basePrice;
-}
-function renderCourseCard(course) {
-    var desc = course.description ? course.description.replace(/<[^>]*>/g, '').substring(0, 120) + '…' : '';
-    var slug = course.slug || '';
-    var hours = (course.hours || 72) + ' ч.';
-    var ptLabel = course.program_type === 'pp' ? 'Профессиональная переподготовка' : 'Повышение квалификации';
-    var d = discountByType[course.program_type] || 0;
-    var basePrice = parseFloat(course.price) || 0;
-    var abPrice = _coursesAbPrice(basePrice, course);
-    var priceHtml = d > 0
-        ? '<span class="rd-price-old">' + _coursesFmtPrice(basePrice) + ' ₽</span>' + _coursesFmtPrice(abPrice) + ' ₽'
-        : _coursesFmtPrice(abPrice) + ' ₽';
-    var minInstallment = (window.COURSE_INSTALLMENT_MIN_PRICE || 10000);
-    var months = (window.COURSE_INSTALLMENT_MONTHS || 12);
-    var installmentHtml = '';
-    if (abPrice >= minInstallment) {
-        var monthly = Math.ceil(abPrice / months);
-        installmentHtml =
-            '<div class="rd-price-installment">' +
-              '<span class="rd-price-prefix">от</span><strong>' + _coursesFmtPrice(monthly) + ' ₽/мес</strong>' +
-              '<span class="rd-installment-badge">рассрочка 0%</span>' +
-            '</div>';
-    }
-    return '<a class="rd-card" href="/kursy/' + encodeURIComponent(slug) + '/" data-course-id="' + course.id + '">' +
-        '<div class="rd-card-pat"></div>' +
-        '<div class="rd-card-tags">' +
-          '<span class="rd-tag indigo">' + _coursesEsc(ptLabel) + '</span>' +
-          '<span class="rd-tag">' + _coursesEsc(hours) + '</span>' +
-        '</div>' +
-        '<h4>' + _coursesEsc(course.title) + '</h4>' +
-        '<div class="rd-card-meta">' + _coursesEsc(desc) + '</div>' +
-        '<div class="rd-card-foot">' +
-          '<div class="rd-card-price-block">' +
-            '<div class="rd-price-now">' + priceHtml + '</div>' +
-            installmentHtml +
-          '</div>' +
-          '<span class="rd-join-btn">К программе</span>' +
-        '</div>' +
-      '</a>';
-}
-
-// Поиск по программам
-(function() {
-    var input = document.getElementById('courseSearchInput');
-    var clearBtn = document.getElementById('courseSearchClear');
-    var status = document.getElementById('courseSearchStatus');
-    var grid = document.getElementById('coursesGrid');
-    var loadMoreContainer = document.getElementById('loadMoreContainer');
-    if (!input || !grid) return;
-
-    var originalGridHtml = null;
-    var debounceTimer = null;
-
-    function normalize(s) { return (s || '').toString().toLowerCase().replace(/ё/g, 'е').trim(); }
-
-    function applyFilter(q) {
-        q = normalize(q);
-        if (!q) {
-            if (originalGridHtml !== null) {
-                grid.innerHTML = originalGridHtml;
-                originalGridHtml = null;
-            }
-            if (loadMoreContainer) loadMoreContainer.style.display = '';
-            status.style.display = 'none';
-            clearBtn.style.display = 'none';
-            return;
-        }
-        if (originalGridHtml === null) originalGridHtml = grid.innerHTML;
-        clearBtn.style.display = '';
-        if (loadMoreContainer) loadMoreContainer.style.display = 'none';
-
-        var tokens = q.split(/\s+/).filter(Boolean);
-        var matches = allCoursesData.filter(function(c) {
-            var hay = normalize((c.title || '') + ' ' + (c.description || ''));
-            return tokens.every(function(t) { return hay.indexOf(t) !== -1; });
-        });
-
-        if (matches.length === 0) {
-            grid.innerHTML = '';
-            status.style.display = '';
-            status.innerHTML = 'По запросу «' + _coursesEsc(q) + '» ничего не найдено. Попробуйте другие слова или <a href="#" id="courseSearchResetLink" style="color:var(--indigo-600);">сбросьте поиск</a>.';
-            var rl = document.getElementById('courseSearchResetLink');
-            if (rl) rl.addEventListener('click', function(e) { e.preventDefault(); input.value = ''; applyFilter(''); input.focus(); });
-            return;
-        }
-        grid.innerHTML = matches.map(renderCourseCard).join('');
-        status.style.display = '';
-        status.textContent = 'Найдено: ' + matches.length + ' ' + (matches.length % 10 === 1 && matches.length % 100 !== 11 ? 'программа' : (matches.length % 10 >= 2 && matches.length % 10 <= 4 && (matches.length % 100 < 10 || matches.length % 100 >= 20) ? 'программы' : 'программ'));
-    }
-
-    input.addEventListener('input', function() {
-        clearTimeout(debounceTimer);
-        var v = input.value;
-        debounceTimer = setTimeout(function() { applyFilter(v); }, 120);
-    });
-    clearBtn.addEventListener('click', function() { input.value = ''; applyFilter(''); input.focus(); });
-    input.addEventListener('keydown', function(e) { if (e.key === 'Escape' && input.value) { input.value = ''; applyFilter(''); } });
-})();
-
-// Load more
-(function() {
-    var loadMoreBtn = document.getElementById('loadMoreBtn');
-    var coursesGrid = document.getElementById('coursesGrid');
-    var loadMoreContainer = document.getElementById('loadMoreContainer');
-    if (!loadMoreBtn || !coursesGrid) return;
-
-    var remainingCourses = <?php echo json_encode(array_slice($allCourses, $perPage), JSON_UNESCAPED_UNICODE); ?>;
-    var perPage = <?php echo $perPage; ?>;
-    var currentOffset = 0;
-
-    loadMoreBtn.addEventListener('click', function() {
-        var btn = this;
-        var batch = remainingCourses.slice(currentOffset, currentOffset + perPage);
-        if (batch.length === 0) return;
-        btn.disabled = true;
-        btn.textContent = 'Загрузка...';
-
-        var html = batch.map(renderCourseCard).join('');
-        coursesGrid.insertAdjacentHTML('beforeend', html);
-        currentOffset += perPage;
-
-        if (currentOffset >= remainingCourses.length) {
-            loadMoreContainer.style.display = 'none';
-        } else {
-            btn.disabled = false;
-            btn.textContent = 'Показать больше курсов';
-        }
-    });
-})();
 </script>
 
 <?php include __DIR__ . '/includes/footer-redesign.php'; ?>

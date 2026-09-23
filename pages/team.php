@@ -223,7 +223,7 @@ include __DIR__ . '/../includes/header.php';
             <?php endforeach; ?>
         </div>
         <div class="team-cta-inline">
-            <a href="/kursy" class="team-link">Смотреть курсы с этими преподавателями →</a>
+            <a href="/kursy/" class="team-link">Смотреть курсы с этими преподавателями →</a>
         </div>
     </div>
 </section>
@@ -277,7 +277,7 @@ include __DIR__ . '/../includes/header.php';
             <?php endforeach; ?>
         </div>
         <div class="team-cta-inline">
-            <a href="/vebinary" class="team-link">Смотреть вебинары и видеолекции →</a>
+            <a href="/vebinary/" class="team-link">Смотреть вебинары и видеолекции →</a>
         </div>
     </div>
 </section>
@@ -290,8 +290,8 @@ include __DIR__ . '/../includes/header.php';
             <h2>Учитесь у практиков</h2>
             <p>Курсы, вебинары и конкурсы портала ведут действующие эксперты. Присоединяйтесь.</p>
             <div class="team-cta-buttons">
-                <a href="/kursy" class="rd-btn rd-btn-primary">Выбрать курс</a>
-                <a href="/vebinary" class="rd-btn rd-btn-ghost">Записаться на вебинар</a>
+                <a href="/kursy/" class="rd-btn rd-btn-primary">Выбрать курс</a>
+                <a href="/vebinary/" class="rd-btn rd-btn-ghost">Записаться на вебинар</a>
             </div>
         </div>
     </div>

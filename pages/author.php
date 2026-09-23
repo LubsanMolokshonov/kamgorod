@@ -31,7 +31,7 @@ if (!$user || empty($publications)) {
       <div class="rd-wrap" style="text-align:center;padding:60px 0;">
         <h1 style="font:800 32px var(--font-sans);color:var(--ink-900);margin-bottom:14px;">Автор не найден</h1>
         <p style="color:var(--ink-500);margin-bottom:24px;">У этого автора пока нет опубликованных материалов.</p>
-        <a href="/zhurnal" class="rd-btn rd-btn-primary">Перейти к журналу</a>
+        <a href="/zhurnal/" class="rd-btn rd-btn-primary">Перейти к журналу</a>
       </div>
     </section>
     <?php

@@ -31,7 +31,7 @@ if ($slug) {
         exit;
     }
 } else {
-    header('Location: /zhurnal');
+    header('Location: /zhurnal/');
     exit;
 }
 
@@ -46,7 +46,7 @@ if (!$publication || $publication['status'] !== 'published') {
       <div class="rd-wrap" style="text-align:center;padding:60px 0;">
         <h1 style="font:800 32px var(--font-sans);color:var(--ink-900);margin-bottom:14px;">Публикация не найдена</h1>
         <p style="color:var(--ink-500);margin-bottom:24px;">Запрашиваемая публикация не существует или была удалена.</p>
-        <a href="/zhurnal" class="rd-btn rd-btn-primary">Перейти к журналу</a>
+        <a href="/zhurnal/" class="rd-btn rd-btn-primary">Перейти к журналу</a>
       </div>
     </section>
     <?php
@@ -77,7 +77,8 @@ $reviewStats = $reviewObj->getStats($reviewEntityType, $reviewEntityId);
 $reviewList  = $reviewObj->getApproved($reviewEntityType, $reviewEntityId, 20);
 
 // Тело статьи: чистка br-артефактов + автоматическое оглавление по <h2>/<h3>
-$articleHtml = $publication['content'] ?? '';
+require_once __DIR__ . '/../includes/url-helper.php';
+$articleHtml = normalizeContentHtml($publication['content'] ?? '');
 if ($articleHtml !== '') {
     $articleHtml = preg_replace('/<strong>\s*-\s*<br\s*\/?>\s*<\/strong>/i', '<br>&ndash;&nbsp;', $articleHtml);
     $articleHtml = preg_replace('/;\s*-\s*<br\s*\/?>/i', ';<br>&ndash;&nbsp;', $articleHtml);
@@ -168,13 +169,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 
 <section class="rd-section" style="padding:32px 0 24px;">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/zhurnal/">Журнал</a>
-      <span class="sep">/</span>
-      <strong><?php echo htmlspecialchars(mb_substr($publication['title'], 0, 80)); ?><?php echo mb_strlen($publication['title']) > 80 ? '…' : ''; ?></strong>
-    </div>
+
   </div>
 </section>
 
@@ -218,7 +213,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <?php if (!empty($tags)): ?>
         <div class="pub-tags">
           <?php foreach ($tags as $tag): ?>
-            <a href="/zhurnal?tag=<?php echo urlencode($tag['slug']); ?>" class="pub-tag"><?php echo htmlspecialchars($tag['name']); ?></a>
+            <a href="/zhurnal/?tag=<?php echo urlencode($tag['slug']); ?>" class="pub-tag"><?php echo htmlspecialchars($tag['name']); ?></a>
           <?php endforeach; ?>
         </div>
         <?php endif; ?>
@@ -255,7 +250,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <div class="pub-cta-card">
           <h3>Хотите опубликовать свой материал?</h3>
           <p>Поделитесь опытом с&nbsp;коллегами и&nbsp;получите официальное свидетельство о&nbsp;публикации.</p>
-          <a href="/opublikovat" class="rd-btn">Опубликовать статью
+          <a href="/opublikovat/" class="rd-btn">Опубликовать статью
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
           </a>
         </div>
@@ -284,7 +279,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           <ul class="rec-courses-list">
             <?php foreach ($recommendedCourses as $course): ?>
               <li class="rec-course-item">
-                <a href="/kursy/<?php echo urlencode($course['slug']); ?>/">
+                <a <?= getCourseUrl($course['slug'], $course['id']) ? 'href="' . htmlspecialchars(getCourseUrl($course['slug'], $course['id']), ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
                   <span class="rec-course-title"><?php echo htmlspecialchars($course['title'], ENT_QUOTES, 'UTF-8'); ?></span>
                   <span class="rec-course-meta"><?php echo (int)$course['hours']; ?> ч. · от <?php echo number_format((float)$course['price'], 0, '.', ' '); ?> ₽</span>
                 </a>
@@ -330,7 +325,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <p>Размещение бесплатное, свидетельство о&nbsp;публикации с&nbsp;QR — за&nbsp;5&nbsp;минут.</p>
       </div>
       <div class="actions">
-        <a href="/opublikovat" class="rd-btn rd-btn-primary">Опубликовать бесплатно</a>
+        <a href="/opublikovat/" class="rd-btn rd-btn-primary">Опубликовать бесплатно</a>
         <a href="/zhurnal/" class="rd-btn rd-btn-ghost">К каталогу</a>
       </div>
     </div>

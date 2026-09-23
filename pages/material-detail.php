@@ -34,6 +34,7 @@ $isLocked = $material && (int)$material['is_generated'] === 1 && (int)$material[
 
 $rdActivePage = 'materialy';
 $additionalCSS = [
+    '/assets/css/catalog-pagination.css',
     '/assets/css/materials.css?v=' . filemtime(__DIR__ . '/../assets/css/materials.css'),
     '/assets/css/course-card.css?v=' . filemtime(__DIR__ . '/../assets/css/course-card.css'),
 ];
@@ -72,7 +73,8 @@ $ctaCard      = $ctaCourse    ? buildCourseCardData($ctaCourse, $db)    : null;
 $inlineCard   = $inlineCourse ? buildCourseCardData($inlineCourse, $db) : null;
 
 // В locked-превью тела нет — там останется только нижний блок
-$materialHtml = $material['content'] ?? '';
+require_once __DIR__ . '/../includes/url-helper.php';
+$materialHtml = normalizeContentHtml($material['content'] ?? '', $material['title']);
 if ($materialHtml !== '' && !$isLocked && $inlineCard) {
     $materialHtml = ccInjectAfterMiddleHeading($materialHtml, renderCourseCard($inlineCard, 'inline'));
 }

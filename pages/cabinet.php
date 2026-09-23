@@ -5,6 +5,7 @@
  */
 
 session_start();
+require_once __DIR__ . '/../includes/url-helper.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
@@ -586,7 +587,7 @@ include __DIR__ . '/../includes/header.php';
                                     <span class="price-current"><?php echo $item['price']; ?> ₽</span>
                                 <?php endif; ?>
                             </div>
-                            <a href="/kursy/<?php echo htmlspecialchars($e['slug']); ?>/" class="checkout-item-link" title="Подробнее о курсе">→</a>
+                            <a <?= getCourseUrl($e['slug']) ? 'href="' . htmlspecialchars(getCourseUrl($e['slug']), ENT_QUOTES, 'UTF-8') . '"' : '' ?> class="checkout-item-link" title="Подробнее о курсе">→</a>
 
                             <?php if (!$isInstallmentRequested): ?>
                             <button type="button"
@@ -1292,7 +1293,7 @@ include __DIR__ . '/../includes/header.php';
                                                 Оформить диплом (<?php echo OLYMPIAD_DIPLOMA_PRICE; ?> ₽)
                                             </a>
                                         <?php endif; ?>
-                                        <a href="/olimpiada-test/<?php echo $result['olympiad_id']; ?>"
+                                        <a href="/olimpiada-test/<?php echo $result['olympiad_id']; ?>/"
                                            class="btn btn-outline" style="border-color: #d1d5db; color: #6b7280;">
                                             Пройти повторно
                                         </a>

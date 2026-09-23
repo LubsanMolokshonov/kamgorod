@@ -39,7 +39,7 @@ if (!$competition) {
         <div class="rd-wrap" style="text-align:center;">
           <h1 style="font:700 36px var(--font-sans);color:var(--ink-900);margin-bottom:12px;">Конкурс не найден</h1>
           <p style="color:var(--ink-500);margin-bottom:24px;">Возможно, он был удалён или перемещён.</p>
-          <a href="/konkursy" class="rd-btn rd-btn-primary">Все конкурсы</a>
+          <a href="/konkursy/" class="rd-btn rd-btn-primary">Все конкурсы</a>
         </div>
       </section>
     </main>
@@ -143,13 +143,7 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
 <!-- HERO -->
 <section class="cd-hero">
   <div class="rd-wrap">
-    <div class="cd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/konkursy">Конкурсы</a>
-      <span class="sep">/</span>
-      <strong><?php echo htmlspecialchars($competition['title']); ?></strong>
-    </div>
+
 
     <div class="cd-hero-grid">
       <div class="cd-hero-content">

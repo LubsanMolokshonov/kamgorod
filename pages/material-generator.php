@@ -57,13 +57,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <a href="/materialy/">Материалы ФОП</a>
-      <span class="sep">/</span>
-      <strong>Генератор</strong>
-    </div>
+
     <h1 class="rd-hero-title rd-hero-title-sm" style="margin-top:18px;">ИИ-генератор материалов ФОП</h1>
     <p class="rd-hero-sub" style="max-width:680px;">Выберите тип материала, заполните 3–5 полей — получите готовый файл за 30 секунд. Соответствие ФОП и ФАОП ОВЗ. Скачивание в PDF, DOCX или PPTX.</p>
 

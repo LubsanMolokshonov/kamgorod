@@ -19,7 +19,7 @@ require_once __DIR__ . '/../includes/session.php';
 
 $userId = $_SESSION['user_id'] ?? null;
 if (!$userId) {
-    header('Location: /vhod?return=' . urlencode($_SERVER['REQUEST_URI']));
+    header('Location: /vhod/?return=' . urlencode($_SERVER['REQUEST_URI']));
     exit;
 }
 

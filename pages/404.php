@@ -23,10 +23,10 @@ include __DIR__ . '/../includes/header.php';
         <p>Возможно, она была удалена, перемещена или вы перешли по неверной ссылке.</p>
         <div class="error-404-links">
             <a href="/" class="primary">На главную</a>
-            <a href="/konkursy" class="secondary">Конкурсы</a>
-            <a href="/olimpiady" class="secondary">Олимпиады</a>
-            <a href="/vebinary" class="secondary">Вебинары</a>
-            <a href="/zhurnal" class="secondary">Журнал</a>
+            <a href="/konkursy/" class="secondary">Конкурсы</a>
+            <a href="/olimpiady/" class="secondary">Олимпиады</a>
+            <a href="/vebinary/" class="secondary">Вебинары</a>
+            <a href="/zhurnal/" class="secondary">Журнал</a>
         </div>
     </div>
 </div>

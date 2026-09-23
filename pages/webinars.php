@@ -25,6 +25,10 @@ $selectedType     = $_GET['at'] ?? '';
 $selectedSpec     = $_GET['as'] ?? '';
 $status           = $_GET["status"] ?? "";
 
+require_once __DIR__ . '/../includes/catalog-seo.php';
+$catalogOptions = ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec, 'status' => $status];
+if (!catalogOptionsExist($db, $catalogOptions)) catalogNotFound();
+
 redirectToSeoUrl('vebinary', [
     'status' => $status,
     'ac' => $selectedCategory,
@@ -78,7 +82,7 @@ if (!empty($selectedSpec)) {
 }
 
 $webinars = $webinarObj->getAll($filters, 50);
-$totalWebinars = count($webinars);
+$totalWebinars = (new CatalogListing($db, 'vebinary', $catalogOptions))->count();
 $counts = $webinarObj->countByStatus();
 
 // Counts per filter — скрываем пустые пункты + noindex пустых страниц
@@ -205,17 +209,17 @@ $jsonLdArray = [buildFaqJsonLd($faqItems)];
 require_once __DIR__ . "/../includes/listing-schema-helper.php";
 $jsonLdArray[] = buildListingSchema($db, 'webinar', 'vebinary', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
 
+$catalogPolicy = catalogPolicy($db, 'vebinary', $catalogOptions, $totalWebinars);
+$canonicalUrl = $catalogPolicy['canonical'];
+$robotsContent = $catalogPolicy['robots'];
+
 include __DIR__ . "/../includes/header-redesign.php";
 ?>
 
 <!-- HERO каталога -->
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
-    <div class="rd-crumbs">
-      <a href="/">Главная</a>
-      <span class="sep">/</span>
-      <strong>Вебинары</strong>
-    </div>
+
   </div>
   <div class="rd-wrap rd-hero-grid" style="margin-top:24px;">
     <div>
