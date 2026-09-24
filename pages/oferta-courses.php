@@ -28,6 +28,7 @@ include __DIR__ . '/../includes/header.php';
 </div></section>
 <div class="terms-content">
 <nav class="terms-nav"><h3>Содержание</h3><ul>
+<li><a href="#preamble">Преамбула</a></li>
 <li><a href="#section-1">1. Применимые источники права</a></li>
 <li><a href="#section-2">2. Общие сведения о сторонах договора</a></li>
 <li><a href="#section-3">3. Предмет договора</a></li>
