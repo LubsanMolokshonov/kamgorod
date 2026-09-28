@@ -148,6 +148,44 @@ function opcReviewIdentities(int $id): array
     return $result;
 }
 
+function opcFitAboutHtml(string $html): string
+{
+    $html = OlympiadPageContent::sanitizeAboutHtml(trim($html));
+    if (OlympiadPageContent::visibleLength($html) <= OlympiadPageContent::ABOUT_MAX_LENGTH) {
+        return $html;
+    }
+
+    $plain = preg_replace('/<[^>]+>/u', ' ', $html) ?? $html;
+    $plain = html_entity_decode($plain, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $plain = trim(preg_replace('/\s+/u', ' ', $plain) ?? '');
+    $sentences = preg_split('/(?<=[.!?])\s+/u', $plain, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $selected = [];
+    foreach ($sentences as $sentence) {
+        $candidate = trim(implode(' ', array_merge($selected, [$sentence])));
+        $length = mb_strlen($candidate);
+        if ($length > OlympiadPageContent::ABOUT_MAX_LENGTH) {
+            break;
+        }
+        $selected[] = $sentence;
+        if ($length >= 1500) {
+            break;
+        }
+    }
+    $text = trim(implode(' ', $selected));
+    if (mb_strlen($text) < OlympiadPageContent::ABOUT_MIN_LENGTH) {
+        return $html;
+    }
+    return '<p>' . htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</p>';
+}
+
+function opcHasUnsupportedClaim(string $text): bool
+{
+    return (bool)preg_match(
+        '/(?:\b\d+[\s\x{00A0}]*(?:₽|руб(?:\.|\b))|\bстоимост\w*\s+(?:составляет\s+)?\d+|\b20\d{2}\b|\bлиценз\w*|\bаккредит\w*|\bгарантир\w*|\bобязательно\s+засчитывается|\bсоответствует\s+ФГОС|\bофициально\s+(?:признан\w*|подтвержд\w*))/iu',
+        $text
+    );
+}
+
 /** @return array<string,mixed> */
 function opcGenerateOne(array $source, object $ai, string $model, string $correction = ''): array
 {
@@ -187,18 +225,33 @@ function opcGenerateOne(array $source, object $ai, string $model, string $correc
     foreach ((array)($data['faq'] ?? []) as $item) {
         $answers[(string)($item['key'] ?? '')] = trim((string)($item['answer'] ?? ''));
     }
-    $faq = array_map(static fn(array $item): array => [
-        'key' => $item['key'],
-        'question' => $item['q'],
-        'answer' => $answers[$item['key']] ?? '',
-    ], $expectedFaq);
+    $normalizedTitle = OlympiadPageContent::normalizeTitle((string)$source['title']);
+    $faq = array_map(static function (array $item) use ($answers, $normalizedTitle): array {
+        $answer = $answers[$item['key']] ?? '';
+        if (opcHasUnsupportedClaim($answer)) {
+            $answer = 'По вопросу «' . $item['q'] . '» для олимпиады «' . $normalizedTitle
+                . '» ориентируйтесь на сведения, опубликованные на этой странице. '
+                . 'Если нужно уточнить конкретное условие участия или оформления документа, обратитесь в поддержку портала.';
+        }
+        return [
+            'key' => $item['key'],
+            'question' => $item['q'],
+            'answer' => $answer,
+        ];
+    }, $expectedFaq);
     $reviewTexts = [];
     foreach ((array)($data['review_examples'] ?? []) as $item) {
         $reviewTexts[(int)($item['index'] ?? -1)] = trim((string)($item['review_text'] ?? ''));
     }
     $reviews = [];
     foreach ($identities as $index => $identity) {
-        $reviews[] = $identity + ['review_text' => $reviewTexts[$index] ?? ''];
+        $reviewText = $reviewTexts[$index] ?? '';
+        if (opcHasUnsupportedClaim($reviewText)) {
+            $reviewText = 'В примере по олимпиаде «' . $normalizedTitle . '» для роли «'
+                . $identity['author_role'] . '» удобно показан понятный дистанционный формат участия. '
+                . 'Задания помогают сосредоточиться на теме, а результат можно спокойно обсудить после прохождения.';
+        }
+        $reviews[] = $identity + ['review_text' => $reviewText];
     }
     return [
         'olympiad_id' => (int)$source['id'],
@@ -206,12 +259,36 @@ function opcGenerateOne(array $source, object $ai, string $model, string $correc
         'title' => (string)$source['title'],
         'subject' => (string)$source['subject'],
         'hero_text' => trim((string)($data['hero_text'] ?? '')),
-        'about_html' => trim((string)($data['about_html'] ?? '')),
+        'about_html' => opcFitAboutHtml((string)($data['about_html'] ?? '')),
         'faq' => $faq,
         'review_examples' => $reviews,
         'generated_at' => date(DATE_ATOM),
         'model' => (string)($result['model'] ?? $model),
     ];
+}
+
+/** @return array<int,string> */
+function opcEntryDiagnostics(array $entry): array
+{
+    $diagnostics = [];
+    $hero = (string)($entry['hero_text'] ?? '');
+    $about = (string)($entry['about_html'] ?? '');
+    $diagnostics[] = 'Hero: ' . OlympiadPageContent::visibleLength($hero)
+        . ' знаков, ' . OlympiadPageContent::sentenceCount($hero) . ' предложений.';
+    $diagnostics[] = 'About: ' . OlympiadPageContent::visibleLength($about)
+        . ' видимых знаков; разрешённый HTML без атрибутов: '
+        . (OlympiadPageContent::sanitizeAboutHtml($about) === trim($about) ? 'да' : 'нет') . '.';
+    foreach ((array)($entry['faq'] ?? []) as $index => $item) {
+        $answer = (string)($item['answer'] ?? '');
+        $diagnostics[] = 'FAQ #' . ($index + 1) . ': '
+            . OlympiadPageContent::sentenceCount($answer) . ' предложений.';
+    }
+    foreach ((array)($entry['review_examples'] ?? []) as $index => $item) {
+        $review = (string)($item['review_text'] ?? '');
+        $diagnostics[] = 'Отзыв #' . ($index + 1) . ': '
+            . OlympiadPageContent::sentenceCount($review) . ' предложений.';
+    }
+    return $diagnostics;
 }
 
 function opcGenerate(string $exportPath, string $outputPath, int $limit, bool $resume, string $model): void
@@ -242,7 +319,7 @@ function opcGenerate(string $exportPath, string $outputPath, int $limit, bool $r
         }
         $correction = '';
         $entry = null;
-        for ($attempt = 1; $attempt <= 2; $attempt++) {
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
             $entry = opcGenerateOne($source, $ai, $model, $correction);
             $candidate = $plan;
             $candidate['items'] = array_values(array_filter(
@@ -255,11 +332,18 @@ function opcGenerate(string $exportPath, string $outputPath, int $limit, bool $r
                 $plan = $candidate;
                 break;
             }
-            $correction = implode("\n", array_slice($errors, 0, 20));
+            $correction = implode("\n", array_merge(
+                array_slice($errors, 0, 20),
+                opcEntryDiagnostics($entry),
+                [
+                    'Перепиши весь JSON. About обязан иметь 1400–1600 видимых знаков после удаления HTML-тегов.',
+                    'Каждый ответ FAQ и каждый отзыв обязан содержать ровно 2–3 предложения с финальными знаками препинания.',
+                ]
+            ));
             $entry = null;
         }
         if ($entry === null) {
-            throw new RuntimeException("Олимпиада {$id}: две попытки не прошли валидатор. {$correction}");
+            throw new RuntimeException("Олимпиада {$id}: пять попыток не прошли валидатор. {$correction}");
         }
         $plan['generated_at'] = date(DATE_ATOM);
         opcWriteJson($outputPath, $plan);
