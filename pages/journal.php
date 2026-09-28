@@ -159,6 +159,7 @@ $additionalCSS = [
     '/assets/css/journal-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/journal-redesign.css'),
     '/assets/css/audience-filter.css?v=' . filemtime(__DIR__ . '/../assets/css/audience-filter.css'),
     '/assets/css/publication-extras.css?v=' . filemtime(__DIR__ . '/../assets/css/publication-extras.css'),
+    '/assets/css/landing-seo.css?v=' . filemtime(__DIR__ . '/../assets/css/landing-seo.css'),
 ];
 $additionalJS = ['/assets/js/audience-filter.js?v=' . filemtime(__DIR__ . '/../assets/js/audience-filter.js')];
 $ogImage = SITE_URL . '/assets/images/og-journal.jpg';
@@ -189,8 +190,8 @@ $faqItems = [
 // чтобы разметка совпадала с видимым контентом.
 $jsonLdArray = $showLanding ? [$jsonLd, buildFaqJsonLd($faqItems)] : [$jsonLd];
 
-// Микроразметка Schema.org/Product для листинга: витрина реальных отзывов посадочной
-// (если есть) — иначе прежний generic-гибрид по всем публикациям.
+// Микроразметка Schema.org/Product: витрина с явной маркировкой ИИ-примеров,
+// а при её отсутствии — агрегат только по сохранённым reviews.
 require_once __DIR__ . '/../includes/listing-schema-helper.php';
 if (!empty($landingReviews)) {
     $jsonLdArray[] = buildLandingReviewsProductJsonLd($pageTitle, $pageDescription, $ogImage, SITE_NAME, $landingReviews);

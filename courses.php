@@ -308,8 +308,8 @@ $faqVars = [
 $faqItems = buildLandingFaq(coursesLandingFaqPool(), $pageKey, $faqVars, 6);
 $jsonLdArray = [buildFaqJsonLd($faqItems)];
 
-// Витрина отзывов каталоговой страницы: реальные отзывы курсов среза,
-// затем добивка существующими сид-отзывами посадочной (landing_reviews) до 12.
+// Витрина отзывов каталоговой страницы: пользовательские отзывы курсов среза,
+// затем добивка явно маркированными ИИ-примерами landing_reviews до 12.
 require_once __DIR__ . '/classes/Review.php';
 $reviewObj = new Review($db);
 
@@ -323,6 +323,8 @@ $landingReviews = array_map(fn($r) => [
     'rating'      => (int)$r['rating'],
     'review_text' => $r['review_text'],
     'review_date' => $r['created_at'],
+    'author_role' => $r['author_role'] ?? null,
+    'content_source' => $r['content_source'] ?? 'user',
 ], $realCourseReviews);
 
 if (count($landingReviews) < 12) {

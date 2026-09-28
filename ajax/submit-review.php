@@ -38,6 +38,7 @@ $entityType = (string)($_POST['entity_type'] ?? '');
 $entityId = (int)($_POST['entity_id'] ?? 0);
 $rating = (int)($_POST['rating'] ?? 0);
 $reviewText = trim((string)($_POST['review_text'] ?? ''));
+$authorRole = trim((string)($_POST['author_role'] ?? ''));
 
 if (!Review::isValidType($entityType) || $entityId <= 0 || $rating < 1 || $rating > 5) {
     echo json_encode(['success' => false, 'message' => 'Некорректные данные отзыва']);
@@ -50,18 +51,25 @@ $authorName = trim((string)($_POST['author_name'] ?? ''));
 
 try {
     if ($userId) {
-        $u = (new Database($db))->queryOne("SELECT full_name FROM users WHERE id = ?", [(int)$userId]);
+        $u = (new Database($db))->queryOne("SELECT full_name, profession FROM users WHERE id = ?", [(int)$userId]);
         if ($u && trim((string)$u['full_name']) !== '') {
             $authorName = trim($u['full_name']);
+        }
+        if ($authorRole === '' && $u && trim((string)($u['profession'] ?? '')) !== '') {
+            $authorRole = trim((string)$u['profession']);
         }
     }
 
     // Валидация имени и текста.
     $validator = new Validator([
         'author_name' => $authorName,
+        'author_role' => $authorRole,
         'review_text' => $reviewText,
     ]);
-    $validator->required('author_name')->maxLength('author_name', 120)->maxLength('review_text', 2000);
+    $validator->required('author_name')
+        ->maxLength('author_name', 120)
+        ->maxLength('author_role', 160)
+        ->maxLength('review_text', 2000);
     if ($validator->fails()) {
         echo json_encode(['success' => false, 'message' => $validator->getFirstError()], JSON_UNESCAPED_UNICODE);
         exit;
@@ -89,7 +97,7 @@ try {
     $reviewObj = new Review($db);
     $result = $reviewObj->submit(
         $entityType, $entityId, $rating, $reviewText,
-        $authorName, $userId, $voteToken, $_SERVER['REMOTE_ADDR'] ?? null
+        $authorName, $userId, $voteToken, $_SERVER['REMOTE_ADDR'] ?? null, $authorRole
     );
 
     if (!$result['success']) {

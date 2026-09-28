@@ -23,12 +23,15 @@ $rsCsrf = function_exists('generateCSRFToken') ? generateCSRFToken() : '';
 
 // Предзаполнение имени для залогиненного пользователя.
 $rsUserName = '';
+$rsUserRole = '';
 if (!empty($_SESSION['user_id']) && isset($db)) {
     try {
-        $rsU = (new Database($db))->queryOne("SELECT full_name FROM users WHERE id = ?", [(int)$_SESSION['user_id']]);
+        $rsU = (new Database($db))->queryOne("SELECT full_name, profession FROM users WHERE id = ?", [(int)$_SESSION['user_id']]);
         $rsUserName = $rsU ? trim((string)$rsU['full_name']) : '';
+        $rsUserRole = $rsU ? mb_substr(trim((string)($rsU['profession'] ?? '')), 0, 160) : '';
     } catch (Exception $e) {
         $rsUserName = '';
+        $rsUserRole = '';
     }
 }
 
@@ -79,6 +82,13 @@ if (!function_exists('rsRenderStars')) {
             <?php endif; ?>
         </div>
 
+        <?php
+        $rsHasAiExamples = count(array_filter($rsList, static fn($r) => ($r['content_source'] ?? 'user') === 'ai_example')) > 0;
+        if ($rsHasAiExamples):
+        ?>
+            <p class="rs-ai-disclosure">Карточки с пометкой «ИИ-пример» — смоделированные примеры впечатлений, а не сообщения реальных пользователей.</p>
+        <?php endif; ?>
+
         <!-- Форма отзыва -->
         <form class="rs-form" id="rs-form" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($rsCsrf, ENT_QUOTES, 'UTF-8') ?>">
@@ -108,6 +118,13 @@ if (!function_exists('rsRenderStars')) {
             </div>
 
             <div class="rs-field">
+                <label class="rs-label" for="rs-role">Должность или роль <span class="rs-optional">(необязательно)</span></label>
+                <input type="text" id="rs-role" name="author_role" maxlength="160"
+                       value="<?= htmlspecialchars($rsUserRole, ENT_QUOTES, 'UTF-8') ?>"
+                       placeholder="Например, воспитатель или учитель математики">
+            </div>
+
+            <div class="rs-field">
                 <label class="rs-label" for="rs-text">Отзыв <span class="rs-optional">(необязательно)</span></label>
                 <textarea id="rs-text" name="review_text" maxlength="2000" rows="4"
                           placeholder="Поделитесь впечатлением о продукте"></textarea>
@@ -128,10 +145,14 @@ if (!function_exists('rsRenderStars')) {
                 <?php foreach ($rsWithText as $idx => $r):
                     $hidden = $idx >= 5 ? ' rs-item--hidden' : '';
                     $rDate = !empty($r['created_at']) ? date('d.m.Y', strtotime($r['created_at'])) : '';
+                    $isAiExample = ($r['content_source'] ?? 'user') === 'ai_example';
+                    $displayRole = trim((string)($r['author_role'] ?? '')) ?: 'Участник';
                 ?>
-                    <li class="rs-item<?= $hidden ?>">
+                    <li class="rs-item<?= $hidden ?><?= $isAiExample ? ' rs-item--ai' : '' ?>">
                         <div class="rs-item-head">
                             <span class="rs-item-author"><?= htmlspecialchars($r['author_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                            <span class="rs-item-role"><?= htmlspecialchars($displayRole, ENT_QUOTES, 'UTF-8') ?></span>
+                            <?php if ($isAiExample): ?><span class="rs-ai-badge">ИИ-пример</span><?php endif; ?>
                             <span class="rs-stars rs-stars--item"><?= rsRenderStars((int)$r['rating']) ?></span>
                             <?php if ($rDate): ?><time class="rs-item-date"><?= $rDate ?></time><?php endif; ?>
                         </div>

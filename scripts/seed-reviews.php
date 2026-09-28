@@ -5,8 +5,8 @@
  *
  * Сами отзывы НЕ публикуются здесь: их постепенно переносит в таблицу reviews
  * cron/publish-seeded-reviews.php (ежечасно, публикует «дозревшие» строки).
- * Дрип маскирует наполнение от антиспам-эвристик Google — важна скорость
- * появления отзывов на ОДНОЙ странице, а не суммарный объём по сайту.
+ * Очередь позволяет публиковать смоделированные примеры постепенно; на сайте
+ * они всегда явно маркируются как «ИИ-пример» и не выдаются за отзывы реальных людей.
  *
  * Что делает:
  *  - берёт активные сущности 5 типов (конкурсы/олимпиады/курсы/вебинары/публикации);
@@ -18,8 +18,8 @@
  *    продуктов отзывов больше — распределение степенное, а не «всем поровну»;
  *  - на одну сущность не больше MAX_PER_ENTITY отзывов за прогон и не чаще
  *    MIN_GAP_DAYS дней;
- *  - имена авторов — реальные «Фамилия И. О.» из базы, каждое имя не более 2 раз
- *    с учётом уже опубликованных отзывов;
+ *  - авторы берутся из отдельного синтетического пула, реальные ФИО пользователей
+ *    не используются; каждая карточка получает роль и маркировку ai_example;
  *  - оценки 65% 5★ / 28% 4★ / 7% 3★ (средняя ~4.5, не «все пятёрки»);
  *  - ~50% отзывов с текстом (ИИ, OpenRouter), остальные — только звёзды;
  *    длины текстов разные: короткие / средние / развёрнутые;
@@ -98,9 +98,10 @@ if ($LOAD !== '') {
         $text = (isset($row['review_text']) && trim((string)$row['review_text']) !== '')
             ? mb_substr(trim((string)$row['review_text']), 0, 2000) : null;
         $dbw->execute(
-            "INSERT INTO review_seed_queue (entity_type, entity_id, author_name, rating, review_text, scheduled_at)
-             VALUES (?, ?, ?, ?, ?, ?)",
-            [$row['entity_type'], (int)$row['entity_id'], $row['author_name'], (int)$row['rating'], $text, $row['scheduled_at']]
+            "INSERT INTO review_seed_queue
+                (entity_type, entity_id, author_name, author_role, rating, review_text, content_source, scheduled_at)
+             VALUES (?, ?, ?, ?, ?, ?, 'ai_example', ?)",
+            [$row['entity_type'], (int)$row['entity_id'], $row['author_name'], $row['author_role'] ?? 'Педагог', (int)$row['rating'], $text, $row['scheduled_at']]
         );
         $ins++;
         if ($text !== null) $withText++;
@@ -120,7 +121,6 @@ $MAX_PER_ENTITY  = 8;   // не больше N отзывов на одну су
 $MIN_GAP_DAYS    = 21;  // минимум дней между двумя отзывами одной сущности
 $TEXT_PROB       = 50;  // % отзывов с текстом
 $AI_BATCH        = 10;  // сущностей на один вызов ИИ
-$NAME_MAX_USES   = 2;   // сколько раз одно имя может встретиться на сайте
 
 // Модели ротируем — единый стиль на 1800 отзывов выглядит синтетически.
 $AI_MODELS = [
@@ -190,60 +190,19 @@ if ($START !== '') {
 $TOTAL = (int)round($DAYS * $PER_DAY);
 echo "Горизонт: {$DAYS} дн. с " . date('Y-m-d', $startTs) . ", темп {$PER_DAY}/день → {$TOTAL} отзывов.\n";
 
-// ── Пул имён авторов: «Фамилия И. О.» из реальной базы ────────────────
-echo "Загружаю пул имён...\n";
-$fioRegex = '^[А-ЯЁ][а-яё]+ [А-ЯЁ][а-яё]+ [А-ЯЁ][а-яё]+$';
-$rawNames = $dbw->query(
-    "SELECT full_name FROM (
-        SELECT DISTINCT full_name FROM users                 WHERE full_name REGEXP ?
-        UNION
-        SELECT DISTINCT full_name FROM webinar_registrations WHERE full_name REGEXP ?
-     ) t",
-    [$fioRegex, $fioRegex]
-);
-$namePool = [];
-foreach ($rawNames as $r) {
-    $parts = preg_split('/\s+/u', trim($r['full_name']));
-    if (count($parts) < 3) continue;
-    // «Фамилия Имя Отчество» -> «Фамилия И. О.»
-    $namePool[] = $parts[0] . ' ' . mb_substr($parts[1], 0, 1) . '. ' . mb_substr($parts[2], 0, 1) . '.';
-}
-$namePool = array_values(array_unique($namePool));
-shuffle($namePool);
-if (count($namePool) < 100) {
-    fwrite(STDERR, "Слишком мало имён в пуле (" . count($namePool) . "). Прерываю.\n");
-    exit(1);
-}
-
-// Учитываем имена, уже засветившиеся в reviews и в неопубликованном хвосте очереди.
-$nameUse = [];
-foreach ($dbw->query("SELECT author_name, COUNT(*) c FROM reviews GROUP BY author_name") as $r) {
-    $nameUse[$r['author_name']] = (int)$r['c'];
-}
-foreach ($dbw->query("SELECT author_name, COUNT(*) c FROM review_seed_queue WHERE published_review_id IS NULL GROUP BY author_name") as $r) {
-    $nameUse[$r['author_name']] = ($nameUse[$r['author_name']] ?? 0) + (int)$r['c'];
-}
-$freeNames = 0;
-foreach ($namePool as $n) { $freeNames += max(0, $NAME_MAX_USES - ($nameUse[$n] ?? 0)); }
-echo "Имён в пуле: " . count($namePool) . " (свободных слотов: {$freeNames})\n";
-if ($freeNames < $TOTAL) {
-    fwrite(STDERR, "Имён не хватает на {$TOTAL} отзывов ({$freeNames} слотов). Уменьши --days/--per-day.\n");
-    exit(1);
-}
-
+// ── Отдельный синтетический пул: не используем персональные данные клиентов ──
+$namePool = ['Анна К.', 'Мария С.', 'Елена В.', 'Ольга Н.', 'Ирина П.', 'Наталья М.', 'Светлана Р.', 'Татьяна Л.'];
 $nameIdx = 0;
-$takeName = function () use (&$namePool, &$nameIdx, &$nameUse, $NAME_MAX_USES) {
-    $n = count($namePool);
-    for ($tries = 0; $tries < $n * $NAME_MAX_USES + 10; $tries++) {
-        $name = $namePool[$nameIdx % $n];
-        $nameIdx++;
-        if (($nameUse[$name] ?? 0) < $NAME_MAX_USES) {
-            $nameUse[$name] = ($nameUse[$name] ?? 0) + 1;
-            return $name;
-        }
-    }
-    return $namePool[array_rand($namePool)]; // запасной вариант (не должен срабатывать)
+$takeName = function () use (&$namePool, &$nameIdx) {
+    return $namePool[$nameIdx++ % count($namePool)];
 };
+$rolesByType = [
+    'competition' => ['Учитель', 'Воспитатель', 'Методист', 'Педагог дополнительного образования'],
+    'olympiad' => ['Учитель', 'Воспитатель', 'Методист', 'Классный руководитель'],
+    'course' => ['Учитель-предметник', 'Методист', 'Заместитель директора', 'Педагог'],
+    'webinar' => ['Педагог', 'Учитель', 'Воспитатель', 'Методист'],
+    'publication' => ['Автор методических материалов', 'Учитель', 'Воспитатель', 'Педагог'],
+];
 
 // ── Оценки 65/28/7 ────────────────────────────────────────────────────
 $pickRating = function () {
@@ -362,6 +321,8 @@ foreach ($dayOf as $i => $day) {
         'has_text'     => $hasText,
         'len'          => $len,
         'author_name'  => $takeName(),
+        'author_role'  => ($rolesByType[$type] ?? ['Педагог'])[($ent['id'] + $i) % count($rolesByType[$type] ?? ['Педагог'])],
+        'content_source' => 'ai_example',
         'review_text'  => null,
         'scheduled_at' => date('Y-m-d', $ts) . sprintf(
             ' %02d:%02d:%02d', mt_rand($HOUR_FROM, $HOUR_TO), mt_rand(0, 59), mt_rand(0, 59)
@@ -384,6 +345,8 @@ if ($DUMP !== '') {
             'label'        => $row['label'],
             'rating'       => $row['rating'],
             'author_name'  => $row['author_name'],
+            'author_role'  => $row['author_role'],
+            'content_source' => 'ai_example',
             'scheduled_at' => $row['scheduled_at'],
             'want_text'    => (bool)$row['has_text'],
             'length_hint'  => $row['len']['hint'],
@@ -430,12 +393,12 @@ if ($NO_AI) {
                     . mb_substr($r['title'], 0, 160) . "\n";
             }
 
-            $system = 'Ты пишешь короткие реалистичные отзывы от лица российских педагогов '
-                . 'об образовательном портале. Пиши живо, естественно и по-разному, без канцелярита '
-                . 'и шаблонных штампов, как пишут учителя и воспитатели в реальных отзывах.';
+            $system = 'Ты пишешь короткие смоделированные примеры впечатлений педагогов '
+                . 'об образовательном портале. Пиши живо и по-разному, без канцелярита и не утверждай, '
+                . 'что это сообщения реальных людей.';
             $user = "Тип продукта: {$label}.\n"
                 . "Ниже список позиций (индекс, оценка автора, требуемый объём и название). Для КАЖДОЙ позиции напиши "
-                . "один отзыв от лица педагога, который реально участвовал/прошёл/опубликовал.\n"
+                . "один явно смоделированный пример возможного впечатления педагога.\n"
                 . "Требования:\n"
                 . "— соблюдай указанный для позиции объём;\n"
                 . "— разнообразь длину и формулировки, не повторяй структуру;\n"
@@ -489,9 +452,10 @@ foreach ($rows as $row) {
     $text = ($row['has_text'] && $row['review_text'] !== null) ? $row['review_text'] : null;
     if (!$DRY) {
         $dbw->execute(
-            "INSERT INTO review_seed_queue (entity_type, entity_id, author_name, rating, review_text, scheduled_at)
-             VALUES (?, ?, ?, ?, ?, ?)",
-            [$row['entity_type'], $row['entity_id'], $row['author_name'], $row['rating'], $text, $row['scheduled_at']]
+            "INSERT INTO review_seed_queue
+                (entity_type, entity_id, author_name, author_role, rating, review_text, content_source, scheduled_at)
+             VALUES (?, ?, ?, ?, ?, ?, 'ai_example', ?)",
+            [$row['entity_type'], $row['entity_id'], $row['author_name'], $row['author_role'], $row['rating'], $text, $row['scheduled_at']]
         );
     }
     $ratingHist[$row['rating']]++;

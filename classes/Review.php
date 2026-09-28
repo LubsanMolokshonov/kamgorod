@@ -32,11 +32,12 @@ class Review {
      * Зарегистрировать отзыв.
      * @return array ['success'=>bool, 'already_reviewed'=>bool, 'status'=>string]
      */
-    public function submit($entityType, $entityId, $rating, $text, $authorName, $userId, $voteToken, $ip = null) {
+    public function submit($entityType, $entityId, $rating, $text, $authorName, $userId, $voteToken, $ip = null, $authorRole = null) {
         $entityId = (int)$entityId;
         $rating = (int)$rating;
         $text = trim((string)$text);
         $authorName = trim((string)$authorName);
+        $authorRole = trim((string)$authorRole);
         $voteToken = (string)$voteToken;
         $userId = $userId ? (int)$userId : null;
 
@@ -48,9 +49,9 @@ class Review {
         // INSERT IGNORE — при дубле (entity_type, entity_id, vote_token) строка не вставляется.
         $affected = $this->db->execute(
             "INSERT IGNORE INTO reviews
-                (entity_type, entity_id, user_id, author_name, rating, review_text, status, vote_token, ip_address)
-             VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)",
-            [$entityType, $entityId, $userId, $authorName, $rating, ($text === '' ? null : $text), $voteToken, $ip]
+                (entity_type, entity_id, user_id, author_name, author_role, rating, review_text, content_source, status, vote_token, ip_address)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'user', 'pending', ?, ?)",
+            [$entityType, $entityId, $userId, $authorName, ($authorRole === '' ? null : mb_substr($authorRole, 0, 160)), $rating, ($text === '' ? null : $text), $voteToken, $ip]
         );
 
         if ((int)$affected === 0) {
@@ -177,10 +178,11 @@ class Review {
         }
         $limit = max(1, min(100, (int)$limit)); // safe: приведено к int, интерполяция в LIMIT безопасна
         return $this->db->query(
-            "SELECT id, author_name, rating, review_text, created_at
+            "SELECT id, author_name, author_role, rating, review_text, content_source, created_at
              FROM reviews
              WHERE entity_type = ? AND entity_id = ? AND status = 'approved'
-             ORDER BY created_at DESC
+               AND review_text IS NOT NULL AND review_text <> ''
+             ORDER BY (content_source = 'user') DESC, created_at DESC
              LIMIT {$limit}",
             [$entityType, (int)$entityId]
         );
@@ -200,11 +202,11 @@ class Review {
         $ph  = implode(',', array_fill(0, count($ids), '?'));
         $limit = max(1, min(100, (int)$limit)); // safe: int, интерполяция в LIMIT безопасна
         return $this->db->query(
-            "SELECT id, entity_id, author_name, rating, review_text, created_at
+            "SELECT id, entity_id, author_name, author_role, rating, review_text, content_source, created_at
              FROM reviews
              WHERE entity_type = ? AND entity_id IN ($ph) AND status = 'approved'
                AND review_text IS NOT NULL AND review_text <> ''
-             ORDER BY created_at DESC
+             ORDER BY (content_source = 'user') DESC, created_at DESC
              LIMIT {$limit}",
             array_merge([$entityType], $ids)
         );
@@ -237,8 +239,8 @@ class Review {
         }
         $limit = max(1, min(500, (int)$limit)); // safe: приведено к int, интерполяция в LIMIT безопасна
         return $this->db->query(
-            "SELECT id, entity_type, entity_id, user_id, author_name, rating, review_text,
-                    status, moderation_reason, ip_address, created_at, moderated_at
+            "SELECT id, entity_type, entity_id, user_id, author_name, author_role, rating, review_text,
+                    content_source, status, moderation_reason, ip_address, created_at, moderated_at
              FROM reviews
              WHERE status = ?
              ORDER BY created_at DESC

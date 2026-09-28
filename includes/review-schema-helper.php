@@ -6,8 +6,7 @@
  * страница-деталка МЁРДЖИТ в свой существующий главный JSON-LD-узел
  * (Course/Event/Quiz/Article/LearningResource) как свойства aggregateRating и review.
  *
- * Органика-онли: при count == 0 aggregateRating НЕ выводится (пустой рейтинг
- * Google игнорирует/штрафует).
+ * Единственный источник рейтинга — сохранённые одобренные строки reviews.
  */
 
 if (!function_exists('buildAggregateRatingJsonLd')) {
@@ -69,8 +68,12 @@ if (!function_exists('buildReviewNodes')) {
                     'bestRating' => '5',
                     'worstRating' => '1',
                 ],
-                'reviewBody' => $text,
+                'reviewBody' => (($r['content_source'] ?? 'user') === 'ai_example' ? 'ИИ-пример: ' : '') . $text,
             ];
+            $authorRole = $strip($r['author_role'] ?? '');
+            if ($authorRole !== '') {
+                $node['author']['jobTitle'] = $authorRole;
+            }
             if (!empty($r['created_at'])) {
                 $node['datePublished'] = date('Y-m-d', strtotime($r['created_at']));
             }
@@ -85,23 +88,18 @@ if (!function_exists('applyReviewSchema')) {
      * Навесить aggregateRating и review[] на существующий JSON-LD-узел продукта.
      * Возвращает изменённый узел (или исходный, если отзывов нет).
      *
-     * Гибрид: если реальных одобренных отзывов нет, но передан $fallbackSeedKey,
-     * навешивается ДЕТЕРМИНИРОВАННЫЙ синтетический aggregateRating (стабильный
-     * per-entity). Без ключа сохраняется прежнее поведение «органика-онли».
+     * Рейтинг строится только по сохранённым строкам reviews. ИИ-примеры хранятся
+     * там же с content_source=ai_example и явно маркируются в reviewBody.
      *
      * @param array $node Главный JSON-LD-узел (Course/Event/Quiz/Article/...)
      * @param array $stats ['avg'=>float, 'count'=>int] из Review::getStats()
      * @param array $reviews Строки из Review::getApproved() (опционально)
-     * @param string|null $fallbackSeedKey Стабильный ключ ("$type:$id") для синтетики
+     * @param string|null $fallbackSeedKey Устаревший параметр, оставлен для совместимости вызовов
      * @return array
      */
     function applyReviewSchema(array $node, array $stats, array $reviews = [], ?string $fallbackSeedKey = null): array {
         $agg = buildAggregateRatingJsonLd($stats['avg'] ?? 0, $stats['count'] ?? 0);
         if ($agg === null) {
-            // Нет реальных отзывов: синтетический фолбэк, если задан ключ.
-            if ($fallbackSeedKey !== null && function_exists('buildSyntheticAggregateRating')) {
-                $node['aggregateRating'] = buildSyntheticAggregateRating($fallbackSeedKey);
-            }
             return $node;
         }
         $node['aggregateRating'] = $agg;

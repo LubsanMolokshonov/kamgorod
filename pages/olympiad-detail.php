@@ -88,24 +88,16 @@ $additionalCSS = [
 $testUrl = '/olimpiada-test/' . (int)$olympiad['id'] . '/';
 $groupRegistrationUrl = '/pages/group-registration.php?product_type=olympiad&product_id=' . (int)$olympiad['id'];
 
+// Уникальный контент деталки. До наполнения новой таблицы используется совместимый fallback.
+require_once __DIR__ . '/../classes/OlympiadPageContent.php';
+$olympiadPageContent = (new OlympiadPageContent($db))->get($olympiad);
+$olympiadDisplayTitle = $olympiadPageContent['title'];
+$benefitBlocks = $olympiadPageContent['benefits'];
+$stepBlocks = $olympiadPageContent['steps'];
+$faqItems = $olympiadPageContent['faq'];
+
 // FAQ-блок + микроразметка Schema.org/FAQPage.
-// Гибрид: расширенный пул (с сохранением динамики цены/подписки) → детерминированный
-// поднабор по id олимпиады + подстановка её названия ({product}). На каждой олимпиаде свой FAQ.
 require_once __DIR__ . '/../includes/faq-helper.php';
-require_once __DIR__ . '/../includes/faq-pool-helper.php';
-$faqPool = [
-    ['q' => 'Как проходит олимпиада «{product}»?', 'a' => 'Олимпиада проходит в онлайн-формате. После регистрации вам будет предложено ответить на 10 вопросов по теме. Время прохождения не ограничено. Вы увидите свой результат сразу после завершения теста.'],
-    ['q' => 'Участие в олимпиаде «{product}» действительно бесплатное?', 'a' => 'Да, участие полностью бесплатное. ' . ($pmSubscriptionOnly ? 'Именной диплом для портфолио оформляется по подписке — без поштучной оплаты.' : ('Оплата требуется только в том случае, если вы захотите получить именной диплом. Стоимость оформления диплома составляет ' . $diplomaPrice . ' руб.'))],
-    ['q' => 'Как работает акция «2+1»?', 'a' => ($pmSubscriptionOnly ? 'По подписке все дипломы для портфолио доступны без поштучной оплаты — оформляйте столько, сколько нужно, акция «2+1» не требуется.' : 'При оформлении трёх дипломов вы оплачиваете только два — третий (самый дешёвый в заказе) мы добавляем бесплатно. Акция применяется в корзине автоматически и действует на все дипломы и сертификаты вместе: олимпиады, конкурсы и вебинары можно комбинировать.')],
-    ['q' => 'Какие вопросы в олимпиаде «{product}»?', 'a' => 'Олимпиада содержит 10 вопросов в формате теста с вариантами ответов. Вопросы составлены профессиональными методистами и соответствуют тематике олимпиады.'],
-    ['q' => 'Как определяется место участника?', 'a' => 'Место определяется по количеству правильных ответов: 9–10 правильных — 1 место, 8 — 2 место, 7 — 3 место. При результате менее 7 — статус участника.'],
-    ['q' => 'Можно ли пройти олимпиаду «{product}» повторно?', 'a' => 'Да, вы можете пройти олимпиаду повторно для улучшения результата. Каждая попытка генерирует новый набор вопросов. При оформлении диплома используется лучший из результатов.'],
-    ['q' => 'Какие документы подтверждают легитимность?', 'a' => 'Портал работает на основании лицензии на образовательную деятельность № Л035-01212-59/00203856 и свидетельства о регистрации СМИ Эл. №ФС 77-74524. Также мы — резидент «Сколково». Все дипломы являются официальными документами.'],
-    ['q' => 'Кому подойдёт олимпиада «{product}»?', 'a' => 'Олимпиада рассчитана на педагогов и учеников соответствующего уровня — проверьте свои знания по теме и получите диплом для портфолио.'],
-    ['q' => 'Сколько времени занимает олимпиада «{product}»?', 'a' => 'Тест из 10 вопросов проходится за несколько минут. Время не ограничено — отвечайте в удобном темпе.'],
-    ['q' => 'Действителен ли диплом олимпиады «{product}» для аттестации?', 'a' => 'Да. Диплом выдаётся от имени зарегистрированного СМИ (Эл. №ФС 77-74524), соответствует ФГОС и учитывается при аттестации педагога.'],
-];
-$faqItems = buildLandingFaq($faqPool, 'olympiad:' . (int)$olympiad['id'], ['product' => $olympiad['title'] ?? ''], 6);
 // Отзывы продукта + микроразметка рейтинга (aggregateRating/review)
 require_once __DIR__ . '/../classes/Review.php';
 require_once __DIR__ . '/../includes/review-schema-helper.php';
@@ -119,7 +111,7 @@ require_once __DIR__ . '/../includes/rating-synthetic-helper.php';
 $reviewSeedKey = $reviewEntityType . ':' . $reviewEntityId;
 $jsonLd['image'] = $ogImage;
 $jsonLd['sku'] = syntheticSku($reviewSeedKey);
-$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList, $reviewSeedKey);
+$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList);
 $additionalCSS[] = '/assets/css/reviews.css?v=' . filemtime(__DIR__ . '/../assets/css/reviews.css');
 $additionalJS = $additionalJS ?? [];
 $additionalJS[] = '/assets/js/reviews.js?v=' . filemtime(__DIR__ . '/../assets/js/reviews.js');
@@ -152,7 +144,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <h1 class="cd-hero-title reveal"><?php echo htmlspecialchars($olympiad['title']); ?></h1>
 
         <p class="rd-hero-sub reveal" style="margin-top:18px;color:var(--ink-700);font-size:17px;line-height:1.55;">
-          <?php echo htmlspecialchars(mb_substr($olympiad['description'], 0, 220)); ?><?php echo mb_strlen($olympiad['description']) > 220 ? '…' : ''; ?>
+          <?php echo htmlspecialchars($olympiadPageContent['hero_text'], ENT_QUOTES, 'UTF-8'); ?>
         </p>
 
         <div class="cd-hero-bullets reveal-stagger">
@@ -200,23 +192,23 @@ include __DIR__ . '/../includes/header-redesign.php';
     <div class="cd-benefits-grid reveal-stagger">
       <div class="cd-benefit">
         <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
-        <h3>Дистанционный формат</h3>
-        <p>Участвуйте из любой точки России без необходимости выезда.</p>
+        <h3><?php echo htmlspecialchars($benefitBlocks['remote']['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
+        <p><?php echo htmlspecialchars($benefitBlocks['remote']['text'], ENT_QUOTES, 'UTF-8'); ?></p>
       </div>
       <div class="cd-benefit">
         <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
-        <h3>Быстрый результат</h3>
-        <p>Узнайте результат сразу после прохождения теста.</p>
+        <h3><?php echo htmlspecialchars($benefitBlocks['fast']['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
+        <p><?php echo htmlspecialchars($benefitBlocks['fast']['text'], ENT_QUOTES, 'UTF-8'); ?></p>
       </div>
       <div class="cd-benefit">
         <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg></div>
-        <h3>Официальный документ</h3>
-        <p>Диплом от издания с регистрацией СМИ для портфолио.</p>
+        <h3><?php echo htmlspecialchars($benefitBlocks['document']['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
+        <p><?php echo htmlspecialchars($benefitBlocks['document']['text'], ENT_QUOTES, 'UTF-8'); ?></p>
       </div>
       <div class="cd-benefit">
         <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg></div>
-        <h3>Бесплатное участие</h3>
-        <p>Тест бесплатный — оплата только за оформление диплома.</p>
+        <h3><?php echo htmlspecialchars($benefitBlocks['free']['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
+        <p><?php echo htmlspecialchars($benefitBlocks['free']['text'], ENT_QUOTES, 'UTF-8'); ?></p>
       </div>
     </div>
   </div>
@@ -277,55 +269,41 @@ include __DIR__ . '/../includes/header-redesign.php';
     <div class="rd-steps four reveal-stagger">
       <div class="rd-step">
         <div class="rd-step-n">1</div>
-        <h4>Регистрация</h4>
-        <p>Участие бесплатное. Укажите email и ФИО.</p>
+        <h4><?php echo htmlspecialchars($stepBlocks['registration']['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
+        <p><?php echo htmlspecialchars($stepBlocks['registration']['text'], ENT_QUOTES, 'UTF-8'); ?></p>
       </div>
       <div class="rd-step">
         <div class="rd-step-n">2</div>
-        <h4>Прохождение теста</h4>
-        <p>10 вопросов по теме олимпиады «<?php echo htmlspecialchars($olympiad['title'] ?? '', ENT_QUOTES, 'UTF-8'); ?>» в формате тестирования.</p>
+        <h4><?php echo htmlspecialchars($stepBlocks['test']['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
+        <p><?php echo htmlspecialchars($stepBlocks['test']['text'], ENT_QUOTES, 'UTF-8'); ?></p>
       </div>
       <div class="rd-step">
         <div class="rd-step-n">3</div>
-        <h4>Результат</h4>
-        <p>Узнайте свой результат и место среди участников.</p>
+        <h4><?php echo htmlspecialchars($stepBlocks['result']['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
+        <p><?php echo htmlspecialchars($stepBlocks['result']['text'], ENT_QUOTES, 'UTF-8'); ?></p>
       </div>
       <div class="rd-step">
         <div class="rd-step-n">4</div>
-        <h4>Диплом</h4>
-        <?php if ($pmSubscriptionOnly): ?>
-        <p>Оформите именной диплом для портфолио — он входит в подписку, без поштучной оплаты.</p>
-        <?php else: ?>
-        <p>Оформите именной диплом за <?php echo $diplomaPrice; ?>&nbsp;₽. По акции «2+1» каждый третий диплом&nbsp;— бесплатно.</p>
-        <?php endif; ?>
+        <h4><?php echo htmlspecialchars($stepBlocks['diploma']['title'], ENT_QUOTES, 'UTF-8'); ?></h4>
+        <p><?php echo htmlspecialchars($stepBlocks['diploma']['text'], ENT_QUOTES, 'UTF-8'); ?></p>
       </div>
     </div>
   </div>
 </section>
 
 <!-- ОБ ОЛИМПИАДЕ -->
-<?php if (!empty($olympiad['seo_content']) || !empty($olympiad['description'])): ?>
+<?php if ($olympiadPageContent['about_html'] !== ''): ?>
 <section class="rd-section">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
-      <span class="rd-eyebrow">Об олимпиаде</span>
-      <h2 class="rd-section-title">Что нужно знать</h2>
+      <span class="rd-eyebrow">О содержании</span>
+      <h2 class="rd-section-title">Об олимпиаде «<?php echo htmlspecialchars($olympiadDisplayTitle, ENT_QUOTES, 'UTF-8'); ?>»</h2>
     </div>
 
     <div class="cd-about-grid">
       <div class="reveal">
         <div class="rd-prose">
-          <?php if (!empty($olympiad['seo_content'])): ?>
-            <?php echo $olympiad['seo_content']; ?>
-          <?php else: ?>
-            <?php
-            $paragraphs = explode("\n\n", $olympiad['description']);
-            foreach ($paragraphs as $paragraph):
-                if (empty(trim($paragraph))) continue;
-            ?>
-              <p><?php echo nl2br(htmlspecialchars($paragraph)); ?></p>
-            <?php endforeach; ?>
-          <?php endif; ?>
+          <?php echo $olympiadPageContent['about_html']; ?>
         </div>
       </div>
 
@@ -436,9 +414,15 @@ $olCtaSub     = $olCtaSubs[$olCtaSeed % count($olCtaSubs)];
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
       <span class="rd-eyebrow">Вопросы</span>
-      <h2 class="rd-section-title">Вопросы и ответы</h2>
+      <h2 class="rd-section-title">Вопросы и ответы об олимпиаде «<?php echo htmlspecialchars($olympiadDisplayTitle, ENT_QUOTES, 'UTF-8'); ?>»</h2>
     </div>
-    <?php renderFaqList($faqItems, 'reveal-stagger', 'style="max-width:880px;margin:0 auto;"'); ?>
+    <?php
+    $faqRenderItems = array_map(static fn(array $item): array => [
+        'q' => htmlspecialchars($item['q'], ENT_QUOTES, 'UTF-8'),
+        'a' => nl2br(htmlspecialchars($item['a'], ENT_QUOTES, 'UTF-8')),
+    ], $faqItems);
+    renderFaqList($faqRenderItems, 'reveal-stagger', 'style="max-width:880px;margin:0 auto;"');
+    ?>
   </div>
 </section>
 

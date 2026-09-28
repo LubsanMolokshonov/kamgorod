@@ -7,7 +7,7 @@
  * берёт «дозревшие» строки (scheduled_at <= NOW(), ещё не опубликованные) и
  * переносит их в таблицу reviews со status='approved'. Расписание заложено
  * генератором (scripts/seed-reviews.php) — по разным мероприятиям, пару раз в
- * день, чтобы наполнение выглядело органично и не палилось антиспамом Google.
+ * день. Все такие карточки публикуются с явным content_source=ai_example.
  *
  * Recommended cron schedule: дважды в день (слоты 11:00 и 18:00).
  * Docker:
@@ -51,7 +51,7 @@ try {
 
     // Дозревшие строки очереди.
     $due = $dbw->query(
-        "SELECT id, entity_type, entity_id, author_name, rating, review_text, scheduled_at
+        "SELECT id, entity_type, entity_id, author_name, author_role, rating, review_text, content_source, scheduled_at
          FROM review_seed_queue
          WHERE published_review_id IS NULL AND scheduled_at <= NOW()
          ORDER BY scheduled_at
@@ -81,9 +81,9 @@ try {
         // created_at = scheduled_at — дрип как честное накопление; user_id оставляем NULL.
         $dbw->execute(
             "INSERT INTO reviews
-                (entity_type, entity_id, user_id, author_name, rating, review_text, status, moderation_reason, vote_token, ip_address, created_at, moderated_at)
-             VALUES (?, ?, NULL, ?, ?, ?, 'approved', 'seed', ?, NULL, ?, ?)",
-            [$type, $eid, $row['author_name'], (int)$row['rating'], $text, $voteToken, $row['scheduled_at'], $row['scheduled_at']]
+                (entity_type, entity_id, user_id, author_name, author_role, rating, review_text, content_source, status, moderation_reason, vote_token, ip_address, created_at, moderated_at)
+             VALUES (?, ?, NULL, ?, ?, ?, ?, 'ai_example', 'approved', 'seed', ?, NULL, ?, ?)",
+            [$type, $eid, $row['author_name'], $row['author_role'] ?: null, (int)$row['rating'], $text, $voteToken, $row['scheduled_at'], $row['scheduled_at']]
         );
         $reviewId = (int)$db->lastInsertId();
 
