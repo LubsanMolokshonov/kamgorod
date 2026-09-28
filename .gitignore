@@ -72,6 +72,7 @@ Thumbs.db
 
 # Локальные выгрузки и рабочие таблицы
 /outputs/
+/docs/exports/
 
 # Uploaded certificates and publications
 /uploads/webinars/certificates/*.pdf
