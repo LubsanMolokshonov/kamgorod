@@ -68,7 +68,7 @@ try {
             'city' => $_POST['city'] ?? '',
             'publication_date' => $_POST['publication_date'] ?? date('Y-m-d'),
             'template_id' => intval($_POST['template_id'] ?? 1),
-            'price' => 499.00
+            'price' => (float)PUBLICATION_CERTIFICATE_PRICE
         ]);
         $certificate = $certObj->getById($certificateId);
     } else {
@@ -115,7 +115,7 @@ try {
         'ecommerce' => [
             'id' => 'pub-' . $publicationId,
             'name' => $publication['title'],
-            'price' => 499,
+            'price' => (int)PUBLICATION_CERTIFICATE_PRICE,
             'category' => 'Публикации'
         ]
     ]);

@@ -87,7 +87,7 @@ try {
                 'type' => 'certificate',
                 'id' => $cert['id'],
                 'name' => $cert['publication_title'],
-                'price' => (float)($cert['price'] ?? 499),
+                'price' => (float)($cert['price'] ?? PUBLICATION_CERTIFICATE_PRICE),
                 'is_free' => false,
                 'raw_data' => $cert
             ];

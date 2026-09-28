@@ -185,7 +185,7 @@ try {
         'phone' => $phone,
         'organization' => $_POST['organization'],
         'position' => $_POST['position'] ?? '',
-        'price' => 299.00
+        'price' => (float)PUBLICATION_CERTIFICATE_PRICE
     ]);
 
     // Set session

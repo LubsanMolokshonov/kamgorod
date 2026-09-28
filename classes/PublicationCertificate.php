@@ -41,7 +41,7 @@ class PublicationCertificate {
             'organization' => $data['organization'] ?? '',
             'position' => $data['position'] ?? '',
             'certificate_number' => $certificateNumber,
-            'price' => $data['price'] ?? 499.00,
+            'price' => $data['price'] ?? (float)PUBLICATION_CERTIFICATE_PRICE,
             'status' => 'pending'
         ];
 

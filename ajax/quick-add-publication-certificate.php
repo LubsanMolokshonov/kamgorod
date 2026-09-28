@@ -78,7 +78,7 @@ try {
             'city' => $user['city'] ?? '',
             'publication_date' => date('Y-m-d'),
             'template_id' => 1,
-            'price' => 299.00,
+            'price' => (float)PUBLICATION_CERTIFICATE_PRICE,
         ]);
     } else {
         $certificateId = $certificate['id'];
@@ -97,7 +97,7 @@ try {
         'ecommerce' => [
             'id' => 'pub-' . $publicationId,
             'name' => $publication['title'] ?? '',
-            'price' => 299,
+            'price' => (int)PUBLICATION_CERTIFICATE_PRICE,
             'category' => 'Публикации',
         ],
     ]);
