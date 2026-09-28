@@ -390,12 +390,17 @@ function opcImport(string $path, bool $apply, int $batchSize, string $checkpoint
     if ($errors !== []) {
         throw new RuntimeException('Импорт заблокирован: ' . implode(' | ', array_slice($errors, 0, 10)));
     }
+    // config.php настраивает параметры сессии, поэтому в apply-режиме загружаем
+    // подключение к БД до первого вывода в STDOUT и не провоцируем CLI warnings.
+    $pdo = $apply ? opcPdo() : null;
     echo "План валиден: " . count((array)$plan['items']) . " строк.\n";
     if (!$apply) {
         echo "DRY-RUN: в БД ничего не записано. Для импорта добавьте --apply.\n";
         return;
     }
-    $pdo = opcPdo();
+    if (!$pdo instanceof PDO) {
+        throw new RuntimeException('Не удалось подключиться к БД для импорта.');
+    }
     require_once BASE_PATH . '/classes/Review.php';
     $review = new Review($pdo);
     $checkpoint = ($resume && is_file($checkpointPath)) ? opcReadJson($checkpointPath) : ['completed_ids' => []];
