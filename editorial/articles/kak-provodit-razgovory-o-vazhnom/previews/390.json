@@ -18,11 +18,11 @@
   "tables": [
     {
       "width": 320,
-      "overflow": "visible"
+      "overflow": "auto"
     },
     {
       "width": 320,
-      "overflow": "visible"
+      "overflow": "auto"
     }
   ],
   "h1": 1
