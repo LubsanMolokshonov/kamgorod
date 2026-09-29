@@ -26,6 +26,7 @@ require_once BASE_PATH . '/classes/Database.php';
 require_once BASE_PATH . '/classes/Course.php';
 require_once BASE_PATH . '/classes/CoursePriceAB.php';
 require_once BASE_PATH . '/classes/Bitrix24Integration.php';
+require_once BASE_PATH . '/classes/CourseAccessTaskQueue.php';
 
 // Lock file
 $lockFile = '/tmp/course_bitrix_cron.lock';
@@ -162,9 +163,15 @@ try {
         }
     }
 
+    // После создания недостающих сделок обработать автоплатные задачи на допуск.
+    // Ручные/синтетические Bitrix-оплаты в эту очередь не ставятся.
+    $accessTasks = (new CourseAccessTaskQueue($db, $bitrix))->processPending($BATCH_SIZE);
+    echo date('Y-m-d H:i:s') . ' - Course access tasks: '
+        . json_encode($accessTasks, JSON_UNESCAPED_UNICODE) . "\n";
+
     echo date('Y-m-d H:i:s') . " - Completed. Sent: {$sent}, Failed: {$failed}, Skipped: {$skipped}\n";
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
     echo date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n";
     error_log("Course Bitrix24 Cron Error: " . $e->getMessage());
 

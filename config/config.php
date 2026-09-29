@@ -90,6 +90,14 @@ if (!defined('MAX_COURSE_RECOMMENDATION_HOURLY_CAP')) define('MAX_COURSE_RECOMME
 if (!defined('BITRIX24_WEBHOOK_URL')) define('BITRIX24_WEBHOOK_URL', $_ENV['BITRIX24_WEBHOOK_URL'] ?? '');
 if (!defined('BITRIX24_WEBINAR_PIPELINE_ID')) define('BITRIX24_WEBINAR_PIPELINE_ID', $_ENV['BITRIX24_WEBINAR_PIPELINE_ID'] ?? 102);
 if (!defined('BITRIX24_COURSE_PIPELINE_ID')) define('BITRIX24_COURSE_PIPELINE_ID', $_ENV['BITRIX24_COURSE_PIPELINE_ID'] ?? 108);
+// Исполнитель задачи на допуск к курсу после автоплаты (Стефанович Юлия).
+// Ответственный самой сделки при этом не меняется.
+if (!defined('BITRIX24_COURSE_ACCESS_RESPONSIBLE_ID')) {
+    define('BITRIX24_COURSE_ACCESS_RESPONSIBLE_ID', (int)($_ENV['BITRIX24_COURSE_ACCESS_RESPONSIBLE_ID'] ?? 47640));
+}
+if (!defined('BITRIX24_COURSE_ACCESS_DEADLINE_MINUTES')) {
+    define('BITRIX24_COURSE_ACCESS_DEADLINE_MINUTES', max(5, (int)($_ENV['BITRIX24_COURSE_ACCESS_DEADLINE_MINUTES'] ?? 30)));
+}
 // Источники Bitrix, которыми помечаются оффлайн-сделки fgos.pro в общем funnel ЦДО:
 // 83 («ФГОС-практикум») / 87 («ФГОС-практикум ВК»). По ним считаем «нашу» оффлайн-
 // выручку (рассрочки/счета), отделяя от оффлайн-бизнеса остального холдинга.
@@ -114,7 +122,6 @@ if (!defined('BITRIX24_COURSE_STAGE_PAID')) {
 if (!defined('BITRIX24_COURSE_STAGE_PAID_LEGACY')) {
     define('BITRIX24_COURSE_STAGE_PAID_LEGACY', 'C108:UC_8RO3WZ');
 }
-
 // Bitrix24: стадии email-цепочки курсов (pipeline 108)
 if (!defined('BITRIX24_COURSE_STAGE_15MIN'))   define('BITRIX24_COURSE_STAGE_15MIN', 'C108:UC_HWWIFQ');
 if (!defined('BITRIX24_COURSE_STAGE_1H'))      define('BITRIX24_COURSE_STAGE_1H', 'C108:UC_1YOFLO');

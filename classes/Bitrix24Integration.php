@@ -12,6 +12,8 @@ class Bitrix24Integration {
     private $logFile;
     /** HTTP-код последнего вызова call() — позволяет отличить «сделка удалена» (400) от временного сбоя */
     private $lastHttpCode = null;
+    /** @var bool|null Кэш проверки scope task для текущего webhook. */
+    private $taskApiAvailable = null;
 
     public function __construct() {
         $this->webhookUrl = defined('BITRIX24_WEBHOOK_URL') ? BITRIX24_WEBHOOK_URL : '';
@@ -280,6 +282,18 @@ class Bitrix24Integration {
 
         $this->log("Failed to update deal {$dealId}: " . json_encode($result), 'error');
         return false;
+    }
+
+    /** Доступны ли tasks.task.list/add для текущего webhook. */
+    public function hasTaskApiAccess() {
+        if ($this->taskApiAvailable !== null) {
+            return $this->taskApiAvailable;
+        }
+
+        $result = $this->call('methods');
+        $methods = is_array($result['result'] ?? null) ? $result['result'] : [];
+        return $this->taskApiAvailable = in_array('tasks.task.list', $methods, true)
+            && in_array('tasks.task.add', $methods, true);
     }
 
     /**
@@ -685,6 +699,124 @@ class Bitrix24Integration {
 
     // ==================== Вспомогательные методы для курсов ====================
 
+    /** Уникальное название задачи позволяет безопасно повторять обработку очереди. */
+    public static function courseAccessTaskTitle($dealId) {
+        return 'Пустить слушателя ФГОС-практикум — сделка #' . (int)$dealId;
+    }
+
+    /**
+     * Поля REST-задачи на допуск к курсу после автоплаты.
+     *
+     * @return array<string,mixed>
+     */
+    public static function buildCourseAccessTaskFields(
+        $dealId,
+        $responsibleId,
+        $studentName = '',
+        $courseTitle = '',
+        $amount = null,
+        $orderNumber = '',
+        $deadline = null
+    ) {
+        $dealId = (int)$dealId;
+        $responsibleId = (int)$responsibleId;
+        if ($deadline === null) {
+            $deadlineMinutes = defined('BITRIX24_COURSE_ACCESS_DEADLINE_MINUTES')
+                ? max(5, (int)BITRIX24_COURSE_ACCESS_DEADLINE_MINUTES)
+                : 30;
+            $deadline = date(DATE_ATOM, time() + $deadlineMinutes * 60);
+        }
+
+        $description = ['Автоматическая оплата курса подтверждена.'];
+        if (trim((string)$studentName) !== '') {
+            $description[] = 'Клиент: ' . trim((string)$studentName);
+        }
+        if (trim((string)$courseTitle) !== '') {
+            $description[] = 'Курс: ' . trim((string)$courseTitle);
+        }
+        if ($amount !== null) {
+            $description[] = 'Сумма: ' . number_format((float)$amount, 2, ',', ' ') . ' ₽';
+        }
+        if (trim((string)$orderNumber) !== '') {
+            $description[] = 'Заказ: ' . trim((string)$orderNumber);
+        }
+        $webhookUrl = defined('BITRIX24_WEBHOOK_URL') ? (string)BITRIX24_WEBHOOK_URL : '';
+        $urlParts = parse_url($webhookUrl);
+        if (!empty($urlParts['scheme']) && !empty($urlParts['host'])) {
+            $description[] = 'Сделка: ' . $urlParts['scheme'] . '://' . $urlParts['host']
+                . '/crm/deal/details/' . $dealId . '/';
+        }
+
+        return [
+            'TITLE' => self::courseAccessTaskTitle($dealId),
+            'DESCRIPTION' => implode("\n", $description),
+            'RESPONSIBLE_ID' => $responsibleId,
+            'DEADLINE' => $deadline,
+            'UF_CRM_TASK' => ['D_' . $dealId],
+        ];
+    }
+
+    /**
+     * Найти ранее созданную интеграцией задачу.
+     *
+     * @return string|null|false ID, null если задачи нет, false при ошибке API
+     */
+    public function findCourseAccessTask($dealId) {
+        $title = self::courseAccessTaskTitle($dealId);
+        $result = $this->call('tasks.task.list', [
+            'order' => ['ID' => 'DESC'],
+            'filter' => [
+                'TITLE' => $title,
+                'UF_CRM_TASK' => 'D_' . (int)$dealId,
+            ],
+            'select' => ['ID', 'TITLE', 'UF_CRM_TASK'],
+        ]);
+
+        if ($result === null) {
+            return false;
+        }
+
+        $tasks = $result['result']['tasks'] ?? $result['result']['TASKS'] ?? [];
+        foreach (is_array($tasks) ? $tasks : [] as $task) {
+            $taskTitle = (string)($task['title'] ?? $task['TITLE'] ?? '');
+            $taskId = (string)($task['id'] ?? $task['ID'] ?? '');
+            if ($taskTitle === $title && $taskId !== '') {
+                return $taskId;
+            }
+        }
+
+        return null;
+    }
+
+    /** Создать связанную со сделкой задачу на допуск к курсу. */
+    public function createCourseAccessTask(
+        $dealId,
+        $responsibleId,
+        $studentName = '',
+        $courseTitle = '',
+        $amount = null,
+        $orderNumber = ''
+    ) {
+        $fields = self::buildCourseAccessTaskFields(
+            $dealId,
+            $responsibleId,
+            $studentName,
+            $courseTitle,
+            $amount,
+            $orderNumber
+        );
+        $result = $this->call('tasks.task.add', ['fields' => $fields]);
+        $taskId = $result['result']['task']['id'] ?? $result['result']['task']['ID'] ?? null;
+
+        if ($taskId !== null && (string)$taskId !== '') {
+            $this->log("Course access task {$taskId} created for deal {$dealId}");
+            return (string)$taskId;
+        }
+
+        $this->log("Failed to create course access task for deal {$dealId}", 'error');
+        return null;
+    }
+
     /**
      * Создать сделку для записи на курс
      * Сделка создается в воронке "Курсы" (CATEGORY_ID 108)
@@ -701,7 +833,6 @@ class Bitrix24Integration {
         if ($stageId === null) {
             $stageId = defined('BITRIX24_COURSE_STAGE_NEW') ? BITRIX24_COURSE_STAGE_NEW : 'C' . $categoryId . ':NEW';
         }
-
         $isInstallment = ($paymentInfo['payment_method'] ?? null) === 'installment';
         $title = mb_substr($course['title'], 0, 90) . ' — ' . $enrollment['full_name'];
         if ($isInstallment) {
@@ -903,7 +1034,7 @@ class Bitrix24Integration {
      * @param array $params Параметры вызова
      * @return array|null Результат или null при ошибке
      */
-    private function call($method, $params = []) {
+    protected function call($method, $params = []) {
         if (!$this->isConfigured()) {
             $this->log("Bitrix24 integration not configured", 'error');
             return null;

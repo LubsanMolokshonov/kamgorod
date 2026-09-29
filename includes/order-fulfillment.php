@@ -13,6 +13,8 @@
  *   - orders.payment_status='succeeded', paid_at;
  *   - registrations/publication_certificates/webinar_certificates/olympiad_registrations/
  *     course_enrollments → 'paid', генерация соответствующих PDF (+ supervisor);
+ *   - для source='webhook' атомарно ставит курсовые позиции в очередь задачи
+ *     на допуск (только реальный yookassa_payment_id, не bitrix:*);
  *   - снятие зарезервированных позиций корзины (removeCartItemsByOrderId).
  * После коммита (best-effort): отмена email-цепочек, проверка готовности всех документов.
  *
@@ -36,6 +38,7 @@ require_once __DIR__ . '/../classes/WebinarRegistration.php';
 require_once __DIR__ . '/../classes/Diploma.php';
 require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../classes/OlympiadDiploma.php';
+require_once __DIR__ . '/../classes/CourseAccessTaskQueue.php';
 require_once __DIR__ . '/session.php'; // removeCartItemsByOrderId()
 
 if (!function_exists('fulfillOrderItems')) {
@@ -122,6 +125,14 @@ function fulfillOrderItems(PDO $pdo, int $orderId, string $source = 'webhook', ?
             if (!empty($item['course_enrollment_id'])) {
                 $stmt = $pdo->prepare("UPDATE course_enrollments SET status = 'paid' WHERE id = ?");
                 $stmt->execute([$item['course_enrollment_id']]);
+
+                // INSERT идёт в той же транзакции, что и payment_status='succeeded':
+                // подтверждённая автоплата не может остаться без задания в очереди.
+                (new CourseAccessTaskQueue($pdo))->schedule(
+                    (int)$orderId,
+                    (int)$item['course_enrollment_id'],
+                    $source
+                );
             }
         }
 

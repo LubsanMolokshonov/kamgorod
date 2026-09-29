@@ -619,6 +619,22 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
             logWebhook('WARNING', $paymentId, "Bitrix24 course integration error: " . $e->getMessage(), '');
         }
 
+        // Если сделка уже создана/обновлена, сразу поставить Юлии задачу на допуск.
+        // При временной ошибке запись останется pending и будет повторена курсовым cron.
+        try {
+            require_once BASE_PATH . '/classes/CourseAccessTaskQueue.php';
+            $taskResult = (new CourseAccessTaskQueue($GLOBALS['db']))
+                ->processPending(50, (int)$orderId);
+            logWebhook(
+                'INFO',
+                $paymentId,
+                'Course access tasks: ' . json_encode($taskResult, JSON_UNESCAPED_UNICODE),
+                ''
+            );
+        } catch (\Throwable $e) {
+            logWebhook('WARNING', $paymentId, 'Course access task processing failed: ' . $e->getMessage(), '');
+        }
+
         // Письмо-подтверждение оплаты курса (отмену email-цепочек уже сделал fulfillOrderItems).
         try {
             require_once BASE_PATH . '/classes/CourseEmailChain.php';
