@@ -11,13 +11,14 @@
  *   - course  — позиция курса
  *   - portal  — конкурс/олимпиада/вебинар/публикация + материалы ФОП (токены)
  *
- * Выручка смешанных заказов делится пропорционально сумме price позиций каждого направления.
+ * Портальная доля смешанных заказов считается пропорционально price позиций;
+ * курсовая сумма всегда берётся из OPPORTUNITY сделки Bitrix24.
  *
  * Режимы атрибуции выручки/оплат ($basis):
- *   - 'paid'    (дефолт) — по дате оплаты orders.paid_at («по дате завершения»);
- *   - 'created' — когортный: курсовая доля заказа привязывается к дате создания
- *     заявки (course_enrollments.created_at), портальная — к orders.created_at.
- *     Оплата июля за заявку июня попадает в июнь.
+ *   - 'paid'    (дефолт): курсы — по CLOSEDATE выигранной сделки Bitrix24,
+ *     портал — по дате оплаты orders.paid_at;
+ *   - 'created': курсы — по DATE_CREATE выигранной сделки Bitrix24,
+ *     портал — когортно по orders.created_at.
  * Заявки и «создано заказов» в обоих режимах — по created_at, расходы — по дате расхода.
  *
  * Материалы ФОП (покупка токенов) идут мимо orders — отдельной веткой через
@@ -31,6 +32,10 @@ class RNPAnalytics
 {
     private Database $db;
     private \PDO $pdo;
+    private ?Bitrix24Integration $bitrix;
+    private bool $crmDealsLoaded = false;
+    private ?array $crmDeals = null;
+    private ?array $courseDealContext = null;
 
     public const CHANNELS = ['direct', 'vk', 'other'];
     public const SECTIONS = ['portal', 'course'];
@@ -44,10 +49,11 @@ class RNPAnalytics
         'other_course_cost',
     ];
 
-    public function __construct(\PDO $pdo)
+    public function __construct(\PDO $pdo, ?Bitrix24Integration $bitrix = null)
     {
         $this->pdo = $pdo;
         $this->db = new Database($pdo);
+        $this->bitrix = $bitrix;
     }
 
     /**
@@ -56,14 +62,17 @@ class RNPAnalytics
      * @param string $dateFrom 'YYYY-MM-DD'
      * @param string $dateTo   'YYYY-MM-DD'
      * @param string $granularity 'day' | 'week' | 'month'
-     * @param string $basis 'paid' — выручка по paid_at | 'created' — когортно, по дате заявки/заказа
+     * @param string $basis 'paid' — CLOSEDATE для курсов | 'created' — DATE_CREATE для курсов
      * @return array{
      *     periods: array<int, array{
      *         key: string, label: string, start: string, end: string,
      *         rows: array<string, array<string, mixed>>,
      *         total: array<string, mixed>
      *     }>,
-     *     grand_total: array<string, mixed>
+     *     grand_total: array<string, mixed>,
+     *     grand_rows: array<string, array<string, mixed>>,
+     *     course_crm: array{available: bool, count: int, revenue: float},
+     *     offline_crm: array
      * }
      */
     public function getReport(string $dateFrom, string $dateTo, string $granularity = 'day', string $basis = 'paid'): array
@@ -71,12 +80,15 @@ class RNPAnalytics
         $granularity = in_array($granularity, ['day', 'week', 'month'], true) ? $granularity : 'day';
         $basis = $basis === 'created' ? 'created' : 'paid';
 
+        // Локальные оплаты определяют только портал. Курсовая выручка целиком
+        // берётся из текущего набора выигранных сделок Bitrix24.
         $paidRows = $this->fetchOrderSplit($dateFrom, $dateTo, $basis === 'created' ? 'cohort' : 'paid_at', $granularity);
         $createdRows = $this->fetchOrderSplit($dateFrom, $dateTo, 'created_at', $granularity);
         $costs = $this->fetchCosts($dateFrom, $dateTo, $granularity);
         $leadRows = $this->fetchCourseLeads($dateFrom, $dateTo, $granularity);
         $tokenRows = $this->fetchTokenSplit($dateFrom, $dateTo, $granularity);
-        $offline   = $this->fetchOfflineCrmSplit($dateFrom, $dateTo, $granularity, $basis);
+        $courseCrm = $this->fetchCrmCourseSplit($dateFrom, $dateTo, $granularity, $basis);
+        $offline = $courseCrm['offline'];
         $periods = $this->buildPeriods($dateFrom, $dateTo, $granularity);
 
         // Индексы для быстрого слияния
@@ -84,6 +96,7 @@ class RNPAnalytics
         foreach ($paidRows as $r) {
             $paidIdx[$r['period_key']][$r['channel']][$r['section']] = $r;
         }
+        $courseCrmIdx = $courseCrm['periods'];
         $createdIdx = [];
         foreach ($createdRows as $r) {
             $createdIdx[$r['period_key']][$r['channel']][$r['section']] = $r;
@@ -111,7 +124,9 @@ class RNPAnalytics
 
             foreach (self::CHANNELS as $channel) {
                 foreach (self::SECTIONS as $section) {
-                    $paid = $paidIdx[$period['key']][$channel][$section] ?? null;
+                    $paid = $section === 'course'
+                        ? ($courseCrmIdx[$period['key']][$channel] ?? null)
+                        : ($paidIdx[$period['key']][$channel][$section] ?? null);
                     $created = $createdIdx[$period['key']][$channel][$section] ?? null;
 
                     $leadsVal = 0.0;
@@ -125,26 +140,24 @@ class RNPAnalytics
                     $tokenRevenue  = $token ? (float)$token['revenue'] : 0.0;
                     $tokenPayments = $token ? (float)$token['payments'] : 0.0;
 
-                    // Оффлайн-продажи курсов из CRM (рассрочка/счёт/консультация без
-                    // заказа на сайте). У них нет UTM, поэтому весь объём идёт в
-                    // «Другое × Курсы». Сделки, уже материализованные в orders,
-                    // исключены на уровне выборки — задвоения нет.
-                    $off = ($channel === 'other' && $section === 'course')
-                        ? ($offline['periods'][$period['key']] ?? null)
+                    // «Создано» для оффлайн-сделок без заказа сохраняем отдельно:
+                    // их нет в orders, но они должны участвовать в воронке РНП.
+                    $off = ($section === 'course')
+                        ? ($offline['periods'][$period['key']][$channel] ?? null)
                         : null;
-                    $offRevenue  = $off ? (float)$off['revenue'] : 0.0;
-                    $offPayments = $off ? (float)$off['payments'] : 0.0;
-                    $offCreated  = $off ? (float)$off['created'] : 0.0;
+                    $offCreated = $off ? (float)$off['created'] : 0.0;
+                    $financialAvailable = $section !== 'course' || $courseCrm['available'];
 
                     $cell = [
                         'channel' => $channel,
                         'section' => $section,
                         'cost' => 0.0,
-                        'revenue' => ($paid['revenue'] ?? 0.0) + $tokenRevenue + $offRevenue,
-                        'payments' => ($paid['payments'] ?? 0.0) + $tokenPayments + $offPayments,
+                        'revenue' => ($paid['revenue'] ?? 0.0) + $tokenRevenue,
+                        'payments' => ($paid['payments'] ?? 0.0) + $tokenPayments,
                         'created_orders' => ($created['orders_count'] ?? 0.0) + $tokenPayments + $offCreated,
-                        'paid_orders' => ($paid['orders_count'] ?? 0.0) + $tokenPayments + $offPayments,
+                        'paid_orders' => ($paid['orders_count'] ?? $paid['payments'] ?? 0.0) + $tokenPayments,
                         'leads' => $leadsVal,
+                        'financial_available' => $financialAvailable,
                     ];
                     $rows[$channel][$section] = $cell;
 
@@ -154,6 +167,9 @@ class RNPAnalytics
                     $grandRows[$channel][$section]['created_orders'] += $cell['created_orders'];
                     $grandRows[$channel][$section]['paid_orders'] += $cell['paid_orders'];
                     $grandRows[$channel][$section]['leads'] += $cell['leads'];
+                    if (!$financialAvailable) {
+                        $grandRows[$channel][$section]['financial_available'] = false;
+                    }
                 }
             }
 
@@ -177,13 +193,13 @@ class RNPAnalytics
 
             // Расчёт метрик и Итого по периоду
             $rows = $this->computeMetrics($rows);
-            // Информационная строка «в т.ч. Оффлайн CRM»: та же выручка, что уже
-            // доклеена в «Другое × Курсы», но показанная отдельно — чтобы сверять
-            // РНП со сделками Bitrix глазами. В суммы отчёта НЕ входит (канал 'crm'
+            // Информационная строка «в т.ч. Оффлайн CRM»: подмножество курсовой
+            // CRM-выручки без успешного заказа. В суммы отчёта НЕ входит (канал 'crm'
             // не перечислен в CHANNELS, computeMetrics его не трогает).
-            $offCell = $offline['periods'][$period['key']] ?? null;
-            $rows['cells']['crm']['course'] = $this->offlineCell($offCell);
-            if ($offCell) {
+            $offPeriod = $offline['periods'][$period['key']] ?? [];
+            $offCell = $this->sumCrmChannels($offPeriod);
+            $rows['cells']['crm']['course'] = $this->offlineCell($offCell, $courseCrm['available']);
+            if ($offCell !== null) {
                 $grandOffline['revenue']  += (float)$offCell['revenue'];
                 $grandOffline['payments'] += (float)$offCell['payments'];
                 $grandOffline['created']  += (float)$offCell['created'];
@@ -199,20 +215,19 @@ class RNPAnalytics
         }
 
         $grand = $this->computeMetrics($grandRows);
-        $grand['cells']['crm']['course'] = $this->offlineCell($grandOffline);
+        $grand['cells']['crm']['course'] = $this->offlineCell($grandOffline, $courseCrm['available']);
 
         return [
             'periods' => $report,
             'grand_total' => $grand['total'],
             'grand_rows' => $grand['cells'],
-            // Диагностика для дашборда: сколько оффлайн-сделок доклеено и жив ли Bitrix.
-            'offline_crm' => [
-                'available' => $offline['available'],
-                'count'     => $offline['count'],
-                'revenue'   => $offline['revenue'],
-                'deals'     => $offline['deals'],
-                'periods'   => $offline['periods'],
+            'course_crm' => [
+                'available' => $courseCrm['available'],
+                'count' => $courseCrm['count'],
+                'revenue' => $courseCrm['revenue'],
             ],
+            // Диагностика подмножества CRM-сделок, у которых нет успешного заказа.
+            'offline_crm' => $offline,
         ];
     }
 
@@ -247,16 +262,20 @@ class RNPAnalytics
         $cost = [];
         $profit = [];
         $cpa = [];
+        $available = $report['course_crm']['available'];
 
         foreach ($report['periods'] as $p) {
             $labels[] = $p['label'];
-            $revenue[] = round($p['total']['revenue'], 2);
+            $revenue[] = $available ? round($p['total']['revenue'], 2) : null;
             $cost[] = round($p['total']['cost'], 2);
-            $profit[] = round($p['total']['profit'], 2);
-            $cpa[] = $p['total']['payments'] > 0 ? round($p['total']['cost'] / $p['total']['payments'], 2) : null;
+            $profit[] = $available ? round($p['total']['profit'], 2) : null;
+            $cpa[] = $available && $p['total']['payments'] > 0
+                ? round($p['total']['cost'] / $p['total']['payments'], 2)
+                : null;
         }
 
         return [
+            'available' => $available,
             'labels' => $labels,
             'revenue' => $revenue,
             'cost' => $cost,
@@ -496,123 +515,244 @@ class RNPAnalytics
     }
 
     /**
-     * Оффлайн-продажи курсов из Bitrix CRM, которых нет в orders.
+     * Полная курсовая выручка из текущего набора выигранных сделок Bitrix24.
+     * Локальные orders используются только для определения канала и признака
+     * «оффлайн»: их суммы и paid_at в расчёт курсовой выручки не входят.
      *
-     * Это сделки, закрытые менеджером как WON (рассрочка, счёт, консультация без
-     * записи на сайте). Сделки, под которые уже есть оплаченный заказ на сайте —
-     * в том числе синтетические заказы `bitrix:<dealId>` — исключаются через
-     * fgosMaterializedDealIds(), иначе выручка задвоится.
-     *
-     * База времени:
-     *   - basis 'paid'    — выручка/оплаты по CLOSEDATE, «создано» по DATE_CREATE;
-     *   - basis 'created' — всё по DATE_CREATE (когортный режим).
-     *
-     * Bitrix отдаёт «наши» сделки списком в пару сотен строк, фильтр по датам на
-     * стороне API не работает (см. Bitrix24Integration::getFgosOfflineDeals), поэтому
-     * период режем здесь. Ответ кэшируется на время запроса: getReport вызывается
-     * несколько раз (дни, недели, график), ходить в API каждый раз незачем.
-     *
-     * @return array{periods: array<string, array{revenue: float, payments: float, created: float}>,
-     *               available: bool, count: int, revenue: float, deals: array}
+     * @return array{
+     *   periods: array,
+     *   available: bool,
+     *   count: int,
+     *   revenue: float,
+     *   offline: array{periods: array, available: bool, count: int, revenue: float, deals: array}
+     * }
      */
-    private function fetchOfflineCrmSplit(string $dateFrom, string $dateTo, string $granularity, string $basis): array
+    private function fetchCrmCourseSplit(string $dateFrom, string $dateTo, string $granularity, string $basis): array
     {
-        $empty = ['periods' => [], 'available' => true, 'count' => 0, 'revenue' => 0.0, 'deals' => []];
-
-        $deals = $this->loadOfflineCrmDeals();
+        $unavailableOffline = [
+            'periods' => [], 'available' => false, 'count' => 0, 'revenue' => 0.0, 'deals' => [],
+        ];
+        $deals = $this->loadWonCrmDeals();
         if ($deals === null) {
-            // Bitrix недоступен — не занижаем цифры молча, дашборд покажет предупреждение.
-            return ['periods' => [], 'available' => false, 'count' => 0, 'revenue' => 0.0, 'deals' => []];
-        }
-        if (!$deals) {
-            return $empty;
+            return [
+                'periods' => [], 'available' => false, 'count' => 0, 'revenue' => 0.0,
+                'offline' => $unavailableOffline,
+            ];
         }
 
-        $periods  = [];
-        $count    = 0;
-        $revenue  = 0.0;
-        $inPeriod = [];
+        $context = $this->loadCourseDealContext();
+        $periods = [];
+        $offlinePeriods = [];
+        $count = 0;
+        $revenue = 0.0;
+        $offlineCount = 0;
+        $offlineRevenue = 0.0;
+        $offlineDeals = [];
+        $seen = [];
 
         foreach ($deals as $deal) {
-            $closed  = $deal['closedate'];
-            $created = $deal['created'];
-            $amount  = (float)$deal['revenue'];
+            $dealId = (int)($deal['id'] ?? 0);
+            if ($dealId <= 0 || isset($seen[$dealId])) {
+                continue;
+            }
+            $seen[$dealId] = true;
 
-            // Выручка/оплаты
+            $closed = (string)($deal['closedate'] ?? '');
+            $created = (string)($deal['created'] ?? '');
+            $amount = (float)($deal['revenue'] ?? 0.0);
+            $dealContext = $context[$dealId] ?? ['channel' => 'other', 'has_paid_order' => false];
+            $channel = in_array($dealContext['channel'], self::CHANNELS, true)
+                ? $dealContext['channel']
+                : 'other';
+            $isOffline = empty($dealContext['has_paid_order']);
             $revenueDate = $basis === 'created' ? $created : $closed;
+
             if ($revenueDate !== '' && $revenueDate >= $dateFrom && $revenueDate <= $dateTo) {
                 $key = $this->periodKeyForDate($revenueDate, $granularity);
-                $this->initOfflinePeriod($periods, $key);
-                $periods[$key]['revenue']  += $amount;
-                $periods[$key]['payments'] += $amount > 0 ? 1 : 0;
+                $this->initCrmPeriod($periods, $key, $channel);
+                $periods[$key][$channel]['revenue'] += $amount;
+                if ($amount > 0) {
+                    $periods[$key][$channel]['payments'] += 1;
+                    $periods[$key][$channel]['orders_count'] += 1;
+                }
                 $count++;
                 $revenue += $amount;
-                $inPeriod[] = $deal;
+
+                if ($isOffline) {
+                    $this->initCrmPeriod($offlinePeriods, $key, $channel);
+                    $offlinePeriods[$key][$channel]['revenue'] += $amount;
+                    if ($amount > 0) {
+                        $offlinePeriods[$key][$channel]['payments'] += 1;
+                        $offlinePeriods[$key][$channel]['orders_count'] += 1;
+                    }
+                    $offlineCount++;
+                    $offlineRevenue += $amount;
+                    $offlineDeals[] = $deal;
+                }
             }
 
-            // «Создано» — всегда по дате создания сделки.
-            if ($created !== '' && $created >= $dateFrom && $created <= $dateTo) {
+            // Для оффлайн-сделок «создано» всегда относится к DATE_CREATE,
+            // независимо от выбранного режима выручки.
+            if ($isOffline && $created !== '' && $created >= $dateFrom && $created <= $dateTo) {
                 $key = $this->periodKeyForDate($created, $granularity);
-                $this->initOfflinePeriod($periods, $key);
-                $periods[$key]['created'] += 1;
+                $this->initCrmPeriod($offlinePeriods, $key, $channel);
+                $offlinePeriods[$key][$channel]['created'] += 1;
             }
         }
 
         return [
-            'periods'   => $periods,
+            'periods' => $periods,
             'available' => true,
-            'count'     => $count,
-            'revenue'   => $revenue,
-            'deals'     => $inPeriod,
+            'count' => $count,
+            'revenue' => $revenue,
+            'offline' => [
+                'periods' => $offlinePeriods,
+                'available' => true,
+                'count' => $offlineCount,
+                'revenue' => $offlineRevenue,
+                'deals' => $offlineDeals,
+            ],
         ];
     }
 
-    /**
-     * Список «наших» WON-сделок из CRM без заказа на сайте. null — Bitrix недоступен.
-     * Кэшируется в пределах запроса.
-     */
-    private function loadOfflineCrmDeals(): ?array
+    /** @return array<int,array>|null null означает недоступность Bitrix24. */
+    private function loadWonCrmDeals(): ?array
     {
-        static $cache = null;
-        static $loaded = false;
-
-        if ($loaded) {
-            return $cache;
+        if ($this->crmDealsLoaded) {
+            return $this->crmDeals;
         }
-        $loaded = true;
+        $this->crmDealsLoaded = true;
 
         try {
-            require_once __DIR__ . '/Bitrix24Integration.php';
-            require_once __DIR__ . '/../includes/offline-order-helper.php';
-
-            $bitrix = new \Bitrix24Integration();
-            if (!$bitrix->isConfigured()) {
-                return $cache = [];
+            if ($this->bitrix === null) {
+                require_once __DIR__ . '/Bitrix24Integration.php';
+                $this->bitrix = new Bitrix24Integration();
             }
-
-            // Период берём заведомо широкий — фильтрация по датам идёт в вызывающем
-            // методе, а список «наших» сделок целиком укладывается в пару страниц.
-            $result = $bitrix->getFgosOfflineDeals(
-                '2000-01-01',
-                '2100-01-01',
-                fgosMaterializedDealIds($this->db)
-            );
-
-            if ($result['count'] === null) {
-                return $cache = null; // ошибка API
+            if (!$this->bitrix->isConfigured()) {
+                return $this->crmDeals = null;
             }
-            return $cache = $result['deals'];
+            return $this->crmDeals = $this->bitrix->getFgosWonDeals();
         } catch (\Throwable $e) {
-            error_log('[rnp] оффлайн-сделки CRM недоступны: ' . $e->getMessage());
-            return $cache = null;
+            error_log('[rnp] выигранные сделки CRM недоступны: ' . $e->getMessage());
+            return $this->crmDeals = null;
         }
     }
 
-    private function initOfflinePeriod(array &$periods, string $key): void
+    /**
+     * Канал и наличие успешного заказа для каждой сделки, связанной с сайтом.
+     * Приоритет источника: последний успешный заказ → заявка на курс → консультация.
+     *
+     * @return array<int,array{channel:string,has_paid_order:bool}>
+     */
+    private function loadCourseDealContext(): array
     {
-        if (!isset($periods[$key])) {
-            $periods[$key] = ['revenue' => 0.0, 'payments' => 0.0, 'created' => 0.0];
+        if ($this->courseDealContext !== null) {
+            return $this->courseDealContext;
         }
+
+        $context = [];
+        $rows = $this->db->query(
+            "SELECT ce.bitrix_lead_id AS deal_id,
+                    ce.utm_source AS enrollment_utm_source,
+                    o.id AS order_id,
+                    o.utm_source AS order_utm_source
+             FROM course_enrollments ce
+             LEFT JOIN order_items oi ON oi.course_enrollment_id = ce.id
+             LEFT JOIN orders o ON o.id = oi.order_id AND o.payment_status = 'succeeded'
+             WHERE ce.bitrix_lead_id IS NOT NULL
+             ORDER BY ce.bitrix_lead_id, o.paid_at DESC, o.id DESC"
+        );
+        foreach ($rows as $row) {
+            $dealId = (int)$row['deal_id'];
+            if ($dealId <= 0) {
+                continue;
+            }
+            if (!isset($context[$dealId])) {
+                $source = trim((string)($row['order_utm_source'] ?: $row['enrollment_utm_source']));
+                $context[$dealId] = [
+                    'channel' => $this->channelForSource($source),
+                    'has_paid_order' => !empty($row['order_id']),
+                ];
+            } elseif (!empty($row['order_id'])) {
+                $context[$dealId]['has_paid_order'] = true;
+            }
+        }
+
+        // Синтетический заказ может пережить отвязку заявки. Маркер bitrix:<id>
+        // остаётся надёжной связью и не даёт пометить такую сделку как оффлайн.
+        $markedOrders = $this->db->query(
+            "SELECT yookassa_payment_id, utm_source
+             FROM orders
+             WHERE payment_status = 'succeeded'
+               AND yookassa_payment_id LIKE 'bitrix:%'"
+        );
+        foreach ($markedOrders as $row) {
+            $dealId = (int)substr((string)$row['yookassa_payment_id'], 7);
+            if ($dealId <= 0) {
+                continue;
+            }
+            if (!isset($context[$dealId])) {
+                $context[$dealId] = [
+                    'channel' => $this->channelForSource((string)$row['utm_source']),
+                    'has_paid_order' => true,
+                ];
+            } else {
+                $context[$dealId]['has_paid_order'] = true;
+            }
+        }
+
+        $consultations = $this->db->query(
+            "SELECT bitrix_lead_id AS deal_id, utm_source
+             FROM course_consultations
+             WHERE bitrix_lead_id IS NOT NULL"
+        );
+        foreach ($consultations as $row) {
+            $dealId = (int)$row['deal_id'];
+            if ($dealId > 0 && !isset($context[$dealId])) {
+                $context[$dealId] = [
+                    'channel' => $this->channelForSource((string)$row['utm_source']),
+                    'has_paid_order' => false,
+                ];
+            }
+        }
+
+        return $this->courseDealContext = $context;
+    }
+
+    private function channelForSource(string $source): string
+    {
+        $source = mb_strtolower(trim($source));
+        if (str_starts_with($source, 'yandex') || str_starts_with($source, 'ya')) {
+            return 'direct';
+        }
+        if (str_starts_with($source, 'vk')) {
+            return 'vk';
+        }
+        return 'other';
+    }
+
+    private function initCrmPeriod(array &$periods, string $key, string $channel): void
+    {
+        if (!isset($periods[$key][$channel])) {
+            $periods[$key][$channel] = [
+                'revenue' => 0.0, 'payments' => 0.0, 'orders_count' => 0.0, 'created' => 0.0,
+            ];
+        }
+    }
+
+    /** @return array{revenue:float,payments:float,created:float}|null */
+    private function sumCrmChannels(array $channels): ?array
+    {
+        if (!$channels) {
+            return null;
+        }
+        $sum = ['revenue' => 0.0, 'payments' => 0.0, 'created' => 0.0];
+        foreach ($channels as $cell) {
+            $sum['revenue'] += (float)($cell['revenue'] ?? 0.0);
+            $sum['payments'] += (float)($cell['payments'] ?? 0.0);
+            $sum['created'] += (float)($cell['created'] ?? 0.0);
+        }
+        return $sum;
     }
 
     /**
@@ -741,13 +881,11 @@ class RNPAnalytics
     /**
      * Ячейка информационной строки «в т.ч. Оффлайн CRM» (канал 'crm' × 'course').
      *
-     * Дублирует часть «Другое × Курсы», поэтому ни в какие суммы не включается —
-     * в admin/rnp/index.php эта группа выводится отдельной строкой и не входит
-     * ни в один rnpSumChannels().
+     * Дублирует часть курсовой выручки, поэтому ни в какие суммы не включается.
      *
      * @param array{revenue: float, payments: float, created: float}|null $off
      */
-    private function offlineCell(?array $off): array
+    private function offlineCell(?array $off, bool $available = true): array
     {
         $revenue  = $off ? (float)$off['revenue'] : 0.0;
         $payments = $off ? (float)$off['payments'] : 0.0;
@@ -762,11 +900,12 @@ class RNPAnalytics
             'created_orders' => $created,
             'paid_orders' => $payments,
             'leads' => 0.0,
+            'financial_available' => $available,
             'cpa' => null,          // расхода у оффлайн-сделок нет
-            'avg_check' => $payments > 0 ? $revenue / $payments : null,
-            'profit' => $revenue,
+            'avg_check' => $available && $payments > 0 ? $revenue / $payments : null,
+            'profit' => $available ? $revenue : null,
             'romi' => null,
-            'conversion' => $created > 0 ? $payments / $created : null,
+            'conversion' => $available && $created > 0 ? $payments / $created : null,
             'lead_cost' => null,
         ];
     }
@@ -788,6 +927,7 @@ class RNPAnalytics
                     'created_orders' => 0.0,
                     'paid_orders' => 0.0,
                     'leads' => 0.0,
+                    'financial_available' => true,
                 ];
             }
         }
@@ -804,33 +944,40 @@ class RNPAnalytics
         $total = [
             'cost' => 0.0, 'revenue' => 0.0, 'payments' => 0.0,
             'created_orders' => 0.0, 'paid_orders' => 0.0, 'leads' => 0.0,
+            'financial_available' => true,
         ];
 
         foreach (self::CHANNELS as $ch) {
             foreach (self::SECTIONS as $sec) {
                 $cell = $matrix[$ch][$sec];
-                $cell['cpa'] = $cell['payments'] > 0 ? $cell['cost'] / $cell['payments'] : null;
-                $cell['avg_check'] = $cell['payments'] > 0 ? $cell['revenue'] / $cell['payments'] : null;
-                $cell['profit'] = $cell['revenue'] - $cell['cost'];
-                $cell['romi'] = $cell['cost'] > 0 ? ($cell['revenue'] - $cell['cost']) / $cell['cost'] : null;
-                $cell['conversion'] = $cell['created_orders'] > 0 ? $cell['paid_orders'] / $cell['created_orders'] : null;
+                $available = $cell['financial_available'] ?? true;
+                $cell['cpa'] = $available && $cell['payments'] > 0 ? $cell['cost'] / $cell['payments'] : null;
+                $cell['avg_check'] = $available && $cell['payments'] > 0 ? $cell['revenue'] / $cell['payments'] : null;
+                $cell['profit'] = $available ? $cell['revenue'] - $cell['cost'] : null;
+                $cell['romi'] = $available && $cell['cost'] > 0 ? ($cell['revenue'] - $cell['cost']) / $cell['cost'] : null;
+                $cell['conversion'] = $available && $cell['created_orders'] > 0 ? $cell['paid_orders'] / $cell['created_orders'] : null;
                 $cell['lead_cost'] = ($sec === 'course' && $cell['leads'] > 0) ? $cell['cost'] / $cell['leads'] : null;
                 $matrix[$ch][$sec] = $cell;
 
                 $total['cost']           += $cell['cost'];
-                $total['revenue']        += $cell['revenue'];
-                $total['payments']       += $cell['payments'];
                 $total['created_orders'] += $cell['created_orders'];
-                $total['paid_orders']    += $cell['paid_orders'];
                 $total['leads']          += $cell['leads'];
+                if ($available) {
+                    $total['revenue'] += $cell['revenue'];
+                    $total['payments'] += $cell['payments'];
+                    $total['paid_orders'] += $cell['paid_orders'];
+                } else {
+                    $total['financial_available'] = false;
+                }
             }
         }
 
-        $total['cpa']        = $total['payments'] > 0 ? $total['cost'] / $total['payments'] : null;
-        $total['avg_check']  = $total['payments'] > 0 ? $total['revenue'] / $total['payments'] : null;
-        $total['profit']     = $total['revenue'] - $total['cost'];
-        $total['romi']       = $total['cost'] > 0 ? ($total['revenue'] - $total['cost']) / $total['cost'] : null;
-        $total['conversion'] = $total['created_orders'] > 0 ? $total['paid_orders'] / $total['created_orders'] : null;
+        $available = $total['financial_available'];
+        $total['cpa']        = $available && $total['payments'] > 0 ? $total['cost'] / $total['payments'] : null;
+        $total['avg_check']  = $available && $total['payments'] > 0 ? $total['revenue'] / $total['payments'] : null;
+        $total['profit']     = $available ? $total['revenue'] - $total['cost'] : null;
+        $total['romi']       = $available && $total['cost'] > 0 ? ($total['revenue'] - $total['cost']) / $total['cost'] : null;
+        $total['conversion'] = $available && $total['created_orders'] > 0 ? $total['paid_orders'] / $total['created_orders'] : null;
         $total['lead_cost']  = $total['leads'] > 0 ? $total['cost'] / $total['leads'] : null;
 
         return ['cells' => $matrix, 'total' => $total];

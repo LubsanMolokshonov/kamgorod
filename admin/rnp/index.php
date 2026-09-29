@@ -21,19 +21,18 @@ $rnp = new RNPAnalytics($db);
 
 $dateFrom = $_GET['date_from'] ?? date('Y-m-01');
 $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
-// Атрибуция выручки/оплат: 'paid' — по дате оплаты (дефолт), 'created' — когортно
-// по дате создания заявки (курсы) / заказа (педпортал). Заявки и расходы всегда по дате создания.
+// Атрибуция выручки/оплат: для курсов CLOSEDATE/DATE_CREATE сделки Bitrix24,
+// для педпортала paid_at/created_at заказа. Заявки и расходы — по дате создания.
 $basis = ($_GET['basis'] ?? 'paid') === 'created' ? 'created' : 'paid';
 
 // Всегда получаем оба уровня — дни и недели
 $dayReport  = $rnp->getReport($dateFrom, $dateTo, 'day', $basis);
 $weekReport = $rnp->getReport($dateFrom, $dateTo, 'week', $basis);
 
-// Оффлайн-продажи fgos.pro из CRM, не попавшие в orders (консультации + ручные
-// сделки без записи на сайте), теперь доклеиваются внутрь таблицы — в «Курсы Другое»
-// (см. RNPAnalytics::fetchOfflineCrmSplit). Здесь берём только сводку для подписи
-// под заголовком и предупреждения о недоступности Bitrix.
+// Вся курсовая выручка берётся из выигранных сделок CRM. Отдельно сохраняем
+// сводку по сделкам без успешного заказа сайта для информационной строки.
 $rnpOfflineCrm = $dayReport['offline_crm'];
+$rnpCourseCrm  = $dayReport['course_crm'];
 
 $csrfToken = generateCSRFToken();
 
@@ -84,23 +83,31 @@ foreach ($dayReport['periods'] as $d) {
  * Суммировать метрики по нескольким channel×section ячейкам.
  */
 function rnpSumChannels(array $rows, array $channels): array {
-    $s = ['cost'=>0,'revenue'=>0,'payments'=>0,'created_orders'=>0,'paid_orders'=>0,'leads'=>0];
+    $s = [
+        'cost'=>0,'revenue'=>0,'payments'=>0,'created_orders'=>0,'paid_orders'=>0,'leads'=>0,
+        'financial_available'=>true,
+    ];
     $hasCourse = false;
     foreach ($channels as [$ch, $sec]) {
         $c = $rows[$ch][$sec];
         $s['cost']           += $c['cost'];
-        $s['revenue']        += $c['revenue'];
-        $s['payments']       += $c['payments'];
         $s['created_orders'] += $c['created_orders'];
-        $s['paid_orders']    += $c['paid_orders'];
         $s['leads']          += $c['leads'] ?? 0;
+        if ($c['financial_available'] ?? true) {
+            $s['revenue']     += $c['revenue'];
+            $s['payments']    += $c['payments'];
+            $s['paid_orders'] += $c['paid_orders'];
+        } else {
+            $s['financial_available'] = false;
+        }
         if ($sec === 'course') $hasCourse = true;
     }
-    $s['cpa']        = $s['payments'] > 0 ? $s['cost'] / $s['payments'] : null;
-    $s['avg_check']  = $s['payments'] > 0 ? $s['revenue'] / $s['payments'] : null;
-    $s['profit']     = $s['revenue'] - $s['cost'];
-    $s['romi']       = $s['cost'] > 0 ? ($s['revenue'] - $s['cost']) / $s['cost'] : null;
-    $s['conversion'] = $s['created_orders'] > 0 ? $s['paid_orders'] / $s['created_orders'] : null;
+    $available = $s['financial_available'];
+    $s['cpa']        = $available && $s['payments'] > 0 ? $s['cost'] / $s['payments'] : null;
+    $s['avg_check']  = $available && $s['payments'] > 0 ? $s['revenue'] / $s['payments'] : null;
+    $s['profit']     = $available ? $s['revenue'] - $s['cost'] : null;
+    $s['romi']       = $available && $s['cost'] > 0 ? ($s['revenue'] - $s['cost']) / $s['cost'] : null;
+    $s['conversion'] = $available && $s['created_orders'] > 0 ? $s['paid_orders'] / $s['created_orders'] : null;
     $s['lead_cost']  = ($hasCourse && $s['leads'] > 0) ? $s['cost'] / $s['leads'] : null;
     $s['_has_course'] = $hasCourse;
     return $s;
@@ -158,8 +165,8 @@ $groups = [
         'cost_field' => 'other_course_cost',
     ],
     [
-        // Информационная строка: та же выручка, что уже сидит внутри «Курсы Другое»,
-        // но показанная отдельно — чтобы сверять РНП со сделками Bitrix. В суммы
+        // Информационная строка: подмножество курсовой CRM-выручки без успешного
+        // заказа на сайте. Показано отдельно для контроля, в суммы
         // не входит (канал 'crm' не участвует ни в одном rnpSumChannels).
         'key' => 'offline_crm', 'label' => 'в т.ч. Оффлайн CRM', 'is_sum' => false,
         'channels' => [['crm','course']],
@@ -277,7 +284,7 @@ include __DIR__ . '/../includes/header.php';
                     </label>
                     <label class="rnp-basis-pill">
                         <input type="radio" name="basis" value="created" <?= $basis === 'created' ? 'checked' : '' ?>>
-                        <span>По дате создания заявки</span>
+                        <span>По дате создания</span>
                     </label>
                 </div>
             </div>
@@ -287,17 +294,17 @@ include __DIR__ . '/../includes/header.php';
         </div>
         <p class="rnp-basis-hint">
             Расходы и заявки всегда считаются по дате создания. Переключатель меняет только выручку и оплаты:
-            «по дате оплаты» — деньги в периоде получения (как раньше); «по дате создания заявки» — когортно,
-            оплата привязывается к дате заявки (курсы) / создания заказа (педпортал), поэтому цифры прошлых
-            периодов растут по мере закрытия сделок.
+            для курсов «по дате оплаты» означает дату закрытия выигранной сделки в Bitrix24, а «по дате создания» —
+            дату создания сделки; для педпортала используются дата оплаты и дата создания заказа соответственно.
+            Исторические цифры по курсам меняются, если менеджер переносит дату сделки в Bitrix24.
         </p>
     </form>
 </div>
 
-<?php if ($rnpOfflineCrm['available'] === false): ?>
+<?php if ($rnpCourseCrm['available'] === false): ?>
 <div class="content-card rnp-card" style="border-left:4px solid #ef4444;">
-    <strong>Bitrix24 не отвечает</strong> — подтверждённые CRM-продажи курсов (рассрочки, счета, сделки без заказа
-    на сайте) сейчас в таблицу не попали, цифры по курсам занижены. Обновите страницу позже.
+    <strong>Bitrix24 не отвечает</strong> — достоверная курсовая выручка недоступна. Курсовые финансовые показатели,
+    составные итоги и графики помечены как «н/д»; данные педпортала, заявки и расходы продолжают отображаться.
 </div>
 <?php endif; ?>
 
@@ -311,8 +318,8 @@ include __DIR__ . '/../includes/header.php';
     <p class="rnp-basis-hint">
         Включая <strong><?= number_format((int)$rnpOfflineCrm['count'], 0, ',', ' ') ?></strong> оффлайн-сделок
         CRM на <strong><?= number_format((float)$rnpOfflineCrm['revenue'], 0, ',', ' ') ?> ₽</strong>
-        (подтверждённые продажи воронки «Курсы» без заказа на сайте). ЦДО без подтверждения оплаты из 1С не входит в этот слой. У сделок нет UTM, поэтому они учтены в строке
-        «Курсы Другое»; период — по <?= $basis === 'created' ? 'дате создания сделки' : 'дате закрытия сделки в Bitrix' ?>.
+        (подтверждённые продажи воронки «Курсы» без успешного заказа на сайте). Они уже входят в курсовые каналы
+        и отдельно показаны только для контроля; ЦДО без подтверждения оплаты из 1С не учитывается.
     </p>
     <?php endif; ?>
     <div class="rnp-pivot-wrapper">
@@ -351,6 +358,8 @@ include __DIR__ . '/../includes/header.php';
                         $val = $cell[$metric['key']] ?? null;
                         $isDay = ($col['type'] === 'day');
                         $hideForPortalOnly = !empty($metric['course_only']) && empty($grp['has_course']);
+                        $financialUnavailable = !($cell['financial_available'] ?? true)
+                            && in_array($metric['key'], ['revenue', 'payments', 'cpa', 'avg_check', 'profit'], true);
                         $cssExtra = '';
                         if ($isProfit && $val !== null) {
                             $cssExtra = $val < 0 ? ' is-negative' : ($val > 0 ? ' is-positive' : '');
@@ -359,6 +368,8 @@ include __DIR__ . '/../includes/header.php';
                     <td class="rnp-pivot-val rnp-pivot-col-<?= $col['type'] ?><?= $isCost ? ' rnp-cost-cell' : '' ?><?= $cssExtra ?>">
                         <?php if ($hideForPortalOnly): ?>
                             —
+                        <?php elseif ($financialUnavailable): ?>
+                            н/д
                         <?php elseif ($isCost && $isEditable && $isDay): ?>
                             <input
                                 type="number"
@@ -389,6 +400,9 @@ include __DIR__ . '/../includes/header.php';
     <div class="rnp-card-header">
         <h2>Графики</h2>
     </div>
+    <?php if ($rnpCourseCrm['available'] === false): ?>
+        <p class="rnp-basis-hint">Графики скрыты: без данных Bitrix24 общий финансовый итог неполон.</p>
+    <?php else: ?>
     <div class="rnp-charts">
         <div class="rnp-chart-box">
             <h3>Выручка vs Расход</h3>
@@ -403,18 +417,19 @@ include __DIR__ . '/../includes/header.php';
             <canvas id="rnpChartCPA"></canvas>
         </div>
     </div>
+    <?php endif; ?>
 </div>
 
 <script>
 window.RNP_DATA = <?= json_encode([
     'csrf' => $csrfToken,
-    'chart' => [
+    'chart' => $rnpCourseCrm['available'] ? [
         'labels'  => array_map(fn($p) => $p['label'], $dayReport['periods']),
         'revenue' => array_map(fn($p) => round($p['total']['revenue'], 2), $dayReport['periods']),
         'cost'    => array_map(fn($p) => round($p['total']['cost'], 2), $dayReport['periods']),
         'profit'  => array_map(fn($p) => round($p['total']['profit'], 2), $dayReport['periods']),
         'cpa'     => array_map(fn($p) => $p['total']['cpa'] !== null ? round($p['total']['cpa'], 2) : null, $dayReport['periods']),
-    ],
+    ] : null,
 ], JSON_UNESCAPED_UNICODE) ?>;
 </script>
 
