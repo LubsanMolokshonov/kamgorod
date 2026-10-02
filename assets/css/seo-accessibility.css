@@ -20,7 +20,7 @@ body .seo-breadcrumbs li [aria-current="page"] { min-width: 0; white-space: norm
   .rd-page .rd-nav { gap: 12px; }
   .rd-page .rd-nav-right { gap: 8px; }
   .rd-page .rd-logo { min-width: 0; flex-shrink: 1; }
-  .rd-page .rd-topbar .rd-logo img { max-width: 110px; height: auto; }
+  .rd-page .rd-topbar .rd-logo img { width: 110px; max-width: 100%; height: auto; }
   .rd-grid, .rd-cards-grid, .seo-landing .rd-grid, .cd-benefits-grid, .cd-info-cards,
   .cd-criteria-grid, .cd-noms-grid, .cd-goals-grid, .od-license-grid,
   .rd-usp-grid, .rd-trust-grid { grid-template-columns: minmax(0, 1fr) !important; }
