@@ -17,7 +17,7 @@ for (const c of sections) {
     expect(response.status()).toBe(200);
     expect((await response.body()).length).toBeLessThanOrEqual(c.budget);
     await expect(page.locator('h1')).toHaveCount(1);
-    expect(await page.locator(c.grid+' > .rd-card').count()).toBeLessThanOrEqual(24);
+    expect(await page.locator(c.grid+' > .rd-card').count()).toBeLessThanOrEqual(50);
     const visible=await page.locator('nav[aria-label="Хлебные крошки"] li').allTextContents();
     const nodes=await page.locator('script[type="application/ld+json"]').allTextContents();
     const crumbs=nodes.map(x=>JSON.parse(x)).filter(x=>x['@type']==='BreadcrumbList');

@@ -1,4 +1,5 @@
 <?php
+if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
 /**
  * URL Helper Functions
  * Smart URL generation for competitions based on audience context
@@ -63,6 +64,16 @@ function normalizeContentHtml(string $html, ?string $pageTitle = null): string {
     if (!$root) return $html;
     foreach ($root->getElementsByTagName('a') as $a) {
         if ($a->hasAttribute('href')) $a->setAttribute('href', normalizeInternalUrl($a->getAttribute('href')));
+    }
+    foreach (iterator_to_array($root->getElementsByTagName('table')) as $table) {
+        if (str_contains(' ' . $table->parentNode->getAttribute('class') . ' ', ' seo-table-scroll ')) continue;
+        $wrapper = $dom->createElement('div');
+        $wrapper->setAttribute('class', 'seo-table-scroll');
+        $wrapper->setAttribute('tabindex', '0');
+        $wrapper->setAttribute('role', 'region');
+        $wrapper->setAttribute('aria-label', 'Таблица с горизонтальной прокруткой');
+        $table->parentNode->insertBefore($wrapper, $table);
+        $wrapper->appendChild($table);
     }
     if ($pageTitle !== null) {
         $plain = static fn($s) => mb_strtolower(trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($s), ENT_QUOTES, 'UTF-8'))));

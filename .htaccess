@@ -107,6 +107,13 @@ RewriteRule ^$ index.php [L]
 # ================================================
 
 # Серверная пагинация каталогов (до маршрутов карточек и фасетов).
+RewriteRule ^nachalnaya-shkola/$ pages/primary-school.php [L,QSA]
+RewriteRule ^(dou|srednyaya-starshaya-shkola|spo|doshkolniki|1-4-klassy|5-8-klassy|9-11-klassy|studenty-spo|dopolnitelnoe-obrazovanie)/page/([^/]+)/?$ pages/audience.php?slug=$1&page=$2 [L,QSA]
+# Самостоятельные посадочные — раньше динамических slug/фасетов.
+RewriteRule ^publikaciya-dlya-pedagogov/(metodicheskaya-razrabotka/)?$ pages/seo-landing.php [L,QSA]
+RewriteRule ^konkursy/dlya-attestacii/(page/[^/]+/)?$ pages/seo-landing.php [L,QSA]
+RewriteRule ^kursy/povyshenie-kvalifikatsii/dlya-uchiteley/(page/[^/]+/)?$ pages/seo-landing.php [L,QSA]
+RewriteRule ^(konkursy|vebinary)/(.*/)?page/([^/]+)/?$ pages/seo-catalog-router.php?section=$1 [L,QSA]
 RewriteRule ^olimpiady/page/([^/]+)/?$ olympiads.php?page=$1 [L,QSA]
 RewriteRule ^olimpiady/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/page/([^/]+)/?$ olympiads.php?ac=$1&as=$2&at=$3&page=$4 [L,QSA]
 RewriteRule ^olimpiady/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|dopolnitelnoe-obrazovanie|doshkolniki|1-4-klassy|5-8-klassy|9-11-klassy|1-klass|2-klass|3-klass|4-klass|5-klass|6-klass|7-klass|8-klass|9-klass|10-klass|11-klass|studenty-spo|pedagogam-1-klass|pedagogam-2-klass|pedagogam-3-klass|pedagogam-4-klass|pedagogam-5-klass|pedagogam-6-klass|pedagogam-7-klass|pedagogam-8-klass|pedagogam-9-klass|pedagogam-10-klass|pedagogam-11-klass)/page/([^/]+)/?$ olympiads.php?ac=$1&at=$2&page=$3 [L,QSA]
@@ -118,12 +125,14 @@ RewriteRule ^publikacii/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-
 RewriteRule ^publikacii/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/page/([^/]+)/?$ publications.php?ac=$1&page=$2 [L,QSA]
 RewriteRule ^kursy/page/([^/]+)/?$ courses.php?page=$1 [L,QSA]
 RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/page/([^/]+)/?$ courses.php?ct=$1&ac=$2&at=$3&as=$4&page=$5 [L,QSA]
-RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/page/([^/]+)/?$ courses.php?ct=$1&ac=$2&at=$3&page=$4 [L,QSA]
+RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|dopolnitelnoe-obrazovanie|doshkolniki|[1-9]-klass|10-klass|11-klass|studenty-spo|pedagogam-[1-9]-klass|pedagogam-10-klass|pedagogam-11-klass)/page/([^/]+)/?$ courses.php?ct=$1&ac=$2&at=$3&page=$4 [L,QSA]
+RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/page/([^/]+)/?$ courses.php?ct=$1&ac=$2&as=$3&page=$4 [L,QSA]
 RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/page/([^/]+)/?$ courses.php?ct=$1&ac=$2&page=$3 [L,QSA]
 RewriteRule ^kursy/povyshenie-kvalifikatsii/page/([^/]+)/?$ courses.php?program_type=kpk&page=$1 [L,QSA]
 RewriteRule ^kursy/perepodgotovka/page/([^/]+)/?$ courses.php?program_type=pp&page=$1 [L,QSA]
 RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/page/([^/]+)/?$ courses.php?ac=$1&at=$2&as=$3&page=$4 [L,QSA]
-RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/page/([^/]+)/?$ courses.php?ac=$1&at=$2&page=$3 [L,QSA]
+RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|dopolnitelnoe-obrazovanie|doshkolniki|[1-9]-klass|10-klass|11-klass|studenty-spo|pedagogam-[1-9]-klass|pedagogam-10-klass|pedagogam-11-klass)/page/([^/]+)/?$ courses.php?ac=$1&at=$2&page=$3 [L,QSA]
+RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/page/([^/]+)/?$ courses.php?ac=$1&as=$2&page=$3 [L,QSA]
 RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/page/([^/]+)/?$ courses.php?ac=$1&page=$2 [L,QSA]
 RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|dopolnitelnoe-obrazovanie)/([a-z0-9-]+)/page/([^/]+)/?$ courses.php?ct=$1&at=$2&as=$3&page=$4 [L,QSA]
 RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|dopolnitelnoe-obrazovanie)/page/([^/]+)/?$ courses.php?ct=$1&at=$2&page=$3 [L,QSA]
@@ -192,14 +201,15 @@ RewriteRule ^olimpiady/logopedy/?$ /olimpiady/pedagogi/ [R=301,L]
 # audience_types деактивированы (is_active=0) и не содержат олимпиад — редирект на категорию
 # без фильтра уровня, а не на произвольный класс (нет единого «правильного» класса-преемника
 # у агрегатной диапазонной страницы).
-RewriteRule ^olimpiady/pedagogi/nachalnaya-shkola/?$ /olimpiady/pedagogi/ [R=301,L]
+# Восстановлена самостоятельная аудитория; правило удалено.
+# RewriteRule ^olimpiady/pedagogi/nachalnaya-shkola/?$ /olimpiady/pedagogi/ [R=301,L]
 RewriteRule ^olimpiady/pedagogi/srednyaya-starshaya-shkola/?$ /olimpiady/pedagogi/ [R=301,L]
 RewriteRule ^olimpiady/shkolnikam/1-4-klassy/?$ /olimpiady/shkolnikam/ [R=301,L]
 RewriteRule ^olimpiady/shkolnikam/5-8-klassy/?$ /olimpiady/shkolnikam/ [R=301,L]
 RewriteRule ^olimpiady/shkolnikam/9-11-klassy/?$ /olimpiady/shkolnikam/ [R=301,L]
 # То же для комбинаций at+as (специализация + опустевший диапазонный уровень) — убираем
 # протухший сегмент уровня, сохраняя специализацию (релевантнее, чем редирект на голую категорию)
-RewriteRule ^olimpiady/pedagogi/([a-z0-9-]+)/(nachalnaya-shkola|srednyaya-starshaya-shkola)/?$ /olimpiady/pedagogi/$1/ [R=301,L]
+RewriteRule ^olimpiady/pedagogi/([a-z0-9-]+)/(srednyaya-starshaya-shkola)/?$ /olimpiady/pedagogi/$1/ [R=301,L]
 RewriteRule ^olimpiady/shkolnikam/([a-z0-9-]+)/(1-4-klassy|5-8-klassy|9-11-klassy)/?$ /olimpiady/shkolnikam/$1/ [R=301,L]
 
 # 301 со старого порядка ac/at/as → новый ac/as/at
@@ -297,6 +307,7 @@ RewriteRule ^opublikovat/?$ pages/submit-publication.php [L,QSA]
 RewriteRule ^materialy/?$ pages/materials-landing.php [L,QSA]
 
 # Каталог материалов
+RewriteRule ^materialy/katalog/(.*/)?page/([^/]+)/?$ pages/materials-pagination.php [L,QSA]
 RewriteRule ^materialy/katalog/?$ pages/materials-catalog.php [L,QSA]
 
 # Каталог по типу материала: /materialy/katalog/tip/konspekt-uroka/
@@ -357,7 +368,8 @@ RewriteRule ^kursyb(/.*)?$ /kursy$1 [R=301,L]
 
 # Тип программы + аудитория (3 уровня): /kursy/povyshenie-kvalifikatsii/pedagogi/dou/vospitatel/
 RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ courses.php?ct=$1&ac=$2&at=$3&as=$4 [L,QSA]
-RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ courses.php?ct=$1&ac=$2&at=$3 [L,QSA]
+RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|dopolnitelnoe-obrazovanie|doshkolniki|[1-9]-klass|10-klass|11-klass|studenty-spo|pedagogam-[1-9]-klass|pedagogam-10-klass|pedagogam-11-klass)/?$ courses.php?ct=$1&ac=$2&at=$3 [L,QSA]
+RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ courses.php?ct=$1&ac=$2&as=$3 [L,QSA]
 RewriteRule ^kursy/(povyshenie-kvalifikatsii|perepodgotovka)/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ courses.php?ct=$1&ac=$2 [L,QSA]
 
 # Типы программ (без аудитории)
@@ -366,7 +378,8 @@ RewriteRule ^kursy/perepodgotovka/?$ courses.php?program_type=pp [L,QSA]
 
 # Аудитория курсов (3 уровня): /kursy/pedagogi/dou/vospitatel/
 RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/([a-z0-9-]+)/?$ courses.php?ac=$1&at=$2&as=$3 [L,QSA]
-RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ courses.php?ac=$1&at=$2 [L,QSA]
+RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/(dou|nachalnaya-shkola|srednyaya-starshaya-shkola|spo|dopolnitelnoe-obrazovanie|doshkolniki|[1-9]-klass|10-klass|11-klass|studenty-spo|pedagogam-[1-9]-klass|pedagogam-10-klass|pedagogam-11-klass)/?$ courses.php?ac=$1&at=$2 [L,QSA]
+RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/([a-z0-9-]+)/?$ courses.php?ac=$1&as=$2 [L,QSA]
 RewriteRule ^kursy/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ courses.php?ac=$1 [L,QSA]
 
 # Уровень (audience_type) без категории: /kursy/nachalnaya-shkola/, /kursy/perepodgotovka/nachalnaya-shkola/

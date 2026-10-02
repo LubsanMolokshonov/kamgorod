@@ -3,8 +3,9 @@
 <footer class="rd-footer">
   <div class="rd-wrap rd-foot-grid">
     <div class="rd-foot-about">
-      <a class="rd-logo rd-logo-foot" href="/" style="display:inline-flex;margin-bottom:16px;" aria-label="<?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
-        <img src="/assets/images/logo.svg" alt="<?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
+      <a class="rd-logo rd-logo-foot" href="/" style="display:inline-flex;margin-bottom:16px;" aria-label="<?php
+if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); } echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
+        <img src="/assets/images/logo.svg" alt="Педагогический портал">
       </a>
       <p>Педагогический портал — платформа для проведения всероссийских и международных конкурсов для педагогов и школьников.</p>
       <p style="margin-top:16px;color:#c2cdff;">+7 (922) 304-44-13<br>info@fgos.pro<br>Ежедневно 9:00–21:00</p>
@@ -37,8 +38,8 @@
     <div>
       <h5>Публикации</h5>
       <a href="/zhurnal/">Журнал публикаций</a>
-      <a href="/opublikovat/">Опубликовать материал</a>
-      <a href="/sertifikat-publikacii/">Получить сертификат</a>
+      <a href="/publikaciya-dlya-pedagogov/">Опубликовать материал</a><a href="/generator-statej/">Генератор статей</a>
+      <a href="/publikaciya-dlya-pedagogov/#pravila">Получить сертификат</a>
       <a href="/blog/">Блог</a>
       <h5 style="margin-top:24px;">Курсы</h5>
       <a href="/kursy/povyshenie-kvalifikatsii/">Повышение квалификации</a>
@@ -49,7 +50,7 @@
     </div>
 
     <div>
-      <h5>Помощь</h5>
+      <h5>По ступени образования</h5><a href="/dou/">Дошкольное образование</a><a href="/nachalnaya-shkola/">Начальная школа</a><a href="/spo/">СПО</a> · <a href="/dopolnitelnoe-obrazovanie/">Дополнительное образование</a><h5>Помощь</h5>
       <a href="/svedeniya/">Сведения об организации</a>
       <a href="/pages/contacts.php">Контакты</a>
       <a href="/polzovatelskoe-soglashenie/">Пользовательское соглашение</a>

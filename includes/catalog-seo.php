@@ -2,6 +2,7 @@
 if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
 /** Общая политика каталогов. Используется страницами, sitemap и AJAX. */
 require_once __DIR__ . '/seo-url.php';
+require_once __DIR__ . '/seo-editorial.php';
 require_once __DIR__ . '/../classes/CatalogListing.php';
 
 function catalogPageUrl(string $base, int $page): string {
@@ -39,8 +40,8 @@ function parseCatalogPath(string $path): ?array {
     if ($parts && in_array($parts[0], $categories, true)) $options['ac'] = array_shift($parts);
     if ($parts) {
         if ($section === 'kursy') {
-            if (isset($options['ac']) || in_array($parts[0], ['dou','nachalnaya-shkola','srednyaya-starshaya-shkola','spo','dopolnitelnoe-obrazovanie'], true)) $options['at'] = array_shift($parts);
-            if ($parts && (isset($options['at']) || isset($options['program_type']))) $options['as'] = array_shift($parts);
+            if (in_array($parts[0], $levels, true)) $options['at'] = array_shift($parts);
+            if ($parts && (isset($options['at']) || isset($options['ac']) || isset($options['program_type']))) $options['as'] = array_shift($parts);
         } elseif ($section === 'publikacii' && isset($options['ac'])) {
             $options['at'] = array_shift($parts);
             if ($parts) $options['as'] = array_shift($parts);
@@ -89,7 +90,7 @@ function catalogIndexPolicy(string $section, array $options, int $total, bool $h
         $canonical = buildSeoUrl($section, array_diff_key($options, ['ac' => true]));
     }
     if (in_array($section, ['konkursy','olimpiady'], true) && $base !== '/' . $section . '/' && !$hasLanding) $canonical = '/' . $section . '/';
-    if ($section === 'vebinary' && $base !== '/vebinary/' && $base !== '/vebinary/predstoyashchie/') $canonical = '/vebinary/';
+    if ($section === 'vebinary' && !$hasLanding && $base !== '/vebinary/' && $base !== '/vebinary/predstoyashchie/') $canonical = '/vebinary/';
     if ($section === 'publikacii' && $base !== '/publikacii/') $canonical = '/publikacii/';
     if ($total === 0) { $canonical = $path; $robots = 'noindex,follow'; }
     // Эти страницы требуют самостоятельного редакционного решения.
@@ -110,6 +111,8 @@ function catalogPolicy(PDO $pdo, string $section, array $options, ?int $total = 
         require_once __DIR__ . '/landing-content-helper.php';
         $hasLanding = !empty(getLandingSeoHtml($pdo, landingPageKey($base)));
     }
+    $override = seoPageData($pdo, $base);
+    $hasLanding = $hasLanding || (!empty($override['index_catalog']) && !empty($override['intro_text']));
     return catalogIndexPolicy($section, $options, $total, $hasLanding, $page);
 }
 
@@ -145,11 +148,13 @@ function renderCatalogPagination(array $request, int $total): string {
     $pages = max(1, (int)ceil($total / CatalogListing::PAGE_SIZE));
     $page = $request['page'];
     $escape = static fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
-    $url = static fn($n) => catalogPageUrl($request['base'], $n) . ($request['q'] !== '' ? '?q=' . rawurlencode($request['q']) : '') . '#catalog';
+    $query = $request['query'] ?? [];
+    if ($request['q'] !== '') $query['q'] = $request['q'];
+    $url = static fn($n) => catalogPageUrl($request['base'], $n) . ($query ? '?' . http_build_query($query) : '') . '#catalog';
     $html = '<nav id="catalogPagination" class="catalog-pagination" aria-label="Страницы каталога" data-catalog-path="' . $escape($request['base']) . '" data-page="' . $page . '" data-query="' . $escape($request['q']) . '">';
     if ($page > 1) $html .= '<a href="' . $escape($url(1)) . '">В начало каталога</a>';
     if ($pages > 1) {
-        $numbers = array_unique([1, max(1, $page - 1), $page, min($pages, $page + 1), $pages]); sort($numbers);
+        $numbers = $page === 1 ? range(1, $pages) : array_unique([1, max(1, $page - 1), $page, min($pages, $page + 1), $pages]); sort($numbers);
         foreach ($numbers as $n) $html .= $n === $page ? '<span aria-current="page">' . $n . '</span>' : '<a href="' . $escape($url($n)) . '">' . $n . '</a>';
     }
     if ($page < $pages) $html .= '<a id="loadMoreBtn" class="rd-load-more" data-next-page="' . ($page + 1) . '" href="' . $escape($url($page + 1)) . '">Показать ещё</a>';

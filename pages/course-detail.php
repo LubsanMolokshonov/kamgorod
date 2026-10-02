@@ -222,7 +222,8 @@ $installment = calculateInstallment($abPrice);
           <span class="rd-pill">Дистанционно</span>
         </div>
 
-        <h1 class="cd-hero-title reveal"><?php echo htmlspecialchars($course['title']); ?></h1>
+        <h1 class="cd-hero-title reveal"><?php echo htmlspecialchars(seoHeading($course['title'])); ?></h1>
+        <?= renderSeoEditorial($seoPage ?? []) ?>
 
         <div class="cd-hero-bullets reveal-stagger">
           <div class="b"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><?php echo htmlspecialchars($credentialType); ?></div>

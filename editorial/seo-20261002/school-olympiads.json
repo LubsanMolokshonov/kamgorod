@@ -1,0 +1,722 @@
+[
+  {
+    "title": "Олимпиада по математике для 1-4 классов",
+    "slug": "olimpiada-matematika-1-4-klass",
+    "description": "Проверь свои знания по математике! Простые задачи на сложение, вычитание, фигуры и сравнение чисел.",
+    "subject": "Математика",
+    "grade": "1-4",
+    "questions": [
+      {
+        "question_text": "Сколько будет 5 + 3?",
+        "options": [
+          "6",
+          "7",
+          "8",
+          "9"
+        ],
+        "correct_option_index": 2,
+        "display_order": 1
+      },
+      {
+        "question_text": "Какое число больше: 12 или 9?",
+        "options": [
+          "9",
+          "12",
+          "Они равны",
+          "Невозможно сравнить"
+        ],
+        "correct_option_index": 1,
+        "display_order": 2
+      },
+      {
+        "question_text": "Сколько сторон у квадрата?",
+        "options": [
+          "3",
+          "4",
+          "5",
+          "6"
+        ],
+        "correct_option_index": 1,
+        "display_order": 3
+      },
+      {
+        "question_text": "Чему равно 10 − 4?",
+        "options": [
+          "5",
+          "6",
+          "7",
+          "8"
+        ],
+        "correct_option_index": 1,
+        "display_order": 4
+      },
+      {
+        "question_text": "Какая фигура имеет три угла?",
+        "options": [
+          "Квадрат",
+          "Круг",
+          "Треугольник",
+          "Прямоугольник"
+        ],
+        "correct_option_index": 2,
+        "display_order": 5
+      },
+      {
+        "question_text": "Сколько будет 3 × 2?",
+        "options": [
+          "5",
+          "6",
+          "7",
+          "8"
+        ],
+        "correct_option_index": 1,
+        "display_order": 6
+      },
+      {
+        "question_text": "Какое число стоит между 7 и 9?",
+        "options": [
+          "6",
+          "7",
+          "8",
+          "10"
+        ],
+        "correct_option_index": 2,
+        "display_order": 7
+      },
+      {
+        "question_text": "Сколько будет 15 − 5?",
+        "options": [
+          "8",
+          "9",
+          "10",
+          "11"
+        ],
+        "correct_option_index": 2,
+        "display_order": 8
+      },
+      {
+        "question_text": "Сколько углов у прямоугольника?",
+        "options": [
+          "3",
+          "4",
+          "5",
+          "6"
+        ],
+        "correct_option_index": 1,
+        "display_order": 9
+      },
+      {
+        "question_text": "Чему равно 20 + 10?",
+        "options": [
+          "25",
+          "28",
+          "30",
+          "35"
+        ],
+        "correct_option_index": 2,
+        "display_order": 10
+      }
+    ],
+    "source": "database/migrations/038_seed_olympiads.sql"
+  },
+  {
+    "title": "Олимпиада по русскому языку для 1-4 классов",
+    "slug": "olimpiada-russkiy-yazyk-1-4-klass",
+    "description": "Олимпиада по русскому языку для младших школьников. Части речи, правописание и основы пунктуации.",
+    "subject": "Русский язык",
+    "grade": "1-4",
+    "questions": [
+      {
+        "question_text": "Какая часть речи обозначает предмет?",
+        "options": [
+          "Глагол",
+          "Прилагательное",
+          "Существительное",
+          "Наречие"
+        ],
+        "correct_option_index": 2,
+        "display_order": 1
+      },
+      {
+        "question_text": "Сколько гласных букв в русском алфавите?",
+        "options": [
+          "6",
+          "10",
+          "12",
+          "15"
+        ],
+        "correct_option_index": 1,
+        "display_order": 2
+      },
+      {
+        "question_text": "Какое слово написано правильно?",
+        "options": [
+          "Малоко",
+          "Молоко",
+          "Молако",
+          "Малако"
+        ],
+        "correct_option_index": 1,
+        "display_order": 3
+      },
+      {
+        "question_text": "Какой знак ставится в конце вопросительного предложения?",
+        "options": [
+          "Точка",
+          "Восклицательный знак",
+          "Запятая",
+          "Вопросительный знак"
+        ],
+        "correct_option_index": 3,
+        "display_order": 4
+      },
+      {
+        "question_text": "Слово «бежать» — это какая часть речи?",
+        "options": [
+          "Существительное",
+          "Прилагательное",
+          "Глагол",
+          "Предлог"
+        ],
+        "correct_option_index": 2,
+        "display_order": 5
+      },
+      {
+        "question_text": "Какая буква пропущена в слове «з_ма»?",
+        "options": [
+          "а",
+          "и",
+          "о",
+          "е"
+        ],
+        "correct_option_index": 1,
+        "display_order": 6
+      },
+      {
+        "question_text": "Сколько слогов в слове «молоко»?",
+        "options": [
+          "2",
+          "3",
+          "4",
+          "1"
+        ],
+        "correct_option_index": 1,
+        "display_order": 7
+      },
+      {
+        "question_text": "Какое слово является антонимом к слову «горячий»?",
+        "options": [
+          "Тёплый",
+          "Жаркий",
+          "Холодный",
+          "Быстрый"
+        ],
+        "correct_option_index": 2,
+        "display_order": 8
+      },
+      {
+        "question_text": "Имена собственные пишутся с:",
+        "options": [
+          "Маленькой буквы",
+          "Большой буквы",
+          "Любой буквы",
+          "Цифры"
+        ],
+        "correct_option_index": 1,
+        "display_order": 9
+      },
+      {
+        "question_text": "Какое слово является существительным?",
+        "options": [
+          "Красивый",
+          "Бегать",
+          "Книга",
+          "Быстро"
+        ],
+        "correct_option_index": 2,
+        "display_order": 10
+      }
+    ],
+    "source": "database/migrations/038_seed_olympiads.sql"
+  },
+  {
+    "title": "Олимпиада по окружающему миру для 1-4 классов",
+    "slug": "olimpiada-okruzhayushchiy-mir-1-4-klass",
+    "description": "Олимпиада по окружающему миру для младших школьников. Времена года, животные, растения и тело человека.",
+    "subject": "Окружающий мир",
+    "grade": "1-4",
+    "questions": [
+      {
+        "question_text": "Какое время года наступает после зимы?",
+        "options": [
+          "Лето",
+          "Осень",
+          "Весна",
+          "Зима"
+        ],
+        "correct_option_index": 2,
+        "display_order": 1
+      },
+      {
+        "question_text": "Какое животное впадает в зимнюю спячку?",
+        "options": [
+          "Волк",
+          "Заяц",
+          "Медведь",
+          "Лиса"
+        ],
+        "correct_option_index": 2,
+        "display_order": 2
+      },
+      {
+        "question_text": "Сколько дней в неделе?",
+        "options": [
+          "5",
+          "6",
+          "7",
+          "8"
+        ],
+        "correct_option_index": 2,
+        "display_order": 3
+      },
+      {
+        "question_text": "Какой орган человека отвечает за зрение?",
+        "options": [
+          "Ухо",
+          "Нос",
+          "Глаз",
+          "Язык"
+        ],
+        "correct_option_index": 2,
+        "display_order": 4
+      },
+      {
+        "question_text": "Какое растение является деревом?",
+        "options": [
+          "Ромашка",
+          "Берёза",
+          "Клубника",
+          "Подорожник"
+        ],
+        "correct_option_index": 1,
+        "display_order": 5
+      },
+      {
+        "question_text": "Где живут рыбы?",
+        "options": [
+          "В лесу",
+          "В воде",
+          "В пустыне",
+          "На горе"
+        ],
+        "correct_option_index": 1,
+        "display_order": 6
+      },
+      {
+        "question_text": "Какой месяц идёт после января?",
+        "options": [
+          "Март",
+          "Декабрь",
+          "Февраль",
+          "Апрель"
+        ],
+        "correct_option_index": 2,
+        "display_order": 7
+      },
+      {
+        "question_text": "Что нужно растению для роста?",
+        "options": [
+          "Темнота и холод",
+          "Свет, вода и тепло",
+          "Только камни",
+          "Только песок"
+        ],
+        "correct_option_index": 1,
+        "display_order": 8
+      },
+      {
+        "question_text": "Сколько месяцев в году?",
+        "options": [
+          "10",
+          "11",
+          "12",
+          "13"
+        ],
+        "correct_option_index": 2,
+        "display_order": 9
+      },
+      {
+        "question_text": "Какое животное даёт молоко?",
+        "options": [
+          "Курица",
+          "Корова",
+          "Лягушка",
+          "Попугай"
+        ],
+        "correct_option_index": 1,
+        "display_order": 10
+      }
+    ],
+    "source": "database/migrations/038_seed_olympiads.sql"
+  },
+  {
+    "title": "Олимпиада по математике для 5-8 классов",
+    "slug": "olimpiada-matematika-5-8-klass",
+    "description": "Олимпиада по математике для учеников средней школы. Дроби, уравнения, основы геометрии.",
+    "subject": "Математика",
+    "grade": "5-8",
+    "questions": [
+      {
+        "question_text": "Чему равна дробь 1/2 в десятичной записи?",
+        "options": [
+          "0,25",
+          "0,5",
+          "0,75",
+          "1,5"
+        ],
+        "correct_option_index": 1,
+        "display_order": 1
+      },
+      {
+        "question_text": "Решите уравнение: x + 7 = 15. Чему равен x?",
+        "options": [
+          "7",
+          "8",
+          "9",
+          "22"
+        ],
+        "correct_option_index": 1,
+        "display_order": 2
+      },
+      {
+        "question_text": "Сколько градусов в развёрнутом угле?",
+        "options": [
+          "90",
+          "120",
+          "180",
+          "360"
+        ],
+        "correct_option_index": 2,
+        "display_order": 3
+      },
+      {
+        "question_text": "Чему равно 3/4 + 1/4?",
+        "options": [
+          "1/2",
+          "1",
+          "3/4",
+          "2"
+        ],
+        "correct_option_index": 1,
+        "display_order": 4
+      },
+      {
+        "question_text": "Площадь прямоугольника со сторонами 5 и 3 равна:",
+        "options": [
+          "8",
+          "15",
+          "16",
+          "20"
+        ],
+        "correct_option_index": 1,
+        "display_order": 5
+      },
+      {
+        "question_text": "Какое число является наименьшим общим кратным чисел 4 и 6?",
+        "options": [
+          "8",
+          "10",
+          "12",
+          "24"
+        ],
+        "correct_option_index": 2,
+        "display_order": 6
+      },
+      {
+        "question_text": "Чему равно (−3) × (−2)?",
+        "options": [
+          "−6",
+          "−5",
+          "5",
+          "6"
+        ],
+        "correct_option_index": 3,
+        "display_order": 7
+      },
+      {
+        "question_text": "Сумма углов треугольника равна:",
+        "options": [
+          "90°",
+          "180°",
+          "270°",
+          "360°"
+        ],
+        "correct_option_index": 1,
+        "display_order": 8
+      },
+      {
+        "question_text": "Чему равно 0,1 × 100?",
+        "options": [
+          "1",
+          "10",
+          "100",
+          "0,01"
+        ],
+        "correct_option_index": 1,
+        "display_order": 9
+      },
+      {
+        "question_text": "Какой процент составляет число 25 от числа 100?",
+        "options": [
+          "5%",
+          "15%",
+          "25%",
+          "50%"
+        ],
+        "correct_option_index": 2,
+        "display_order": 10
+      }
+    ],
+    "source": "database/migrations/038_seed_olympiads.sql"
+  },
+  {
+    "title": "Олимпиада по математике для 9-11 классов",
+    "slug": "olimpiada-matematika-9-11-klass",
+    "description": "Олимпиада по математике для старшеклассников. Функции, основы тригонометрии и теории вероятностей.",
+    "subject": "Математика",
+    "grade": "9-11",
+    "questions": [
+      {
+        "question_text": "Чему равен sin 90°?",
+        "options": [
+          "0",
+          "0,5",
+          "1",
+          "−1"
+        ],
+        "correct_option_index": 2,
+        "display_order": 1
+      },
+      {
+        "question_text": "Какова область определения функции y = √x?",
+        "options": [
+          "Все числа",
+          "x ≥ 0",
+          "x > 0",
+          "x ≤ 0"
+        ],
+        "correct_option_index": 1,
+        "display_order": 2
+      },
+      {
+        "question_text": "Чему равна производная функции y = x²?",
+        "options": [
+          "x",
+          "2x",
+          "x²",
+          "2"
+        ],
+        "correct_option_index": 1,
+        "display_order": 3
+      },
+      {
+        "question_text": "Вероятность достоверного события равна:",
+        "options": [
+          "0",
+          "0,5",
+          "1",
+          "2"
+        ],
+        "correct_option_index": 2,
+        "display_order": 4
+      },
+      {
+        "question_text": "График функции y = kx + b — это:",
+        "options": [
+          "Парабола",
+          "Окружность",
+          "Прямая",
+          "Гипербола"
+        ],
+        "correct_option_index": 2,
+        "display_order": 5
+      },
+      {
+        "question_text": "Чему равен cos 0°?",
+        "options": [
+          "0",
+          "0,5",
+          "1",
+          "−1"
+        ],
+        "correct_option_index": 2,
+        "display_order": 6
+      },
+      {
+        "question_text": "Логарифм log₁₀ 1000 равен:",
+        "options": [
+          "2",
+          "3",
+          "10",
+          "100"
+        ],
+        "correct_option_index": 1,
+        "display_order": 7
+      },
+      {
+        "question_text": "Сколько решений имеет уравнение x² = 4?",
+        "options": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ],
+        "correct_option_index": 2,
+        "display_order": 8
+      },
+      {
+        "question_text": "Формула площади круга:",
+        "options": [
+          "2πr",
+          "πr²",
+          "πd",
+          "2πr²"
+        ],
+        "correct_option_index": 1,
+        "display_order": 9
+      },
+      {
+        "question_text": "Чему равно значение выражения 2⁰?",
+        "options": [
+          "0",
+          "1",
+          "2",
+          "Не определено"
+        ],
+        "correct_option_index": 1,
+        "display_order": 10
+      }
+    ],
+    "source": "database/migrations/038_seed_olympiads.sql"
+  },
+  {
+    "title": "Олимпиада по обществознанию для 9-11 классов",
+    "slug": "olimpiada-obshchestvoznanie-9-11-klass",
+    "description": "Олимпиада по обществознанию для старшеклассников. Конституция, права человека, основы экономики.",
+    "subject": "Обществознание",
+    "grade": "9-11",
+    "questions": [
+      {
+        "question_text": "Конституция РФ была принята в:",
+        "options": [
+          "1991 году",
+          "1993 году",
+          "1995 году",
+          "2000 году"
+        ],
+        "correct_option_index": 1,
+        "display_order": 1
+      },
+      {
+        "question_text": "Кто является гарантом Конституции РФ?",
+        "options": [
+          "Премьер-министр",
+          "Президент",
+          "Совет Федерации",
+          "Государственная Дума"
+        ],
+        "correct_option_index": 1,
+        "display_order": 2
+      },
+      {
+        "question_text": "С какого возраста гражданин РФ может голосовать на выборах?",
+        "options": [
+          "14 лет",
+          "16 лет",
+          "18 лет",
+          "21 год"
+        ],
+        "correct_option_index": 2,
+        "display_order": 3
+      },
+      {
+        "question_text": "Что такое инфляция?",
+        "options": [
+          "Рост зарплат",
+          "Устойчивый рост общего уровня цен",
+          "Снижение цен",
+          "Рост производства"
+        ],
+        "correct_option_index": 1,
+        "display_order": 4
+      },
+      {
+        "question_text": "Какая ветвь власти принимает законы?",
+        "options": [
+          "Исполнительная",
+          "Судебная",
+          "Законодательная",
+          "Президентская"
+        ],
+        "correct_option_index": 2,
+        "display_order": 5
+      },
+      {
+        "question_text": "Право на образование в РФ является:",
+        "options": [
+          "Привилегией",
+          "Обязанностью работодателя",
+          "Конституционным правом каждого",
+          "Платной услугой"
+        ],
+        "correct_option_index": 2,
+        "display_order": 6
+      },
+      {
+        "question_text": "Налоги — это:",
+        "options": [
+          "Добровольные пожертвования",
+          "Обязательные платежи в бюджет государства",
+          "Штрафы",
+          "Кредиты"
+        ],
+        "correct_option_index": 1,
+        "display_order": 7
+      },
+      {
+        "question_text": "Трудовой договор заключается с:",
+        "options": [
+          "12 лет",
+          "14 лет",
+          "16 лет (по общему правилу)",
+          "21 года"
+        ],
+        "correct_option_index": 2,
+        "display_order": 8
+      },
+      {
+        "question_text": "Что относится к политическим правам граждан?",
+        "options": [
+          "Право на жилище",
+          "Право на труд",
+          "Право избирать и быть избранным",
+          "Право на отдых"
+        ],
+        "correct_option_index": 2,
+        "display_order": 9
+      },
+      {
+        "question_text": "Рыночная экономика основана на:",
+        "options": [
+          "Государственном планировании",
+          "Частной собственности и свободной конкуренции",
+          "Натуральном обмене",
+          "Командном управлении"
+        ],
+        "correct_option_index": 1,
+        "display_order": 10
+      }
+    ],
+    "source": "database/migrations/038_seed_olympiads.sql"
+  }
+]

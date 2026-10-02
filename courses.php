@@ -382,6 +382,14 @@ if ($catalogRequest['page'] > 1) $pageTitle .= ' — страница ' . $catal
 $additionalJS[] = '/assets/js/catalog-pagination.js';
 $additionalCSS[] = '/assets/css/catalog-pagination.css';
 
+// Не формируем ссылки на несовместимые сочетания уровня и специализации.
+$audienceSpecializations = array_values(array_filter($audienceSpecializations, static function($item) use($db,$catalogOptions) {
+    return catalogOptionsExist($db,array_merge($catalogOptions,['as'=>$item['slug']]));
+}));
+$audienceTypes = array_values(array_filter($audienceTypes, static function($item) use($db,$catalogOptions) {
+    return catalogOptionsExist($db,array_merge($catalogOptions,['at'=>$item['slug']]));
+}));
+
 include __DIR__ . '/includes/header-redesign.php';
 ?>
 
@@ -397,7 +405,20 @@ include __DIR__ . '/includes/header-redesign.php';
         <span class="rd-pill indigo"><?php echo htmlspecialchars($heroDocPill); ?></span>
         <span class="rd-pill">Разрешение Сколково № 068</span>
       </div>
-      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo htmlspecialchars($h1Text); ?><?php if (empty($selectedSpecData)): ?> — <span class="accent">дистанционно</span><?php endif; ?></h1>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo htmlspecialchars(seoHeading($h1Text)); ?><?php if (empty($selectedSpecData) && empty($seoPage['seo_h1'])): ?> — <span class="accent">дистанционно</span><?php endif; ?></h1>
+      <?= renderSeoEditorial($seoPage ?? []) ?>
+      <p><a href="/kursy/povyshenie-kvalifikatsii/dlya-uchiteley/">Повышение квалификации для учителей</a></p>
+      <?php if ($catalogRequest['base']==='/kursy/' && $catalogRequest['page']===1): ?>
+      <nav class="seo-actions" aria-label="Курсы по ступени образования">
+      <?php foreach ((new Database($db))->query("SELECT id,name,slug,category_id FROM audience_types WHERE is_active=1 AND slug IN ('dou','nachalnaya-shkola','srednyaya-starshaya-shkola','spo','dopolnitelnoe-obrazovanie')") as $level):
+          foreach (['', 'pedagogi'] as $audience):
+              $linkOptions=['at'=>$level['slug'],'ac'=>$audience];
+              if (!catalogOptionsExist($db,$linkOptions) || !catalogPolicy($db,'kursy',$linkOptions)['sitemap']) continue; ?>
+          <a href="<?= htmlspecialchars(buildSeoUrl('kursy',$linkOptions),ENT_QUOTES,'UTF-8') ?>"><?= htmlspecialchars($level['name'].($audience ? ' — педагогам' : ''),ENT_QUOTES,'UTF-8') ?></a>
+          <?php endforeach; endforeach; ?>
+      </nav>
+      <?php endif; ?>
+
       <p class="rd-hero-sub reveal"><?php echo htmlspecialchars($heroSubText); ?></p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><?php echo htmlspecialchars($heroDocBullet); ?></div>

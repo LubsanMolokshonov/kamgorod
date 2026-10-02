@@ -185,7 +185,9 @@ $additionalCSS[] = '/assets/css/reviews.css?v=' . filemtime(__DIR__ . '/../asset
 $additionalJS = $additionalJS ?? [];
 $additionalJS[] = '/assets/js/reviews.js?v=' . filemtime(__DIR__ . '/../assets/js/reviews.js');
 
-$schemaJson = json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+require_once __DIR__ . '/../includes/seo-editorial.php';
+$schema = seoEditorialSchema($schema,seoEditorial(seoPageData($db)));
+$schemaJson = json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_HEX_TAG);
 
 include __DIR__ . '/../includes/header-redesign.php';
 ?>
@@ -210,7 +212,8 @@ include __DIR__ . '/../includes/header-redesign.php';
       </div>
     <?php endif; ?>
 
-    <h1><?= htmlspecialchars($material['title'], ENT_QUOTES, 'UTF-8') ?></h1>
+    <h1><?= htmlspecialchars(seoHeading($material['title']), ENT_QUOTES, 'UTF-8') ?></h1>
+        <?= renderSeoEditorial($seoPage ?? []) ?>
 
     <?php if (!empty($programs)): ?>
       <div class="mat-detail-tags">

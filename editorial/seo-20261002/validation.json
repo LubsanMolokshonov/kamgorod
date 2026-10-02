@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-02",
+  "environment": "local Docker, production read-only baseline only",
+  "php_lint": {
+    "files": 41,
+    "failed": 0
+  },
+  "unit_checks": {
+    "passed": 268
+  },
+  "material_http_fixtures": {
+    "passed": 100,
+    "fixtures_removed": true,
+    "original_content_and_updated_at_preserved": true
+  },
+  "catalog_http": {
+    "all_pages": "passed",
+    "unique_card_counts_match_database": true,
+    "search_beyond_first_page": "passed"
+  },
+  "seo_browser": {
+    "passed": 50,
+    "failed": 0,
+    "runs": [
+      {
+        "files": [
+          "seo-technical.spec.js",
+          "seo-october.spec.js"
+        ],
+        "passed": 48
+      },
+      {
+        "filter": "карточки, статья",
+        "passed": 2
+      }
+    ],
+    "engines": [
+      "Chromium",
+      "WebKit"
+    ],
+    "widths": [
+      360,
+      390,
+      412
+    ],
+    "heights": [
+      640,
+      932
+    ],
+    "targeted_recheck": "Unique Description 120–160 for all five landings: 2 passed"
+  },
+  "existing_cart_browser": {
+    "passed": 8,
+    "skipped": 2,
+    "failed": 2,
+    "failure_reason": "Third-party Yandex Metrika certificate errors and report-only CSP console messages",
+    "skipped_reason": "Empty cart: no payment form"
+  },
+  "migrations": {
+    "187": "repeat passed",
+    "188": "repeat passed",
+    "189": "repeat passed"
+  },
+  "imports": {
+    "school_olympiads": 6,
+    "school_questions": 60,
+    "school_second_apply": "existing IDs retained",
+    "metadata_second_apply": "no writes",
+    "rollback": "dry-run of history ID 5 passed",
+    "metadata_candidate_rows": 255,
+    "metadata_local_verified": 174,
+    "metadata_missing": 73,
+    "metadata_changed_source": 8,
+    "stale_early_local_overrides_rolled_back": 9
+  },
+  "git_diff_check": "passed",
+  "not_verified": [
+    "Authenticated full registration/payment/document-issuance E2E",
+    "Production after deployment",
+    "Editorial facts not supplied",
+    "Search-engine index/ranking changes"
+  ]
+}

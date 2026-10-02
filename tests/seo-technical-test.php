@@ -25,6 +25,9 @@ same(str_contains($normalized, '<p class="x material-content-heading">Назва
 same(str_contains($normalized, '<h2 id="section"'), true, 'Самостоятельный раздел');
 same(str_contains($normalized, '/kursy/?x=1#p'), true, 'Ссылка в контенте');
 same(str_contains($normalized, '<a href="/wrong">'), true, 'JS не является ссылкой');
+$tableHtml = normalizeContentHtml('<table><tr><td>Данные</td></tr></table>');
+same(substr_count($tableHtml, 'class="seo-table-scroll"'), 1, 'Прокручиваемая таблица');
+same(normalizeContentHtml($tableHtml), $tableHtml, 'Обёртка таблицы идемпотентна');
 for ($i=0;$i<100;$i++) {
     $out=normalizeContentHtml('<h1>Материал '.$i.'</h1><p>Текст &amp; ссылка <a href="/kursy">курсы</a></p><h1>Раздел</h1>', 'Материал '.$i);
     same(substr_count($out, '<h1'), 0, 'Материал '.$i);

@@ -5,7 +5,8 @@
             <div class="footer-container">
                 <div class="footer-column">
                     <h4>О портале</h4>
-                    <p><?php echo SITE_NAME ?? 'Педагогический портал'; ?> - платформа для проведения всероссийских и международных конкурсов для педагогов и школьников.</p>
+                    <p><?php
+if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); } echo SITE_NAME ?? 'Педагогический портал'; ?> - платформа для проведения всероссийских и международных конкурсов для педагогов и школьников.</p>
                 </div>
 
                 <div class="footer-column">
@@ -51,13 +52,13 @@
                     <p>
                         <a href="/zhurnal/">Журнал публикаций</a><br>
                         <a href="/publikacii/">Опубликованные материалы</a><br>
-                        <a href="/opublikovat/">Опубликовать материал</a><br>
-                        <a href="/sertifikat-publikacii/">Получить сертификат</a>
+                        <a href="/publikaciya-dlya-pedagogov/">Опубликовать материал</a><a href="/generator-statej/">Генератор статей</a><br>
+                        <a href="/publikaciya-dlya-pedagogov/#pravila">Получить сертификат</a>
                     </p>
                 </div>
 
                 <div class="footer-column">
-                    <h4>Помощь</h4>
+                    <h4>Помощь</h4><p><a href="/dou/">Дошкольное образование</a> · <a href="/nachalnaya-shkola/">Начальная школа</a> · <a href="/spo/">СПО</a> · <a href="/dopolnitelnoe-obrazovanie/">Дополнительное образование</a></p>
                     <p>
                         <a href="/svedeniya/">Сведения об организации</a><br>
                         <a href="/pages/contacts.php">Контакты</a><br>

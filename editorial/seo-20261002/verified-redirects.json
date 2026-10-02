@@ -1,0 +1,65 @@
+[
+  {
+    "source_id": 199,
+    "target_id": 198,
+    "source_slug": "formirovanie-yazykovoy-identichnosti-v-sotsialnyh-setyah-1",
+    "target_slug": "formirovanie-yazykovoy-identichnosti-v-sotsialnyh-setyah",
+    "user_id": 5896,
+    "content_sha256": "6c272e32a88a3168771cc4a681f62eb0fe436a8f6f685bae9259441af92e8683",
+    "title": "Формирование языковой идентичности в социальных сетях"
+  },
+  {
+    "source_id": 339,
+    "target_id": 301,
+    "source_slug": "idei-v-f-shatalova-v-sovremennom-uroke-organizatsiya-kollektivnoy-poznavatelnoy-deyatelnosti-v-nachalnyh-klassah-1",
+    "target_slug": "idei-v-f-shatalova-v-sovremennom-uroke-organizatsiya-kollektivnoy-poznavatelnoy-deyatelnosti-v-nachalnyh-klassah",
+    "user_id": 7049,
+    "content_sha256": "041d09da0876441d3c0147a5160d59a75223d010e2e7821472e9bd4f76f4b655",
+    "title": "ИДЕИ В. Ф. ШАТАЛОВА В СОВРЕМЕННОМ УРОКЕ: ОРГАНИЗАЦИЯ КОЛЛЕКТИВНОЙ ПОЗНАВАТЕЛЬНОЙ ДЕЯТЕЛЬНОСТИ В НАЧАЛЬНЫХ КЛАССАХ"
+  },
+  {
+    "source_id": 185,
+    "target_id": 184,
+    "source_slug": "konspekt-zanyatiya-po-lepke-vot-oni-kakie-yozhiki-lesnye-1",
+    "target_slug": "konspekt-zanyatiya-po-lepke-vot-oni-kakie-yozhiki-lesnye",
+    "user_id": 5751,
+    "content_sha256": "5db50a47be628d77352e7cc0697c2efd13e8a50510185a548be31389e607ebb6",
+    "title": "Конспект занятия по лепке «Вот они какие, ёжики лесные»"
+  },
+  {
+    "source_id": 258,
+    "target_id": 257,
+    "source_slug": "stsenariy-prazdnika-9-maya-my-pomnim-den-pobedy-1",
+    "target_slug": "stsenariy-prazdnika-9-maya-my-pomnim-den-pobedy",
+    "user_id": 6659,
+    "content_sha256": "5c3327d95d39b4293ccc0cb4d17ab8eff4486921edb14346c9138bf4be08730c",
+    "title": "Сценарий праздника 9 Мая 'Мы помним День Победы'"
+  },
+  {
+    "source_id": 245,
+    "target_id": 243,
+    "source_slug": "stsenariy-prazdnika-den-zaschity-detey-v-detskom-sadu-1",
+    "target_slug": "stsenariy-prazdnika-den-zaschity-detey-v-detskom-sadu",
+    "user_id": 6574,
+    "content_sha256": "ef809a1f2a475200ce3add0a93e5933d571c55f9847760b97f683fa5dae4256a",
+    "title": "Сценарий праздника 'День защиты детей в детском саду'"
+  },
+  {
+    "source_id": 203,
+    "target_id": 204,
+    "source_slug": "urok-tehnologii-v-7-klasse-mastiki-i-klei-dlya-linoleuma-1",
+    "target_slug": "urok-tehnologii-v-7-klasse-mastiki-i-klei-dlya-linoleuma-2",
+    "user_id": 6067,
+    "content_sha256": "d09d5b51775121755e4243d7cd59254ecb1e3a257b264d883d44f93faf72e15c",
+    "title": "Урок технологии в 7 классе: мастики и клеи для линолеума"
+  },
+  {
+    "source_id": 209,
+    "target_id": 208,
+    "source_slug": "yaschik-s-fruktami-1",
+    "target_slug": "yaschik-s-fruktami",
+    "user_id": 6184,
+    "content_sha256": "d4e3f94a184708a99a452897056cabf4e4281802c07814a2fe86e8c01610a912",
+    "title": "Ящик с фруктами"
+  }
+]

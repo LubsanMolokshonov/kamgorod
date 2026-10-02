@@ -38,7 +38,7 @@ $pmIsSubscriber = $pmUserId ? (new SubscriptionService($db))->coversCertificates
 $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
 
 $pageTitle = 'Опубликовать статью бесплатно и получить свидетельство | ' . SITE_NAME;
-$pageDescription = 'Опубликуйте статью бесплатно в электронном педагогическом журнале — материал разместят за 5 минут, платно только свидетельство о публикации для аттестации.';
+$pageDescription = 'Опубликуйте статью бесплатно в электронном педагогическом журнале — материал разместят после проверки, платно только свидетельство о публикации для аттестации.';
 
 $rdActivePage = 'zhurnal';
 $additionalCSS = [
@@ -58,8 +58,8 @@ include __DIR__ . '/../includes/header-redesign.php';
   <div class="rd-wrap" style="margin-top:24px;text-align:center;">
     <div class="rd-pill-row reveal-stagger" style="justify-content:center;">
       <span class="rd-pill"><span class="dot"></span><?php echo number_format($totalPublications + 1250, 0, '', ' '); ?>+ публикаций</span>
-      <span class="rd-pill indigo">Свидетельство <?php echo $pmSubscriptionOnly ? 'по подписке' : '499&nbsp;₽'; ?></span>
-      <span class="rd-pill">5&nbsp;минут оформление</span>
+      <span class="rd-pill indigo">Свидетельство <?php echo $pmSubscriptionOnly ? 'по подписке' : htmlspecialchars(number_format((float)PUBLICATION_CERTIFICATE_PRICE, 0, ',', ' ')) . '&nbsp;₽'; ?></span>
+      <span class="rd-pill">После проверки материала</span>
     </div>
     <h1 class="rd-hero-title rd-hero-title-sm reveal" style="max-width:880px;margin:0 auto;">Опубликуйте статью бесплатно и&nbsp;получите <span class="accent">свидетельство о&nbsp;публикации</span></h1>
     <p class="rd-hero-sub reveal" style="max-width:720px;margin:14px auto 0;">Ваш материал разместят в&nbsp;электронном педагогическом журнале и&nbsp;он&nbsp;станет доступен коллегам по&nbsp;всей России.</p>
@@ -263,7 +263,7 @@ include __DIR__ . '/../includes/header-redesign.php';
                   Загрузка...
                 </span>
               </button>
-              <p class="submit-hint">После загрузки вы&nbsp;перейдёте к&nbsp;оформлению свидетельства<?php echo $pmSubscriptionOnly ? ' по подписке' : ' (499&nbsp;₽)'; ?></p>
+              <p class="submit-hint">После загрузки вы&nbsp;перейдёте к&nbsp;оформлению свидетельства<?php echo $pmSubscriptionOnly ? ' по подписке' : ' (' . htmlspecialchars(number_format((float)PUBLICATION_CERTIFICATE_PRICE, 0, ',', ' ')) . '&nbsp;₽)'; ?></p>
             </div>
           </form>
         </div>
@@ -319,7 +319,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           </details>
           <details>
             <summary>Как быстро появится в&nbsp;журнале?</summary>
-            <p>После модерации (1–2&nbsp;рабочих дня) публикация появится в&nbsp;каталоге журнала.</p>
+            <p>После успешной автоматической или ручной проверки публикация появится в&nbsp;каталоге журнала. Точный срок зависит от проверки материала.</p>
           </details>
           <details>
             <summary>Какие форматы файлов?</summary>

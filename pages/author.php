@@ -16,7 +16,7 @@ $userObj = new User($db);
 $user = $id > 0 ? $userObj->getById($id) : null;
 
 $publicationObj = new Publication($db);
-$publications = $user ? $publicationObj->getByUser($id, 'published') : [];
+$publications = $user ? array_values(array_filter($publicationObj->getByUser($id, 'published'), static fn($p) => empty($p['redirect_to_slug']))) : [];
 
 // 404, если автора нет или у него нет опубликованных материалов
 // (профили обычных зарегистрированных пользователей не открываем).

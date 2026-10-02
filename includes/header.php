@@ -1,4 +1,5 @@
 <?php
+if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
 // Initialize session for user authentication check
 require_once __DIR__ . '/session.php';
 require_once __DIR__ . '/asset-helpers.php';
@@ -8,6 +9,30 @@ initSession();
 require_once __DIR__ . '/../classes/PricingMode.php';
 $pricingVariant = PricingMode::getVariant();   // 'A' | 'B'
 $pricingLabel   = PricingMode::label();        // 'control' | 'subscription'
+
+// Метаданные отделены от названий, используемых в документах.
+require_once __DIR__ . '/seo-editorial.php';
+$seoPage = isset($db) && http_response_code() < 400 ? seoPageData($db) : [];
+$seoLandingDefinitions = json_decode(file_get_contents(__DIR__ . '/seo-landing-data.json'), true);
+$seoLandingPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+if (http_response_code() < 400 && isset($seoLandingDefinitions[$seoLandingPath])) {
+    if (empty($seoPage['meta_title'])) $seoPage['meta_title'] = $seoLandingDefinitions[$seoLandingPath]['title'];
+    if (empty($seoPage['seo_h1'])) $seoPage['seo_h1'] = $seoLandingDefinitions[$seoLandingPath]['h1'];
+    if (empty($seoPage['meta_description'])) $seoPage['meta_description'] = $seoLandingDefinitions[$seoLandingPath]['description'];
+}
+
+if (!empty($seoPage['meta_title'])) $pageTitle = $seoPage['meta_title'];
+if (!empty($seoPage['meta_description'])) $pageDescription = $seoPage['meta_description'];
+if (!empty($jsonLd) && in_array($jsonLd['@type'] ?? '', ['Article','Course','LearningResource'],true)) $jsonLd = seoEditorialSchema($jsonLd,seoEditorial($seoPage));
+if (!empty($jsonLdArray)) {
+    foreach ($jsonLdArray as &$seoSchema) {
+        if (is_array($seoSchema) && in_array($seoSchema['@type'] ?? '', ['Article','Course','LearningResource'], true)) {
+            $seoSchema = seoEditorialSchema($seoSchema, seoEditorial($seoPage));
+        }
+    }
+    unset($seoSchema);
+}
+$additionalCSS[] = '/assets/css/seo-accessibility.css';
 
 // Флаг редизайн-страницы: если true, к <body> добавляется класс rd-page
 // (включает типографику и сбросы редизайна). По умолчанию false — чтобы
@@ -149,6 +174,7 @@ if ($useSharedBreadcrumbs) {
 <?php
 // Поддержка нескольких JSON-LD блоков: $jsonLdArray (массив), $jsonLd (одиночный), $breadcrumbJsonLd
 $allJsonLd = [];
+if (!empty($jsonLd) && in_array($jsonLd['@type'] ?? '', ['Article','Course','LearningResource'],true)) $jsonLd = seoEditorialSchema($jsonLd,seoEditorial($seoPage));
 if (!empty($jsonLdArray)) {
     $allJsonLd = $jsonLdArray;
 } elseif (!empty($jsonLd)) {
@@ -184,7 +210,7 @@ $isLoggedIn = isset($_SESSION['user_email']);
 <div class="rd-topbar">
   <div class="rd-wrap rd-nav">
     <a class="rd-logo" href="/" aria-label="<?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
-      <img src="/assets/images/logo.svg" alt="<?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
+      <img src="/assets/images/logo.svg" alt="Педагогический портал">
     </a>
 
     <nav class="rd-nav-links">
@@ -262,7 +288,7 @@ $isLoggedIn = isset($_SESSION['user_email']);
   <div class="rd-mobile-menu-panel">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <a class="rd-logo" href="/" aria-label="<?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
-        <img src="/assets/images/logo.svg" alt="<?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
+        <img src="/assets/images/logo.svg" alt="Педагогический портал">
       </a>
       <button type="button" class="rd-menu-btn" id="rdMenuClose" aria-label="Закрыть">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>

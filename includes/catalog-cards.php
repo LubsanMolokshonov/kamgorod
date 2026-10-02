@@ -52,6 +52,18 @@ function renderCatalogCards(string $section, array $items): string {
               </<?= $cardUrl ? 'a' : 'div' ?>>
             <?php endforeach; ?>
 <?php endif; ?>
+<?php if ($section === 'konkursy'):
+require_once __DIR__ . '/../classes/PricingMode.php';
+require_once __DIR__ . '/../classes/SubscriptionService.php';
+global $db;
+$subscriber = !empty($_SESSION['user_id']) && (new SubscriptionService($db))->coversCertificates((int)$_SESSION['user_id']);
+$subscriptionOnly = PricingMode::isSubscriptionOnly() && !$subscriber;
+foreach ($items as $item): ?>
+<a class="rd-card" data-product-id="<?= (int)$item['id'] ?>" href="<?= htmlspecialchars(buildProductUrl('konkursy', $item['slug'], $item['id']), ENT_QUOTES, 'UTF-8') ?>">
+<div class="rd-card-pat"></div><div class="rd-card-tags"><span class="rd-tag indigo"><?= htmlspecialchars(COMPETITION_CATEGORIES[$item['category']] ?? '', ENT_QUOTES, 'UTF-8') ?></span></div>
+<h4><?= htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8') ?></h4><div class="rd-card-meta"><?= htmlspecialchars(mb_substr(strip_tags($item['description'] ?? ''), 0, 120), ENT_QUOTES, 'UTF-8') ?></div>
+<div class="rd-card-foot"><div class="rd-price-now"><?= $subscriptionOnly ? '' : number_format((float)$item['price'], 0, ',', ' ') . ' ₽' ?></div><span class="rd-join-btn">Участвовать</span></div></a>
+<?php endforeach; endif; ?>
 <?php if ($section === 'olimpiady'): $olympiads = $items; ?>
 <?php foreach ($olympiads as $olympiad):
                 $audLabel = Olympiad::getAudienceLabel($olympiad['target_audience'] ?? '');

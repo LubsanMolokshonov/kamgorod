@@ -135,3 +135,12 @@ Thumbs.db
 
 # Снапшоты раундов A/B-теста (создаются scripts/reset-pricing-ab.php)
 scripts/ab-snapshots/
+
+# Локальные свидетельства SEO-аудита; в выпуск входят код и проверяемые пакеты.
+/editorial/seo-20261002/public-snapshot.json
+/editorial/seo-20261002/legacy-olympiads.json
+/editorial/seo-20261002/production-before/
+/editorial/seo-20261002/local-after/
+/editorial/seo-20261002/*.png
+/editorial/seo-20261002/local-*.json
+/scripts/__pycache__/

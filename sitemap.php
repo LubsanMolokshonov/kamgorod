@@ -21,13 +21,29 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 <?php
 function sitemapUrl($loc, $priority = '0.5', $changefreq = 'monthly', $lastmod = null) {
     global $db;
-    static $seen = [];
+    static $seen = [], $contentDates = null;
+    if ($contentDates === null) {
+        $contentDates = [];
+        try {
+            foreach ($db->query('SELECT path,editorial_json FROM seo_page_overrides WHERE editorial_json IS NOT NULL') as $page) {
+                $date = json_decode($page['editorial_json'], true)['content_updated_at'] ?? null;
+                if ($date) $contentDates[$page['path']] = $date;
+            }
+        } catch (PDOException $e) { if ($e->getCode() !== '42S02') throw $e; }
+    }
     if (isset($seen[$loc])) return;
     $seen[$loc] = true;
-    $route = parseCatalogPath(parse_url($loc, PHP_URL_PATH));
+    $path = parse_url($loc, PHP_URL_PATH);
+    $landings = json_decode(file_get_contents(__DIR__ . '/includes/seo-landing-data.json'), true);
+    $specialLanding = isset($landings[$path]) && $path !== '/kursy/povyshenie-kvalifikatsii/nachalnaya-shkola/';
+    if ($specialLanding && str_starts_with($path, '/konkursy/') && (new CatalogListing($db,'konkursy',['ac'=>'pedagogi']))->count() === 0) return;
+    if ($specialLanding && str_starts_with($path, '/kursy/') && (new CatalogListing($db,'kursy',['ac'=>'pedagogi','program_type'=>'kpk']))->count() === 0) return;
+    $route = $specialLanding ? null : parseCatalogPath($path);
     if ($route && (!catalogOptionsExist($db, $route['options']) || !catalogPolicy($db, $route['section'], $route['options'])['sitemap'])) return;
     echo "    <url>\n";
     echo "        <loc>" . htmlspecialchars($loc) . "</loc>\n";
+    // Технический updated_at не доказывает содержательное изменение.
+    $lastmod = $contentDates[$path] ?? null;
     if ($lastmod) {
         $ts = is_numeric($lastmod) ? (int)$lastmod : strtotime($lastmod);
         if ($ts > 0) {
@@ -88,6 +104,15 @@ sitemapUrl($baseUrl . '/zhurnal/', '0.9', 'weekly', $maxPublications);
 sitemapUrl($baseUrl . '/publikacii/', '0.9', 'weekly', $maxPublications);
 sitemapUrl($baseUrl . '/materialy/', '0.8', 'monthly', fileLastmod($rootDir . '/pages/materials-landing.php'));
 sitemapUrl($baseUrl . '/materialy/katalog/', '0.9', 'weekly', $maxMaterials);
+
+// Посадочные с полным содержимым и редакционно подтверждённые каталоги.
+foreach (array_keys(json_decode(file_get_contents(__DIR__ . '/includes/seo-landing-data.json'),true)) as $path) sitemapUrl($baseUrl.$path,'0.8','weekly');
+try {
+    foreach ($db->query("SELECT path FROM seo_page_overrides WHERE index_catalog=1 AND intro_text IS NOT NULL AND intro_text<>''") as $row) {
+        $route = parseCatalogPath($row['path']);
+        if ($route) sitemapUrl($baseUrl.$row['path'],'0.7','weekly');
+    }
+} catch(PDOException $e) { if($e->getCode()!=='42S02') throw $e; }
 
 // Категории конкурсов — lastmod от таблицы competitions
 foreach (['metodika', 'vneurochnaya', 'proekty', 'tvorchestvo'] as $cat) {
@@ -185,7 +210,7 @@ foreach ($audienceProductMap as $section => $cfg) {
 // 2. КОНКУРСЫ
 // ========================================
 
-$stmt = $db->query("SELECT slug, updated_at FROM competitions WHERE is_active = 1 ORDER BY display_order, created_at DESC");
+$stmt = $db->query("SELECT slug, updated_at FROM competitions WHERE is_active = 1 AND (redirect_to_slug IS NULL OR redirect_to_slug = '') ORDER BY display_order, created_at DESC");
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     sitemapUrl($baseUrl . '/konkursy/' . $row['slug'] . '/', '0.7', 'monthly', $row['updated_at']);
 }
@@ -238,6 +263,13 @@ $stmt = $db->query("
 ");
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     sitemapUrl($baseUrl . '/kursy/' . $row['cat_slug'] . '/' . $row['type_slug'] . '/', '0.6', 'weekly', $row['lastmod']);
+}
+
+// Уровень × тип программы: только существующие непустые комбинации.
+foreach ($db->query("SELECT DISTINCT at2.slug, c.program_type FROM audience_types at2 JOIN course_audience_types ca ON ca.audience_type_id=at2.id JOIN courses c ON c.id=ca.course_id WHERE at2.is_active=1 AND c.is_active=1") as $row) {
+    if(!in_array($row['slug'],['dou','nachalnaya-shkola','srednyaya-starshaya-shkola','spo','dopolnitelnoe-obrazovanie'],true)) continue;
+    sitemapUrl($baseUrl.buildSeoUrl('kursy',['at'=>$row['slug']]),'0.6','weekly');
+    sitemapUrl($baseUrl.buildSeoUrl('kursy',['at'=>$row['slug'],'program_type'=>$row['program_type']]),'0.6','weekly');
 }
 
 // Специализация (предмет) × тип программы — /kursy/{тип}/{spec}/ (правило .htaccess «ct+as»).

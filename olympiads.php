@@ -117,6 +117,14 @@ if (!empty($audienceSpecializations) && $selectedCategoryData) {
 // категории фильтра: «Предмет» (specialization_type = subject) и «Специализация»
 // (specialization_type = role). Оба фильтруют каталог через один query-параметр `as`
 // (specialization_slug) — различие только визуальное, в аккордеоне фильтра.
+// Не формируем ссылки на несовместимые сочетания уровня и специализации.
+$audienceSpecializations = array_values(array_filter($audienceSpecializations, static function($item) use($db,$catalogOptions) {
+    return catalogOptionsExist($db,array_merge($catalogOptions,['as'=>$item['slug']]));
+}));
+$audienceTypes = array_values(array_filter($audienceTypes, static function($item) use($db,$catalogOptions) {
+    return catalogOptionsExist($db,array_merge($catalogOptions,['at'=>$item['slug']]));
+}));
+
 $specSubjects = [];
 $specRoles    = [];
 foreach ($audienceSpecializations as $as) {
@@ -257,7 +265,8 @@ include __DIR__ . '/includes/header-redesign.php';
         <span class="rd-pill"><?php echo $totalOlympiads; ?>+ активных олимпиад</span>
         <span class="rd-pill indigo">Соответствует ФГОС</span>
       </div>
-      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo $h1Html; ?></h1>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo !empty($seoPage['seo_h1']) ? htmlspecialchars(seoHeading(''), ENT_QUOTES, 'UTF-8') : $h1Html; ?></h1>
+      <?= renderSeoEditorial($seoPage ?? []) ?>
       <p class="rd-hero-sub reveal"><?php echo $h1Subtext; ?></p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Тест бесплатно · 10 вопросов</div>

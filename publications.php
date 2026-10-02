@@ -128,8 +128,8 @@ include __DIR__ . '/includes/header-redesign.php';
         <span class="rd-pill indigo">Свидетельство СМИ</span>
         <span class="rd-pill">Резидент Сколково</span>
       </div>
-      <h1 class="rd-hero-title rd-hero-title-sm reveal">Опубликованные материалы педагогов&nbsp;<span class="accent">в&nbsp;научном журнале</span></h1>
-      <p class="rd-hero-sub reveal">Методические разработки, конспекты уроков, программы и проекты, опубликованные в нашем зарегистрированном электронном СМИ. Бесплатная публикация с выдачей сертификата.</p>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?= htmlspecialchars(seoHeading('Опубликованные материалы педагогов в научном журнале'), ENT_QUOTES, 'UTF-8') ?></h1>
+      <p class="rd-hero-sub reveal">Методические разработки, конспекты уроков, программы и проекты, опубликованные в нашем зарегистрированном электронном СМИ. Размещение бесплатно. Свидетельство оформляется отдельно по действующим условиям.</p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Бесплатная публикация</div>
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Сертификат СМИ Эл. №ФС 77-74524</div>
@@ -137,7 +137,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Индексация поисковыми системами</div>
       </div>
       <div class="rd-hero-cta reveal">
-        <a href="/opublikovat/" class="rd-btn rd-btn-primary">Опубликовать свой материал
+        <a href="/publikaciya-dlya-pedagogov/" class="rd-btn rd-btn-primary">Опубликовать свой материал
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
         <span style="font-size:13px;color:var(--ink-500);">бесплатно · сертификат СМИ</span>

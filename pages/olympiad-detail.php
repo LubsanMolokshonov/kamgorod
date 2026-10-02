@@ -54,7 +54,7 @@ if (!$olympiad) {
 
 $audienceLabel = Olympiad::getAudienceLabel($olympiad['target_audience']);
 $diplomaPrice  = (int)($olympiad['diploma_price'] ?? 229);
-$academicYear  = $olympiad['academic_year'] ?? '2025-2026';
+$academicYear  = $olympiad['academic_year'] ?? '';
 
 // A/B-тест: в варианте B (не-подписчик) цены диплома нет — он доступен только по подписке.
 require_once __DIR__ . '/../classes/PricingMode.php';
@@ -141,7 +141,8 @@ include __DIR__ . '/../includes/header-redesign.php';
           <span class="rd-pill" style="background:#FFF3E0;color:#C2410C;border-color:#FFD9A8;">🎁 2+1: третий диплом бесплатно</span>
         </div>
 
-        <h1 class="cd-hero-title reveal"><?php echo htmlspecialchars($olympiad['title']); ?></h1>
+        <h1 class="cd-hero-title reveal"><?php echo htmlspecialchars(seoHeading($olympiad['title'])); ?></h1>
+        <?= renderSeoEditorial($seoPage ?? []) ?>
 
         <p class="rd-hero-sub reveal" style="margin-top:18px;color:var(--ink-700);font-size:17px;line-height:1.55;">
           <?php echo htmlspecialchars($olympiadPageContent['hero_text'], ENT_QUOTES, 'UTF-8'); ?>
@@ -324,7 +325,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           <div class="body">Диплом I, II, III степени в электронном виде</div>
         </div>
 
-        <div class="cd-info-card cd-i-year">
+        <?php if ($academicYear !== ''): ?><div class="cd-info-card cd-i-year">
           <div style="display:flex;gap:12px;align-items:center;">
             <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
             <h3>Учебный год</h3>
@@ -332,7 +333,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           <div class="body"><?php echo htmlspecialchars($academicYear); ?></div>
         </div>
 
-        <div class="cd-info-card cd-i-price">
+        <?php endif; ?><div class="cd-info-card cd-i-price">
           <div style="display:flex;gap:12px;align-items:center;">
             <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21V3h5a4 4 0 0 1 0 8H6"/><path d="M6 15h8"/></svg></div>
             <h3>Стоимость диплома</h3>

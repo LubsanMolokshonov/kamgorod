@@ -12,7 +12,7 @@ try {
     $path = $_GET['path'] ?? ''; $q = $_GET['q'] ?? '';
     if (!is_string($path) || !is_string($q) || strlen($path) > 1000 || mb_strlen($q) > 200) throw new InvalidArgumentException('Некорректный запрос');
     $route = parseCatalogPath($path);
-    if (!$route || !in_array($route['section'], ['kursy','olimpiady','publikacii'], true) || !catalogOptionsExist($db, $route['options'])) throw new InvalidArgumentException('Каталог не найден');
+    if (!$route || !in_array($route['section'], ['kursy','olimpiady','publikacii','konkursy'], true) || !catalogOptionsExist($db, $route['options'])) throw new InvalidArgumentException('Каталог не найден');
     $page = catalogPageNumber($_GET['page'] ?? 1);
     $request = $route; $request['page'] = $page; $request['q'] = trim($q);
     $listing = new CatalogListing($db, $route['section'], $route['options'], $q);

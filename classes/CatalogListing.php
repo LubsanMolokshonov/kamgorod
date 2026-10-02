@@ -11,7 +11,7 @@ class CatalogListing {
     private array $params = [];
     private string $order;
     private string $columns;
-    public const PAGE_SIZE = 24;
+    public const PAGE_SIZE = 50;
 
     public function __construct(PDO $pdo, string $section, array $options = [], string $search = '') {
         $this->db = new Database($pdo);
@@ -36,7 +36,12 @@ class CatalogListing {
             $this->columns .= ', p.description, p.price, p.program_type, p.hours';
         } elseif ($section === 'olimpiady') {
             $this->columns .= ', p.description, p.subject, p.target_audience, p.diploma_price';
+        } elseif ($section === 'konkursy') {
+            $this->columns .= ', p.description, p.category, p.price';
+            $wheres[] = "(p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')";
         } elseif ($section === 'vebinary') {
+            $this->from .= ' LEFT JOIN speakers sp ON sp.id = p.speaker_id';
+            $this->columns = 'p.*, sp.full_name AS speaker_name, sp.photo AS speaker_photo';
             $this->order = 'p.scheduled_at DESC, p.id DESC';
         }
         foreach (['ac' => ['audience_categories', 'category_id', 'audience_categories'],
@@ -88,5 +93,9 @@ class CatalogListing {
     }
     public function minimumOlympiadPrice(): float {
         return (float)($this->db->queryOne("SELECT MIN(NULLIF(p.diploma_price, 0)) AS price FROM {$this->from} WHERE {$this->where}", $this->params)['price'] ?? 229);
+    }
+    public function minimumCompetitionPrice(): float {
+        if ($this->section !== 'konkursy') throw new LogicException('Только конкурсы');
+        return (float)($this->db->queryOne("SELECT MIN(NULLIF(p.price, 0)) AS price FROM {$this->from} WHERE {$this->where}", $this->params)['price'] ?? 0);
     }
 }

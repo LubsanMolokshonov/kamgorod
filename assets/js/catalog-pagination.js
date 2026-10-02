@@ -4,7 +4,7 @@
     var nav = document.getElementById('catalogPagination');
     if (!nav) return;
     var section = nav.dataset.catalogPath.split('/')[1];
-    var names = {kursy: ['courses', 'course'], olimpiady: ['olympiads', 'olympiad'], publikacii: ['publications', 'publication']};
+    var names = {kursy: ['courses', 'course'], olimpiady: ['olympiads', 'olympiad'], publikacii: ['publications', 'publication'], konkursy: ['competitions', 'competition']};
     if (!names[section]) return;
     var grid = document.getElementById(names[section][0] + 'Grid');
     var input = document.getElementById(names[section][1] + 'SearchInput');

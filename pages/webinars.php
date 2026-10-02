@@ -27,7 +27,8 @@ $status           = $_GET["status"] ?? "";
 
 require_once __DIR__ . '/../includes/catalog-seo.php';
 $catalogOptions = ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec, 'status' => $status];
-if (!catalogOptionsExist($db, $catalogOptions)) catalogNotFound();
+$catalogRequest = catalogRequest($db, 'vebinary', $catalogOptions);
+$catalogListing = new CatalogListing($db, 'vebinary', $catalogOptions, $catalogRequest['q']);
 
 redirectToSeoUrl('vebinary', [
     'status' => $status,
@@ -81,8 +82,9 @@ if (!empty($selectedSpec)) {
     $filters['specialization_slug'] = $selectedSpec;
 }
 
-$webinars = $webinarObj->getAll($filters, 50);
-$totalWebinars = (new CatalogListing($db, 'vebinary', $catalogOptions))->count();
+$totalWebinars = $catalogListing->count();
+if ($catalogRequest['page'] > max(1, (int)ceil($totalWebinars / CatalogListing::PAGE_SIZE))) catalogNotFound();
+$webinars = $catalogListing->page($catalogRequest['page']);
 $counts = $webinarObj->countByStatus();
 
 // Counts per filter — скрываем пустые пункты + noindex пустых страниц
@@ -209,9 +211,18 @@ $jsonLdArray = [buildFaqJsonLd($faqItems)];
 require_once __DIR__ . "/../includes/listing-schema-helper.php";
 $jsonLdArray[] = buildListingSchema($db, 'webinar', 'vebinary', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
 
-$catalogPolicy = catalogPolicy($db, 'vebinary', $catalogOptions, $totalWebinars);
+$catalogPolicy = catalogPolicy($db, 'vebinary', $catalogOptions, $totalWebinars, $catalogRequest['page']);
 $canonicalUrl = $catalogPolicy['canonical'];
-$robotsContent = $catalogPolicy['robots'];
+$robotsContent = $catalogRequest['q'] !== '' ? 'noindex,follow' : $catalogPolicy['robots'];
+if ($catalogRequest['page'] > 1) $pageTitle .= ' — страница ' . $catalogRequest['page'];
+
+// Не формируем ссылки на несовместимые сочетания уровня и специализации.
+$audienceSpecializations = array_values(array_filter($audienceSpecializations, static function($item) use($db,$catalogOptions) {
+    return catalogOptionsExist($db,array_merge($catalogOptions,['as'=>$item['slug']]));
+}));
+$audienceTypes = array_values(array_filter($audienceTypes, static function($item) use($db,$catalogOptions) {
+    return catalogOptionsExist($db,array_merge($catalogOptions,['at'=>$item['slug']]));
+}));
 
 include __DIR__ . "/../includes/header-redesign.php";
 ?>
@@ -228,7 +239,8 @@ include __DIR__ . "/../includes/header-redesign.php";
         <span class="rd-pill indigo">Бесплатное участие</span>
         <span class="rd-pill">Сертификат 2 ак. часа</span>
       </div>
-      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo $h1Html; ?></h1>
+      <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo !empty($seoPage['seo_h1']) ? htmlspecialchars(seoHeading(''), ENT_QUOTES, 'UTF-8') : $h1Html; ?></h1>
+      <?= renderSeoEditorial($seoPage ?? []) ?>
       <p class="rd-hero-sub reveal"><?php echo $h1Subtext; ?></p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Бесплатное участие в прямом эфире</div>
@@ -413,6 +425,7 @@ include __DIR__ . "/../includes/header-redesign.php";
               </a>
             <?php endforeach; ?>
           </div>
+          <?= renderCatalogPagination($catalogRequest, $totalWebinars) ?>
         <?php endif; ?>
       </div>
     </div>

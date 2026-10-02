@@ -1,0 +1,46 @@
+{
+  "source_rows": 3561,
+  "source_sheets": {
+    "Падение запросов": 264,
+    "Сироты": 2290,
+    "Каннибализация": 51,
+    "Дубли метаданных": 951,
+    "Новые страницы": 5
+  },
+  "production_before": {
+    "crawled": 7310,
+    "network_errors": 0,
+    "sitemap": 2919,
+    "sitemap_not_200": 0,
+    "sitemap_noindex": 0,
+    "sitemap_noncanonical": 0,
+    "missing_alt": 0,
+    "broken_internal_pairs": {
+      "301": 11,
+      "404": 6949,
+      "302": 1
+    }
+  },
+  "local_after": {
+    "crawled": 7003,
+    "network_errors": 0,
+    "sitemap": 2197,
+    "sitemap_not_200": 0,
+    "sitemap_noindex": 0,
+    "sitemap_noncanonical": 0,
+    "missing_alt": 0,
+    "broken_internal_pairs": {
+      "302": 1,
+      "404": 76
+    }
+  },
+  "row_acceptance": {
+    "Не принято": 1452,
+    "Локально 301 → 200; проверить решение по содержанию": 7,
+    "Локально PASS": 2102
+  },
+  "orphan_acceptance": {
+    "Локально PASS": 1766,
+    "Не принято": 524
+  }
+}

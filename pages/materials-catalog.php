@@ -14,6 +14,7 @@ require_once __DIR__ . '/../classes/AudienceCategory.php';
 require_once __DIR__ . '/../classes/AudienceType.php';
 require_once __DIR__ . '/../classes/AudienceSpecialization.php';
 require_once __DIR__ . '/../includes/seo-url.php';
+require_once __DIR__ . '/../includes/catalog-seo.php';
 
 $materialObj = new Material($db);
 $typeObj = new MaterialType($db);
@@ -54,8 +55,8 @@ if (!empty($realQuery['type']) && $selectedCategory === '') {
     exit;
 }
 
-$page    = max(1, (int)($_GET['page'] ?? 1));
-$perPage = 12;
+try { $page = catalogPageNumber($_GET['page'] ?? 1); } catch (InvalidArgumentException $e) { catalogNotFound(); }
+$perPage = CatalogListing::PAGE_SIZE;
 $offset  = ($page - 1) * $perPage;
 
 // 3-уровневая аудитория
@@ -73,6 +74,7 @@ if ($selectedSpec) {
 
 $currentType = $typeSlug ? $typeObj->getBySlug($typeSlug) : null;
 $currentTag  = $tagSlug ? $tagObj->getBySlug($tagSlug) : null;
+if (($typeSlug && !$currentType) || ($tagSlug && !$currentTag) || !catalogOptionsExist($db,['ac'=>$selectedCategory,'at'=>$selectedType,'as'=>$selectedSpec])) catalogNotFound();
 
 $filters = ['sort' => $sort];
 if ($currentType)          { $filters['type_id'] = $currentType['id']; }
@@ -90,6 +92,7 @@ if ($search !== '') {
     $totalCount = $materialObj->countPublished($filters);
 }
 $totalPages = max(1, (int)ceil($totalCount / $perPage));
+if ($page > $totalPages) catalogNotFound();
 
 $types = $typeObj->getWithCounts();
 
@@ -169,9 +172,13 @@ if ($selectedCategoryData) {
 }
 $hasExtraFilters = ($search !== '') || ($sort !== 'date') || ($program !== '') || $currentTag !== null
     || ($currentType && strpos($catalogPath, '/tip/') === false);
+if (isset($realQuery['page']) && !str_contains(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/page/')) {
+    unset($realQuery['page']);
+    header('Location: '.catalogPageUrl($catalogPath,$page).($realQuery ? '?'.http_build_query($realQuery) : ''),true,301);exit;
+}
 $canonicalUrl = SITE_URL . $catalogPath;
 if (!$hasExtraFilters && $page > 1) {
-    $canonicalUrl .= '?page=' . $page;
+    $canonicalUrl .= 'page/' . $page . '/';
 }
 
 // Пагинация: уникальные title/description, чтобы страницы не склеивались как дубли
@@ -255,7 +262,13 @@ include __DIR__ . '/../includes/header-redesign.php';
 <section class="rd-hero-catalog">
   <div class="rd-wrap">
 
-    <h1 class="rd-hero-title rd-hero-title-sm" style="margin-top:18px;"><?= htmlspecialchars($h1, ENT_QUOTES, 'UTF-8') ?></h1>
+    <?php if($catalogPath==='/materialy/katalog/' && $page===1): ?>
+    <nav class="seo-actions" aria-label="Разделы материалов">
+    <?php foreach ($types as $type): ?><a href="/materialy/katalog/tip/<?= htmlspecialchars($type['slug'],ENT_QUOTES,'UTF-8') ?>/"><?= htmlspecialchars($type['name'],ENT_QUOTES,'UTF-8') ?></a><?php endforeach; ?>
+    <?php foreach ((new Database($db))->query("SELECT DISTINCT ac.slug,ac.name FROM audience_categories ac JOIN material_audience_categories ma ON ma.category_id=ac.id JOIN materials m ON m.id=ma.material_id WHERE ac.is_active=1 AND m.status='published'") as $audience): ?><a href="/materialy/katalog/<?= htmlspecialchars($audience['slug'],ENT_QUOTES,'UTF-8') ?>/"><?= htmlspecialchars($audience['name'],ENT_QUOTES,'UTF-8') ?></a><?php endforeach; ?>
+    </nav>
+    <?php endif; ?>
+    <h1 class="rd-hero-title rd-hero-title-sm" style="margin-top:18px;"><?= htmlspecialchars(seoHeading($h1), ENT_QUOTES, 'UTF-8') ?></h1>
     <p class="rd-hero-sub" style="max-width:640px;">Готовые материалы под ФОП и ФАОП ОВЗ. Не нашли нужного — <a href="/material-generator/" style="color:var(--indigo-600);font-weight:600;">сгенерируйте свой через ИИ</a>.</p>
   </div>
 </section>
@@ -355,8 +368,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           if ($search !== '')    { $pgQuery['q'] = $search; }
           for ($p = 1; $p <= $totalPages; $p++) {
               $q = $pgQuery;
-              if ($p > 1) { $q['page'] = $p; }
-              $url = $catalogPath . (!empty($q) ? '?' . http_build_query($q) : '');
+              $url = catalogPageUrl($catalogPath, $p) . (!empty($q) ? '?' . http_build_query($q) : '');
               $cls = $p === $page ? ' class="is-active"' : '';
               echo '<a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '"' . $cls . '>' . $p . '</a>';
           }

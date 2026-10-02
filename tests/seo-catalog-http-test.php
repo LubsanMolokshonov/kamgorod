@@ -20,7 +20,7 @@ foreach (['/kursy/','/kursy/povyshenie-kvalifikatsii/','/kursy/perepodgotovka/',
         if($status!==200)throw new RuntimeException($base.' страница '.$p.' HTTP '.$status);
         $links=$xpath->query('//*[@id="'.$grid.'"]/a/@href');$current=[];
         foreach($links as $link)$current[]=$link->value;
-        if(count($current)!==min(24,max(0,$total-($p-1)*24)))throw new RuntimeException('Неверное число карточек');
+        if(count($current)!==min(CatalogListing::PAGE_SIZE,max(0,$total-($p-1)*CatalogListing::PAGE_SIZE)))throw new RuntimeException('Неверное число карточек');
         if(array_intersect($all,$current))throw new RuntimeException('Повтор карточек');
         $all=array_merge($all,$current);
         $canonical=$xpath->evaluate('string(//link[@rel="canonical"]/@href)');

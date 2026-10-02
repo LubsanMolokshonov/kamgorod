@@ -75,8 +75,8 @@ if ($articleHtml !== '' && $inlineCard) {
 
 $seoTitle = !empty($publication['meta_title']) ? $publication['meta_title'] : $publication['title'];
 $seoDescription = !empty($publication['meta_description']) ? $publication['meta_description'] : $publication['annotation'];
-$pageTitle = htmlspecialchars($seoTitle) . ' | ' . SITE_NAME;
-$pageDescription = htmlspecialchars(mb_substr($seoDescription, 0, 160));
+$pageTitle = $seoTitle . ' | ' . SITE_NAME;
+$pageDescription = mb_substr($seoDescription, 0, 160);
 $canonicalUrl = SITE_URL . '/blog/' . $publication['slug'] . '/';
 $noindex = !empty($publication['noindex']);
 
@@ -177,7 +177,8 @@ include __DIR__ . '/../includes/header-redesign.php';
           <span class="pub-type"><?php echo htmlspecialchars($publication['type_name']); ?></span>
         <?php endif; ?>
 
-        <h1><?php echo htmlspecialchars($publication['title']); ?></h1>
+        <h1><?php echo htmlspecialchars(seoHeading($publication['title'])); ?></h1>
+        <?= renderSeoEditorial($seoPage ?? []) ?>
 
         <div class="pub-meta">
           <div class="author-block">

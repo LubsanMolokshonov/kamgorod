@@ -287,7 +287,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="empty-cart-icon">🛒</div>
                 <h2>Корзина пуста</h2>
                 <p>Добавьте конкурсы или публикации в корзину</p>
-                <a href="/index.php" class="btn btn-primary">
+                <a href="/" class="btn btn-primary">
                     Перейти к конкурсам
                 </a>
             </div>
@@ -400,7 +400,7 @@ include __DIR__ . '/../includes/header.php';
 
             <!-- Add More Button -->
             <div class="add-more-section">
-                <a href="/index.php?from=cart" class="add-more-btn add-more-btn-secondary">
+                <a href="/?from=cart" class="add-more-btn add-more-btn-secondary">
                     + Добавить ещё мероприятие
                 </a>
             </div>

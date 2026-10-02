@@ -249,7 +249,7 @@ include __DIR__ . '/../includes/header.php';
                     <span>info@fgos.pro</span>
                 </a>
             </div>
-            <a href="/index.php" class="btn btn-primary btn-hero">Перейти к конкурсам</a>
+            <a href="/konkursy/" class="btn btn-primary btn-hero">Перейти к конкурсам</a>
         </div>
     </div>
 </div>

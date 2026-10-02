@@ -1,0 +1,44 @@
+/* Общие ограничения содержимого и доступность SEO-посадочных. */
+main, .rd-catalog-main, .rd-grid > *, .seo-editorial { min-width: 0; }
+main img, main video, article img, article video { max-width: 100%; height: auto; }
+.seo-editorial { margin: 20px 0; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 16px; line-height: 1.65; overflow-wrap: anywhere; }
+.seo-editorial p + p { margin-top: 10px; }
+.seo-table-scroll { max-width: 100%; overflow-x: auto; }
+body .seo-breadcrumbs ol { flex-wrap: wrap; }
+body .seo-breadcrumbs li { min-width: 0; max-width: 100%; flex-shrink: 1; }
+body .seo-breadcrumbs li [aria-current="page"] { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.catalog-pagination { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0; }
+.catalog-pagination a, .catalog-pagination span { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 8px 12px; }
+.seo-landing { max-width: 1120px; margin: auto; padding: 32px 20px 80px; line-height: 1.7; }
+.seo-landing h1 { font-size: clamp(28px, 4vw, 44px); line-height: 1.18; margin: 20px 0; }
+.seo-landing h2 { font-size: 26px; margin: 28px 0 12px; }
+.seo-landing ul, .seo-landing ol { padding-left: 24px; }
+.seo-landing .rd-grid { margin: 24px 0; }
+.seo-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+.seo-actions a { display: inline-flex; min-height: 44px; align-items: center; padding: 10px 18px; border: 1px solid currentColor; border-radius: 8px; }
+@media (max-width: 767px) {
+  .rd-page .rd-nav { gap: 12px; }
+  .rd-page .rd-nav-right { gap: 8px; }
+  .rd-page .rd-logo { min-width: 0; flex-shrink: 1; }
+  .rd-page .rd-topbar .rd-logo img { max-width: 110px; height: auto; }
+  .rd-grid, .rd-cards-grid, .seo-landing .rd-grid, .cd-benefits-grid, .cd-info-cards,
+  .cd-criteria-grid, .cd-noms-grid, .cd-goals-grid, .od-license-grid,
+  .rd-usp-grid, .rd-trust-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .cd-benefit, .cd-info-card { min-width: 0; overflow-wrap: anywhere; }
+  main input:not([type=checkbox]):not([type=radio]), main select, main textarea, .seo-landing input { font-size: 16px; max-width: 100%; }
+  main button, main select, main input:not([type=hidden]):not([type=checkbox]):not([type=radio]), .rd-load-more { min-height: 44px; }
+  .seo-landing, .seo-editorial { overflow-wrap: anywhere; }
+  .rd-card { max-width: 100%; min-width: 0; }
+}
+
+.rd-page .seo-landing h2 { margin: 32px 0 12px; }
+.rd-page .seo-landing h3 { margin: 20px 0 10px; }
+.rd-page .seo-landing p { margin: 12px 0; }
+.rd-page .seo-landing figure { margin: 20px 0; }
+.seo-landing figure img { display: block; width: min(100%, 420px); height: auto; }
+@media (max-width: 767px) {
+  .rd-page input:not([type=hidden]), .rd-page select, .rd-page textarea { font-size: 16px; }
+  .rd-page button, .rd-page input:not([type=hidden]):not([type=checkbox]):not([type=radio]), .rd-page select { min-height: 44px; }
+  .rd-chip-list { gap: 8px; }
+  .rd-chip-row a { display: inline-flex; align-items: center; min-height: 44px; }
+}
