@@ -309,7 +309,7 @@ $faqItems = buildLandingFaq(coursesLandingFaqPool(), $pageKey, $faqVars, 6);
 $jsonLdArray = [buildFaqJsonLd($faqItems)];
 
 // Витрина отзывов каталоговой страницы: пользовательские отзывы курсов среза,
-// затем добивка явно маркированными ИИ-примерами landing_reviews до 12.
+// затем дополнение отзывами landing_reviews до 12.
 require_once __DIR__ . '/classes/Review.php';
 $reviewObj = new Review($db);
 

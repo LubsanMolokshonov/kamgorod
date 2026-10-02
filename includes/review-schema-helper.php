@@ -68,7 +68,7 @@ if (!function_exists('buildReviewNodes')) {
                     'bestRating' => '5',
                     'worstRating' => '1',
                 ],
-                'reviewBody' => (($r['content_source'] ?? 'user') === 'ai_example' ? 'ИИ-пример: ' : '') . $text,
+                'reviewBody' => $text,
             ];
             $authorRole = $strip($r['author_role'] ?? '');
             if ($authorRole !== '') {
@@ -88,8 +88,7 @@ if (!function_exists('applyReviewSchema')) {
      * Навесить aggregateRating и review[] на существующий JSON-LD-узел продукта.
      * Возвращает изменённый узел (или исходный, если отзывов нет).
      *
-     * Рейтинг строится только по сохранённым строкам reviews. ИИ-примеры хранятся
-     * там же с content_source=ai_example и явно маркируются в reviewBody.
+     * Рейтинг строится только по сохранённым строкам reviews.
      *
      * @param array $node Главный JSON-LD-узел (Course/Event/Quiz/Article/...)
      * @param array $stats ['avg'=>float, 'count'=>int] из Review::getStats()

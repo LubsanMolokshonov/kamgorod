@@ -153,7 +153,6 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                         <td>
                             <?= h($r['author_name']) ?>
                             <?php if (!empty($r['author_role'])): ?><div class="meta"><?= h($r['author_role']) ?></div><?php endif; ?>
-                            <?php if (($r['content_source'] ?? 'user') === 'ai_example'): ?><div class="reason">ИИ-пример</div><?php endif; ?>
                             <?php if (!empty($r['user_id'])): ?><div class="meta">user #<?= (int)$r['user_id'] ?></div><?php endif; ?>
                             <?php if (!empty($r['ip_address'])): ?><div class="meta"><?= h($r['ip_address']) ?></div><?php endif; ?>
                         </td>

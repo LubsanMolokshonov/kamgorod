@@ -97,8 +97,7 @@ opcHttpAssert($reviewCards->length >= 5, 'видимы минимум пять �
 foreach ($reviewCards as $card) {
     opcHttpAssert(trim((string)$xpath->evaluate('string(.//*[contains(concat(" ", normalize-space(@class), " "), " rs-item-role ")])', $card)) !== '', 'у карточки показана роль автора');
 }
-$aiCards = $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " rs-item--ai ")]');
-opcHttpAssert($aiCards->length > 0, 'ИИ-карточки явно помечены');
-opcHttpAssert($xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " rs-ai-disclosure ")]')->length === 1, 'над отзывами есть пояснение об ИИ-примерах');
+opcHttpAssert(!str_contains((string)$html, 'ИИ-пример'), 'на странице нет служебной подписи отзывов');
+opcHttpAssert($xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " rs-ai-disclosure ")]')->length === 0, 'над отзывами нет служебного пояснения');
 
 echo "HTTP-приёмка {$url} пройдена.\n";

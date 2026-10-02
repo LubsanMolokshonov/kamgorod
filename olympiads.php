@@ -226,7 +226,7 @@ $faqItems = buildLandingFaq(olympiadsLandingFaqPool(), $pageKey, [
 ], 6);
 $jsonLdArray = [buildFaqJsonLd($faqItems)];
 
-// Product-схема: витрина с маркировкой ИИ-примеров или агрегат сохранённых reviews.
+// Product-схема: витрина отзывов или агрегат сохранённых reviews.
 require_once __DIR__ . '/includes/listing-schema-helper.php';
 if (!empty($landingReviews)) {
     $jsonLdArray[] = buildLandingReviewsProductJsonLd($pageTitle, $pageDescription, $ogImage, SITE_NAME, $landingReviews);

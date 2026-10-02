@@ -78,7 +78,7 @@ if (!function_exists('landingReviewsAggregate')) {
 
 if (!function_exists('buildLandingReviewsProductJsonLd')) {
     /**
-     * Единый Product-узел посадочной с отзывами витрины и явной маркировкой ИИ-примеров.
+     * Единый Product-узел посадочной с отзывами витрины.
      * Используется ВМЕСТО generic buildListingSchema, когда витрина есть, —
      * чтобы на странице был один Product, а aggregateRating/review были уникальны.
      */
@@ -149,10 +149,6 @@ if (!function_exists('renderLandingReviews')) {
             return;
         }
         $agg = landingReviewsAggregate($reviews);
-        $hasAiExamples = count(array_filter(
-            $reviews,
-            static fn(array $review): bool => ($review['content_source'] ?? 'user') === 'ai_example'
-        )) > 0;
         $esc = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
         $stars = function (int $filled): string {
             $out = '';
@@ -172,24 +168,19 @@ if (!function_exists('renderLandingReviews')) {
                 <span class="lr-summary-count"><?= (int)$agg['count'] ?> отзывов</span>
               </div>
             </div>
-            <?php if ($hasAiExamples): ?>
-              <p class="lr-ai-disclosure">Карточки с пометкой «ИИ-пример» — смоделированные примеры впечатлений, а не сообщения реальных пользователей.</p>
-            <?php endif; ?>
             <div class="lr-grid">
               <?php foreach ($reviews as $idx => $r):
                   $av = landingAvatar((string)($r['author_name'] ?? ''));
                   $date = !empty($r['review_date']) ? date('d.m.Y', strtotime($r['review_date'])) : '';
                   $hidden = $idx >= 6 ? ' lr-card--hidden' : '';
-                  $isAiExample = ($r['content_source'] ?? 'user') === 'ai_example';
                   $role = trim((string)($r['author_role'] ?? '')) ?: 'Участник';
               ?>
-                <article class="lr-card<?= $hidden ?><?= $isAiExample ? ' lr-card--ai' : '' ?>">
+                <article class="lr-card<?= $hidden ?>">
                   <div class="lr-card-head">
                     <span class="lr-avatar" style="background:<?= $esc($av['color']) ?>"><?= $esc($av['initials']) ?></span>
                     <div class="lr-meta">
                       <span class="lr-author"><?= $esc($r['author_name']) ?></span>
                       <span class="lr-role"><?= $esc($role) ?></span>
-                      <?php if ($isAiExample): ?><span class="lr-ai-badge">ИИ-пример</span><?php endif; ?>
                       <span class="lr-stars lr-stars--card"><?= $stars((int)($r['rating'] ?? 5)) ?></span>
                     </div>
                     <?php if ($date): ?><time class="lr-date"><?= $esc($date) ?></time><?php endif; ?>

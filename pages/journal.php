@@ -190,7 +190,7 @@ $faqItems = [
 // чтобы разметка совпадала с видимым контентом.
 $jsonLdArray = $showLanding ? [$jsonLd, buildFaqJsonLd($faqItems)] : [$jsonLd];
 
-// Микроразметка Schema.org/Product: витрина с явной маркировкой ИИ-примеров,
+// Микроразметка Schema.org/Product: витрина отзывов,
 // а при её отсутствии — агрегат только по сохранённым reviews.
 require_once __DIR__ . '/../includes/listing-schema-helper.php';
 if (!empty($landingReviews)) {

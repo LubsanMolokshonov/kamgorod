@@ -41,16 +41,6 @@
     color: #6b7280;
     margin: 0;
 }
-.rs-ai-disclosure {
-    margin: -10px 0 24px;
-    padding: 10px 12px;
-    border: 1px solid #c7d2fe;
-    border-radius: 10px;
-    background: #eef2ff;
-    color: #4338ca;
-    font-size: 13px;
-    line-height: 1.45;
-}
 
 /* Звёзды (статичный индикатор) */
 .rs-stars { display: inline-flex; line-height: 1; }
@@ -169,19 +159,6 @@
 }
 .rs-item-author { font-weight: 600; color: #111827; }
 .rs-item-role { color: #6b7280; font-size: 13px; }
-.rs-ai-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 7px;
-    border-radius: 999px;
-    background: #eef2ff;
-    color: #4338ca;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .02em;
-    text-transform: uppercase;
-}
-.rs-item--ai { border-color: #c7d2fe; background: #fafaff; }
 .rs-item-date { color: #9ca3af; font-size: 13px; margin-left: auto; }
 .rs-item-text { margin: 0; color: #374151; line-height: 1.55; }
 

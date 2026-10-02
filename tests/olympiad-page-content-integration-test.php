@@ -72,7 +72,7 @@ try {
     $list = $review->getApproved('olympiad', $entityId, 10);
     $schema = applyReviewSchema(['@type' => 'Quiz'], $stats, $list);
     $bodies = array_column((array)($schema['review'] ?? []), 'reviewBody');
-    opcIntegrationAssert(count(array_filter($bodies, static fn(string $body): bool => str_starts_with($body, 'ИИ-пример:'))) === 1, 'ИИ-отзыв маркируется в JSON-LD');
+    opcIntegrationAssert($bodies === ['Смоделированный пример.'], 'JSON-LD содержит сохранённый текст отзыва без служебной подписи');
 } finally {
     $db->rollBack();
 }

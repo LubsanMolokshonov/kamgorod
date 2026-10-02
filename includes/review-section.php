@@ -82,13 +82,6 @@ if (!function_exists('rsRenderStars')) {
             <?php endif; ?>
         </div>
 
-        <?php
-        $rsHasAiExamples = count(array_filter($rsList, static fn($r) => ($r['content_source'] ?? 'user') === 'ai_example')) > 0;
-        if ($rsHasAiExamples):
-        ?>
-            <p class="rs-ai-disclosure">Карточки с пометкой «ИИ-пример» — смоделированные примеры впечатлений, а не сообщения реальных пользователей.</p>
-        <?php endif; ?>
-
         <!-- Форма отзыва -->
         <form class="rs-form" id="rs-form" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($rsCsrf, ENT_QUOTES, 'UTF-8') ?>">
@@ -145,14 +138,12 @@ if (!function_exists('rsRenderStars')) {
                 <?php foreach ($rsWithText as $idx => $r):
                     $hidden = $idx >= 5 ? ' rs-item--hidden' : '';
                     $rDate = !empty($r['created_at']) ? date('d.m.Y', strtotime($r['created_at'])) : '';
-                    $isAiExample = ($r['content_source'] ?? 'user') === 'ai_example';
                     $displayRole = trim((string)($r['author_role'] ?? '')) ?: 'Участник';
                 ?>
-                    <li class="rs-item<?= $hidden ?><?= $isAiExample ? ' rs-item--ai' : '' ?>">
+                    <li class="rs-item<?= $hidden ?>">
                         <div class="rs-item-head">
                             <span class="rs-item-author"><?= htmlspecialchars($r['author_name'], ENT_QUOTES, 'UTF-8') ?></span>
                             <span class="rs-item-role"><?= htmlspecialchars($displayRole, ENT_QUOTES, 'UTF-8') ?></span>
-                            <?php if ($isAiExample): ?><span class="rs-ai-badge">ИИ-пример</span><?php endif; ?>
                             <span class="rs-stars rs-stars--item"><?= rsRenderStars((int)$r['rating']) ?></span>
                             <?php if ($rDate): ?><time class="rs-item-date"><?= $rDate ?></time><?php endif; ?>
                         </div>

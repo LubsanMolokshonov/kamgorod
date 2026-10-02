@@ -130,7 +130,7 @@ $reviewRows = [[
 ]];
 $reviewSchema = buildReviewNodes($reviewRows);
 opcAssert($reviewSchema[0]['author']['jobTitle'] === 'Методист', 'роль автора попадает в JSON-LD jobTitle');
-opcAssert(str_starts_with($reviewSchema[0]['reviewBody'], 'ИИ-пример:'), 'ИИ-источник маркируется в JSON-LD reviewBody');
+opcAssert($reviewSchema[0]['reviewBody'] === $reviewRows[0]['review_text'], 'JSON-LD содержит текст отзыва без служебной подписи');
 opcAssert(!isset(applyReviewSchema(['@type' => 'Quiz'], ['avg' => 0, 'count' => 0], [], 'legacy')['aggregateRating']), 'нет hash-based synthetic rating');
 opcAssert(!isset(buildListingProductJsonLd('Каталог', 'Описание', '/img.jpg', null, 0, 'Бренд')['aggregateRating']), 'листинг без сохранённых отзывов не размечает рейтинг');
 
