@@ -300,7 +300,7 @@ class Order {
             [$paymentId]
         );
 
-        return $order && $order['payment_status'] === 'succeeded';
+        return $order && in_array($order['payment_status'], ['succeeded', 'refunded'], true);
     }
 
     /**

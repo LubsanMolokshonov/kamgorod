@@ -27,6 +27,7 @@ require_once BASE_PATH . '/config/config.php';
 require_once BASE_PATH . '/config/database.php';
 require_once BASE_PATH . '/classes/PaymentReconciliation.php';
 require_once BASE_PATH . '/classes/TelegramNotifier.php';
+require_once BASE_PATH . '/classes/PaymentRefundAccounting.php';
 
 TelegramNotifier::registerFatalHandler('reconcile-payments');
 
@@ -53,6 +54,27 @@ file_put_contents($lockFile, getmypid());
 
 try {
     echo date('Y-m-d H:i:s') . " - Starting payment reconciliation...\n";
+
+    // Страховка пропущенного refund.succeeded. Перекрытие 30 дней; старую историю
+    // импортируем scripts/reconcile-refunds.php --apply при внедрении.
+    try {
+        $refundClient = new \YooKassa\Client();
+        $refundClient->setAuth(YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY);
+        $refunds = (new PaymentRefundAccounting($db, $refundClient))->reconcile(
+            true, gmdate('Y-m-d\TH:i:s\Z', time() - 30 * 86400)
+        );
+        echo date('Y-m-d H:i:s') . ' - Refunds. ' . json_encode($refunds) . "\n";
+        if ($refunds['errors'] > 0) {
+            throw new RuntimeException('Не удалось сверить возвраты: ' . $refunds['errors']);
+        }
+    } catch (Throwable $e) {
+        // Ошибка списка возвратов не должна останавливать восстановление оплат.
+        error_log('Refund reconciliation: ' . $e->getMessage());
+        TelegramNotifier::instance($db)->alert(
+            'refund_reconciliation_errors', '[Cron] Ошибки сверки возвратов',
+            ['error' => $e->getMessage()], 'critical'
+        );
+    }
 
     $recon = new PaymentReconciliation($db, function (string $level, string $msg): void {
         echo date('Y-m-d H:i:s') . " - {$level} | {$msg}\n";

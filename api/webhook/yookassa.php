@@ -23,7 +23,7 @@ register_shutdown_function(function() {
         $logFile = __DIR__ . '/../../logs/webhook.log';
         $message = "[" . date('Y-m-d H:i:s') . "] FATAL_ERROR | {$error['message']} in {$error['file']}:{$error['line']}\n";
         error_log($message, 3, $logFile);
-        http_response_code(200); // Always return 200 to prevent Yookassa retries
+        http_response_code(($GLOBALS['eventType'] ?? '') === 'refund.succeeded' ? 503 : 200);
         echo json_encode(['status' => 'error', 'message' => 'Internal error']);
     }
 });
@@ -99,6 +99,22 @@ try {
     $eventType = $notification->getEvent();
 
     logWebhook('INFO', $paymentId, "Event: {$eventType}, Status: {$paymentStatus}", '');
+
+    // Возврат — отдельный объект, в том числе для токенов без заказа.
+    // Проверяем его и накопленную сумму через API до любых изменений.
+    if ($eventType === 'refund.succeeded') {
+        require_once __DIR__ . '/../../classes/PaymentRefundAccounting.php';
+        $refundResult = (new PaymentRefundAccounting($GLOBALS['db'], $client))->syncRefund($paymentId);
+        $orderObj = new Order($GLOBALS['db']);
+        $order = $orderObj->getByPaymentId($refundResult['payment_id']);
+        if ($order && $refundResult['full'] && $order['payment_status'] !== 'refunded') {
+            handleRefundSucceeded($orderObj, $order, $payment);
+        }
+        logWebhook('INFO', $paymentId, 'Refund accounted: ' . $refundResult['refunded_amount'], '');
+        http_response_code(200);
+        echo json_encode(['status' => 'refund_accounted']);
+        exit;
+    }
 
     // ============================================================
     // Покупка токенов для генератора материалов ФОП
@@ -309,16 +325,8 @@ try {
     $orderObj = new Order($GLOBALS['db']);
     $registrationObj = new Registration($GLOBALS['db']);
 
-    // Для refund.succeeded объект уведомления — Refund: getId() возвращает id ВОЗВРАТА,
-    // а заказ привязан к id ПЛАТЕЖА. Берём payment_id платежа через getPaymentId(),
-    // иначе getByPaymentId по id возврата не находит заказ («Order not found»).
-    $lookupPaymentId = $paymentId;
-    if ($eventType === 'refund.succeeded' && method_exists($payment, 'getPaymentId')) {
-        $lookupPaymentId = $payment->getPaymentId();
-    }
-
     // Find order by payment ID
-    $order = $orderObj->getByPaymentId($lookupPaymentId);
+    $order = $orderObj->getByPaymentId($paymentId);
 
     if (!$order) {
         logWebhook('WARNING', $paymentId, 'Order not found', '');
@@ -353,10 +361,6 @@ try {
             handlePaymentWaitingForCapture($orderObj, $order, $payment);
             break;
 
-        case 'refund.succeeded':
-            handleRefundSucceeded($orderObj, $order, $payment);
-            break;
-
         default:
             logWebhook('INFO', $paymentId, "Unhandled event type: {$eventType}", '');
     }
@@ -368,11 +372,11 @@ try {
 } catch (Throwable $e) {
     // Ловим Throwable (не только Exception): PHP-Error вроде «class not found» — это Error,
     // он мимо catch(Exception) улетал бы в фатал. logWebhook('ERROR') сам шлёт Telegram-алерт.
-    // Всё равно отвечаем 200, чтобы Yookassa не ретраила из-за наших ошибок.
+    // Ошибки возвратов требуют повтора: иначе финансовая корректировка потеряется.
     logWebhook('ERROR', $paymentId ?? 'unknown', 'Exception: ' . $e->getMessage(), $e->getTraceAsString());
 
-    http_response_code(200);
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    http_response_code(($eventType ?? '') === 'refund.succeeded' ? 503 : 200);
+    echo json_encode(['status' => 'error']);
 }
 
 /**

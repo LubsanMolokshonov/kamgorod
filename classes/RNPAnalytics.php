@@ -12,7 +12,7 @@
  *   - portal  — конкурс/олимпиада/вебинар/публикация + материалы ФОП (токены)
  *
  * Портальная доля смешанных заказов считается пропорционально price позиций;
- * курсовая сумма всегда берётся из OPPORTUNITY сделки Bitrix24.
+ * курсовая сумма берётся из OPPORTUNITY сделки Bitrix24 за вычетом возвратов ЮKassa.
  *
  * Режимы атрибуции выручки/оплат ($basis):
  *   - 'paid'    (дефолт): курсы — по CLOSEDATE выигранной сделки Bitrix24,
@@ -154,7 +154,7 @@ class RNPAnalytics
                         'cost' => 0.0,
                         'revenue' => ($paid['revenue'] ?? 0.0) + $tokenRevenue,
                         'payments' => ($paid['payments'] ?? 0.0) + $tokenPayments,
-                        'created_orders' => ($created['orders_count'] ?? 0.0) + $tokenPayments + $offCreated,
+                        'created_orders' => ($created['orders_count'] ?? 0.0) + (float)($token['created_count'] ?? 0.0) + $offCreated,
                         'paid_orders' => ($paid['orders_count'] ?? $paid['payments'] ?? 0.0) + $tokenPayments,
                         'leads' => $leadsVal,
                         'financial_available' => $financialAvailable,
@@ -297,6 +297,9 @@ class RNPAnalytics
     private function fetchOrderSplit(string $dateFrom, string $dateTo, string $dateColumn, string $granularity): array
     {
         $channelExpr = $this->channelExpr('o.utm_source');
+        // Для старого refunded без сверки сохраняем прежний нулевой зачёт.
+        $netAmount = "GREATEST(0, o.final_amount - COALESCE(rt.refunded_amount,
+            CASE WHEN o.payment_status = 'refunded' THEN o.final_amount ELSE 0 END))";
 
         if ($dateColumn === 'cohort') {
             // Когортный режим («по дате создания»): только оплаченные заказы;
@@ -314,14 +317,16 @@ class RNPAnalytics
                     DATE(COALESCE(MIN(ce.created_at), o.created_at)) AS date_course,
                     {$channelExpr} AS channel,
                     o.id AS order_id,
-                    o.final_amount AS final_amount,
+                    {$netAmount} AS final_amount,
+                    o.final_amount AS gross_amount,
                     1 AS is_paid,
                     COALESCE(SUM(CASE WHEN oi.course_enrollment_id IS NOT NULL THEN oi.price ELSE 0 END), 0) AS course_raw,
                     COALESCE(SUM(CASE WHEN oi.course_enrollment_id IS NULL THEN oi.price ELSE 0 END), 0) AS portal_raw
                 FROM orders o
+                LEFT JOIN yookassa_refund_totals rt ON rt.payment_id = o.yookassa_payment_id
                 LEFT JOIN order_items oi ON oi.order_id = o.id
                 LEFT JOIN course_enrollments ce ON ce.id = oi.course_enrollment_id
-                WHERE o.payment_status = 'succeeded' AND o.paid_at IS NOT NULL
+                WHERE o.payment_status IN ('succeeded', 'refunded') AND o.paid_at IS NOT NULL
                   AND DATE(o.created_at) >= ?
                 GROUP BY o.id
             ";
@@ -331,7 +336,7 @@ class RNPAnalytics
             // - для paid_at учитываем только успешно оплаченные
             // - для created_at — все заказы (как «создано»), плюс отдельно «оплачено» среди них
             if ($dateColumn === 'paid_at') {
-                $whereDate = "o.payment_status = 'succeeded' AND o.paid_at IS NOT NULL
+                $whereDate = "o.payment_status IN ('succeeded', 'refunded') AND o.paid_at IS NOT NULL
                               AND DATE(o.paid_at) BETWEEN ? AND ?";
             } else {
                 $whereDate = "DATE(o.created_at) BETWEEN ? AND ?";
@@ -346,11 +351,13 @@ class RNPAnalytics
                     {$periodExpr} AS period_key,
                     {$channelExpr} AS channel,
                     o.id AS order_id,
-                    o.final_amount AS final_amount,
-                    (o.payment_status = 'succeeded' AND o.paid_at IS NOT NULL) AS is_paid,
+                    {$netAmount} AS final_amount,
+                    o.final_amount AS gross_amount,
+                    (o.payment_status IN ('succeeded', 'refunded') AND o.paid_at IS NOT NULL) AS is_paid,
                     COALESCE(SUM(CASE WHEN oi.course_enrollment_id IS NOT NULL THEN oi.price ELSE 0 END), 0) AS course_raw,
                     COALESCE(SUM(CASE WHEN oi.course_enrollment_id IS NULL THEN oi.price ELSE 0 END), 0) AS portal_raw
                 FROM orders o
+                LEFT JOIN yookassa_refund_totals rt ON rt.payment_id = o.yookassa_payment_id
                 LEFT JOIN order_items oi ON oi.order_id = o.id
                 WHERE {$whereDate}
                 GROUP BY o.id
@@ -415,7 +422,9 @@ class RNPAnalytics
                         $agg[$key][$channel][$section]['payments'] += $share;
                     }
                 }
-                $agg[$key][$channel][$section]['orders_count'] += $share;
+                if ($dateColumn === 'created_at' || $finalAmount > 0 || (float)$o['gross_amount'] === 0.0) {
+                    $agg[$key][$channel][$section]['orders_count'] += $share;
+                }
             }
         }
 
@@ -503,10 +512,12 @@ class RNPAnalytics
             SELECT
                 {$periodExpr} AS period_key,
                 {$channelExpr} AS channel,
-                COALESCE(SUM(COALESCE(tt.amount_paid, tp.price_rub)), 0) AS revenue,
-                COUNT(*) AS payments
+                COALESCE(SUM(GREATEST(0, COALESCE(tt.amount_paid, tp.price_rub) - COALESCE(rt.refunded_amount, 0))), 0) AS revenue,
+                SUM(CASE WHEN COALESCE(tt.amount_paid, tp.price_rub) > COALESCE(rt.refunded_amount, 0) THEN 1 ELSE 0 END) AS payments,
+                COUNT(*) AS created_count
             FROM token_transactions tt
             LEFT JOIN token_packages tp ON tp.id = tt.package_id
+            LEFT JOIN yookassa_refund_totals rt ON rt.payment_id = tt.payment_id
             WHERE tt.reason = 'purchase'
               AND DATE(tt.created_at) BETWEEN ? AND ?
             GROUP BY period_key, channel
@@ -561,6 +572,7 @@ class RNPAnalytics
             $created = (string)($deal['created'] ?? '');
             $amount = (float)($deal['revenue'] ?? 0.0);
             $dealContext = $context[$dealId] ?? ['channel' => 'other', 'has_paid_order' => false];
+            $amount = max(0.0, $amount - (float)($dealContext['refund_amount'] ?? 0.0));
             $channel = in_array($dealContext['channel'], self::CHANNELS, true)
                 ? $dealContext['channel']
                 : 'other';
@@ -575,7 +587,9 @@ class RNPAnalytics
                     $periods[$key][$channel]['payments'] += 1;
                     $periods[$key][$channel]['orders_count'] += 1;
                 }
-                $count++;
+                if ($amount > 0) {
+                    $count++;
+                }
                 $revenue += $amount;
 
                 if ($isOffline) {
@@ -658,7 +672,7 @@ class RNPAnalytics
                     o.utm_source AS order_utm_source
              FROM course_enrollments ce
              LEFT JOIN order_items oi ON oi.course_enrollment_id = ce.id
-             LEFT JOIN orders o ON o.id = oi.order_id AND o.payment_status = 'succeeded'
+             LEFT JOIN orders o ON o.id = oi.order_id AND o.payment_status IN ('succeeded', 'refunded')
              WHERE ce.bitrix_lead_id IS NOT NULL
              ORDER BY ce.bitrix_lead_id, o.paid_at DESC, o.id DESC"
         );
@@ -714,6 +728,34 @@ class RNPAnalytics
                     'has_paid_order' => false,
                 ];
             }
+        }
+
+        // Возврат распределяется по ценам всех позиций заказа. Группировка по
+        // сделке и заказу предотвращает повторный вычет при нескольких её позициях.
+        $refundRows = $this->db->query(
+            "SELECT ce.bitrix_lead_id AS deal_id, o.id AS order_id,
+                    o.final_amount, o.payment_status, rt.refunded_amount,
+                    SUM(oi.price) AS linked_raw,
+                    (SELECT SUM(all_items.price) FROM order_items all_items
+                     WHERE all_items.order_id = o.id) AS total_raw
+             FROM orders o
+             JOIN order_items oi ON oi.order_id = o.id
+             JOIN course_enrollments ce ON ce.id = oi.course_enrollment_id
+             LEFT JOIN yookassa_refund_totals rt ON rt.payment_id = o.yookassa_payment_id
+             WHERE o.payment_status IN ('succeeded', 'refunded')
+               AND ce.bitrix_lead_id IS NOT NULL
+               AND (rt.refunded_amount > 0 OR o.payment_status = 'refunded')
+             GROUP BY ce.bitrix_lead_id, o.id, rt.refunded_amount"
+        );
+        foreach ($refundRows as $row) {
+            $dealId = (int)$row['deal_id'];
+            $totalRaw = (float)$row['total_raw'];
+            if (!isset($context[$dealId]) || $totalRaw <= 0) {
+                continue;
+            }
+            $refund = min((float)$row['final_amount'], (float)($row['refunded_amount'] ?? $row['final_amount']));
+            $context[$dealId]['refund_amount'] = ($context[$dealId]['refund_amount'] ?? 0.0)
+                + $refund * (float)$row['linked_raw'] / $totalRaw;
         }
 
         return $this->courseDealContext = $context;

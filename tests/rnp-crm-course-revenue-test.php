@@ -74,8 +74,10 @@ $pdo->exec('CREATE TABLE orders (
     final_amount REAL, yookassa_payment_id TEXT
 )');
 $pdo->exec('CREATE TABLE order_items (
-    id INTEGER PRIMARY KEY, order_id INTEGER, course_enrollment_id INTEGER
+    id INTEGER PRIMARY KEY, order_id INTEGER, course_enrollment_id INTEGER, price REAL DEFAULT 100
 )');
+
+$pdo->exec('CREATE TABLE yookassa_refund_totals (payment_id TEXT PRIMARY KEY, refunded_amount REAL)');
 
 $pdo->exec("INSERT INTO course_enrollments (id, bitrix_lead_id, utm_source) VALUES
     (1, 101, 'yandex_search'),
@@ -142,3 +144,75 @@ rnpAssertSame('Составной финансовый итог становит
 rnpAssertSame('Недоступная курсовая прибыль не маскируется нулём', null, $metrics['cells']['direct']['course']['profit']);
 
 echo "RNP CRM course revenue tests passed\n";
+
+// Регрессия: возвраты уменьшают исходный период, включая WON-сделки CRM.
+$pdo->exec("UPDATE orders SET yookassa_payment_id = 'course-full' WHERE id = 202");
+$pdo->exec("UPDATE orders SET payment_status = 'refunded', yookassa_payment_id = 'legacy-full' WHERE id = 201");
+$pdo->exec("UPDATE orders SET final_amount = 200, yookassa_payment_id = 'mixed-partial' WHERE id = 204");
+$pdo->exec('UPDATE order_items SET price = 50 WHERE id = 4');
+$pdo->exec('INSERT INTO order_items VALUES (5, 204, 4, 50), (6, 204, NULL, 100)');
+$pdo->exec("INSERT INTO yookassa_refund_totals VALUES ('course-full', 200), ('mixed-partial', 100)");
+$withRefunds = new RNPAnalytics($pdo, new RnpFakeBitrix24($deals));
+$netAugust = rnpCrmSplit($withRefunds, '2026-08-01', '2026-08-31', 'paid');
+rnpAssertFloat('Полный и смешанный частичный возвраты вычитаются из CRM', 775.0, $netAugust['revenue']);
+rnpAssertFloat('Повторные позиции сделки не удваивают её долю возврата', 425.0, rnpChannelRevenue($netAugust, 'direct'));
+rnpAssertFloat('Полный возврат оставляет только другую VK-сделку', 50.0, rnpChannelRevenue($netAugust, 'vk'));
+rnpAssertSame('Полностью возвращённая продажа исключена из числа оплат', 4, $netAugust['count']);
+rnpAssertSame('Возврат не превращается в оффлайн-продажу', 2, $netAugust['offline']['count']);
+$netSeptember = rnpCrmSplit($withRefunds, '2026-09-01', '2026-09-30', 'paid');
+rnpAssertFloat('Старый refunded без суммы не возвращается в CRM-выручку', 0.0, $netSeptember['revenue']);
+rnpAssertSame('Старый refunded не становится оффлайн-сделкой', 0, $netSeptember['offline']['count']);
+$netCreated = rnpCrmSplit($withRefunds, '2026-08-01', '2026-08-31', 'created');
+rnpAssertFloat('Возвраты работают в режиме создания', 450.0, $netCreated['revenue']);
+
+$pdo->sqliteCreateFunction('GREATEST', static fn(...$values) => max($values));
+$pdo->exec("ALTER TABLE orders ADD created_at TEXT DEFAULT '2026-08-01 12:00:00'");
+$pdo->exec("ALTER TABLE course_enrollments ADD created_at TEXT DEFAULT '2026-08-01 12:00:00'");
+$pdo->exec("INSERT INTO orders VALUES
+    (206, 'succeeded', '2026-08-26 12:00:00', 'yandex', 100, 'portal-partial', '2026-08-01 12:00:00'),
+    (207, 'succeeded', '2026-08-26 12:00:00', 'yandex', 100, 'portal-full', '2026-08-01 12:00:00')");
+$pdo->exec("INSERT INTO yookassa_refund_totals VALUES ('portal-partial', 40), ('portal-full', 100)");
+$orderSplit = new ReflectionMethod(RNPAnalytics::class, 'fetchOrderSplit');
+$orderSplit->setAccessible(true);
+$portalRows = $orderSplit->invoke($withRefunds, '2026-08-26', '2026-08-26', 'paid_at', 'day');
+rnpAssertFloat('Портал: исходные 200 минус возвраты 140', 60.0, (float)$portalRows[0]['revenue']);
+rnpAssertFloat('Портал: частичный возврат сохраняет одну оплату', 1.0, (float)$portalRows[0]['payments']);
+rnpAssertFloat('Портал: полный возврат исключён из оплаченных заказов', 1.0, (float)$portalRows[0]['orders_count']);
+$mixed = $orderSplit->invoke($withRefunds, '2026-08-15', '2026-08-15', 'paid_at', 'day');
+rnpAssertFloat('Портальная доля смешанного возврата', 50.0, (float)$mixed[1]['revenue']);
+$cohort = $orderSplit->invoke($withRefunds, '2026-08-01', '2026-08-01', 'cohort', 'day');
+$cohortPortal = array_filter($cohort, static fn($row) => $row['section'] === 'portal');
+rnpAssertFloat('Когорта портала сохраняет исходную дату и вычитает возвраты', 135.0, array_sum(array_column($cohortPortal, 'revenue')));
+$pdo->exec('CREATE TABLE token_packages (id INTEGER PRIMARY KEY, price_rub REAL)');
+$pdo->exec('CREATE TABLE token_transactions (id INTEGER PRIMARY KEY, payment_id TEXT, package_id INTEGER,
+    amount_paid REAL, created_at TEXT, utm_source TEXT, reason TEXT)');
+$pdo->exec("INSERT INTO token_packages VALUES (1, 100)");
+$pdo->exec("INSERT INTO token_transactions VALUES
+    (1, 'token-partial', 1, NULL, '2026-08-26 12:00:00', 'yandex', 'purchase'),
+    (2, 'token-full', 1, 30, '2026-08-26 12:00:00', 'yandex', 'purchase')");
+$pdo->exec("INSERT INTO yookassa_refund_totals VALUES ('token-partial', 40), ('token-full', 30)");
+$tokenSplit = new ReflectionMethod(RNPAnalytics::class, 'fetchTokenSplit');
+$tokenSplit->setAccessible(true);
+$tokenRows = $tokenSplit->invoke($withRefunds, '2026-08-26', '2026-08-26', 'day');
+rnpAssertFloat('Токены: частичный и полный возвраты, включая fallback цены', 60.0, (float)$tokenRows[0]['revenue']);
+rnpAssertSame('Токены: одна оставшаяся оплата', 1, (int)$tokenRows[0]['payments']);
+rnpAssertSame('Токены: возврат не удаляет созданные покупки', 2, (int)$tokenRows[0]['created_count']);
+require_once __DIR__ . '/../classes/Order.php';
+rnpAssertSame('Поздний payment.succeeded не переактивирует возвращённый заказ', true, (new Order($pdo))->isProcessed('legacy-full'));
+echo "RNP refund tests passed\n";
+
+// Проверяем общий итог и производные метрики через публичный метод отчёта.
+$pdo->exec('ALTER TABLE course_enrollments ADD phone TEXT');
+$pdo->exec('ALTER TABLE course_consultations ADD phone TEXT');
+$pdo->exec("ALTER TABLE course_consultations ADD created_at TEXT DEFAULT '2026-08-01'");
+$pdo->sqliteCreateFunction('REGEXP_REPLACE', static fn($s, $pattern, $replacement) => preg_replace('/' . $pattern . '/', $replacement, $s));
+$pdo->exec('CREATE TABLE rnp_ad_costs (date TEXT, direct_portal_cost REAL, vk_portal_cost REAL,
+    direct_course_cost REAL, vk_course_cost REAL, other_portal_cost REAL, other_course_cost REAL)');
+$pdo->exec("INSERT INTO rnp_ad_costs VALUES ('2026-08-01', 100, 0, 0, 0, 0, 0)");
+$report = $withRefunds->getReport('2026-08-01', '2026-08-31');
+rnpAssertFloat('Итог РНП: курсы 775 + портал 135 + токены 60', 970.0, $report['grand_total']['revenue']);
+rnpAssertFloat('Прибыль учитывает возвраты', 870.0, $report['grand_total']['profit']);
+rnpAssertFloat('ROMI учитывает возвраты', 8.7, $report['grand_total']['romi']);
+$chart = $withRefunds->getChartData('2026-08-01', '2026-08-31');
+rnpAssertFloat('График использует ту же чистую выручку', 970.0, array_sum($chart['revenue']));
+echo "RNP report refund integration tests passed\n";
