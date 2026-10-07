@@ -263,6 +263,17 @@
   /* ---- Фильтр-тоггл (мобильный, каталог) ---- */
   var filterToggle = document.getElementById('rdFilterToggle');
   var filtersPanel = document.getElementById('rdFiltersPanel');
+  /* ---- Аккордеон разделов фильтра ---- */
+  if (filtersPanel) {
+    filtersPanel.addEventListener('click', function (e) {
+      var head = e.target.closest('.rd-facet-head');
+      if (!head) return;
+      var facet = head.closest('.rd-facet');
+      if (!facet) return;
+      var isOpen = facet.classList.toggle('is-open');
+      head.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+  }
   if (filterToggle && filtersPanel) {
     filterToggle.addEventListener('click', function () {
       filtersPanel.classList.toggle('open');
