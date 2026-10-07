@@ -67,8 +67,14 @@ if ($currentTag) {
     $pageDescription = 'Редакционные статьи и материалы для педагогов: методика, тренды образования, разборы полезных практик.';
 }
 
-$canonicalPath = '/blog/';
+$blogVariant = isset($_GET['tag']) || isset($_GET['type']) || isset($_GET['q']) || isset($_GET['sort']);
+$skipSeoPageMetadata = $blogVariant || $page > 1;
+$canonicalPath = '/blog/' . (!$blogVariant && $page > 1 ? '?page=' . $page : '');
 $canonicalUrl = SITE_URL . $canonicalPath;
+if ($blogVariant) $robotsContent = 'noindex,follow';
+if ($page > 1) $pageTitle .= ' — страница ' . $page;
+if ($page > max(1, (int)$totalPages)) { http_response_code(404); $robotsContent = 'noindex,follow'; }
+
 
 $rdActivePage = 'blog';
 $additionalCSS = [
@@ -82,14 +88,21 @@ $jsonLd = [
     '@type' => 'CollectionPage',
     'name' => $pageTitle,
     'description' => $pageDescription,
-    'url' => SITE_URL . '/blog/',
+    'url' => $canonicalUrl,
+    '@id' => $canonicalUrl . '#collection',
     'isPartOf' => [
         '@type' => 'WebSite',
         'name' => SITE_NAME,
         'url' => SITE_URL
     ]
 ];
-$jsonLdArray = [$jsonLd];
+$jsonLd['mainEntity'] = ['@type' => 'ItemList', 'itemListElement' => array_map(
+    static fn($post, $index) => ['@type' => 'ListItem', 'position' => $offset + $index + 1,
+        'url' => SITE_URL . '/blog/' . $post['slug'] . '/', 'name' => $post['title']],
+    $publications, array_keys($publications)
+)];
+$jsonLdArray = [$jsonLd, ['@context' => 'https://schema.org', '@type' => 'Blog',
+    '@id' => SITE_URL . '/blog/#blog', 'url' => SITE_URL . '/blog/', 'name' => 'Блог', 'inLanguage' => 'ru-RU']];
 
 $russianMonths = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 function bl_format_date($iso, $months) {

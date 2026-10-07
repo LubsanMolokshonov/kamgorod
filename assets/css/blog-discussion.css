@@ -1,0 +1,14 @@
+.bd-section { border-top: 1px solid #e5e7eb; padding-top: 28px; }
+.bd-section h2 { font-size: 26px; }
+.bd-section [hidden] { display: none !important; }
+.bd-section select { font: inherit; max-width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; }
+.bd-comment { padding: 20px 0; border-bottom: 1px solid #e5e7eb; overflow-wrap: anywhere; }
+.bd-reply { margin-left: 24px; padding-left: 16px; border-left: 2px solid #e5e7eb; }
+.bd-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+.bd-meta span, .bd-meta time, .bd-address, .bd-hint { color: #64748b; font-size: 14px; }
+.bd-body { white-space: normal; }
+.bd-stars { color: #b46a00; letter-spacing: 2px; }
+.bd-answer, #bd-cancel { background: none; color: #1458a0; border: 0; cursor: pointer; padding: 10px 0; font: inherit; }
+.bd-section :focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.bd-section .rs-more { display: inline-block; margin-top: 18px; }
+@media (max-width: 480px) { .bd-section .rs-form { padding: 16px; } .bd-reply { margin-left: 10px; padding-left: 10px; } }

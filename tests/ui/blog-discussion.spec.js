@@ -1,0 +1,93 @@
+const { test, expect } = require('@playwright/test');
+const url = process.env.BLOG_TEST_URL || '/blog/etapy-uroka-po-fgos/';
+test.beforeEach(async ({ baseURL }) => {
+  if (!['localhost', '127.0.0.1'].includes(new URL(baseURL).hostname)) throw new Error('Только локальный тест');
+});
+test('обсуждение, schema, пагинация и ответ с клавиатуры', async ({ page }) => {
+  const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto(url);
+  const section = page.locator('#discussion');
+  await expect(section).toBeVisible();
+  expect(await page.locator('#bd-list .bd-comment:not(.bd-reply)').count()).toBe(20);
+  const schemas = await page.locator('script[type="application/ld+json"]').allTextContents();
+  const article = schemas.map(JSON.parse).find(x => x['@type'] === 'BlogPosting');
+  expect(article.commentCount).toBeGreaterThanOrEqual(25);
+  expect(article.aggregateRating.ratingValue).toBe(4);
+  expect(article.comment.length).toBe(21);
+  await page.locator('#bd-list .bd-answer').first().focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#bd-reply-to')).toBeVisible();
+  await expect(page.locator('#bd-rating')).toBeDisabled();
+  await expect(page.locator('#bd-body')).toBeFocused();
+  await page.locator('#bd-cancel').click();
+  await expect(page.locator('#bd-rating')).toBeEnabled();
+  await page.locator('#bd-more').click();
+  await expect(page.locator('#bd-list .bd-comment:not(.bd-reply)')).toHaveCount(24);
+  await expect(page.locator('#bd-more')).toHaveCount(0);
+  expect(await section.evaluate(el => el.scrollWidth <= el.clientWidth && el.getBoundingClientRect().right <= innerWidth)).toBeTruthy();
+  expect(errors).toEqual([]);
+  await section.screenshot({ path: '/tmp/blog-discussion-' + test.info().project.name + '.png' });
+});
+test('ошибки отправки сохраняют текст и ключ повторного запроса', async ({ page }) => {
+  await page.goto(url);
+  await page.locator('#bd-name').fill('Читатель');
+  await page.locator('#bd-body').fill('Вопрос о статье');
+  const requestKey = await page.locator('[name=request_key]').inputValue();
+  await page.route('**/ajax/submit-blog-comment.php', route => route.abort());
+  await page.locator('#bd-form [type=submit]').click();
+  await expect(page.locator('#bd-message')).toContainText('Ошибка сети');
+  await expect(page.locator('#bd-body')).toHaveValue('Вопрос о статье');
+  await expect(page.locator('[name=request_key]')).toHaveValue(requestKey);
+  await page.unroute('**/ajax/submit-blog-comment.php');
+  await page.route('**/ajax/submit-blog-comment.php', route => route.fulfill({status:422,contentType:'application/json',body:JSON.stringify({success:false,message:'Вы уже оценили эту статью. Выберите «Без оценки».'})}));
+  await page.locator('#bd-form [type=submit]').click();
+  await expect(page.locator('#bd-message')).toContainText('Вы уже оценили');
+  await expect(page.locator('#bd-body')).toHaveValue('Вопрос о статье');
+});
+test('API отклоняет запрос без CSRF; служебные файлы и админка закрыты', async ({ request }) => {
+  const response = await request.post('/ajax/submit-blog-comment.php', { form: {publication_id:'216',author_name:'Читатель',body:'Текст'} });
+  expect(response.status()).toBe(403);
+  expect((await response.json()).success).toBe(false);
+  expect((await request.get('/classes/BlogComment.php')).status()).toBe(403);
+  expect((await request.get('/includes/blog-discussion.php')).status()).toBe(403);
+  const admin = await request.get('/admin/reviews/?section=blog', {maxRedirects:0});
+  expect(admin.status()).toBe(302);
+});
+test('SEO каталога и пагинации', async ({ page, request }) => {
+  await page.goto('/blog/?q=методика');
+  await expect(page.locator('meta[name=robots]')).toHaveAttribute('content','noindex,follow');
+  await page.goto('/blog/?page=2');
+  await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', /\/blog\/\?page=2$/);
+  await expect(page).toHaveTitle(/страница 2/);
+  const sitemap = await request.get('/sitemap.xml');
+  expect(await sitemap.text()).toContain('/blog/</loc>');
+});
+test('переход к старым веткам работает без JavaScript', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({javaScriptEnabled:false});
+  const page = await context.newPage();
+  await page.goto(baseURL + url);
+  await page.locator('#bd-more').click();
+  await expect(page).toHaveURL(/comments_before=/);
+  await expect(page.locator('#bd-list .bd-comment:not(.bd-reply)')).toHaveCount(4);
+  await expect(page.locator('meta[name=robots]')).toHaveAttribute('content','noindex,follow');
+  await context.close();
+});
+
+test('успешная отправка и ожидание модерации очищают форму', async ({ page }) => {
+  await page.goto(url);
+  const root = await page.locator('#bd-list .bd-comment').first().getAttribute('id');
+  const id = Number(root.replace('comment-', ''));
+  await page.route('**/ajax/submit-blog-comment.php', route => route.fulfill({contentType:'application/json',body:JSON.stringify({success:true,status:'approved',visible:true,id,root_id:id,message:'Сообщение опубликовано.'})}));
+  await page.locator('#bd-name').fill('Читатель');
+  await page.locator('#bd-body').fill('Спасибо за статью');
+  await page.locator('#bd-form [type=submit]').click();
+  await expect(page.locator('#bd-message')).toContainText('опубликовано');
+  await expect(page.locator('#bd-body')).toHaveValue('');
+  await expect(page.locator('#bd-form [type=submit]')).toBeEnabled();
+  await page.unroute('**/ajax/submit-blog-comment.php');
+  await page.route('**/ajax/submit-blog-comment.php', route => route.fulfill({contentType:'application/json',body:JSON.stringify({success:true,status:'pending',visible:false,message:'Сообщение сохранено и появится после проверки.'})}));
+  await page.locator('#bd-body').fill('Уточнение');
+  await page.locator('#bd-form [type=submit]').click();
+  await expect(page.locator('#bd-message')).toContainText('после проверки');
+  await expect(page.locator('#bd-body')).toHaveValue('');
+});

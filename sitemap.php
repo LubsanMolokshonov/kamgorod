@@ -101,6 +101,8 @@ sitemapUrl($baseUrl . '/konkursy/', '0.9', 'weekly', $maxCompetitions);
 sitemapUrl($baseUrl . '/olimpiady/', '0.9', 'weekly', $maxOlympiads);
 sitemapUrl($baseUrl . '/vebinary/', '0.9', 'weekly', $maxWebinars);
 sitemapUrl($baseUrl . '/zhurnal/', '0.9', 'weekly', $maxPublications);
+$maxBlog = $db->query("SELECT MAX(updated_at) FROM publications WHERE status = 'published' AND source = 'blog' AND noindex = 0 AND (redirect_to_slug IS NULL OR redirect_to_slug = '') AND indexable_at IS NOT NULL AND indexable_at <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 3 HOUR)")->fetchColumn();
+sitemapUrl($baseUrl . '/blog/', '0.9', 'weekly', $maxBlog ?: fileLastmod($rootDir . '/pages/blog.php'));
 sitemapUrl($baseUrl . '/publikacii/', '0.9', 'weekly', $maxPublications);
 sitemapUrl($baseUrl . '/materialy/', '0.8', 'monthly', fileLastmod($rootDir . '/pages/materials-landing.php'));
 sitemapUrl($baseUrl . '/materialy/katalog/', '0.9', 'weekly', $maxMaterials);

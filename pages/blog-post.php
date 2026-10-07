@@ -12,6 +12,8 @@ require_once __DIR__ . '/../classes/PublicationTag.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/article-toc.php';
 require_once __DIR__ . '/../includes/course-card.php';
+require_once __DIR__ . '/../classes/BlogComment.php';
+require_once __DIR__ . '/../includes/blog-discussion.php';
 
 $publicationObj = new Publication($db);
 
@@ -46,14 +48,21 @@ if (!$publication || $publication['status'] !== 'published' || $publication['sou
     exit;
 }
 
+blogVoteToken(); // Cookie создаётся до HTML: параллельные отправки используют один идентификатор.
+$discussion = new BlogComment($db);
+$discussionBefore = max(0, (int)($_GET['comments_before'] ?? 0));
+$discussionPage = $discussion->threads((int)$publication['id'], $discussionBefore);
+$discussionStats = $discussion->stats((int)$publication['id']);
 $publicationObj->incrementViews($publication['id']);
 $tags = $publicationObj->getTags($publication['id']);
 $related = $publicationObj->getPublished(4, 0, ['source' => 'blog']);
 $related = array_values(array_filter($related, fn($p) => $p['id'] !== $publication['id']));
 
-// Без тематических тегов случайный предметный курс не соответствует общей статье.
-$recommendedCourses = !empty($tags) ? $publicationObj->getRecommendedCourses($publication['id'], 2) : [];
-$inlineCourse = $recommendedCourses[0] ?? null;
+// Как в публикациях: тематический подбор с дополнением активными курсами.
+$recommendedCourses = $publicationObj->getRecommendedCourses($publication['id'], 3);
+$ctaCourse = $recommendedCourses[0] ?? null;
+$inlineCourse = $recommendedCourses[1] ?? $ctaCourse;
+$ctaCard = $ctaCourse ? buildCourseCardData($ctaCourse, $db) : null;
 $inlineCard = $inlineCourse ? buildCourseCardData($inlineCourse, $db) : null;
 
 require_once __DIR__ . '/../includes/url-helper.php';
@@ -68,6 +77,8 @@ if ($articleHtml !== '') {
 $tocData = buildArticleToc($articleHtml);
 $articleHtml = $tocData['html'];
 $toc = $tocData['toc'];
+// В микроразметку передаём только текст статьи, без рекламной карточки.
+$articleBody = trim(strip_tags($articleHtml));
 
 if ($articleHtml !== '' && $inlineCard) {
     $articleHtml = ccInjectAfterMiddleHeading($articleHtml, renderCourseCard($inlineCard, 'inline'));
@@ -79,28 +90,36 @@ $pageTitle = $seoTitle . ' | ' . SITE_NAME;
 $pageDescription = mb_substr($seoDescription, 0, 160);
 $canonicalUrl = SITE_URL . '/blog/' . $publication['slug'] . '/';
 $noindex = !empty($publication['noindex']);
+if ($discussionBefore > 0 && !$noindex) $robotsContent = 'noindex,follow';
 
 $rdActivePage = 'blog';
 $additionalCSS = [
+    '/assets/css/reviews.css',
+    '/assets/css/blog-discussion.css',
     '/assets/css/competition-detail.css?v=' . filemtime(__DIR__ . '/../assets/css/competition-detail.css'),
     '/assets/css/journal-redesign.css?v=' . filemtime(__DIR__ . '/../assets/css/journal-redesign.css'),
     '/assets/css/publication-extras.css?v=' . filemtime(__DIR__ . '/../assets/css/publication-extras.css'),
     '/assets/css/course-card.css?v=' . filemtime(__DIR__ . '/../assets/css/course-card.css'),
 ];
 $additionalJS = [
+    '/assets/js/blog-discussion.js',
     '/assets/js/course-card.js?v=' . filemtime(__DIR__ . '/../assets/js/course-card.js'),
 ];
 
 $ogType = 'article';
 $ogImage = !empty($publication['cover_image_url'])
-    ? SITE_URL . '/' . ltrim($publication['cover_image_url'], '/')
+    ? (preg_match('~^https?://~i', $publication['cover_image_url']) ? $publication['cover_image_url'] : SITE_URL . '/' . ltrim($publication['cover_image_url'], '/'))
     : SITE_URL . '/assets/images/og-journal.jpg';
 
-// Article JSON-LD — идентично pages/publication.php, полная микроразметка сохранена.
+// Разметка редакционной статьи и опубликованного обсуждения.
 $jsonLd = [
     '@context' => 'https://schema.org',
-    '@type' => 'Article',
-    'headline' => $seoTitle,
+    '@type' => 'BlogPosting',
+    '@id' => $canonicalUrl . '#article',
+    'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => $canonicalUrl],
+    'inLanguage' => 'ru-RU',
+    'isPartOf' => ['@type' => 'Blog', '@id' => SITE_URL . '/blog/#blog', 'url' => SITE_URL . '/blog/', 'name' => 'Блог'],
+    'headline' => $publication['title'],
     'description' => mb_substr(strip_tags($seoDescription), 0, 300),
     'url' => SITE_URL . '/blog/' . $publication['slug'] . '/',
     'image' => $ogImage,
@@ -121,8 +140,8 @@ $jsonLd = [
 if (!empty($tags)) {
     $jsonLd['keywords'] = array_column($tags, 'name');
 }
-if ($articleHtml !== '') {
-    $jsonLd['articleBody'] = mb_substr(trim(strip_tags($articleHtml)), 0, 5000);
+if ($articleBody !== '') {
+    $jsonLd['articleBody'] = mb_substr($articleBody, 0, 5000);
 }
 
 $breadcrumbJsonLd = [
@@ -134,7 +153,10 @@ $breadcrumbJsonLd = [
         ['@type' => 'ListItem', 'position' => 3, 'name' => $publication['title']],
     ],
 ];
+$jsonLd = blogDiscussionSchema($jsonLd, $discussionStats, $discussionPage['rows']);
 $jsonLdArray = [$jsonLd, $breadcrumbJsonLd];
+$articlePublishedTime = $jsonLd['datePublished'];
+$articleModifiedTime = $jsonLd['dateModified'];
 
 $months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 $pubDate = new DateTime($publication['published_at']);
@@ -146,6 +168,7 @@ ob_start(static function (string $html): string {
     return preg_replace_callback(
         '~<!--.*?-->(*SKIP)(*F)|<(script|style)\b[^>]*>.*?</\1\s*>(*SKIP)(*F)|<a\b(?:[^>\x22\x27]|\x22[^\x22]*\x22|\x27[^\x27]*\x27)*>~is',
         static function (array $match): string {
+            if (preg_match('~href=[\"\'](?:#|\?comments_before=)~i', $match[0])) return $match[0];
             $tag = preg_replace(
                 '~\x22[^\x22]*\x22(*SKIP)(*F)|\x27[^\x27]*\x27(*SKIP)(*F)|\s+(?:target|rel)\s*=\s*(?:\x22[^\x22]*\x22|\x27[^\x27]*\x27|[^\s>]+)~i',
                 '',
@@ -230,6 +253,11 @@ include __DIR__ . '/../includes/header-redesign.php';
         <?php else: ?>
           <div class="pub-body pub-body--empty"><p>Содержание статьи недоступно для просмотра.</p></div>
         <?php endif; ?>
+
+        <?php if ($ctaCard): ?>
+          <?php echo renderCourseCard($ctaCard, 'expanded'); ?>
+        <?php endif; ?>
+        <?php include __DIR__ . '/../includes/blog-discussion-section.php'; ?>
       </article>
 
       <!-- Sidebar -->

@@ -21,12 +21,18 @@ if (http_response_code() < 400 && isset($seoLandingDefinitions[$seoLandingPath])
     if (empty($seoPage['meta_description'])) $seoPage['meta_description'] = $seoLandingDefinitions[$seoLandingPath]['description'];
 }
 
+if (!empty($skipSeoPageMetadata)) $seoPage = [];
 if (!empty($seoPage['meta_title'])) $pageTitle = $seoPage['meta_title'];
 if (!empty($seoPage['meta_description'])) $pageDescription = $seoPage['meta_description'];
-if (!empty($jsonLd) && in_array($jsonLd['@type'] ?? '', ['Article','Course','LearningResource'],true)) $jsonLd = seoEditorialSchema($jsonLd,seoEditorial($seoPage));
+if (!empty($jsonLd) && in_array($jsonLd['@type'] ?? '', ['Article','BlogPosting','Course','LearningResource'],true)) $jsonLd = seoEditorialSchema($jsonLd,seoEditorial($seoPage));
 if (!empty($jsonLdArray)) {
     foreach ($jsonLdArray as &$seoSchema) {
-        if (is_array($seoSchema) && in_array($seoSchema['@type'] ?? '', ['Article','Course','LearningResource'], true)) {
+        if (($seoSchema['@type'] ?? '') === 'BlogPosting' && !empty($seoPage['seo_h1'])) $seoSchema['headline'] = $seoPage['seo_h1'];
+        if (($seoSchema['@type'] ?? '') === 'CollectionPage' && ($seoLandingPath ?? '') === '/blog/') {
+            $seoSchema['name'] = $pageTitle;
+            $seoSchema['description'] = $pageDescription;
+        }
+        if (is_array($seoSchema) && in_array($seoSchema['@type'] ?? '', ['Article','BlogPosting','Course','LearningResource'], true)) {
             $seoSchema = seoEditorialSchema($seoSchema, seoEditorial($seoPage));
         }
     }
@@ -83,6 +89,10 @@ if ($useSharedBreadcrumbs) {
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
 
+<?php if (!empty($articlePublishedTime)): ?>
+    <meta property="article:published_time" content="<?= htmlspecialchars($articlePublishedTime, ENT_QUOTES, 'UTF-8') ?>">
+    <meta property="article:modified_time" content="<?= htmlspecialchars($jsonLdArray[0]['dateModified'] ?? $articleModifiedTime, ENT_QUOTES, 'UTF-8') ?>">
+<?php endif; ?>
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?php echo htmlspecialchars($pageTitle ?? SITE_NAME, ENT_QUOTES, 'UTF-8'); ?>">
@@ -174,7 +184,7 @@ if ($useSharedBreadcrumbs) {
 <?php
 // Поддержка нескольких JSON-LD блоков: $jsonLdArray (массив), $jsonLd (одиночный), $breadcrumbJsonLd
 $allJsonLd = [];
-if (!empty($jsonLd) && in_array($jsonLd['@type'] ?? '', ['Article','Course','LearningResource'],true)) $jsonLd = seoEditorialSchema($jsonLd,seoEditorial($seoPage));
+if (!empty($jsonLd) && in_array($jsonLd['@type'] ?? '', ['Article','BlogPosting','Course','LearningResource'],true)) $jsonLd = seoEditorialSchema($jsonLd,seoEditorial($seoPage));
 if (!empty($jsonLdArray)) {
     $allJsonLd = $jsonLdArray;
 } elseif (!empty($jsonLd)) {

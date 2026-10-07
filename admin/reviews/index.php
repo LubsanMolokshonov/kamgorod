@@ -19,6 +19,7 @@ require_once __DIR__ . '/../../includes/session.php';
 
 // Доступ только для авторизованного админа (session_start внутри verifySession).
 Admin::verifySession();
+if (($_GET['section'] ?? '') === 'blog') { require __DIR__ . '/blog.php'; exit; }
 header('Content-Type: text/html; charset=UTF-8');
 
 $reviewObj = new Review($db);
@@ -120,6 +121,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 <body>
     <a href="/admin/" class="back">← В админку</a>
     <h1>Отзывы — модерация</h1>
+    <p><a href="?section=blog">Обсуждения блога →</a></p>
 
     <div class="tabs">
         <?php foreach ($statusLabels as $s => $label): ?>
