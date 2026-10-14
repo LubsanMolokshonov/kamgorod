@@ -90,6 +90,38 @@ function normalizeContentHtml(string $html, ?string $pageTitle = null): string {
     return $result;
 }
 
+/** Ссылки на ещё не вышедшие статьи становятся активными после публикации адресата. */
+function renderPublishedBlogLinks(string $html, PDO $pdo): string {
+    if ($html === '' || !str_contains($html, '/blog/')) return $html;
+    $dom = new DOMDocument('1.0', 'UTF-8');
+    $previous = libxml_use_internal_errors(true);
+    $loaded = $dom->loadHTML('<?xml encoding="UTF-8"><html><body><div id="blog-links-fragment">' . $html . '</div></body></html>', LIBXML_NONET);
+    libxml_clear_errors(); libxml_use_internal_errors($previous);
+    $root = $loaded ? $dom->getElementById('blog-links-fragment') : null;
+    if (!$root) return $html;
+    $targets = [];
+    foreach (iterator_to_array($root->getElementsByTagName('a')) as $a) {
+        if (preg_match('~^(?:https://(?:www\.)?fgos\.pro)?/blog/([a-z0-9-]+)/?(?:[?#].*)?$~D', $a->getAttribute('href'), $m)) {
+            $targets[$m[1]][] = $a;
+        }
+    }
+    if ($targets === []) return $html;
+    $q = $pdo->prepare("SELECT slug FROM publications WHERE source = 'blog' AND status = 'published' AND slug IN ("
+        . implode(',', array_fill(0, count($targets), '?')) . ')');
+    $q->execute(array_keys($targets));
+    $published = array_fill_keys($q->fetchAll(PDO::FETCH_COLUMN), true);
+    foreach ($targets as $slug => $anchors) {
+        if (isset($published[$slug])) continue;
+        foreach ($anchors as $a) {
+            while ($a->firstChild) $a->parentNode->insertBefore($a->firstChild, $a);
+            $a->parentNode->removeChild($a);
+        }
+    }
+    $result = '';
+    foreach ($root->childNodes as $child) $result .= $dom->saveHTML($child);
+    return $result;
+}
+
 /**
  * Get current audience context from request
  *

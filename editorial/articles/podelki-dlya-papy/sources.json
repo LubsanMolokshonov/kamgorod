@@ -1,0 +1,24 @@
+[
+  {
+    "id": "PLAN-SP-415",
+    "type": "редакционное задание, не доказательство фактов",
+    "url": "https://docs.google.com/spreadsheets/d/18nsXUruLIfKuz6LKKp7oe21ni7D3jUx9sjVpFRX7aBI/edit#gid=1002",
+    "document": "Простые темы статей — fgos.pro; Первые 30",
+    "edition": "live-read 14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "позиция 4, SP-415",
+    "evidence_file": "../../reviews/first-five-2026-10-14/plan-snapshot.json",
+    "sha256": "361d75d39a83c269ae45e80449511925d389f91dd2eddd0ea71ce5be413bd8bb"
+  },
+  {
+    "id": "AUTHOR-SP-415",
+    "type": "авторская рекомендация / цифровая проверка",
+    "url": null,
+    "document": "Авторские примеры и проверка исполнимости",
+    "edition": "14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "все методические инструкции",
+    "evidence_file": "sources/author-check.md",
+    "sha256": "8e4057b6a5cedabc0aaabd6800bf13f2382809fa7ddc0d56e15c28c6e2910770"
+  }
+]

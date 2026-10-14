@@ -1,0 +1,7 @@
+# fgos.pro: первые пять редакционных статей, утверждено 14.10.2026.
+# Установка на host: /etc/cron.d/fgos-blog-first-five-20261014, root:root 0644.
+# Часовой пояс хоста не влияет на выпуск: ISO8601 проверяется внутри PHP.
+# Повторные попытки до конца октября; в последующие годы не запускается.
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+*/5 * 14-31 10 * root [ "$(date -u +\%Y)" = "2026" ] && /usr/bin/docker exec -w /var/www/html pedagogy_web php cron/process-blog-schedule.php --schedule=editorial/schedules/first-five-2026-10-14.json --publish >> /var/log/fgos-blog-first-five-20261014.log 2>&1

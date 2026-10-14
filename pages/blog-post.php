@@ -67,6 +67,7 @@ $inlineCard = $inlineCourse ? buildCourseCardData($inlineCourse, $db) : null;
 
 require_once __DIR__ . '/../includes/url-helper.php';
 $articleHtml = normalizeContentHtml($publication['content'] ?? '');
+$articleHtml = renderPublishedBlogLinks($articleHtml, $db);
 if ($articleHtml !== '') {
     $articleHtml = preg_replace('/<strong>\s*-\s*<br\s*\/?>\s*<\/strong>/i', '<br>&ndash;&nbsp;', $articleHtml);
     $articleHtml = preg_replace('/;\s*-\s*<br\s*\/?>/i', ';<br>&ndash;&nbsp;', $articleHtml);
