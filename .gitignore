@@ -33,9 +33,8 @@ node_modules/
 /uploads/diplomas/*.jpg
 /uploads/diplomas/*.png
 
-# Logs
-/logs/*.log
-/logs/*.json
+# Логи, вложенные отчёты диагностики и выгрузки интеграций
+/logs/
 *.log
 
 # MCP config (contains DB credentials)
@@ -71,6 +70,7 @@ Thumbs.db
 /Контент/
 
 # Локальные выгрузки и рабочие таблицы
+/output/
 /outputs/
 /docs/exports/
 
@@ -95,6 +95,12 @@ Thumbs.db
 
 # Runtime OG cache
 /uploads/og-cache/
+
+# Генерируемый поисковый индекс TNTSearch и локальная SQLite-БД
+/database/search/*.index
+/database/search/*.index-*
+/database/pedagogy.db
+/database/pedagogy.db-*
 
 # Полные первичные документы для редакционной библиотеки — локальный кэш, не production.
 /editorial/source-library/raw/
@@ -143,4 +149,16 @@ scripts/ab-snapshots/
 /editorial/seo-20261002/local-after/
 /editorial/seo-20261002/*.png
 /editorial/seo-20261002/local-*.json
-/scripts/__pycache__/
+
+# Python-кэш скриптов и редакционных утилит
+__pycache__/
+*.py[cod]
+
+# Неудачные загрузки источников: пустые файлы и страницы ошибок.
+# Проверенные источники и комплекты статей остаются в Git.
+/editorial/reviews/next-five-2026-10-14/sources/gramota-osnova.txt
+/editorial/reviews/next-five-2026-10-14/sources/gramota-pegiy.txt
+/editorial/reviews/next-five-2026-10-14/sources/gramota-snop.txt
+/editorial/reviews/next-five-2026-10-14/sources/pushkin-work.txt
+/editorial/reviews/next-five-2026-10-14/sources/dal-ability.txt
+/editorial/reviews/next-five-2026-10-14/sources/dal-seasons.txt
