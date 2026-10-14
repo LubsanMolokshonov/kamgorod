@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "approved_at": "2026-10-14",
+  "approval": "Прямое поручение пользователя: «Сгенерируй ещё пять статей для блога из списка тридцати статей и поставь их также в очередь. Публиковать нужно будет каждый день в 9 утра». Пользователь делегировал подготовку и постановку в очередь; отдельного согласования готовых версий в этой сессии не было. Хеш фиксирует подготовленную и проверенную версию по этому поручению.",
+  "entries": [
+    {
+      "manifest": "editorial/articles/poslovicy-o-vremenah-goda/metadata.json",
+      "publish_at": "2026-10-19T09:00:00+03:00",
+      "approved_sha256": "1ec5c5969543dba5494d70dbe361954690e50fbc1b6b82d33ed0057ecf6e36b4",
+      "inline_assets_sha256": {}
+    },
+    {
+      "manifest": "editorial/articles/prazdnik-oseni-v-detskom-sadu/metadata.json",
+      "publish_at": "2026-10-20T09:00:00+03:00",
+      "approved_sha256": "09dacbb757171fc8353cdfc5a90e93f4a4c812dd6806e527924d9ffe1602197c",
+      "inline_assets_sha256": {}
+    },
+    {
+      "manifest": "editorial/articles/poslovicy-o-trude/metadata.json",
+      "publish_at": "2026-10-21T09:00:00+03:00",
+      "approved_sha256": "d5a686c9faa3c90f46e4ddfb32171c95be3e621758ee36e02ebd90369f51c9a8",
+      "inline_assets_sha256": {}
+    },
+    {
+      "manifest": "editorial/articles/kak-narisovat-lyagushku/metadata.json",
+      "publish_at": "2026-10-22T09:00:00+03:00",
+      "approved_sha256": "c2c590942333dc2955d11696c86506b55b4882ec028e3d79265668f28a808aab",
+      "inline_assets_sha256": {
+        "/assets/images/blog/kak-narisovat-lyagushku-shagi.png": "131d1c7157936c953e4545ee6e373a669adf7367c12e58a5ada7d85eb6f3d021"
+      }
+    },
+    {
+      "manifest": "editorial/articles/osennyaya-applikaciya/metadata.json",
+      "publish_at": "2026-10-23T09:00:00+03:00",
+      "approved_sha256": "a4e8db610740f0c3060ddc5722bbc10ef4ec6c47c71775a42cced2511cb47eb7",
+      "inline_assets_sha256": {
+        "/assets/images/blog/osennyaya-applikaciya-varianty.png": "89b698c7aa4898aca8b838b62c05fd209c2a37d75115b76aba856b946395d903"
+      }
+    }
+  ]
+}

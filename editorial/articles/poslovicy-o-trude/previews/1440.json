@@ -1,0 +1,21 @@
+{
+  "width": 1440,
+  "scrollWidth": 1440,
+  "h1": 1,
+  "images": [
+    {
+      "loaded": true,
+      "src": "file:///private/tmp/fgos-blog-next-five-daily-20261014/assets/images/blog/poslovicy-o-trude.jpg",
+      "natural": [
+        1200,
+        675
+      ],
+      "box": [
+        982,
+        552.375
+      ],
+      "fit": "cover"
+    }
+  ],
+  "tables": []
+}

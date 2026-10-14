@@ -44,12 +44,30 @@ $html='<p>Читайте <a href="/blog/podelki-dlya-papy/"><strong>поделк
 $out=renderPublishedBlogLinks($html,$pdo);
 expect(!str_contains($out,'href="/blog/podelki-dlya-papy/"') && str_contains($out,'<strong>поделки</strong>'), 'Будущая ссылка сохраняет текст');
 expect(str_contains($out,'href="https://example.com/blog/other/"') && str_contains($out,'href="/blog/den-otca-v-detskom-sadu/"'), 'Рабочие и внешние ссылки сохранены');
-$r=blogScheduleProcess($pdo,$entries,new DateTimeImmutable('2026-10-20T09:00:00+03:00'),true,$publisher);
+$r=blogScheduleProcess($pdo,$entries,new DateTimeImmutable('2026-10-17T09:00:00+03:00'),true,$publisher);
 expect($calls===4 && $r[4]['status']==='scheduled', 'Пропущенные запуски догоняются без выпуска пятой');
 expect(str_contains(renderPublishedBlogLinks($html,$pdo),'href="/blog/podelki-dlya-papy/"'), 'Ссылка появилась после выхода адресата');
 $pdo->exec("UPDATE publications SET title='Чужая правка' WHERE id=".$firstId);
-fails(fn()=>blogScheduleProcess($pdo,$entries,new DateTimeImmutable('2026-10-22T13:00:00+07:00'),true,$publisher),'Конфликт нельзя игнорировать');
+fails(fn()=>blogScheduleProcess($pdo,$entries,new DateTimeImmutable('2026-10-18T13:00:00+07:00'),true,$publisher),'Конфликт нельзя игнорировать');
 expect($calls===4, 'Полный preflight остановил пятую запись при конфликте');
+$restore=$pdo->prepare('UPDATE publications SET title=? WHERE id=?');
+$restore->execute([$entries[0]['package']['title'],$firstId]);
+$nextEntries=blogScheduleLoad($root,$root.'/editorial/schedules/next-five-2026-10-14.json');
+expect(count($nextEntries)===5,'Следующая пятёрка содержит пять статей');
+$allEntries=array_merge($entries,$nextEntries);
+blogScheduleProcess($pdo,$allEntries,new DateTimeImmutable('2026-10-18T09:00:00+03:00'),true,$publisher);
+expect($calls===5,'К 18 октября вышла первая пятёрка');
+foreach($nextEntries as $i=>$entry){
+    $expectedAt=new DateTimeImmutable('2026-10-'.(19+$i).'T09:00:00+03:00');
+    expect($entry['at']==$expectedAt,'Ежедневная дата и 09:00 МСК следующей пятёрки');
+    $beforeCount=$calls;
+    blogScheduleProcess($pdo,$allEntries,$expectedAt->modify('-1 second'),true,$publisher);
+    expect($calls===$beforeCount,'За секунду до срока новая статья скрыта');
+    $daily=blogScheduleProcess($pdo,$allEntries,$expectedAt,true,$publisher);
+    expect($calls===$beforeCount+1 && $daily[5+$i]['status']==='published','В 09:00 выходит ровно одна статья');
+    blogScheduleProcess($pdo,$allEntries,$expectedAt,true,$publisher);
+    expect($calls===$beforeCount+1,'Повтор ежедневного запуска не дублирует статью');
+}
 $schedule=json_decode(file_get_contents($file),true);
 $temporary=$root.'/editorial/schedules/test-invalid-'.getmypid().'.json';
 try {

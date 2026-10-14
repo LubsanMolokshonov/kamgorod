@@ -1,0 +1,24 @@
+[
+  {
+    "id": "PLAN-SP-405",
+    "type": "редакционное задание",
+    "url": "https://docs.google.com/spreadsheets/d/18nsXUruLIfKuz6LKKp7oe21ni7D3jUx9sjVpFRX7aBI/edit#gid=1002",
+    "document": "Простые темы статей — fgos.pro; Первые 30",
+    "edition": "live-read 14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "позиция 9, SP-405",
+    "evidence_file": "../../reviews/next-five-2026-10-14/plan-snapshot.json",
+    "sha256": "9a656b0ea10f9a454e15d9e02c951e89582c8c848ff5775e1725820425bd61ff"
+  },
+  {
+    "id": "AUTHOR-SP-405",
+    "type": "авторская рекомендация / цифровая проверка",
+    "url": null,
+    "document": "Авторские примеры и проверка последовательности",
+    "edition": "14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "все собственные инструкции и вопросы",
+    "evidence_file": "sources/author-check.md",
+    "sha256": "9077fbd69569dbbc16fe27dc6d10353a5e3a814915ffeaf7c9c710b229d570ea"
+  }
+]

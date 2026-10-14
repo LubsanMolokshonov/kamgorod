@@ -1,0 +1,57 @@
+[
+  {
+    "id": "PLAN-SP-387",
+    "type": "редакционное задание",
+    "url": "https://docs.google.com/spreadsheets/d/18nsXUruLIfKuz6LKKp7oe21ni7D3jUx9sjVpFRX7aBI/edit#gid=1002",
+    "document": "Простые темы статей — fgos.pro; Первые 30",
+    "edition": "live-read 14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "позиция 6, SP-387",
+    "evidence_file": "../../reviews/next-five-2026-10-14/plan-snapshot.json",
+    "sha256": "9a656b0ea10f9a454e15d9e02c951e89582c8c848ff5775e1725820425bd61ff"
+  },
+  {
+    "id": "AUTHOR-SP-387",
+    "type": "авторская рекомендация / цифровая проверка",
+    "url": null,
+    "document": "Авторские примеры и проверка последовательности",
+    "edition": "14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "все собственные инструкции и вопросы",
+    "evidence_file": "sources/author-check.md",
+    "sha256": "a3c9fd0b5fb58883f70088c63634ae4a3c76abe3f905142149f7e12466705c67"
+  },
+  {
+    "id": "DAL-AGRICULTURE",
+    "type": "первичный фольклорный сборник, электронная транскрипция",
+    "url": "https://ru.wikisource.org/wiki/Пословицы_русского_народа_(Даль)/Земледелие",
+    "document": "В. И. Даль. Пословицы русского народа",
+    "edition": "издания 1862/1879 указаны на странице; электронная версия прочитана 14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "Земледелие",
+    "evidence_file": "sources/dal-agriculture.md",
+    "sha256": "6ce6abea7f346204595f262be83e7d5a0aa5a96b20ce9f3b0bacf3a47a91b7b8"
+  },
+  {
+    "id": "DICT-пегий",
+    "type": "словарная справка, дополнительный источник",
+    "url": "https://ru.wiktionary.org/wiki/пегий",
+    "document": "Викисловарь: пегий",
+    "edition": "прочитанная 14.10.2026 версия",
+    "checked_at": "2026-10-14",
+    "point": "Русский; Значение 1",
+    "evidence_file": "sources/dictionary-пегий.md",
+    "sha256": "c75d90a5a7f051c9dc07e370618fb1432fe7931468a39fd65143dfb8925cc976"
+  },
+  {
+    "id": "DICT-сноп",
+    "type": "словарная справка, дополнительный источник",
+    "url": "https://ru.wiktionary.org/wiki/сноп",
+    "document": "Викисловарь: сноп",
+    "edition": "прочитанная 14.10.2026 версия",
+    "checked_at": "2026-10-14",
+    "point": "Русский; Значение 1",
+    "evidence_file": "sources/dictionary-сноп.md",
+    "sha256": "eab84f600d03b0ced4d713e61d24d9be83e5bca96f6de72e1018c9ac30688119"
+  }
+]

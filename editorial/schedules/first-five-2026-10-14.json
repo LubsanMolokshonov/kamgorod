@@ -11,13 +11,13 @@
     },
     {
       "manifest": "editorial/articles/prazdniki-v-detskom-sadu/metadata.json",
-      "publish_at": "2026-10-16T13:00:00+07:00",
+      "publish_at": "2026-10-15T09:00:00+03:00",
       "approved_sha256": "6ab275304bb5b7c2ab0ffe0b555b6b5664019cc7046bb93265b79e3caff58022",
       "inline_assets_sha256": {}
     },
     {
       "manifest": "editorial/articles/kak-narisovat-medvedya/metadata.json",
-      "publish_at": "2026-10-18T13:00:00+07:00",
+      "publish_at": "2026-10-16T09:00:00+03:00",
       "approved_sha256": "6bb07a877a3324eda56bdf01783f3468263aa50d555ba195f49470969ced84b3",
       "inline_assets_sha256": {
         "/assets/images/blog/kak-narisovat-medvedya-shagi.png": "71cb694722e791be987c0922d1832acc046eaa1942cc1167255d9dc3fabd6096"
@@ -25,7 +25,7 @@
     },
     {
       "manifest": "editorial/articles/podelki-dlya-papy/metadata.json",
-      "publish_at": "2026-10-20T13:00:00+07:00",
+      "publish_at": "2026-10-17T09:00:00+03:00",
       "approved_sha256": "af877cfeaa9fc769735bacc39db69cf7a8abafe838a2dda47c3d12e582415657",
       "inline_assets_sha256": {
         "/assets/images/blog/podelki-dlya-papy-shema.png": "679abb994f4f77735e57f9e818e000e8bb1121271627445c53171865ee4dde54"
@@ -33,9 +33,11 @@
     },
     {
       "manifest": "editorial/articles/roditelskoe-sobranie-v-nachalnoj-shkole/metadata.json",
-      "publish_at": "2026-10-22T13:00:00+07:00",
+      "publish_at": "2026-10-18T09:00:00+03:00",
       "approved_sha256": "450900d678fb2d4693507daebaf104d27e6a86290358ed2ba95afd16af7b675f",
       "inline_assets_sha256": {}
     }
-  ]
+  ],
+  "updated_at": "2026-10-14",
+  "schedule_change": "Пользователь попросил ежедневную публикацию в 9 утра. Сохранено прежнее 09:00 МСК / 13:00 Asia/Ho_Chi_Minh; четыре оставшиеся статьи перенесены на 15–18 октября."
 }

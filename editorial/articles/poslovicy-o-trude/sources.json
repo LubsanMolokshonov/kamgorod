@@ -1,0 +1,57 @@
+[
+  {
+    "id": "PLAN-SP-144",
+    "type": "редакционное задание",
+    "url": "https://docs.google.com/spreadsheets/d/18nsXUruLIfKuz6LKKp7oe21ni7D3jUx9sjVpFRX7aBI/edit#gid=1002",
+    "document": "Простые темы статей — fgos.pro; Первые 30",
+    "edition": "live-read 14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "позиция 8, SP-144",
+    "evidence_file": "../../reviews/next-five-2026-10-14/plan-snapshot.json",
+    "sha256": "9a656b0ea10f9a454e15d9e02c951e89582c8c848ff5775e1725820425bd61ff"
+  },
+  {
+    "id": "AUTHOR-SP-144",
+    "type": "авторская рекомендация / цифровая проверка",
+    "url": null,
+    "document": "Авторские примеры и проверка последовательности",
+    "edition": "14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "все собственные инструкции и вопросы",
+    "evidence_file": "sources/author-check.md",
+    "sha256": "91edd3d1b32e0594bbfecea6b1242384f7ef90466325e144a71b8ac2afa13361"
+  },
+  {
+    "id": "DAL-WORK",
+    "type": "первичный фольклорный сборник, электронная транскрипция",
+    "url": "https://ru.wikisource.org/wiki/Пословицы_русского_народа_(Даль)/Работа_—_Праздность",
+    "document": "В. И. Даль. Пословицы русского народа",
+    "edition": "издания 1862/1879 указаны на странице; электронная версия прочитана 14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "Работа — Праздность",
+    "evidence_file": "sources/dal-work.md",
+    "sha256": "ec0ff89a3d948d4ed6d75c9a559fb9ca41ea9b740a315ce9482ac04cda73790a"
+  },
+  {
+    "id": "DAL-PATIENCE",
+    "type": "первичный фольклорный сборник, электронная транскрипция",
+    "url": "https://ru.wikisource.org/wiki/Пословицы_русского_народа_(Даль)/Терпение_—_Надежда",
+    "document": "В. И. Даль. Пословицы русского народа",
+    "edition": "издания 1862/1879 указаны на странице; электронная версия прочитана 14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "Терпение — Надежда",
+    "evidence_file": "sources/dal-patience.md",
+    "sha256": "be5b7ee26bacad0f204103aee79919be1dfda29373351a2d0fcad3a70a5ace13"
+  },
+  {
+    "id": "DAL-SKILL",
+    "type": "первичный фольклорный сборник, электронная транскрипция",
+    "url": "https://ru.wikisource.org/wiki/Пословицы_русского_народа_(Даль)/Ремесло_—_Снаряд",
+    "document": "В. И. Даль. Пословицы русского народа",
+    "edition": "издания 1862/1879 указаны на странице; электронная версия прочитана 14.10.2026",
+    "checked_at": "2026-10-14",
+    "point": "Ремесло — Снаряд",
+    "evidence_file": "sources/dal-skill.md",
+    "sha256": "e9df12917a731a45dc69ab4572c4cf5c8bfcccd0d6418cc1fcdb21fec99ef80f"
+  }
+]

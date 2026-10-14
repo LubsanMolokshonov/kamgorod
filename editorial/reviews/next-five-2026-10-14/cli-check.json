@@ -1,0 +1,117 @@
+[
+  {
+    "slug": "poslovicy-o-vremenah-goda",
+    "command": [
+      "php",
+      "scripts/editorial-check.php",
+      "--article=poslovicy-o-vremenah-goda"
+    ],
+    "exit_code": 0,
+    "stdout": "ПРЕДУПРЕЖДЕНИЕ: Старый формат sources.json: рекомендуется перейти на карточки библиотеки.\nСтатья: poslovicy-o-vremenah-goda. Источники: legacy. Ссылок: 5. Ошибок: 0.\n",
+    "stderr": ""
+  },
+  {
+    "slug": "poslovicy-o-vremenah-goda",
+    "command": [
+      "php",
+      "scripts/add-blog-post.php",
+      "--manifest=editorial/articles/poslovicy-o-vremenah-goda/metadata.json",
+      "--validate-only"
+    ],
+    "exit_code": 0,
+    "stdout": "Комплект SHA256: 1ec5c5969543dba5494d70dbe361954690e50fbc1b6b82d33ed0057ecf6e36b4\nURL: /blog/poslovicy-o-vremenah-goda/\nФайлы проверены. БД не проверялась; записи нет.\n",
+    "stderr": ""
+  },
+  {
+    "slug": "prazdnik-oseni-v-detskom-sadu",
+    "command": [
+      "php",
+      "scripts/editorial-check.php",
+      "--article=prazdnik-oseni-v-detskom-sadu"
+    ],
+    "exit_code": 0,
+    "stdout": "ПРЕДУПРЕЖДЕНИЕ: Старый формат sources.json: рекомендуется перейти на карточки библиотеки.\nСтатья: prazdnik-oseni-v-detskom-sadu. Источники: legacy. Ссылок: 2. Ошибок: 0.\n",
+    "stderr": ""
+  },
+  {
+    "slug": "prazdnik-oseni-v-detskom-sadu",
+    "command": [
+      "php",
+      "scripts/add-blog-post.php",
+      "--manifest=editorial/articles/prazdnik-oseni-v-detskom-sadu/metadata.json",
+      "--validate-only"
+    ],
+    "exit_code": 0,
+    "stdout": "Комплект SHA256: 09dacbb757171fc8353cdfc5a90e93f4a4c812dd6806e527924d9ffe1602197c\nURL: /blog/prazdnik-oseni-v-detskom-sadu/\nФайлы проверены. БД не проверялась; записи нет.\n",
+    "stderr": ""
+  },
+  {
+    "slug": "poslovicy-o-trude",
+    "command": [
+      "php",
+      "scripts/editorial-check.php",
+      "--article=poslovicy-o-trude"
+    ],
+    "exit_code": 0,
+    "stdout": "ПРЕДУПРЕЖДЕНИЕ: Старый формат sources.json: рекомендуется перейти на карточки библиотеки.\nСтатья: poslovicy-o-trude. Источники: legacy. Ссылок: 4. Ошибок: 0.\n",
+    "stderr": ""
+  },
+  {
+    "slug": "poslovicy-o-trude",
+    "command": [
+      "php",
+      "scripts/add-blog-post.php",
+      "--manifest=editorial/articles/poslovicy-o-trude/metadata.json",
+      "--validate-only"
+    ],
+    "exit_code": 0,
+    "stdout": "Комплект SHA256: d5a686c9faa3c90f46e4ddfb32171c95be3e621758ee36e02ebd90369f51c9a8\nURL: /blog/poslovicy-o-trude/\nФайлы проверены. БД не проверялась; записи нет.\n",
+    "stderr": ""
+  },
+  {
+    "slug": "kak-narisovat-lyagushku",
+    "command": [
+      "php",
+      "scripts/editorial-check.php",
+      "--article=kak-narisovat-lyagushku"
+    ],
+    "exit_code": 0,
+    "stdout": "ПРЕДУПРЕЖДЕНИЕ: Старый формат sources.json: рекомендуется перейти на карточки библиотеки.\nСтатья: kak-narisovat-lyagushku. Источники: legacy. Ссылок: 1. Ошибок: 0.\n",
+    "stderr": ""
+  },
+  {
+    "slug": "kak-narisovat-lyagushku",
+    "command": [
+      "php",
+      "scripts/add-blog-post.php",
+      "--manifest=editorial/articles/kak-narisovat-lyagushku/metadata.json",
+      "--validate-only"
+    ],
+    "exit_code": 0,
+    "stdout": "Комплект SHA256: c2c590942333dc2955d11696c86506b55b4882ec028e3d79265668f28a808aab\nURL: /blog/kak-narisovat-lyagushku/\nФайлы проверены. БД не проверялась; записи нет.\n",
+    "stderr": ""
+  },
+  {
+    "slug": "osennyaya-applikaciya",
+    "command": [
+      "php",
+      "scripts/editorial-check.php",
+      "--article=osennyaya-applikaciya"
+    ],
+    "exit_code": 0,
+    "stdout": "ПРЕДУПРЕЖДЕНИЕ: Старый формат sources.json: рекомендуется перейти на карточки библиотеки.\nСтатья: osennyaya-applikaciya. Источники: legacy. Ссылок: 1. Ошибок: 0.\n",
+    "stderr": ""
+  },
+  {
+    "slug": "osennyaya-applikaciya",
+    "command": [
+      "php",
+      "scripts/add-blog-post.php",
+      "--manifest=editorial/articles/osennyaya-applikaciya/metadata.json",
+      "--validate-only"
+    ],
+    "exit_code": 0,
+    "stdout": "Комплект SHA256: a4e8db610740f0c3060ddc5722bbc10ef4ec6c47c71775a42cced2511cb47eb7\nURL: /blog/osennyaya-applikaciya/\nФайлы проверены. БД не проверялась; записи нет.\n",
+    "stderr": ""
+  }
+]
