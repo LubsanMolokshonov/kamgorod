@@ -1,0 +1,5 @@
+# fgos.pro: постоянная очередь блога, ежедневно в 09:00 Europe/Moscow по ISO8601.
+# Установка на host: /etc/cron.d/fgos-blog-daily-queue, root:root 0644.
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+*/5 * * * * root /usr/bin/docker exec -w /var/www/html pedagogy_web php cron/process-blog-schedule.php --schedule=editorial/schedules/daily-queue.json --publish >> /var/log/fgos-blog-daily-queue.log 2>&1

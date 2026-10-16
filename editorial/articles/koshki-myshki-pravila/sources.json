@@ -1,0 +1,35 @@
+[
+  {
+    "id": "PLAN-SP-366",
+    "type": "редакционное задание",
+    "url": "https://docs.google.com/spreadsheets/d/18nsXUruLIfKuz6LKKp7oe21ni7D3jUx9sjVpFRX7aBI/edit#gid=1002",
+    "document": "Первые 30",
+    "edition": "live-read 16.10.2026",
+    "checked_at": "2026-10-16",
+    "point": "позиция 23, SP-366",
+    "evidence_file": "../../reviews/remaining-twenty-2026-10-16/plan-snapshot.json",
+    "sha256": "4552004a89a1c4374524ab0d58cec078d95749dd54e23dec148bf6d6c33c556f"
+  },
+  {
+    "id": "AUTHOR-SP-366",
+    "type": "авторская рекомендация",
+    "url": null,
+    "document": "Разбор собственных примеров и цифровая проверка",
+    "edition": "2026-10-16",
+    "checked_at": "2026-10-16",
+    "point": "примеры и инструкции статьи",
+    "evidence_file": "sources/author-check.md",
+    "sha256": "f1cc4bec30a3cc084150af3dccde5e1e7d213a95547759cc0691d0f2f9e75642"
+  },
+  {
+    "id": "CAT-MOUSE-2021",
+    "type": "проверенный текст / описание конкретного варианта",
+    "url": "https://dsrodnik.yak-uo.ru/media/site_platform_media/2021/9/17/elektronnyij-sbornik-igrovyih-praktik.pdf",
+    "document": "Электронный сборник лучших игровых практик педагогов Белгородской области, 2021",
+    "edition": "прочитанная 16.10.2026 версия; методический/литературный материал, не нормативный акт",
+    "checked_at": "2026-10-16",
+    "point": "Печатная с. 236, PDF-страница 236, раздел «Кошки-мышки»",
+    "evidence_file": "sources/checked-source.md",
+    "sha256": "ada67b5404cb6171d9e7818654ed7bf8ce44f15d1356a633be8a300c7e860314"
+  }
+]

@@ -1,0 +1,137 @@
+{
+    "version": 1,
+    "timezone": "Europe\/Moscow",
+    "publish_time": "09:00",
+    "approval": "Готовые комплекты добавляются по поручению пользователя от 16.10.2026.",
+    "entries": [
+        {
+            "manifest": "editorial\/articles\/detskie-schitalki\/metadata.json",
+            "publish_at": "2026-10-24T09:00:00+03:00",
+            "approved_sha256": "ccc1cf90e700ae950f72f2917322dcf6129fe16c087f7ad830175f984f821f45",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/pozdravlenie-rebenku-s-dnem-rozhdeniya\/metadata.json",
+            "publish_at": "2026-10-25T09:00:00+03:00",
+            "approved_sha256": "5016e8e97c7ebf1e128300c69d940a75da0145ffc20455a348012aa2b19ab6a8",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/kak-narisovat-ezhika\/metadata.json",
+            "publish_at": "2026-10-26T09:00:00+03:00",
+            "approved_sha256": "836a4c199f841d01928023029e6376be587a0bf16e8be7e777faa07c902e2a43",
+            "inline_assets_sha256": {
+                "\/assets\/images\/blog\/kak-narisovat-ezhika-shagi.png": "cf4b61ae1e06359e600ce4320777f84f0d16f66d33c293730fc96111ed85528a"
+            }
+        },
+        {
+            "manifest": "editorial\/articles\/palchikovye-igry-dlya-detej\/metadata.json",
+            "publish_at": "2026-10-27T09:00:00+03:00",
+            "approved_sha256": "a79b0be48dfde9f767477f140564967218e131d9bfeca35676917bc2563a222a",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/cvety-iz-salfetok\/metadata.json",
+            "publish_at": "2026-10-28T09:00:00+03:00",
+            "approved_sha256": "12278d0211bcdfa12cddfab843040c3f43afec7a307ba78633c3ff46d6ac40ab",
+            "inline_assets_sha256": {
+                "\/assets\/images\/blog\/cvety-iz-salfetok-shema.png": "b07143f97cff09b9e566dc8a02f474cf75320ab1b5721b0bc2756c2a32d2ffa3"
+            }
+        },
+        {
+            "manifest": "editorial\/articles\/den-narodnogo-edinstva-v-shkole\/metadata.json",
+            "publish_at": "2026-10-29T09:00:00+03:00",
+            "approved_sha256": "8fd17925dd5676b12a65cce05a736537908310b107ee3c6fd7be88308befc802",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/solnyshko-i-dozhdik\/metadata.json",
+            "publish_at": "2026-10-30T09:00:00+03:00",
+            "approved_sha256": "83eb39eb7d4ca12a437b64623c1bcde7f1cf1d17743369e8472e65dda10d0b20",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/zagadki-pro-semyu\/metadata.json",
+            "publish_at": "2026-10-31T09:00:00+03:00",
+            "approved_sha256": "abe64ef7bf1cb2e1bf4cdac046e58038492992e463b5311a57a8e70240a46fc3",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/den-materi-v-detskom-sadu\/metadata.json",
+            "publish_at": "2026-11-01T09:00:00+03:00",
+            "approved_sha256": "645f1b3c32f641bb3c757a85d46fa38181bb66b411a5a6d9cd46d8130e4cb1c3",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/ugadaj-melodiyu-dlya-detej\/metadata.json",
+            "publish_at": "2026-11-02T09:00:00+03:00",
+            "approved_sha256": "d99524f1c233af96bc693e55ec8f1bf763a0aae4caaca972ab3df695c19b23da",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/den-samoupravleniya-v-shkole\/metadata.json",
+            "publish_at": "2026-11-03T09:00:00+03:00",
+            "approved_sha256": "c970a4c146437ad0899134fd6d89b90d24db5ed7be3499b6be70e7811c175ac3",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/den-materi-v-shkole\/metadata.json",
+            "publish_at": "2026-11-04T09:00:00+03:00",
+            "approved_sha256": "6d35ae005f69d905e4aec7846f9cbcfae98a5701603cb6baaec710822fe71c5e",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/koshki-myshki-pravila\/metadata.json",
+            "publish_at": "2026-11-05T09:00:00+03:00",
+            "approved_sha256": "8af3def67d1491141efc9d1b042bdf999fc6740914fc23e8f97935089db88bc2",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/kak-sostavit-detskij-krossvord\/metadata.json",
+            "publish_at": "2026-11-06T09:00:00+03:00",
+            "approved_sha256": "2dfee0b7c968ea544bef2fb941ac971d5afbbabf80b1ef6a5a0754909187fce7",
+            "inline_assets_sha256": {
+                "\/assets\/images\/blog\/detskij-krossvord-setka.png": "1a0bc6d0ccf4bfc0815ef4773965d70dd191bae9eba5e0ace1533d4b87dad43a"
+            }
+        },
+        {
+            "manifest": "editorial\/articles\/novogodnij-utrennik-v-detskom-sadu\/metadata.json",
+            "publish_at": "2026-11-07T09:00:00+03:00",
+            "approved_sha256": "1fbabc177d4d9231a1872d11f9b46015b0be370aea215bcb58bc61c94d81ce54",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/temy-samoobrazovaniya-uchitelya\/metadata.json",
+            "publish_at": "2026-11-08T09:00:00+03:00",
+            "approved_sha256": "6dbb6924bc4511fd8810307982019099609b5f05691c507557060a04c7cf52ea",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/narodnaya-skazka-na-novyj-lad\/metadata.json",
+            "publish_at": "2026-11-09T09:00:00+03:00",
+            "approved_sha256": "aa17b1c4fb3d8dcc57176aa3a526ec8d74f28e06863f4149a4e3db10cab76025",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/novogodnyaya-skazka-scenarij\/metadata.json",
+            "publish_at": "2026-11-10T09:00:00+03:00",
+            "approved_sha256": "37a7598560df379af08870d4e438b426e520c195b73762c6144a39b739e67da4",
+            "inline_assets_sha256": []
+        },
+        {
+            "manifest": "editorial\/articles\/bumazhnyj-kokoshnik\/metadata.json",
+            "publish_at": "2026-11-11T09:00:00+03:00",
+            "approved_sha256": "f809f77096c5b79808623cb998cd443bfc7343410e3bbb404542d207fbd0e13d",
+            "inline_assets_sha256": {
+                "\/assets\/images\/blog\/bumazhnyj-kokoshnik-shema.png": "5496db93b0899567bc4f43c29495f07f3035158403cc30afc1b97e0dc5acb295"
+            }
+        },
+        {
+            "manifest": "editorial\/articles\/prezentaciya-dlya-detskogo-zanyatiya\/metadata.json",
+            "publish_at": "2026-11-12T09:00:00+03:00",
+            "approved_sha256": "46cfd3f1f1a4f240086a5435759414fffbd741b5c1307cba023436972385522b",
+            "inline_assets_sha256": []
+        }
+    ],
+    "updated_at": "2026-10-16T07:37:44+00:00"
+}

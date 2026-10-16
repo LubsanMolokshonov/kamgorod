@@ -11,7 +11,7 @@ function blogScheduleLoad(string $root, string $file): array {
         throw new InvalidArgumentException('Расписание должно находиться в editorial/schedules.');
     }
     $data = json_decode(file_get_contents($file), true, 512, JSON_THROW_ON_ERROR);
-    if (($data['version'] ?? null) !== 1 || empty($data['entries']) || count($data['entries']) > 50) {
+    if (($data['version'] ?? null) !== 1 || empty($data['entries']) || count($data['entries']) > 1000) {
         throw new InvalidArgumentException('Неверное расписание.');
     }
     $entries = []; $slugs = [];

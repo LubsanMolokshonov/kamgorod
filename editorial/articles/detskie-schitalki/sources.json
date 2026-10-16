@@ -1,0 +1,35 @@
+[
+  {
+    "id": "PLAN-SP-360",
+    "type": "редакционное задание",
+    "url": "https://docs.google.com/spreadsheets/d/18nsXUruLIfKuz6LKKp7oe21ni7D3jUx9sjVpFRX7aBI/edit#gid=1002",
+    "document": "Первые 30",
+    "edition": "live-read 16.10.2026",
+    "checked_at": "2026-10-16",
+    "point": "позиция 11, SP-360",
+    "evidence_file": "../../reviews/remaining-twenty-2026-10-16/plan-snapshot.json",
+    "sha256": "4552004a89a1c4374524ab0d58cec078d95749dd54e23dec148bf6d6c33c556f"
+  },
+  {
+    "id": "AUTHOR-SP-360",
+    "type": "авторская рекомендация",
+    "url": null,
+    "document": "Разбор собственных примеров и цифровая проверка",
+    "edition": "2026-10-16",
+    "checked_at": "2026-10-16",
+    "point": "примеры и инструкции статьи",
+    "evidence_file": "sources/author-check.md",
+    "sha256": "49113ac107148205311e956309eb618b6c558c5f366e919a7569a43a273dcebb"
+  },
+  {
+    "id": "COUNT-ARZAMAS",
+    "type": "проверенный текст / описание конкретного варианта",
+    "url": "https://arzamas.academy/materials/1340",
+    "document": "Как устроены детские считалки",
+    "edition": "прочитанная 16.10.2026 версия; методический/литературный материал, не нормативный акт",
+    "checked_at": "2026-10-16",
+    "point": "Основной текст; примеры коротких считалок",
+    "evidence_file": "sources/checked-source.md",
+    "sha256": "d86405e43af42fab562809b2b30437bb150d90c6afca7a7e58460254da816755"
+  }
+]

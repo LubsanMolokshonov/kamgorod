@@ -88,6 +88,7 @@ Thumbs.db
 
 # Резервные копии статей перед изменениями в БД.
 /editorial/backups/
+/editorial/schedules/.append.lock
 
 # Доказательства SEO-аудита: в Git хранится только итоговый README.
 /editorial/seo-technical-20260923/*

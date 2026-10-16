@@ -6,25 +6,25 @@
     {
       "manifest": "editorial/articles/poslovicy-o-vremenah-goda/metadata.json",
       "publish_at": "2026-10-19T09:00:00+03:00",
-      "approved_sha256": "1ec5c5969543dba5494d70dbe361954690e50fbc1b6b82d33ed0057ecf6e36b4",
+      "approved_sha256": "04aaf19f4d4d1eabda3b2393385dc302ad0b828bfb99e632ed8eae17a0dd608d",
       "inline_assets_sha256": {}
     },
     {
       "manifest": "editorial/articles/prazdnik-oseni-v-detskom-sadu/metadata.json",
       "publish_at": "2026-10-20T09:00:00+03:00",
-      "approved_sha256": "09dacbb757171fc8353cdfc5a90e93f4a4c812dd6806e527924d9ffe1602197c",
+      "approved_sha256": "ee205e7f2d3f0ec657b822a870d54d78a3ff177277a54383a35e5e38e808791a",
       "inline_assets_sha256": {}
     },
     {
       "manifest": "editorial/articles/poslovicy-o-trude/metadata.json",
       "publish_at": "2026-10-21T09:00:00+03:00",
-      "approved_sha256": "d5a686c9faa3c90f46e4ddfb32171c95be3e621758ee36e02ebd90369f51c9a8",
+      "approved_sha256": "a870991ee8513e75785b0f12a48d4dbf1ad7aff97be47b8ca59c92571aa41439",
       "inline_assets_sha256": {}
     },
     {
       "manifest": "editorial/articles/kak-narisovat-lyagushku/metadata.json",
       "publish_at": "2026-10-22T09:00:00+03:00",
-      "approved_sha256": "c2c590942333dc2955d11696c86506b55b4882ec028e3d79265668f28a808aab",
+      "approved_sha256": "6690400447ad5c82cb959f342a11313037b659f0be8db9e659dd99f9ad4e8f24",
       "inline_assets_sha256": {
         "/assets/images/blog/kak-narisovat-lyagushku-shagi.png": "131d1c7157936c953e4545ee6e373a669adf7367c12e58a5ada7d85eb6f3d021"
       }
@@ -32,10 +32,12 @@
     {
       "manifest": "editorial/articles/osennyaya-applikaciya/metadata.json",
       "publish_at": "2026-10-23T09:00:00+03:00",
-      "approved_sha256": "a4e8db610740f0c3060ddc5722bbc10ef4ec6c47c71775a42cced2511cb47eb7",
+      "approved_sha256": "366e116d706c69ce80b480f686daeafd658f50f2076911337b4888cebd674ef1",
       "inline_assets_sha256": {
         "/assets/images/blog/osennyaya-applikaciya-varianty.png": "89b698c7aa4898aca8b838b62c05fd209c2a37d75115b76aba856b946395d903"
       }
     }
-  ]
+  ],
+  "updated_at": "2026-10-16",
+  "revision_approval": "16.10.2026 пользователь поручил поставить отредактированные статьи в ежедневную очередь. Обновлены хеши только ещё не опубликованных комплектов; даты сохранены."
 }

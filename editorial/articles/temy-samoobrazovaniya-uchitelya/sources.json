@@ -1,0 +1,24 @@
+[
+  {
+    "id": "PLAN-SP-001",
+    "type": "редакционное задание",
+    "url": "https://docs.google.com/spreadsheets/d/18nsXUruLIfKuz6LKKp7oe21ni7D3jUx9sjVpFRX7aBI/edit#gid=1002",
+    "document": "Первые 30",
+    "edition": "live-read 16.10.2026",
+    "checked_at": "2026-10-16",
+    "point": "позиция 26, SP-001",
+    "evidence_file": "../../reviews/remaining-twenty-2026-10-16/plan-snapshot.json",
+    "sha256": "4552004a89a1c4374524ab0d58cec078d95749dd54e23dec148bf6d6c33c556f"
+  },
+  {
+    "id": "AUTHOR-SP-001",
+    "type": "авторская рекомендация",
+    "url": null,
+    "document": "Разбор собственных примеров и цифровая проверка",
+    "edition": "2026-10-16",
+    "checked_at": "2026-10-16",
+    "point": "примеры и инструкции статьи",
+    "evidence_file": "sources/author-check.md",
+    "sha256": "b34c3b54bd360d67869cd2bf5777eb3873a868a4108349ac9197ace9d0fe296b"
+  }
+]

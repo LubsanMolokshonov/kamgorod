@@ -1,5 +1,30 @@
 # Расписание редакционных статей
 
+С 16.10.2026 новые готовые статьи автоматически добавляются в постоянный
+`daily-queue.json`: после текста, источников и обложки навык запускает
+`scripts/enqueue-blog-post.php --manifest=... --enqueue --approved-sha256=...`.
+Без `--enqueue` это только предварительный расчёт. Время — ежедневно 09:00 МСК
+(13:00 во Вьетнаме). Скрипт учитывает хвост остальных активных расписаний,
+сохраняет текущую версию и хеши схем, повтор не дублирует запись и не меняет дату.
+Незавершённый комплект из editorial-init не ставится в очередь.
+
+Постоянный cron: host `/etc/cron.d/fgos-blog-daily-queue`, источник —
+`daily-queue.cron`. Он не истекает в конце месяца. Прежние две октябрьские
+очереди продолжают обрабатывать свои записи отдельно. Двадцать новых статей
+назначены на 24.10–12.11.2026 включительно; с прежними семью получается
+непрерывный ежедневный выпуск с 17 октября по 12 ноября.
+
+```sh
+php scripts/enqueue-blog-post.php --manifest=editorial/articles/<slug>/metadata.json
+php scripts/enqueue-blog-post.php --manifest=editorial/articles/<slug>/metadata.json --enqueue --approved-sha256=<hash>
+php cron/process-blog-schedule.php --schedule=editorial/schedules/daily-queue.json --validate-only
+php cron/process-blog-schedule.php --schedule=editorial/schedules/daily-queue.json
+```
+
+Список записей и их даты хранится в JSON, а не в будущих опубликованных строках
+БД. При изменении текста требуется отдельное обновление согласованной версии:
+повторный append намеренно останавливается на расхождении.
+
 По запросу 14.10.2026 очередь переведена на ежедневный выпуск в 09:00 Europe/Moscow
 (13:00 Asia/Ho_Chi_Minh). В `first-five-2026-10-14.json` первая, уже опубликованная,
 статья сохраняет дату 14 октября; следующие четыре назначены на 15–18 октября.

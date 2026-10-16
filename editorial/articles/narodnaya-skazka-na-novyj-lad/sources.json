@@ -1,0 +1,35 @@
+[
+  {
+    "id": "PLAN-SP-314",
+    "type": "редакционное задание",
+    "url": "https://docs.google.com/spreadsheets/d/18nsXUruLIfKuz6LKKp7oe21ni7D3jUx9sjVpFRX7aBI/edit#gid=1002",
+    "document": "Первые 30",
+    "edition": "live-read 16.10.2026",
+    "checked_at": "2026-10-16",
+    "point": "позиция 27, SP-314",
+    "evidence_file": "../../reviews/remaining-twenty-2026-10-16/plan-snapshot.json",
+    "sha256": "4552004a89a1c4374524ab0d58cec078d95749dd54e23dec148bf6d6c33c556f"
+  },
+  {
+    "id": "AUTHOR-SP-314",
+    "type": "авторская рекомендация",
+    "url": null,
+    "document": "Разбор собственных примеров и цифровая проверка",
+    "edition": "2026-10-16",
+    "checked_at": "2026-10-16",
+    "point": "примеры и инструкции статьи",
+    "evidence_file": "sources/author-check.md",
+    "sha256": "90b00c2ffbbd16f20dde5489eff974d925f162354adaaa23c6460a563b40f13b"
+  },
+  {
+    "id": "KOLOBOK-AFANASYEV",
+    "type": "проверенный текст / описание конкретного варианта",
+    "url": "https://ru.wikisource.org/wiki/Народные_русские_сказки_(Афанасьев)/Колобок",
+    "document": "А. Н. Афанасьев, Народные русские сказки, № 36 «Колобок», электронная транскрипция",
+    "edition": "прочитанная 16.10.2026 версия; методический/литературный материал, не нормативный акт",
+    "checked_at": "2026-10-16",
+    "point": "Основной текст № 36, последовательность встреч и финал",
+    "evidence_file": "sources/checked-source.md",
+    "sha256": "dfeb5dc3c653e009e7f5635115cee6ddf29fcc23c8530a3dc41e8e69311c8907"
+  }
+]

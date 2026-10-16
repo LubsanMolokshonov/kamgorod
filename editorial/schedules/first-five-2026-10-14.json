@@ -26,7 +26,7 @@
     {
       "manifest": "editorial/articles/podelki-dlya-papy/metadata.json",
       "publish_at": "2026-10-17T09:00:00+03:00",
-      "approved_sha256": "af877cfeaa9fc769735bacc39db69cf7a8abafe838a2dda47c3d12e582415657",
+      "approved_sha256": "1d17963e19428624149bf6a5f3d768457e79458809c8121fa9046b3eba6dc757",
       "inline_assets_sha256": {
         "/assets/images/blog/podelki-dlya-papy-shema.png": "679abb994f4f77735e57f9e818e000e8bb1121271627445c53171865ee4dde54"
       }
@@ -34,10 +34,11 @@
     {
       "manifest": "editorial/articles/roditelskoe-sobranie-v-nachalnoj-shkole/metadata.json",
       "publish_at": "2026-10-18T09:00:00+03:00",
-      "approved_sha256": "450900d678fb2d4693507daebaf104d27e6a86290358ed2ba95afd16af7b675f",
+      "approved_sha256": "b4a825b060dcf2d29a631f43dd99c8e7c4fa4e093592d7633c4c263a139f0d62",
       "inline_assets_sha256": {}
     }
   ],
-  "updated_at": "2026-10-14",
-  "schedule_change": "Пользователь попросил ежедневную публикацию в 9 утра. Сохранено прежнее 09:00 МСК / 13:00 Asia/Ho_Chi_Minh; четыре оставшиеся статьи перенесены на 15–18 октября."
+  "updated_at": "2026-10-16",
+  "schedule_change": "Пользователь попросил ежедневную публикацию в 9 утра. Сохранено прежнее 09:00 МСК / 13:00 Asia/Ho_Chi_Minh; четыре оставшиеся статьи перенесены на 15–18 октября.",
+  "revision_approval": "16.10.2026 пользователь поручил поставить отредактированные статьи в ежедневную очередь. Обновлены хеши только ещё не опубликованных комплектов; даты сохранены."
 }

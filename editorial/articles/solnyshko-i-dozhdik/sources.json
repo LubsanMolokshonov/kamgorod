@@ -1,0 +1,35 @@
+[
+  {
+    "id": "PLAN-SP-359",
+    "type": "редакционное задание",
+    "url": "https://docs.google.com/spreadsheets/d/18nsXUruLIfKuz6LKKp7oe21ni7D3jUx9sjVpFRX7aBI/edit#gid=1002",
+    "document": "Первые 30",
+    "edition": "live-read 16.10.2026",
+    "checked_at": "2026-10-16",
+    "point": "позиция 17, SP-359",
+    "evidence_file": "../../reviews/remaining-twenty-2026-10-16/plan-snapshot.json",
+    "sha256": "4552004a89a1c4374524ab0d58cec078d95749dd54e23dec148bf6d6c33c556f"
+  },
+  {
+    "id": "AUTHOR-SP-359",
+    "type": "авторская рекомендация",
+    "url": null,
+    "document": "Разбор собственных примеров и цифровая проверка",
+    "edition": "2026-10-16",
+    "checked_at": "2026-10-16",
+    "point": "примеры и инструкции статьи",
+    "evidence_file": "sources/author-check.md",
+    "sha256": "3e55067580c38e12448e277a1e2885a7dbaab8eaaaadabd4b5a2932e087e26ff"
+  },
+  {
+    "id": "SUN-RAIN-DOU8",
+    "type": "проверенный текст / описание конкретного варианта",
+    "url": "https://dou8.siteedu.ru/media/sub/691/documents/Подвижные_игры.pdf",
+    "document": "Подвижные игры, размещённые детским садом № 8",
+    "edition": "прочитанная 16.10.2026 версия; методический/литературный материал, не нормативный акт",
+    "checked_at": "2026-10-16",
+    "point": "Раздел «Солнышко и дождик», PDF-страница 8 (без печатной пагинации)",
+    "evidence_file": "sources/checked-source.md",
+    "sha256": "4afb0b1dc5494ded4e6706e6bf0b13edff8b9c1510700d23ed52a16a75c19a84"
+  }
+]

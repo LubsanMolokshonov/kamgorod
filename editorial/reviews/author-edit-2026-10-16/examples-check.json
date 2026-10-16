@@ -1,0 +1,98 @@
+{
+  "cat_mouse": {
+    "caught": [
+      "caught",
+      [
+        {
+          "player": "mouse",
+          "die": 2,
+          "mouse": 4,
+          "cat": 1
+        },
+        {
+          "player": "cat",
+          "die": 5,
+          "mouse": 4,
+          "cat": 3
+        },
+        {
+          "player": "mouse",
+          "die": 1,
+          "mouse": 5,
+          "cat": 3
+        },
+        {
+          "player": "cat",
+          "die": 6,
+          "mouse": 5,
+          "cat": 5
+        }
+      ]
+    ],
+    "home": [
+      "home",
+      [
+        {
+          "player": "mouse",
+          "die": 4,
+          "mouse": 5,
+          "cat": 1
+        },
+        {
+          "player": "cat",
+          "die": 1,
+          "mouse": 5,
+          "cat": 2
+        },
+        {
+          "player": "mouse",
+          "die": 5,
+          "mouse": 7,
+          "cat": 2
+        },
+        {
+          "player": "cat",
+          "die": 2,
+          "mouse": 7,
+          "cat": 3
+        },
+        {
+          "player": "mouse",
+          "die": 6,
+          "mouse": 8,
+          "cat": 3
+        }
+      ]
+    ],
+    "all_reachable_results": [
+      "caught",
+      "home"
+    ],
+    "states_checked": 24
+  },
+  "riddles": [
+    "бабушка",
+    "дедушка",
+    "брат",
+    "брат",
+    "открытый ответ",
+    "открытый ответ"
+  ],
+  "riddle_four_alternative": "сестра",
+  "crossword": "Ш/О/А, все четыре слова совпадают",
+  "music_teams": [
+    [
+      "Л",
+      "К",
+      "К",
+      "Л"
+    ],
+    [
+      "К",
+      "Л",
+      "Л",
+      "К"
+    ]
+  ],
+  "physical_trials": false
+}
