@@ -288,6 +288,11 @@ if (!defined('VK_CONFIRMATION_STRING')) define('VK_CONFIRMATION_STRING', $_ENV['
 if (!defined('VK_COMMUNITY_TOKEN')) define('VK_COMMUNITY_TOKEN', $_ENV['VK_COMMUNITY_TOKEN'] ?? '');
 if (!defined('VK_GROUP_ID')) define('VK_GROUP_ID', (int)($_ENV['VK_GROUP_ID'] ?? 0));
 
+// Автопубликация блога: отдельный пользовательский токен, по умолчанию отключено.
+if (!defined('VK_BLOG_ENABLED')) define('VK_BLOG_ENABLED', false);
+if (!defined('VK_BLOG_USER_TOKEN')) define('VK_BLOG_USER_TOKEN', '');
+if (!defined('VK_BLOG_GROUP_ID')) define('VK_BLOG_GROUP_ID', 200065283);
+
 // Session Configuration
 if (!defined('SESSION_LIFETIME')) define('SESSION_LIFETIME', $_ENV['SESSION_LIFETIME'] ?? 86400);
 if (!defined('COOKIE_LIFETIME')) define('COOKIE_LIFETIME', $_ENV['COOKIE_LIFETIME'] ?? 2592000); // 30 days

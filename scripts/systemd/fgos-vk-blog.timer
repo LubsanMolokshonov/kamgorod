@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily fgos.pro blog publishing at noon Moscow time
+
+[Timer]
+OnCalendar=*-*-* 12:00:00 Europe/Moscow
+Persistent=true
+AccuracySec=1s
+Unit=fgos-vk-blog.service
+
+[Install]
+WantedBy=timers.target
