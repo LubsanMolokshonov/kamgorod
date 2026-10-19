@@ -71,6 +71,26 @@ try {
     $pending = json_decode(file_get_contents($directory . '/authorization.json'), true);
     $now += 901;
     rejected(fn() => $oauth->exchange('secret-code', 'device', $pending['state']), 'Expired authorization state rejected');
+    $wallOAuth = new VkBlogOAuth($directory, 54834902, 'https://fgos.pro/vk-blog-oauth-return.html',
+        fn(array $p) => ['access_token' => 'secret-wall', 'refresh_token' => 'secret-refresh-wall',
+            'expires_in' => 3600, 'state' => $p['state'], 'scope' => 'wall'], fn() => $GLOBALS['now'], ['wall']);
+    parse_str((string)parse_url($wallOAuth->begin(), PHP_URL_QUERY), $wallQuery);
+    ok($wallQuery['scope'] === 'wall', 'Wall-only authorization does not request photos');
+    $wallOAuth->exchange('secret-code-wall', 'device', $wallQuery['state']);
+    ok($wallOAuth->token() === 'secret-wall', 'Wall-only grant is accepted');
+    $wallMethods = [];
+    $wallClient = new VkBlogClient('', 200065283, $wallOAuth, function ($method) use (&$wallMethods): string {
+        $wallMethods[] = $method;
+        return json_encode(['response' => match($method) {
+            'utils.resolveScreenName' => ['type' => 'group', 'object_id' => 200065283],
+            'account.getAppPermissions' => 8192,
+            'groups.getById' => ['groups' => [['is_admin' => 1, 'can_post' => 1]]],
+            'wall.get' => ['items' => []],
+            default => throw new RuntimeException('Unexpected photo or publishing method')
+        }]);
+    }, true);
+    $wallClient->preflight();
+    ok(!in_array('photos.getWallUploadServer', $wallMethods, true), 'Wall-only preflight does not upload or publish');
 } finally {
     foreach (glob($directory . '/*') ?: [] as $file) { unlink($file); }
     if (is_dir($directory)) { rmdir($directory); }

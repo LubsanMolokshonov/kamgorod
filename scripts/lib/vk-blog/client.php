@@ -26,7 +26,7 @@ interface VkBlogGateway
 
 final class VkBlogClient implements VkBlogGateway
 {
-    public function __construct(private string $token, private int $groupId, private ?VkBlogOAuth $oauth = null, private ?Closure $apiTransport = null) {}
+    public function __construct(private string $token, private int $groupId, private ?VkBlogOAuth $oauth = null, private ?Closure $apiTransport = null, private bool $textOnly = false) {}
 
     public function call(string $method, array $params = []): mixed
     {
@@ -81,7 +81,7 @@ final class VkBlogClient implements VkBlogGateway
             throw new RuntimeException('ID сообщества не соответствует fgospro');
         }
         $rights = $this->call('account.getAppPermissions');
-        if (!is_int($rights) || ($rights & 4) === 0 || ($rights & 8192) === 0) {
+        if (!is_int($rights) || (!$this->textOnly && ($rights & 4) === 0) || ($rights & 8192) === 0) {
             throw new RuntimeException('Нужен пользовательский токен с правами photos и wall');
         }
         $groups = $this->call('groups.getById', ['group_ids' => $this->groupId, 'fields' => 'can_post']);
@@ -89,7 +89,7 @@ final class VkBlogClient implements VkBlogGateway
         if ((int)($group['is_admin'] ?? 0) !== 1 || (int)($group['can_post'] ?? 0) !== 1) {
             throw new RuntimeException('Нет административного доступа к стене сообщества');
         }
-        $this->call('photos.getWallUploadServer', ['group_id' => $this->groupId]);
+        if (!$this->textOnly) { $this->call('photos.getWallUploadServer', ['group_id' => $this->groupId]); }
         $this->call('wall.get', ['owner_id' => -$this->groupId, 'count' => 1, 'filter' => 'owner']);
     }
 

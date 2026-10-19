@@ -6,7 +6,7 @@ if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }
 final class VkBlogOAuth
 {
     public function __construct(private string $directory, private int $appId, private string $redirectUri,
-        private ?Closure $transport = null, private ?Closure $clock = null) {}
+        private ?Closure $transport = null, private ?Closure $clock = null, private array $scopes = ['photos', 'wall']) {}
 
     private function now(): int { return $this->clock ? ($this->clock)() : time(); }
 
@@ -66,7 +66,7 @@ final class VkBlogOAuth
             $this->write('authorization', ['verifier' => $verifier, 'state' => $state,
                 'expires_at' => $this->now() + 900, 'app_id' => $this->appId, 'redirect_uri' => $this->redirectUri]);
             return 'https://id.vk.ru/authorize?' . http_build_query(['response_type' => 'code',
-                'client_id' => $this->appId, 'redirect_uri' => $this->redirectUri, 'scope' => 'photos wall',
+                'client_id' => $this->appId, 'redirect_uri' => $this->redirectUri, 'scope' => implode(' ', $this->scopes),
                 'state' => $state, 'code_challenge' => rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '='),
                 'code_challenge_method' => 'S256'], '', '&', PHP_QUERY_RFC3986);
         });
@@ -98,8 +98,8 @@ final class VkBlogOAuth
             throw new RuntimeException('Неполный ответ VK OAuth; нужна повторная авторизация');
         }
         $scopes = preg_split('/[\s,]+/', (string)($result['scope'] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
-        if (!in_array('wall', $scopes, true) || !in_array('photos', $scopes, true)) {
-            throw new RuntimeException('VK ID не выдал права wall и photos; проверьте разрешения приложения');
+        if (array_diff($this->scopes, $scopes)) {
+            throw new RuntimeException('VK ID не выдал запрошенные права; проверьте разрешения приложения');
         }
         return ['VK_ACCESS_TOKEN' => $result['access_token'], 'VK_REFRESH_TOKEN' => $result['refresh_token'],
             'VK_DEVICE_ID' => $deviceId, 'VK_TOKEN_EXPIRES_AT' => $this->now() + (int)$result['expires_in'],
