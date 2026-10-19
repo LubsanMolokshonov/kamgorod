@@ -26,19 +26,32 @@ interface VkBlogGateway
 
 final class VkBlogClient implements VkBlogGateway
 {
-    public function __construct(private string $token, private int $groupId) {}
+    public function __construct(private string $token, private int $groupId, private ?VkBlogOAuth $oauth = null, private ?Closure $apiTransport = null) {}
 
     public function call(string $method, array $params = []): mixed
     {
-        $params['access_token'] = $this->token;
-        $params['v'] = '5.199';
-        $data = json_decode($this->request('https://api.vk.com/method/' . $method, http_build_query($params)), true);
-        if (!is_array($data)) { throw new RuntimeException('Некорректный ответ VK'); }
-        if (isset($data['error'])) { throw new VkBlogApiError((int)($data['error']['error_code'] ?? 0)); }
-        if (!array_key_exists('response', $data)) { throw new RuntimeException('Нет результата VK'); }
-        return $data['response'];
+        if ($this->oauth) { $this->token = $this->oauth->token(); }
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $params['access_token'] = $this->token;
+            $params['v'] = '5.199';
+            $raw = $this->apiTransport ? ($this->apiTransport)($method, $params) :
+                $this->request('https://api.vk.com/method/' . $method, http_build_query($params));
+            $data = json_decode($raw, true);
+            if (!is_array($data)) { throw new RuntimeException('Некорректный ответ VK'); }
+            if (isset($data['error'])) {
+                $code = (int)($data['error']['error_code'] ?? 0);
+                // Only an explicit rejected authorization may be retried. Never retry transport failures.
+                if ($code === 5 && $attempt === 0 && $this->oauth) {
+                    $this->token = $this->oauth->token($this->token);
+                    continue;
+                }
+                throw new VkBlogApiError($code);
+            }
+            if (!array_key_exists('response', $data)) { throw new RuntimeException('Нет результата VK'); }
+            return $data['response'];
+        }
+        throw new RuntimeException('VK запрос не выполнен');
     }
-
     private function request(string $url, string|array $body): string
     {
         if (!function_exists('curl_init')) { throw new RuntimeException('Требуется PHP cURL'); }

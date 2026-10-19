@@ -630,3 +630,9 @@ if (!defined('EMAIL_TRACK_ALLOWED_HOSTS')) {
         'vk.com', // кнопка «Поделиться ВКонтакте» в письмах о публикации
     ]);
 }
+
+// OAuth 2.1 VK ID. Credentials live in a private CLI-only store, never in the frontend.
+if (!defined('VK_BLOG_OAUTH_ENABLED')) define('VK_BLOG_OAUTH_ENABLED', false);
+if (!defined('VK_APP_ID')) define('VK_APP_ID', 54834138);
+if (!defined('VK_BLOG_REDIRECT_URI')) define('VK_BLOG_REDIRECT_URI', '');
+if (!defined('VK_BLOG_OAUTH_DIR')) define('VK_BLOG_OAUTH_DIR', BASE_PATH . '/.git/vk-blog-oauth');

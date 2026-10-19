@@ -3,6 +3,7 @@ declare(strict_types=1);
 if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../scripts/lib/vk-blog/publisher.php';
+require_once __DIR__ . '/../scripts/lib/vk-blog/oauth.php';
 require_once __DIR__ . '/../classes/TelegramNotifier.php';
 
 $options = getopt('', ['send', 'initialize', 'check-access', 'preview', 'help']);
@@ -21,7 +22,7 @@ $enabled = filter_var(VK_BLOG_ENABLED, FILTER_VALIDATE_BOOLEAN);
 if ($send && !$enabled) { echo "Автопубликация отключена; очередь сохранена\n"; exit(0); }
 $groupId = (int)VK_BLOG_GROUP_ID;
 $token = (string)VK_BLOG_USER_TOKEN;
-if (!$preview && ($groupId < 1 || $token === '')) {
+if (!$preview && ($groupId < 1 || ($token === '' && !filter_var(VK_BLOG_OAUTH_ENABLED, FILTER_VALIDATE_BOOLEAN)))) {
     fwrite(STDERR, "Задайте VK_BLOG_GROUP_ID и VK_BLOG_USER_TOKEN в .env. Токен сообщений не используется.\n");
     exit(1);
 }
@@ -30,7 +31,7 @@ $locked = false;
 $lockKey = 'fgos_vk_blog_' . $groupId;
 try {
     if (!$preview && !extension_loaded('curl')) { throw new RuntimeException('Для VK необходим PHP cURL'); }
-    $vk = new VkBlogClient($token, $groupId);
+    $vk = new VkBlogClient($token, $groupId, filter_var(VK_BLOG_OAUTH_ENABLED, FILTER_VALIDATE_BOOLEAN) ? new VkBlogOAuth(VK_BLOG_OAUTH_DIR, (int)VK_APP_ID, VK_BLOG_REDIRECT_URI) : null);
     if ($check) { $vk->preflight(); echo "Доступ к fgospro и загрузке фотографий подтверждён\n"; exit(0); }
     require __DIR__ . '/../config/database.php';
     $publisher = new VkBlogPublisher($db, $vk, new VkBlogSite(PUBLIC_SITE_URL), $groupId,
