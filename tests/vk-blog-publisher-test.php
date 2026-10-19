@@ -230,4 +230,22 @@ $p = publisher($f); $p->initialize(); article($db, 1);
 $site->during = static fn() => $db->exec('UPDATE publications SET views_count=views_count+1 WHERE id=1');
 $p->run();
 check(count($vk->posts) === 1, 'изменение счётчика просмотров при чтении страницы не блокирует отправку');
+$f = fixture(); [$db, $vk] = $f;
+$f[2] = new class implements VkBlogSiteGateway {
+    public function prepare(array $a): array {
+        return ['payload' => VkBlogSite::payload($a, 'https://fgos.pro/blog/' . $a['slug'] . '/') + ['text_only' => true],
+            'sha256' => '', 'bytes' => '', 'mime' => ''];
+    }
+};
+article($db, 1); article($db, 2);
+$p = publisher($f); $p->initialize(); article($db, 3);
+$vk->loseResponse = true;
+$p->run(2);
+check(count($vk->posts) === 1 && str_contains($vk->posts[100]['payload']['url'], 'article-2'), 'выбор ID отправляет только указанную статью');
+check($vk->uploads === 0 && $vk->posts[100]['photo'] === '', 'режим без фото не загружает изображений');
+check($db->query("SELECT state FROM vk_blog_deliveries WHERE publication_id=2")->fetchColumn() === 'unknown', 'потеря ответа текстового поста блокирует повтор');
+$vk->loseResponse = false; $p->run(2); $p->run(2);
+check(count($vk->posts) === 1 && $db->query("SELECT state FROM vk_blog_deliveries WHERE publication_id=2")->fetchColumn() === 'sent', 'текстовый пост сверяется и не дублируется');
+check(VkBlogClient::matches(['from_id' => -42, 'text' => 'text', 'attachments' => []], ['message' => 'text', 'text_only' => true], '', 42), 'сверка текста без фото проверяет автора и текст');
+check(!VkBlogClient::matches(['from_id' => -42, 'text' => 'text', 'attachments' => [['type' => 'photo']]], ['message' => 'text', 'text_only' => true], '', 42), 'сверка без фото отклоняет запись с неожиданным вложением');
 echo "Все проверки пройдены\n";

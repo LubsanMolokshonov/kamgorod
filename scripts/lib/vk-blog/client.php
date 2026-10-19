@@ -116,7 +116,8 @@ final class VkBlogClient implements VkBlogGateway
     public function post(array $payload, string $photo, string $key): int
     {
         $response = $this->call('wall.post', ['owner_id' => -$this->groupId, 'from_group' => 1,
-            'message' => $payload['message'], 'attachments' => $photo, 'guid' => $key]);
+            'message' => $payload['message'], 'attachments' => $photo, 'guid' => $key,
+            'dont_parse_links' => !empty($payload['text_only']) ? 1 : 0]);
         $id = (int)($response['post_id'] ?? 0);
         if ($id < 1) { throw new RuntimeException('Нет ID опубликованного поста VK'); }
         return $id;
@@ -126,6 +127,7 @@ final class VkBlogClient implements VkBlogGateway
     {
         if ((int)($post['from_id'] ?? 0) !== -$groupId ||
             str_replace("\r\n", "\n", (string)($post['text'] ?? '')) !== $payload['message']) { return false; }
+        if (!empty($payload['text_only']) && $photo === '') { return empty($post['attachments']); }
         foreach ($post['attachments'] ?? [] as $attachment) {
             $p = $attachment['photo'] ?? [];
             if ('photo' . ($p['owner_id'] ?? '') . '_' . ($p['id'] ?? '') === $photo) { return true; }

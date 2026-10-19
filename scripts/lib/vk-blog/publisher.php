@@ -61,7 +61,7 @@ final class VkBlogPublisher
             VkBlogSite::payload($a, rtrim($baseUrl, '/') . '/blog/' . rawurlencode($a['slug']) . '/'), $rows);
     }
 
-    public function run(): array
+    public function run(?int $articleId = null): array
     {
         if (!$this->query('SELECT group_id FROM vk_blog_channels WHERE group_id = ?', [$this->groupId])->fetchColumn()) {
             throw new RuntimeException('Сначала явно зафиксируйте архив: --initialize');
@@ -74,12 +74,12 @@ final class VkBlogPublisher
         $unknown = $this->query("SELECT * FROM vk_blog_deliveries WHERE group_id = ? AND state = 'unknown'", [$this->groupId])->fetchAll(PDO::FETCH_ASSOC);
         foreach ($unknown as $row) {
             $payload = is_string($row['payload']) ? json_decode($row['payload'], true) : null;
-            if (!is_array($payload) || !isset($payload['message'], $payload['url']) || empty($row['photo_id'])) {
+            if (!is_array($payload) || !isset($payload['message'], $payload['url']) || (empty($row['photo_id']) && empty($payload['text_only']))) {
                 ($this->notify)('vk_blog_invalid_' . $row['id'], 'Повреждено состояние отправки; повтор заблокирован', ['delivery_id' => $row['id']]);
                 $stats['deferred']++;
                 continue;
             }
-            $post = $this->vk->reconcile($payload, $row['photo_id']);
+            $post = $this->vk->reconcile($payload, (string)$row['photo_id']);
             if ($post !== null) {
                 $this->markSent((int)$row['id'], $post);
                 $stats['reconciled']++;
@@ -92,6 +92,7 @@ final class VkBlogPublisher
             WHERE d.group_id = ? AND d.state = 'pending' AND p." . self::ELIGIBLE . "
             ORDER BY d.is_archive, p.published_at, p.id", [$this->groupId])->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $row) {
+            if ($articleId !== null && (int)$row['publication_id'] !== $articleId) { continue; }
             // После исчерпания дневной квоты не скачиваем остальные обложки архива.
             if ((int)$row['is_archive'] === 1 && !$this->reserveArchive((int)$row['id'], false)) { continue; }
             if ($this->deliver($row)) { $stats['sent']++; } else { $stats['deferred']++; }
@@ -137,10 +138,11 @@ final class VkBlogPublisher
             $payload = $prepared['payload'] + ['cover_sha256' => $prepared['sha256']];
             $encoded = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
             $same = $row['payload'] === $encoded;
-            $photo = $same ? $row['photo_id'] : null;
+            $textOnly = !empty($payload['text_only']);
+            $photo = $textOnly ? '' : ($same ? $row['photo_id'] : null);
             $this->query('UPDATE vk_blog_deliveries SET payload = ?, photo_id = ?, attempts = attempts + 1, last_error = NULL WHERE id = ?',
                 [$encoded, $photo, $id]);
-            if (!$photo) {
+            if (!$textOnly && !$photo) {
                 $photo = $this->vk->upload($prepared['bytes'], $prepared['mime']);
                 $this->query('UPDATE vk_blog_deliveries SET photo_id = ? WHERE id = ?', [$photo, $id]);
             }

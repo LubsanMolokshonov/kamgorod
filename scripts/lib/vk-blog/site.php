@@ -10,7 +10,7 @@ interface VkBlogSiteGateway
 
 final class VkBlogSite implements VkBlogSiteGateway
 {
-    public function __construct(private string $baseUrl) {}
+    public function __construct(private string $baseUrl, private bool $textOnly = false) {}
 
     public static function plain(string $html): string
     {
@@ -98,7 +98,7 @@ final class VkBlogSite implements VkBlogSiteGateway
 
     public function prepare(array $article): array
     {
-        if (empty($article['cover_image_url'])) { throw new RuntimeException('У статьи нет обложки'); }
+        if (!$this->textOnly && empty($article['cover_image_url'])) { throw new RuntimeException('У статьи нет обложки'); }
         $url = $this->url($article);
         $html = $this->fetch($url, 5000000);
         $dom = new DOMDocument();
@@ -109,6 +109,11 @@ final class VkBlogSite implements VkBlogSiteGateway
         $xpath = new DOMXPath($dom);
         $canonical = $xpath->query('//link[@rel="canonical"]/@href')->item(0)?->nodeValue;
         $cover = $xpath->query('//img[contains(concat(" ",normalize-space(@class)," ")," pub-cover ")]/@src')->item(0)?->nodeValue;
+        if ($this->textOnly) {
+            if ($canonical !== $url) { throw new RuntimeException('Страница не соответствует статье'); }
+            return ['payload' => self::payload($article, $url) + ['text_only' => true],
+                'sha256' => '', 'bytes' => '', 'mime' => ''];
+        }
         if ($canonical !== $url || !$cover || $this->absolute($cover) !== $this->absolute($article['cover_image_url'])) {
             throw new RuntimeException('Страница не соответствует статье или обложка на сайте изменилась');
         }

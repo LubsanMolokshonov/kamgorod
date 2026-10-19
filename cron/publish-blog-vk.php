@@ -6,7 +6,7 @@ require_once __DIR__ . '/../scripts/lib/vk-blog/publisher.php';
 require_once __DIR__ . '/../scripts/lib/vk-blog/oauth.php';
 require_once __DIR__ . '/../classes/TelegramNotifier.php';
 
-$options = getopt('', ['send', 'initialize', 'check-access', 'preview', 'help']);
+$options = getopt('', ['send', 'initialize', 'check-access', 'preview', 'help', 'text-only', 'article-id:']);
 if (isset($options['help'])) {
     echo "Предпросмотр: php cron/publish-blog-vk.php\n";
     echo "Права VK: --check-access; фиксация архива: --initialize; отправка: --send\n";
@@ -14,6 +14,9 @@ if (isset($options['help'])) {
 }
 $modeCount = count(array_intersect(array_keys($options), ['send', 'initialize', 'check-access', 'preview']));
 if ($modeCount > 1) { fwrite(STDERR, "Выберите один режим\n"); exit(1); }
+$textOnly = isset($options['text-only']);
+$articleId = isset($options['article-id']) ? filter_var($options['article-id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : null;
+if ($articleId === false) { fwrite(STDERR, 'Invalid article ID'); exit(1); }
 $send = isset($options['send']);
 $initialize = isset($options['initialize']);
 $check = isset($options['check-access']);
@@ -31,10 +34,10 @@ $locked = false;
 $lockKey = 'fgos_vk_blog_' . $groupId;
 try {
     if (!$preview && !extension_loaded('curl')) { throw new RuntimeException('Для VK необходим PHP cURL'); }
-    $vk = new VkBlogClient($token, $groupId, filter_var(VK_BLOG_OAUTH_ENABLED, FILTER_VALIDATE_BOOLEAN) ? new VkBlogOAuth(VK_BLOG_OAUTH_DIR, (int)VK_APP_ID, VK_BLOG_REDIRECT_URI) : null);
+    $vk = new VkBlogClient($token, $groupId, filter_var(VK_BLOG_OAUTH_ENABLED, FILTER_VALIDATE_BOOLEAN) ? new VkBlogOAuth(VK_BLOG_OAUTH_DIR, (int)VK_APP_ID, VK_BLOG_REDIRECT_URI, null, null, $textOnly ? ['wall'] : ['photos', 'wall']) : null, null, $textOnly);
     if ($check) { $vk->preflight(); echo "Доступ к fgospro и загрузке фотографий подтверждён\n"; exit(0); }
     require __DIR__ . '/../config/database.php';
-    $publisher = new VkBlogPublisher($db, $vk, new VkBlogSite(PUBLIC_SITE_URL), $groupId,
+    $publisher = new VkBlogPublisher($db, $vk, new VkBlogSite(PUBLIC_SITE_URL, $textOnly), $groupId,
         static function (string $key, string $message, array $context) use ($db): void {
             TelegramNotifier::instance($db)->alert($key, '[Блог → VK] ' . $message, $context, 'warning');
         });
@@ -52,7 +55,7 @@ try {
         $publisher->initialize();
         echo "Архив зафиксирован; публикаций в VK не было\n";
     } else {
-        echo json_encode($publisher->run(), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n";
+        echo json_encode($publisher->run($articleId), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n";
     }
 } catch (Throwable $e) {
     // Не выводить stack trace с аргументами запросов/секретами.
