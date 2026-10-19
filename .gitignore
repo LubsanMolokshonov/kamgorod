@@ -163,3 +163,9 @@ __pycache__/
 /editorial/reviews/next-five-2026-10-14/sources/pushkin-work.txt
 /editorial/reviews/next-five-2026-10-14/sources/dal-ability.txt
 /editorial/reviews/next-five-2026-10-14/sources/dal-seasons.txt
+
+# Локальные редакционные отчёты, разовые скрипты, скриншоты и черновики.
+# Комплекты editorial/articles/ и расписания editorial/schedules/ нужны серверу.
+/editorial/reviews/
+/editorial/articles/*/previews/
+/editorial/local-drafts/
