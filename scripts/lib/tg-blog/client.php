@@ -35,11 +35,11 @@ final class TgBlogClient implements TgBlogGateway
             throw new RuntimeException('TG_BLOG_API_IPV4 должен быть публичным IPv4 Telegram');
         }
         // Повторно используем HTTPS-соединение для getMe/getChat/getChatMember и отправки.
-        $ch = $this->handle ??= curl_init();
+        $ch = $this->handle ??= curl_init('https://api.telegram.org/bot' . $this->token . '/' . $method);
         curl_setopt_array($ch, [CURLOPT_URL => 'https://api.telegram.org/bot' . $this->token . '/' . $method,
             CURLOPT_POST => true, CURLOPT_POSTFIELDS => $method === 'sendPhoto' ? $data : http_build_query($data),
             CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => $method === 'sendPhoto' ? 60 : 20,
-            CURLOPT_FOLLOWLOCATION => false, CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+            // URL всегда HTTPS и задан в коде; переходы по redirect выключены по умолчанию cURL.
             // Тот же адрес Telegram, который уже используется TelegramNotifier на production.
             // Host/SNI и проверка сертификата api.telegram.org сохраняются.
             CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
