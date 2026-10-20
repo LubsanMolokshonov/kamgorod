@@ -1,0 +1,11 @@
+[Unit]
+Description=One new article at 12:00 Moscow
+
+[Timer]
+OnCalendar=*-*-* 12:00:00 Europe/Moscow
+Persistent=false
+AccuracySec=1s
+Unit=fgos-tg-blog@new.service
+
+[Install]
+WantedBy=timers.target
