@@ -73,6 +73,8 @@ systemctl disable --now fgos-tg-blog-archive.timer fgos-tg-blog-new.timer
 Для api.telegram.org используется IPv4 149.154.167.220 (как в существующем
 TelegramNotifier): DNS production возвращает недоступный адрес. TLS по имени
 api.telegram.org проверяется штатно. Адрес можно задать через TG_BLOG_API_IPV4.
+HTTPS-соединение переиспользуется. Проверки getMe/getChat/getChatMember допускают
+до трёх попыток при сетевом обрыве; sendPhoto выполняется строго один раз.
 В БД: tg_blog_deliveries хранит историю, tg_blog_slots — дневные слоты.
 
 Однозначный отказ Telegram оставляет статью pending до следующего дня, но занимает
