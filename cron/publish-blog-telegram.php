@@ -21,7 +21,7 @@ if ($send && !filter_var($env('TG_BLOG_ENABLED', 'false'), FILTER_VALIDATE_BOOLE
 $locked = false; $db = null; $lock = null;
 try {
     if ($send && !in_array($options['queue'] ?? '', ['archive','new'], true)) { throw new RuntimeException('Укажите --queue=archive или --queue=new'); }
-    $client = new TgBlogClient($env('TG_BLOG_BOT_TOKEN'), $env('TG_BLOG_CHANNEL', '@merovospitatel'));
+    $client = new TgBlogClient($env('TG_BLOG_BOT_TOKEN'), $env('TG_BLOG_CHANNEL', '@merovospitatel'), $env('TG_BLOG_API_IPV4', '149.154.167.220'));
     $mutating = $send || isset($options['initialize']);
     $chatId = ($mutating || isset($options['check-access'])) ? $client->preflight() : '0';
     if (isset($options['check-access'])) { echo "Бот @fgos_blog_bot: право публикации в @merovospitatel подтверждено\n"; exit(0); }

@@ -12,25 +12,34 @@ final class TgBlogUnknown extends RuntimeException {}
 
 final class TgBlogClient implements TgBlogGateway
 {
-    public function __construct(private string $token, private string $channel) {}
+    public function __construct(private string $token, private string $channel, private string $apiIpv4 = '149.154.167.220') {}
 
     private function request(string $method, array $data): array
     {
         if (!extension_loaded('curl')) { throw new RuntimeException('Необходим PHP cURL'); }
         if (!preg_match('/^\d+:[A-Za-z0-9_-]+$/D', $this->token)) { throw new RuntimeException('Не задан корректный TG_BLOG_BOT_TOKEN'); }
+        if (!filter_var($this->apiIpv4, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            throw new RuntimeException('TG_BLOG_API_IPV4 должен быть публичным IPv4 Telegram');
+        }
         $ch = curl_init('https://api.telegram.org/bot' . $this->token . '/' . $method);
-        curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $data,
+        curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $method === 'sendPhoto' ? $data : http_build_query($data),
             CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_TIMEOUT => 60,
-            CURLOPT_FOLLOWLOCATION => false, CURLOPT_PROTOCOLS => CURLPROTO_HTTPS]);
+            CURLOPT_FOLLOWLOCATION => false, CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+            // Тот же адрес Telegram, который уже используется TelegramNotifier на production.
+            // Host/SNI и проверка сертификата api.telegram.org сохраняются.
+            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+            CURLOPT_RESOLVE => ['api.telegram.org:443:' . $this->apiIpv4]]);
         if (PHP_OS_FAMILY === 'Windows' && defined('CURLSSLOPT_NATIVE_CA')) {
             curl_setopt($ch, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
         }
         $raw = curl_exec($ch);
+        $errorCode = curl_errno($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         unset($ch);
         // Не выводим URL запроса и cURL error: они могут содержать токен.
         $response = is_string($raw) ? json_decode($raw, true) : null;
         if (!is_array($response) || !array_key_exists('ok', $response)) {
-            throw new TgBlogUnknown('Нет достоверного ответа Telegram; повтор отправки запрещён до сверки');
+            throw new TgBlogUnknown('Нет достоверного ответа Telegram (cURL ' . $errorCode . ', HTTP ' . $httpCode . '); повтор отправки запрещён до сверки');
         }
         if ($response['ok'] !== true) {
             $code = (int)($response['error_code'] ?? 0);

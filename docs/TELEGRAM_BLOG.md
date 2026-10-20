@@ -33,6 +33,7 @@ tg_blog_* принадлежат только Telegram. Все команды в
 TG_BLOG_ENABLED=false
 TG_BLOG_BOT_TOKEN=ТОКЕН_ИЗ_BOTFATHER
 TG_BLOG_CHANNEL=@merovospitatel
+TG_BLOG_API_IPV4=149.154.167.220
 ```
 
 4. Проверить права и предпросмотр, затем зафиксировать архив. Ни одна из этих
@@ -69,6 +70,9 @@ systemctl disable --now fgos-tg-blog-archive.timer fgos-tg-blog-new.timer
 
 Дополнительный выключатель — TG_BLOG_ENABLED=false; очередь сохраняется.
 Логи не содержат токен и URL запросов Telegram. Ошибки завершают команду с кодом 1.
+Для api.telegram.org используется IPv4 149.154.167.220 (как в существующем
+TelegramNotifier): DNS production возвращает недоступный адрес. TLS по имени
+api.telegram.org проверяется штатно. Адрес можно задать через TG_BLOG_API_IPV4.
 В БД: tg_blog_deliveries хранит историю, tg_blog_slots — дневные слоты.
 
 Однозначный отказ Telegram оставляет статью pending до следующего дня, но занимает
