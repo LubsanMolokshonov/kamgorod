@@ -92,6 +92,7 @@ last_error=NULL, соответствующий slot state=rejected. Дневн�
 
 ```sh
 php tests/tg-blog-test.php
+php tests/tg-blog-cli-test.php
 php tests/tg-blog-mysql-test.php
 php cron/publish-blog-telegram.php --help
 php cron/publish-blog-telegram.php --send --queue=archive

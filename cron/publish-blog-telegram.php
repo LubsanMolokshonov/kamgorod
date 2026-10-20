@@ -6,25 +6,25 @@ require_once __DIR__ . '/../config/config.php';
 ini_set('display_errors', 'stderr');
 require_once __DIR__ . '/../scripts/lib/tg-blog/publisher.php';
 
-$options = getopt('', ['send','initialize','check-access','check-site','preview','queue:','help']);
-if (isset($options['help'])) {
+$cliOptions = getopt('', ['send','initialize','check-access','check-site','preview','queue:','help']);
+if (isset($cliOptions['help'])) {
     echo "Предпросмотр: php cron/publish-blog-telegram.php\nПрава: --check-access\nПроверка страниц и обложек без Telegram: --check-site\nФиксация архива: --initialize\nОтправка: --send --queue=archive|new\n"; exit(0);
 }
-if (count(array_intersect(array_keys($options), ['send','initialize','check-access','check-site','preview'])) > 1) {
+if (count(array_intersect(array_keys($cliOptions), ['send','initialize','check-access','check-site','preview'])) > 1) {
     fwrite(STDERR, "Выберите один режим\n"); exit(1);
 }
 $env = static fn(string $key, string $default = ''): string => (string)($_ENV[$key] ?? (getenv($key) !== false ? getenv($key) : $default));
-$send = isset($options['send']);
+$send = isset($cliOptions['send']);
 if ($send && !filter_var($env('TG_BLOG_ENABLED', 'false'), FILTER_VALIDATE_BOOLEAN)) {
     echo "Telegram-анонсы отключены\n"; exit(0);
 }
 $locked = false; $db = null; $lock = null;
 try {
-    if ($send && !in_array($options['queue'] ?? '', ['archive','new'], true)) { throw new RuntimeException('Укажите --queue=archive или --queue=new'); }
+    if ($send && !in_array($cliOptions['queue'] ?? '', ['archive','new'], true)) { throw new RuntimeException('Укажите --queue=archive или --queue=new'); }
     $client = new TgBlogClient($env('TG_BLOG_BOT_TOKEN'), $env('TG_BLOG_CHANNEL', '@merovospitatel'), $env('TG_BLOG_API_IPV4', '149.154.167.220'));
-    $mutating = $send || isset($options['initialize']);
-    $chatId = ($mutating || isset($options['check-access'])) ? $client->preflight() : '0';
-    if (isset($options['check-access'])) { echo "Бот @fgos_blog_bot: право публикации в @merovospitatel подтверждено\n"; exit(0); }
+    $mutating = $send || isset($cliOptions['initialize']);
+    $chatId = ($mutating || isset($cliOptions['check-access'])) ? $client->preflight() : '0';
+    if (isset($cliOptions['check-access'])) { echo "Бот @fgos_blog_bot: право публикации в @merovospitatel подтверждено\n"; exit(0); }
     require __DIR__ . '/../config/database.php';
     $baseUrl = defined('PUBLIC_SITE_URL') ? PUBLIC_SITE_URL : 'https://fgos.pro';
     $publisher = new TgBlogPublisher($db, $client, new TgBlogSite($baseUrl), $chatId, $baseUrl);
@@ -32,9 +32,9 @@ try {
         $lock = 'fgos_tg_blog_' . $chatId;
         $q = $db->prepare('SELECT GET_LOCK(?,0)'); $q->execute([$lock]); $locked = (int)$q->fetchColumn() === 1;
         if (!$locked) { echo "Другой процесс уже работает\n"; exit(0); }
-        if (isset($options['initialize'])) { $publisher->initialize(); echo "Архив зафиксирован; сообщений не отправлено\n"; }
-        else { echo json_encode($publisher->run($options['queue']), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n"; }
-    } elseif (isset($options['check-site'])) {
+        if (isset($cliOptions['initialize'])) { $publisher->initialize(); echo "Архив зафиксирован; сообщений не отправлено\n"; }
+        else { echo json_encode($publisher->run($cliOptions['queue']), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n"; }
+    } elseif (isset($cliOptions['check-site'])) {
         $q = $db->query("SELECT * FROM publications WHERE source='blog' AND status='published' AND (redirect_to_slug IS NULL OR redirect_to_slug='') AND published_at<=NOW() ORDER BY published_at,id");
         $site = new TgBlogSite($baseUrl); $failures = 0;
         foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $article) {
