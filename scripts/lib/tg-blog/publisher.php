@@ -96,7 +96,7 @@ final class TgBlogPublisher
             return ['state' => 'daily_limit'];
         }
         $a = $this->query("SELECT p.*,d.id AS delivery_id FROM tg_blog_deliveries d JOIN publications p ON p.id=d.publication_id
-            WHERE d.chat_id=? AND d.queue=? AND d.state='pending' AND p." . self::ELIGIBLE . ' ORDER BY p.published_at,p.id LIMIT 1', [$this->chatId, $queue])->fetch(PDO::FETCH_ASSOC);
+            WHERE d.chat_id=? AND d.queue=? AND d.state='pending' AND p.cover_image_url IS NOT NULL AND TRIM(p.cover_image_url)<>'' AND p." . self::ELIGIBLE . ' ORDER BY p.published_at,p.id LIMIT 1', [$this->chatId, $queue])->fetch(PDO::FETCH_ASSOC);
         if (!$a) { return ['state' => 'empty']; }
         $id = (int)$a['delivery_id'];
         try {

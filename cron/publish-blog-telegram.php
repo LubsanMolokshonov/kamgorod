@@ -38,6 +38,10 @@ try {
         $q = $db->query("SELECT * FROM publications WHERE source='blog' AND status='published' AND (redirect_to_slug IS NULL OR redirect_to_slug='') AND published_at<=NOW() ORDER BY published_at,id");
         $site = new TgBlogSite($baseUrl); $failures = 0;
         foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $article) {
+            if (trim((string)($article['cover_image_url'] ?? '')) === '') {
+                echo 'SKIP: ' . $article['id'] . ' ' . $article['slug'] . ": нет обложки; статья остаётся в очереди\n";
+                continue;
+            }
             try {
                 $photo = $site->prepare($article);
                 TgBlogPublisher::validatePhoto($photo);
