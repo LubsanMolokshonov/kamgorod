@@ -24,6 +24,7 @@ final class TgBlogPublisher
 
     public static function caption(array $article, string $url): string
     {
+        $url .= '?utm_source=telegram&utm_campaign=blog';
         $title = TgBlogSite::plain((string)$article['title']);
         $description = TgBlogSite::plain((string)($article['annotation'] ?? ''));
         if ($description === '') { $description = TgBlogSite::plain((string)($article['content'] ?? '')); }

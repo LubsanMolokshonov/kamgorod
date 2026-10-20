@@ -7,11 +7,12 @@ function tgCheck(bool $ok, string $label): void {
 }
 $a = ['title'=>'<b>Заголовок</b>', 'annotation'=>'', 'content'=>'<script>bad()</script><p>Первый</p><p>второй &amp; третий</p>'];
 $url = 'https://fgos.pro/blog/test/';
+$trackedUrl = $url . '?utm_source=telegram&utm_campaign=blog';
 $caption = TgBlogPublisher::caption($a, $url);
-tgCheck($caption === "Заголовок\n\nПервый второй & третий\n\nЧитать на сайте: $url", 'HTML очищен, текст и ссылка сохранены');
+tgCheck($caption === "Заголовок\n\nПервый второй & третий\n\nЧитать на сайте: $trackedUrl", 'HTML очищен, ссылка содержит Telegram UTM-метки');
 $a['annotation'] = str_repeat('😀Описание ', 500);
 $caption = TgBlogPublisher::caption($a, $url);
-tgCheck(strlen(mb_convert_encoding($caption, 'UTF-16LE', 'UTF-8')) / 2 <= 1024 && str_ends_with($caption, $url), 'Длинная подпись с emoji укладывается в лимит и сохраняет ссылку');
+tgCheck(strlen(mb_convert_encoding($caption, 'UTF-16LE', 'UTF-8')) / 2 <= 1024 && str_ends_with($caption, $trackedUrl), 'Длинная подпись с emoji укладывается в лимит и сохраняет ссылку с UTM');
 $a['annotation'] = 'Готовая аннотация';
 tgCheck(str_contains(TgBlogPublisher::caption($a,$url), 'Готовая аннотация'), 'Используется аннотация сайта');
 foreach ([['archive','09:59',false],['archive','10:00',true],['new','11:59',false],['new','12:00',true]] as [$queue,$time,$due]) {
