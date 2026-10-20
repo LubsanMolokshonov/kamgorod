@@ -35,7 +35,7 @@ try {
         if (isset($cliOptions['initialize'])) { $publisher->initialize(); echo "Архив зафиксирован; сообщений не отправлено\n"; }
         else { echo json_encode($publisher->run($cliOptions['queue']), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n"; }
     } elseif (isset($cliOptions['check-site'])) {
-        $q = $db->query("SELECT * FROM publications WHERE source='blog' AND status='published' AND (redirect_to_slug IS NULL OR redirect_to_slug='') AND published_at<=NOW() ORDER BY published_at,id");
+        $q = $db->query("SELECT * FROM publications WHERE source='blog' AND status='published' AND (redirect_to_slug IS NULL OR redirect_to_slug='') AND published_at<=CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','+03:00') ORDER BY published_at,id");
         $site = new TgBlogSite($baseUrl); $failures = 0;
         foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $article) {
             if (trim((string)($article['cover_image_url'] ?? '')) === '') {

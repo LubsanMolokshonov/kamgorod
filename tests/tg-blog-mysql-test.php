@@ -16,7 +16,7 @@ foreach (explode(';',str_replace('CREATE TABLE IF NOT EXISTS','CREATE TEMPORARY 
     if (trim($sql) !== '') { $db->exec($sql); }
 }
 $db->exec("CREATE TEMPORARY TABLE publications (id BIGINT PRIMARY KEY,source VARCHAR(32),status VARCHAR(32),
-    title VARCHAR(255),slug VARCHAR(255),annotation TEXT,content TEXT,cover_image_url TEXT,published_at DATETIME,redirect_to_slug TEXT)");
+    title VARCHAR(255),slug VARCHAR(255),annotation TEXT,content TEXT,cover_image_url TEXT,published_at TIMESTAMP NULL,redirect_to_slug TEXT)");
 $insert = $db->prepare("INSERT INTO publications VALUES (?,'blog','published','Заголовок',?,'Описание','<p>Текст</p>','/cover.png','2026-10-01',NULL)");
 $add = static function(int $id) use ($insert): void { $insert->execute([$id,'article-'.$id]); };
 $tg = new class implements TgBlogGateway {
@@ -41,7 +41,7 @@ $db->exec('UPDATE publications SET cover_image_url=NULL WHERE id=0');
 $db->exec("UPDATE publications SET status='draft' WHERE id=3");
 $db->exec("UPDATE publications SET source='user' WHERE id=4");
 $db->exec("UPDATE publications SET redirect_to_slug='replacement' WHERE id=5");
-$db->exec("UPDATE publications SET published_at='2099-01-01' WHERE id=6");
+$db->exec("UPDATE publications SET published_at='2037-01-01' WHERE id=6");
 assertTg(count($p->preview())===3,'Предпросмотр исключает черновики, чужие разделы, редиректы и будущие даты');
 assertTg((int)$db->query('SELECT COUNT(*) FROM tg_blog_deliveries')->fetchColumn()===0,'Предпросмотр не пишет в очередь');
 throwsTg(fn()=>$p->run('archive',$day('2026-10-19')),'До инициализации отправка запрещена');
@@ -87,4 +87,12 @@ try {
     $r=$other->prepare('SELECT GET_LOCK(?,0)');$r->execute([$key]);
     assertTg((int)$r->fetchColumn()===0,'Второй процесс не может отправлять параллельно');
 } finally { $q=$db->prepare('SELECT RELEASE_LOCK(?)');$q->execute([$key]); }
+$other->exec("SET time_zone='+00:00'");
+$db->exec("SET time_zone='+00:00'");
+$moscow = new TgBlogPublisher($db,$tg,$site,'-10043','https://fgos.pro');
+$moscow->initialize();
+$add(101);
+$db->exec('UPDATE publications SET published_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 2 HOUR) WHERE id=101');
+assertTg($moscow->run('new',$day('2026-10-27'))['publication_id']===101,'Уже опубликованная по московскому времени статья не ждёт часы UTC');
+assertTg((int)$other->query('SELECT TIMESTAMPDIFF(HOUR,UTC_TIMESTAMP(),NOW())')->fetchColumn()===0,'Часовой пояс другого соединения не меняется');
 echo "Telegram MySQL checks passed; existing tables untouched\n";

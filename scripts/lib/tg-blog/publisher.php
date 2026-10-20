@@ -6,9 +6,16 @@ require_once __DIR__ . '/site.php';
 
 final class TgBlogPublisher
 {
-    private const ELIGIBLE = "source='blog' AND status='published' AND (redirect_to_slug IS NULL OR redirect_to_slug='') AND published_at <= NOW()";
+    private const ELIGIBLE = "source='blog' AND status='published' AND (redirect_to_slug IS NULL OR redirect_to_slug='') AND published_at <= CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','+03:00')";
     public function __construct(private PDO $db, private TgBlogGateway $telegram, private TgBlogSiteGateway $site,
-        private string $chatId, private string $baseUrl) {}
+        private string $chatId, private string $baseUrl)
+    {
+        // Сайт пишет московскую дату в TIMESTAMP через UTC-соединение.
+        // Читаем исходное значение в UTC, но сравниваем с московским временем.
+        // Меняем только эту CLI-сессию, без изменения глобальных настроек и генерации.
+        $q = $this->db->prepare('SET time_zone = ?');
+        $q->execute(['+00:00']);
+    }
 
     private function query(string $sql, array $params = []): PDOStatement
     {
