@@ -1,0 +1,11 @@
+[Unit]
+Description=Read-only provider reconciliation every fifteen minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/15:00 Europe/Moscow
+Persistent=true
+AccuracySec=10s
+Unit=fgos-postmypost-blog-reconcile.service
+
+[Install]
+WantedBy=timers.target

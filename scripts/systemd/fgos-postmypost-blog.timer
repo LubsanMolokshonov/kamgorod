@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily blog delivery to Postmypost at noon Moscow
+
+[Timer]
+OnCalendar=*-*-* 12:00:00 Europe/Moscow
+Persistent=true
+AccuracySec=1s
+Unit=fgos-postmypost-blog.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=Reconcile accepted Postmypost blog publications without sending new posts
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker exec pedagogy_web php /var/www/html/cron/publish-blog-postmypost.php --reconcile
+TimeoutStartSec=infinity
