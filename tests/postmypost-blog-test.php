@@ -109,6 +109,9 @@ pmpCheck($api->creates === 1 && str_contains($api->items[101]['details'][0]['con
 $f = pmpFixture(); [$db, $api] = $f; $p = pmpPublisher($f); $p->initialize(); pmpArticle($db, 1);
 $api->items[77] = ['id' => 77, 'account_ids' => [7], 'details' => [['publication_type' => 1, 'content' => 'RSS draft https://fgos.pro/blog/article-1/?utm_source=vk']], 'publication_status' => 4, 'posts' => []];
 $p->run(true); pmpCheck($api->creates === 0 && $db->query('SELECT state FROM vk_blog_deliveries')->fetchColumn() === 'external_hold', 'Existing RSS draft blocks duplicate API post and is not changed');
+$p->run(false); pmpCheck($db->query('SELECT state FROM vk_blog_deliveries')->fetchColumn() === 'external_hold', 'Read-only reconciliation leaves an existing draft unchanged');
+$api->publishAll(); $p->run(false);
+pmpCheck($api->creates === 0 && $db->query('SELECT post_id FROM vk_blog_deliveries')->fetchColumn() == 77, 'Manual publication of existing RSS draft is acknowledged automatically without creating a post');
 
 $f = pmpFixture(); [$db, $api] = $f; $p = pmpPublisher($f); $p->initialize(); pmpArticle($db, 1); $api->lost = true; $p->run(true);
 $api->items[102] = $api->items[101]; $api->items[102]['id'] = 102; $api->lost = false; $p->run(true);

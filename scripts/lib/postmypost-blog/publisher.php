@@ -97,7 +97,7 @@ final class PmpBlogPublisher
         $this->q("UPDATE vk_blog_deliveries SET state='unknown' WHERE group_id=? AND state='sending'", [$this->group]);
         $rows = $this->q("SELECT d.*,s.provider_id,s.request_body FROM vk_blog_deliveries d
             LEFT JOIN postmypost_blog_deliveries s ON s.delivery_id=d.id
-            WHERE d.group_id=? AND d.state IN ('unknown','submitted')", [$this->group])->fetchAll(PDO::FETCH_ASSOC);
+            WHERE d.group_id=? AND d.state IN ('unknown','submitted','external_hold')", [$this->group])->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $row) {
             if ($row['provider_id']) {
                 try { $post = $this->api->publication((int)$row['provider_id']); }
@@ -110,9 +110,16 @@ final class PmpBlogPublisher
                     $this->hold((int)$row['id'], 'blocked', 'Postmypost: текст или изображение принятой записи изменены; нужна ручная сверка');
                     continue;
                 }
+                $payload = json_decode((string)$row['payload'], true);
+                if (!is_array($expected) && (!is_array($payload) || !PmpBlogClient::mentions($post, (string)($payload['url'] ?? ''), $this->account))) {
+                    $this->hold((int)$row['id'], 'blocked', 'Postmypost: сохранённый внешний черновик больше не соответствует статье');
+                    continue;
+                }
+                if ($row['state'] === 'external_hold' && in_array((int)($post['publication_status'] ?? -1), [4, 11, 12], true)) { continue; }
                 $this->accept((int)$row['id'], $post);
                 continue;
             }
+            if ($row['state'] === 'external_hold') { continue; }
             $request = json_decode((string)$row['request_body'], true);
             $matches = [];
             if (is_array($request)) {
@@ -190,13 +197,20 @@ final class PmpBlogPublisher
             $payload['message'] = str_replace($payload['url'], $payload['url'] . '?utm_source=vk&utm_campaign=blog', $payload['message']);
             $payload['url'] .= '?utm_source=vk&utm_campaign=blog';
             $payload['cover_sha256'] = $prepared['sha256'];
+            $this->q('UPDATE vk_blog_deliveries SET payload=? WHERE id=?',
+                [json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $id]);
             $existing = array_values(array_filter($posts, fn(array $p): bool => PmpBlogClient::mentions($p, $payload['url'], $this->account)));
             $provider = $this->providerRow($id);
             if ($provider['provider_id']) { $this->accept($id, $this->api->publication((int)$provider['provider_id'])); return false; }
             if ($existing) {
                 if (count($existing) === 1 && PmpBlogClient::vkPost($existing[0], $this->account, $this->group) !== null) {
                     $this->accept($id, $existing[0]);
-                } else { $this->hold($id, 'external_hold', 'Postmypost: статья уже есть в сервисе; автоматическое создание/изменение запрещено'); }
+                } else {
+                    if (count($existing) === 1) {
+                        $this->q('UPDATE postmypost_blog_deliveries SET provider_id=? WHERE delivery_id=?', [(int)$existing[0]['id'], $id]);
+                    }
+                    $this->hold($id, 'external_hold', 'Postmypost: статья уже есть в сервисе; автоматическое создание/изменение запрещено');
+                }
                 return false;
             }
             $this->q('UPDATE vk_blog_deliveries SET payload=?,attempts=attempts+1,last_error=NULL WHERE id=?',
