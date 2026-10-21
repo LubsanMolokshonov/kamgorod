@@ -14,8 +14,9 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
+require_once __DIR__ . '/../includes/session.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !is_string($_POST['csrf_token'] ?? null) || !validateCSRFToken($_POST['csrf_token'])) {
     echo json_encode(['success' => false]);
     exit;
 }
@@ -32,6 +33,8 @@ if ($orderNumber === '' || !preg_match('~^[A-Za-z0-9_\-]{1,64}$~', $orderNumber)
     exit;
 }
 
+$claimToken = $_POST['claim_token'] ?? '';
+if (!is_string($claimToken) || !preg_match('/^[a-f0-9]{48}$/D', $claimToken)) { http_response_code(400); echo json_encode(['success'=>false]); exit; }
 $db = new Database($GLOBALS['db']);
 $updated = $db->execute(
     "UPDATE orders
@@ -39,8 +42,9 @@ $updated = $db->execute(
       WHERE order_number = ?
         AND user_id = ?
         AND payment_status = 'succeeded'
-        AND metrika_sent_at IS NULL",
-    [$orderNumber, $userId]
+        AND metrika_sent_at IS NULL
+        AND metrika_claim_token = ?",
+    [$orderNumber, $userId, $claimToken]
 );
 
-echo json_encode(['success' => true, 'updated' => (int)$updated]);
+echo json_encode(['success' => (int)$updated === 1, 'updated' => (int)$updated]);

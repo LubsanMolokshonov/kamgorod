@@ -505,6 +505,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                         if (empty($enrollment['bitrix_lead_id'])) {
                             // Сделка ещё не создана — создаём на успешном этапе WON.
                             $course = $courseObj->getById($enrollment['course_id']);
+                            if ($course && !empty($enrollment['course_title_snapshot'])) $course['title'] = $enrollment['course_title_snapshot'];
                             if ($course) {
                                 // OPPORTUNITY = фактически уплачено (order_items.price уже
                                 // содержит final_amount c учётом таймер-скидки 10%, loyalty,
@@ -547,6 +548,7 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                                 // CATEGORY_ID), поэтому создаём НОВУЮ сделку в воронке курсов на
                                 // успешном этапе WON, а в старой сделке оставляем комментарий.
                                 $course = $courseObj->getById($enrollment['course_id']);
+                            if ($course && !empty($enrollment['course_title_snapshot'])) $course['title'] = $enrollment['course_title_snapshot'];
                                 $oldDealId = $enrollment['bitrix_lead_id'];
                                 if ($course) {
                                     $paidAmount = floatval($item['price']);

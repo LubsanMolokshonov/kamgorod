@@ -36,7 +36,10 @@ function sitemapUrl($loc, $priority = '0.5', $changefreq = 'monthly', $lastmod =
     $path = parse_url($loc, PHP_URL_PATH);
     $landings = json_decode(file_get_contents(__DIR__ . '/includes/seo-landing-data.json'), true);
     $specialLanding = isset($landings[$path]) && $path !== '/kursy/povyshenie-kvalifikatsii/nachalnaya-shkola/';
-    if ($specialLanding && str_starts_with($path, '/konkursy/') && (new CatalogListing($db,'konkursy',['ac'=>'pedagogi']))->count() === 0) return;
+    if ($specialLanding && str_starts_with($path, '/konkursy/')) {
+        $override = seoPageData($db, $path);
+        if (empty($override['index_catalog']) || !competitionClassificationReady($db, ['ac'=>'pedagogi']) || (new CatalogListing($db,'konkursy',['ac'=>'pedagogi']))->count() === 0) return;
+    }
     if ($specialLanding && str_starts_with($path, '/kursy/') && (new CatalogListing($db,'kursy',['ac'=>'pedagogi','program_type'=>'kpk']))->count() === 0) return;
     $route = $specialLanding ? null : parseCatalogPath($path);
     if ($route && (!catalogOptionsExist($db, $route['options']) || !catalogPolicy($db, $route['section'], $route['options'])['sitemap'])) return;
@@ -117,6 +120,9 @@ try {
 } catch(PDOException $e) { if($e->getCode()!=='42S02') throw $e; }
 
 // Категории конкурсов — lastmod от таблицы competitions
+foreach (competitionRegistry()['categories'] as $path=>$entry) {
+    if (in_array('ADD_SITEMAP', $entry['actions'], true)) sitemapUrl($baseUrl . $path, '0.7', 'weekly');
+}
 foreach (['metodika', 'vneurochnaya', 'proekty', 'tvorchestvo'] as $cat) {
     sitemapUrl($baseUrl . '/konkursy/' . $cat . '/', '0.8', 'weekly', $maxCompetitions);
 }

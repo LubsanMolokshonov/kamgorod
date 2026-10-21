@@ -737,7 +737,7 @@ select.form-control {
     }
 
     .diploma-form-left .form-control {
-        font-size: 15px !important;
+        font-size: 16px !important;
         padding: 10px 11px !important;
     }
 
@@ -860,7 +860,7 @@ select.form-control {
 
     /* Form Controls - уменьшенный padding */
     .diploma-form-left .form-control {
-        font-size: 14px !important;
+        font-size: 16px !important;
         padding: 7px 8px !important;
     }
 
@@ -1068,3 +1068,7 @@ select.form-control {
         border-width: 3px !important;
     }
 }
+
+/* Размер текста предотвращает автоматический zoom полей на iOS. */
+#registrationForm .form-control { font-size: 16px; min-height: 44px; }
+#registrationForm button, #registrationForm .btn { min-height: 44px; }

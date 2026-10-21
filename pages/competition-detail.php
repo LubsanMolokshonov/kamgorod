@@ -48,24 +48,30 @@ if (!$competition) {
     exit;
 }
 
+require_once __DIR__ . '/../includes/competition-presentation.php';
+require_once __DIR__ . '/../includes/regulations-content.php';
+$competitionFacts = competitionFacts($db, (int)$competition['id']);
+$competitionContent = $competitionFacts['content_json'] ?? [];
 $nominations = $competitionObj->getNominationOptions($competition['id']);
 $audienceTypes = $competitionObj->getAudienceTypes($competition['id']);
 $specializations = $competitionObj->getSpecializations($competition['id']);
 
-$pageTitle = htmlspecialchars($competition['title']) . ' | ' . SITE_NAME;
-$pageDescription = htmlspecialchars(mb_substr($competition['description'], 0, 150));
+$competitionSummary = $competitionContent['intro'] ?? ($competition['title'] . '. Участники: ' . $competition['target_participants'] . '. ' . competitionProcessText());
+$pageTitle = $competition['title'] . ' | ' . SITE_NAME;
+$pageDescription = mb_substr($competitionSummary, 0, 300);
 $canonicalUrl = SITE_URL . '/konkursy/' . $competition['slug'] . '/';
 
 $jsonLd = [
     '@context' => 'https://schema.org',
-    '@type' => 'Event',
+    '@type' => 'WebPage',
     'name' => $competition['title'],
-    'description' => mb_substr(strip_tags($competition['description']), 0, 300),
+    'description' => mb_substr(strip_tags($competitionSummary), 0, 300),
     'url' => SITE_URL . '/konkursy/' . $competition['slug'] . '/',
-    'eventAttendanceMode' => 'https://schema.org/OnlineEventAttendanceMode',
-    'eventStatus' => 'https://schema.org/EventScheduled',
-    'organizer' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL],
-    'offers' => [
+    'publisher' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL],
+    'mainEntity' => [
+        '@type' => 'Service',
+        'name' => 'Оформление участия: ' . $competition['title'],
+        'offers' => [
         '@type' => 'Offer',
         'price' => $competition['price'],
         'priceCurrency' => 'RUB',
@@ -74,14 +80,13 @@ $jsonLd = [
             '@type' => 'RefundPolicy',
             'url' => SITE_URL . '/oferta-meropriyatiya/#refund'
         ]
+        ]
     ]
 ];
 $ogType = 'article';
 $ogImage = SITE_URL . '/og-image/competition/' . $competition['slug'] . '.jpg';
 
-$deadline = new DateTime();
-$deadline->modify('+2 days');
-$deadline_formatted = 'Приём документов до ' . $deadline->format('d.m.Y');
+$deadline_formatted = competitionDeadline($competitionContent);
 
 $rdActivePage = 'konkursy';
 $additionalCSS = ['/assets/css/competition-detail.css?v=' . filemtime(__DIR__ . '/../assets/css/competition-detail.css')];
@@ -93,19 +98,7 @@ $groupRegistrationUrl = '/pages/group-registration.php?product_type=competition&
 // Гибрид: пул с названием конкурса ({product}) → детерминированный поднабор по id конкурса.
 require_once __DIR__ . '/../includes/faq-helper.php';
 require_once __DIR__ . '/../includes/faq-pool-helper.php';
-$faqPool = [
-    ['q' => 'Как быстро я получу диплом конкурса «{product}»?', 'a' => 'Диплом формируется автоматически сразу после подтверждения оплаты. Обычно это занимает не более 5 минут. Вы сможете скачать диплом в личном кабинете в формате PDF.'],
-    ['q' => 'Как можно оплатить участие в конкурсе «{product}»?', 'a' => 'Мы принимаем оплату через ЮKassa: банковские карты (Visa, MasterCard, МИР), электронные кошельки (ЮMoney, QIWI), СБП. Все платежи защищены и проходят через безопасное соединение.'],
-    ['q' => 'Можно ли изменить данные в дипломе?', 'a' => 'Да, вы можете обратиться в службу поддержки для корректировки данных в дипломе. Мы бесплатно исправим любые ошибки и вышлем обновлённый диплом.'],
-    ['q' => 'Действует ли скидка на несколько конкурсов?', 'a' => 'Да! При оплате двух конкурсов третий конкурс вы получаете бесплатно. Добавьте конкурсы в корзину и оплатите все сразу — скидка применяется автоматически.'],
-    ['q' => 'Нужна ли регистрация на сайте?', 'a' => 'Регистрация происходит автоматически при оформлении участия в конкурсе. Вы получите доступ в личный кабинет, где сможете управлять дипломами.'],
-    ['q' => 'Сколько хранятся дипломы на сайте?', 'a' => 'Дипломы хранятся в вашем личном кабинете бессрочно. Вы можете скачать их в любой момент.'],
-    ['q' => 'Вы выдаёте официальные дипломы?', 'a' => 'Да, все наши дипломы являются официальными документами. Мы работаем на основании свидетельства о регистрации СМИ: Эл. №ФС 77-74524.'],
-    ['q' => 'Можно ли выбрать дизайн диплома?', 'a' => 'Да, при оформлении участия вы можете выбрать один из предложенных шаблонов дизайна диплома.'],
-    ['q' => 'Кому подойдёт конкурс «{product}»?', 'a' => 'В карточке конкурса указано, для кого он предназначен — для педагогов, дошкольников или школьников. Педагог получает диплом куратора.'],
-    ['q' => 'Подходит ли диплом конкурса «{product}» для аттестации?', 'a' => 'Да. Дипломы соответствуют ФГОС и учитываются при аттестации педагога и в профессиональном портфолио.'],
-];
-$faqItems = buildLandingFaq($faqPool, 'competition:' . (int)$competition['id'], ['product' => $competition['title'] ?? ''], 6);
+$faqItems = competitionFaq($competition, $nominations, $competitionFacts['participant_roles'] ?? []);
 // Отзывы продукта + микроразметка рейтинга (aggregateRating/review)
 require_once __DIR__ . '/../classes/Review.php';
 require_once __DIR__ . '/../includes/review-schema-helper.php';
@@ -118,24 +111,26 @@ $reviewList  = $reviewObj->getApproved($reviewEntityType, $reviewEntityId, 20);
 require_once __DIR__ . '/../includes/rating-synthetic-helper.php';
 $reviewSeedKey = $reviewEntityType . ':' . $reviewEntityId;
 $jsonLd['image'] = $ogImage;
-$jsonLd['sku'] = syntheticSku($reviewSeedKey);
-$jsonLd = applyReviewSchema($jsonLd, $reviewStats, $reviewList, $reviewSeedKey);
+
+$jsonLd['mainEntity'] = applyReviewSchema($jsonLd['mainEntity'], $reviewStats, $reviewList, $reviewSeedKey);
 $additionalCSS[] = '/assets/css/reviews.css?v=' . filemtime(__DIR__ . '/../assets/css/reviews.css');
 $additionalJS = $additionalJS ?? [];
 $additionalJS[] = '/assets/js/reviews.js?v=' . filemtime(__DIR__ . '/../assets/js/reviews.js');
-
-$jsonLdArray = [$jsonLd, buildFaqJsonLd($faqItems)];
-
-include __DIR__ . '/../includes/header-redesign.php';
-
-$priceFormatted = number_format($competition['price'], 0, ',', ' ');
 
 // A/B-тест: в варианте B (не-подписчик) поштучной цены нет — диплом доступен только по подписке.
 require_once __DIR__ . '/../classes/PricingMode.php';
 require_once __DIR__ . '/../classes/SubscriptionService.php';
 $pmUserId = $_SESSION['user_id'] ?? null;
 $pmIsSubscriber = $pmUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmUserId) : false;
-$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() || $pmIsSubscriber;
+
+if ($pmSubscriptionOnly) unset($jsonLd['mainEntity']['offers']);
+$jsonLdArray = [$jsonLd, buildFaqJsonLd($faqItems)];
+
+include __DIR__ . '/../includes/header-redesign.php';
+
+$priceFormatted = number_format($competition['price'], 0, ',', ' ');
+
 ?>
 
 <main>
@@ -149,7 +144,7 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
       <div class="cd-hero-content">
         <div class="rd-pill-row reveal-stagger">
           <span class="rd-pill"><span class="dot"></span>Конкурс для <?php echo htmlspecialchars($competition['target_participants_genitive'] ?? $competition['target_participants']); ?></span>
-          <span class="rd-pill indigo"><?php echo htmlspecialchars($deadline_formatted); ?></span>
+          <?php if ($deadline_formatted !== ''): ?><span class="rd-pill indigo"><?php echo htmlspecialchars($deadline_formatted); ?></span><?php endif; ?>
         </div>
 
         <h1 class="cd-hero-title reveal"><?php echo htmlspecialchars(seoHeading($competition['title'])); ?></h1>
@@ -159,7 +154,7 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
           <div class="b"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Дистанционный формат</div>
           <div class="b"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Одноэтапный</div>
           <div class="b"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Диплом сразу после оплаты</div>
-          <div class="b"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Соответствует ФГОС</div>
+          <div class="b"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Данные участника в дипломе</div>
         </div>
 
         <div class="cd-hero-cta reveal">
@@ -247,7 +242,7 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
       <div class="reveal">
         <div class="rd-prose">
           <?php
-          $displayDescription = !empty($competition['seo_description']) ? $competition['seo_description'] : $competition['description'];
+          $displayDescription = $competitionSummary;
           $paragraphs = explode("\n\n", $displayDescription);
           foreach ($paragraphs as $paragraph):
               if (empty(trim($paragraph))) continue;
@@ -256,11 +251,7 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
           <?php endforeach; ?>
         </div>
         <div class="cd-about-actions">
-          <button type="button" class="rd-btn rd-btn-ghost"
-                  onclick="openRegulationsModal('<?php echo (int)$competition['id']; ?>', '<?php echo htmlspecialchars($competition['title'], ENT_QUOTES); ?>')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
-            Положение конкурса
-          </button>
+          <a href="#pravila" class="rd-btn rd-btn-ghost">Положение и условия оформления</a>
         </div>
       </div>
 
@@ -295,13 +286,13 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
         </div>
         <?php endif; ?>
 
-        <?php if (!empty($competition['academic_year'])): ?>
+        <?php if (!empty($competitionContent['academic_year'])): ?>
         <div class="cd-info-card cd-i-year">
           <div style="display:flex;gap:12px;align-items:center;">
             <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
             <h3>Учебный год</h3>
           </div>
-          <div class="body"><?php echo htmlspecialchars($competition['academic_year']); ?></div>
+          <div class="body"><?php echo htmlspecialchars($competitionContent['academic_year']); ?></div>
         </div>
         <?php endif; ?>
 
@@ -335,7 +326,7 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
       <?php else: ?>
       <div class="label">Стоимость участия</div>
       <div class="amount"><?php echo $priceFormatted; ?> ₽</div>
-      <div class="note">При оплате двух конкурсов третий — бесплатно. Для группы — скидка до 30%.</div>
+      <div class="note">При оплате двух конкурсов третий — бесплатно. Итоговая стоимость группы рассчитывается в форме.</div>
       <?php endif; ?>
       <a href="<?php echo $registrationUrl; ?>" class="rd-btn rd-btn-primary">
         Принять участие
@@ -349,7 +340,7 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
 </section>
 
 <!-- ЦЕЛИ -->
-<?php if (!empty($competition['goals'])): ?>
+<?php if (!empty($competitionContent['goals'])): ?>
 <section class="rd-section">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
@@ -361,7 +352,7 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
     </div>
     <div class="cd-goals-grid reveal-stagger">
       <?php
-      $goals = explode("\n", $competition['goals']);
+      $goals = explode("\n", $competitionContent['goals']);
       $goalIcons = ['🎯', '🌟', '📈', '🏆', '💡'];
       $goalIdx = 0;
       foreach ($goals as $goal):
@@ -380,7 +371,7 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
 <?php endif; ?>
 
 <!-- ЗАДАЧИ -->
-<?php if (!empty($competition['objectives'])): ?>
+<?php if (!empty($competitionContent['objectives'])): ?>
 <section class="rd-section tight" style="background:var(--ink-50);">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
@@ -392,7 +383,7 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
     </div>
     <div class="cd-objectives reveal-stagger">
       <?php
-      $objectives = explode("\n", $competition['objectives']);
+      $objectives = explode("\n", $competitionContent['objectives']);
       $objIdx = 0;
       foreach ($objectives as $objective):
           if (empty(trim($objective))) continue;
@@ -438,49 +429,12 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
 </section>
 <?php endif; ?>
 
-<!-- КРИТЕРИИ ОЦЕНКИ -->
-<section class="rd-section tight">
-  <div class="rd-wrap">
-    <div class="rd-section-head reveal">
-      <span class="rd-eyebrow">Критерии</span>
-      <h2 class="rd-section-title">Критерии оценки конкурсных работ</h2>
-    </div>
-    <div class="cd-criteria-grid reveal-stagger">
-      <div class="cd-criteria">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
-        <h4>Целесообразность материала</h4>
-      </div>
-      <div class="cd-criteria">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/></svg></div>
-        <h4>Оригинальность материала</h4>
-      </div>
-      <div class="cd-criteria">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/></svg></div>
-        <h4>Полнота и информативность</h4>
-      </div>
-      <div class="cd-criteria">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v2H9z"/><path d="M10 5v4"/><path d="M14 5v4"/><circle cx="12" cy="14" r="5"/><path d="M12 12v2"/><path d="M12 16h.01"/></svg></div>
-        <h4>Научная достоверность</h4>
-      </div>
-      <div class="cd-criteria">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></div>
-        <h4>Стиль и логичность изложения</h4>
-      </div>
-      <div class="cd-criteria">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="8.5" cy="18.5" r="2.5"/><circle cx="15.5" cy="18.5" r="2.5"/></svg></div>
-        <h4>Качество оформления</h4>
-      </div>
-      <div class="cd-criteria">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></div>
-        <h4>Практическое применение</h4>
-      </div>
-      <div class="cd-criteria">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg></div>
-        <h4>Соответствие ФГОС</h4>
-      </div>
-    </div>
-  </div>
-</section>
+<section id="pravila" class="rd-section"><div class="rd-wrap">
+<h2>Условия оформления и положение</h2>
+<?= generateRegulationsContent($competition, $competitionContent) ?>
+<p><a href="/ajax/download-regulations.php?competition_id=<?= (int)$competition['id'] ?>">Скачать условия в PDF</a></p>
+<?= competitionRelatedLinks('/konkursy/' . $competition['slug'] . '/') ?>
+</div></section>
 
 <!-- КАК ПРИНЯТЬ УЧАСТИЕ -->
 <section class="rd-section rd-path">

@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
+
 
 require_once __DIR__ . '/ChatpushClient.php';
 
@@ -470,7 +472,7 @@ SQL;
     private function getSourceTitle(int $orderId): ?string
     {
         $stmt = $this->pdo->prepare(
-            "SELECT COALESCE(c.title, ol.title, w.title, p.title, crs.title) AS source_title
+            "SELECT COALESCE(c.title, ol.title, w.title, p.title, NULLIF(ce.course_title_snapshot, ''), crs.title) AS source_title
              FROM order_items oi
              LEFT JOIN registrations r ON r.id=oi.registration_id
              LEFT JOIN competitions c ON c.id=r.competition_id
@@ -483,7 +485,7 @@ SQL;
              LEFT JOIN course_enrollments ce ON ce.id=oi.course_enrollment_id
              LEFT JOIN courses crs ON crs.id=ce.course_id
              WHERE oi.order_id=?
-               AND COALESCE(c.title, ol.title, w.title, p.title, crs.title) IS NOT NULL
+               AND COALESCE(c.title, ol.title, w.title, p.title, NULLIF(ce.course_title_snapshot, ''), crs.title) IS NOT NULL
              ORDER BY oi.id ASC LIMIT 1"
         );
         $stmt->execute([$orderId]);

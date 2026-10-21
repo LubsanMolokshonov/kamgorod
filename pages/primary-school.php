@@ -8,7 +8,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 ?>
 <div class="seo-landing"><h1>Начальная школа: материалы и мероприятия для педагогов и учеников</h1>
 <h2>Для педагогов начальных классов</h2><div class="seo-actions">
-<a href="/konkursy/pedagogi/nachalnaya-shkola/">Конкурсы для педагогов</a>
+<a href="/konkursy/pedagogi/nachalnaya-shkola/">Конкурсы работ учителей начальных классов</a>
 <a href="/olimpiady/pedagogi/nachalnaya-shkola/">Олимпиады для педагогов</a>
 <a href="/vebinary/pedagogi/nachalnaya-shkola/">Вебинары для педагогов</a>
 <a href="/kursy/povyshenie-kvalifikatsii/nachalnaya-shkola/">Повышение квалификации</a>

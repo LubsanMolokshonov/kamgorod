@@ -1,4 +1,5 @@
 <?php
+if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
 /**
  * Course Class
  * Handles course CRUD operations and audience-based filtering
@@ -405,7 +406,7 @@ class Course {
         return $this->db->query(
             "SELECT ce.id as enrollment_id, ce.status as enrollment_status, ce.created_at as enrolled_at,
                     ce.payment_method, ce.installment_requested_at, ce.installment_monthly_amount,
-                    c.id as course_id, c.title, c.slug, c.hours, c.price, c.program_type
+                    c.id as course_id, COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS title, c.slug, c.hours, c.price, c.program_type
              FROM course_enrollments ce
              JOIN courses c ON ce.course_id = c.id
              WHERE ce.email = ? AND ce.status != 'cancelled'
@@ -422,7 +423,7 @@ class Course {
             "SELECT ce.id as enrollment_id, ce.user_id, ce.status as enrollment_status,
                     ce.created_at as enrolled_at, ce.email, ce.full_name, ce.phone,
                     ce.payment_method, ce.installment_requested_at, ce.installment_monthly_amount,
-                    c.id as course_id, c.title, c.slug, c.hours, c.price, c.program_type
+                    c.id as course_id, COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS title, c.slug, c.hours, c.price, c.program_type
              FROM course_enrollments ce
              JOIN courses c ON ce.course_id = c.id
              WHERE ce.id = ?",

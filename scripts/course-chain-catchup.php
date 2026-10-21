@@ -46,7 +46,7 @@ function loadEnrollment(Database $db, int $id): ?array {
     return $db->queryOne(
         "SELECT ce.id AS enrollment_id, ce.email, ce.full_name, ce.user_id,
                 ce.course_id, ce.ab_variant, ce.created_at, ce.status,
-                c.title AS course_title, c.price AS course_price,
+                COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS course_title, c.price AS course_price,
                 c.hours AS course_hours, c.program_type AS course_program_type,
                 c.slug AS course_slug
          FROM course_enrollments ce

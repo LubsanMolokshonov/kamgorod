@@ -9,13 +9,14 @@ require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/url-helper.php';
 require_once __DIR__ . '/includes/seo-url.php';
 require_once __DIR__ . '/includes/catalog-meta.php';
+require_once __DIR__ . '/includes/competition-presentation.php';
 
 // A/B-тест: в варианте B (не-подписчик) цены в каталоге скрыты — дипломы доступны только по подписке.
 require_once __DIR__ . '/classes/PricingMode.php';
 require_once __DIR__ . '/classes/SubscriptionService.php';
 $pmUserId = $_SESSION['user_id'] ?? null;
 $pmIsSubscriber = $pmUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmUserId) : false;
-$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
+$pmSubscriptionOnly = PricingMode::isSubscriptionOnly() || $pmIsSubscriber;
 
 // Маппинг cc (URL slug) → category (internal key) для SEO URL из .htaccess
 if (isset($_GET['cc'])) {
@@ -168,7 +169,7 @@ if ($totalCompetitions === 0 && (($category !== 'all') || !empty($selectedCatego
 }
 
 // Динамические H1/title/description/тексты
-$h1Subtext = 'Участвуйте, отправляйте работу, получайте официальный диплом для портфолио и аттестации. Дипломы соответствуют ФГОС, выданы зарегистрированным СМИ.';
+$h1Subtext = 'Выберите участника, тему и вид работы. Условия оформления и документы указаны в карточках.';
 $h2Title   = 'Выберите конкурс под свой уровень и предмет';
 $h2Subtext = 'Найдено: <strong>' . (int)$totalCompetitions . '</strong> конкурсов. Все с дипломом победителя или участника.';
 
@@ -176,10 +177,10 @@ if ($hasAnyFilter && $audienceSeoPhrase !== '') {
     $seo = buildCatalogSeoBlocks([
         'phrase'         => $audienceSeoPhrase,
         'count'          => $totalCompetitions,
-        'titleTpl'       => 'Конкурсы {phrase} 2026 года — соответствие ФГОС | ' . SITE_NAME,
-        'descriptionTpl' => 'Всероссийские и международные конкурсы {phrase} для учителей, педагогов и школьников. Официальные дипломы конкурсов {phrase} соответствуют ФГОС и принимаются при аттестации.',
+        'titleTpl'       => 'Конкурсы {phrase} | ' . SITE_NAME,
+        'descriptionTpl' => 'Конкурсы {phrase}: выберите тему и вид работы. Условия оформления, стоимость и документы указаны в карточках.',
         'h1Tpl'          => 'Конкурсы {phrase}',
-        'h1SubtextTpl'   => 'Участвуйте, отправляйте работу в конкурсах {phrase}, получайте официальный диплом для портфолио и аттестации. Дипломы соответствуют ФГОС, выданы зарегистрированным СМИ.',
+        'h1SubtextTpl'   => 'Выберите конкурс {phrase}. Перед оформлением проверьте участника, номинацию, стоимость и условия.',
         'h2Tpl'          => 'Выберите конкурс {phrase} под свой уровень',
         'h2SubtextTpl'   => 'Найдено: <strong>{count}</strong> конкурсов {phrase}. Все с дипломом победителя или участника.',
     ]);
@@ -199,9 +200,9 @@ if ($hasAnyFilter && $audienceSeoPhrase !== '') {
         'audiencePhrase'   => buildAudiencePhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData),
         'hasFilter'        => $hasAnyFilter,
         'titleSuffix'      => ' | ' . SITE_NAME,
-        'descriptionTpl'   => '{h1}. Бесплатное участие, официальный диплом за 30 секунд. Дипломы соответствуют ФГОС и принимаются при аттестации.',
-        'h1FallbackPrefix' => 'Конкурсы для педагогов с ',
-        'h1FallbackAccent' => 'дипломом за&nbsp;30&nbsp;секунд',
+        'descriptionTpl'   => '{h1}. Выберите конкурс по участнику, предмету и типу работы. Сравните условия, стоимость и документы.',
+        'h1FallbackPrefix' => 'Конкурсы для педагогов ',
+        'h1FallbackAccent' => 'и детей',
     ]);
     $pageTitle       = $meta['title'];
     $pageDescription = $meta['description'];
@@ -226,7 +227,10 @@ $competitionPath = buildSeoUrl('konkursy', [
 $pageKey = landingPageKey(parse_url($competitionPath, PHP_URL_PATH) ?: $competitionPath);
 
 $landingSeoHtml = getLandingSeoHtml($db, $pageKey);
-$landingReviews = getLandingReviews($db, $pageKey);
+require_once __DIR__ . '/classes/Review.php';
+$landingReviews = (new Review($db))->getApprovedForEntities('competition', array_column($competitions, 'id'), 12);
+foreach ($landingReviews as &$savedReview) $savedReview['review_date'] = $savedReview['created_at'];
+unset($savedReview);
 
 // Отфильтрованная посадочная с уникальным текстом → self-canonical и индексируемая.
 if (!empty($landingSeoHtml) && $hasAnyFilter) {
@@ -238,21 +242,24 @@ $additionalJS    = array_merge($additionalJS ?? [], ['/assets/js/landing-seo.js?
 
 // FAQ — гибрид: поднабор из пула по seed + переменные страницы.
 $compMinimum = $catalogListing->minimumCompetitionPrice();
-$compPriceMin = $compMinimum > 0 ? number_format($compMinimum, 0, '', ' ') : '';
-$faqItems = buildLandingFaq(competitionsLandingFaqPool(), $pageKey, [
+$compPriceMin = $totalCompetitions > 0 ? number_format($compMinimum, 0, '', ' ') : '';
+$faqItems = buildLandingFaq(competitionsLandingFaqPool($selectedCategory === 'pedagogi'), $pageKey, [
     'count'     => $totalCompetitions,
     'price_min' => $compPriceMin,
     'category'  => $selectedCategoryData['name'] ?? '',
 ], 6);
+if ($compPriceMin === '') $faqItems = array_values(array_filter($faqItems, static fn($item) => $item['q'] !== 'Сколько стоит участие?'));
 $jsonLdArray = [buildFaqJsonLd($faqItems)];
 
-// Product-схема: витрина отзывов или агрегат сохранённых reviews.
-require_once __DIR__ . '/includes/listing-schema-helper.php';
-if (!empty($landingReviews)) {
-    $jsonLdArray[] = buildLandingReviewsProductJsonLd($pageTitle, $pageDescription, $ogImage, SITE_NAME, $landingReviews);
-} else {
-    $jsonLdArray[] = buildListingSchema($db, 'competition', 'konkursy', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
-}
+// Каталог описывает реальные карточки текущей страницы.
+$jsonLdArray[] = [
+    '@context'=>'https://schema.org', '@type'=>'CollectionPage', 'name'=>$pageTitle,
+    'url'=>SITE_URL . catalogPageUrl($competitionPath, $catalogRequest['page']),
+    'mainEntity'=>['@type'=>'ItemList', 'itemListElement'=>array_map(static fn($item, $index) => [
+        '@type'=>'ListItem', 'position'=>($catalogRequest['page'] - 1) * CatalogListing::PAGE_SIZE + $index + 1,
+        'url'=>SITE_URL . '/konkursy/' . $item['slug'] . '/', 'name'=>$item['title']
+    ], $competitions, array_keys($competitions))]
+];
 
 $catalogPolicy = catalogPolicy($db, 'konkursy', $catalogOptions, $totalCompetitions, $catalogRequest['page']);
 $canonicalUrl = $catalogPolicy['canonical'];
@@ -280,16 +287,17 @@ include __DIR__ . '/includes/header-redesign.php';
     <div>
       <div class="rd-pill-row reveal-stagger">
         <span class="rd-pill"><span class="dot"></span><?php echo $totalCompetitions; ?>+ активных конкурсов</span>
-        <span class="rd-pill indigo">Соответствует ФГОС</span>
-        <span class="rd-pill">Принимается при аттестации</span>
+        <span class="rd-pill indigo">Электронные дипломы</span>
+        <span class="rd-pill">Для портфолио</span>
       </div>
       <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo !empty($seoPage['seo_h1']) ? htmlspecialchars(seoHeading(''), ENT_QUOTES, 'UTF-8') : $h1Html; ?></h1>
       <?= renderSeoEditorial($seoPage ?? []) ?>
+      <?= competitionRelatedLinks($catalogRequest['base']) ?>
       <p><a href="/konkursy/dlya-attestacii/">Конкурсы для портфолио и аттестации</a></p>
       <p class="rd-hero-sub reveal"><?php echo $h1Subtext; ?></p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Диплом сразу после оплаты</div>
-        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Подходит для аттестации педагога</div>
+        <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Условия учета уточните в вашей комиссии</div>
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Хранение в личном кабинете бессрочно</div>
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Акция «2+1»: третий конкурс — бесплатно</div>
       </div>
@@ -297,7 +305,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать конкурс
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
-        <span style="font-size:13px;color:var(--ink-500);"><?php echo $pmSubscriptionOnly ? '' : 'от 169 ₽ · оплата ЮКассой'; ?></span>
+        <span style="font-size:13px;color:var(--ink-500);"><?php echo $pmSubscriptionOnly ? '' : ($compPriceMin !== '' ? 'от ' . $compPriceMin . ' ₽ · оплата ЮКассой' : ''); ?></span>
       </div>
     </div>
 
@@ -328,11 +336,11 @@ include __DIR__ . '/includes/header-redesign.php';
       </div>
       <div class="rd-float-card rd-fc-cat-1">
         <div class="rd-fc-icon">⚡</div>
-        <div class="rd-fc-text"><div class="rd-fc-t">Диплом за 30 секунд</div><div class="rd-fc-s">сразу после оплаты</div></div>
+        <div class="rd-fc-text"><div class="rd-fc-t">Диплом в кабинете</div><div class="rd-fc-s">сразу после оплаты</div></div>
       </div>
       <div class="rd-float-card rd-fc-cat-2">
         <div class="rd-fc-icon">✓</div>
-        <div class="rd-fc-text"><div class="rd-fc-t">Соответствует ФГОС</div><div class="rd-fc-s">для аттестации</div></div>
+        <div class="rd-fc-text"><div class="rd-fc-t">Электронные дипломы</div><div class="rd-fc-s">для аттестации</div></div>
       </div>
     </div>
   </div>
@@ -341,8 +349,8 @@ include __DIR__ . '/includes/header-redesign.php';
 <!-- USP-полоска -->
 <div class="rd-usps">
   <div class="rd-wrap rd-usp-grid reveal-stagger">
-    <div class="rd-usp"><div class="ic">⚡</div><div><div class="t">Диплом сразу</div><div class="s">за 30 секунд после оплаты</div></div></div>
-    <div class="rd-usp"><div class="ic">📜</div><div><div class="t">Соответствует ФГОС</div><div class="s">для аттестации педагога</div></div></div>
+    <div class="rd-usp"><div class="ic">⚡</div><div><div class="t">Диплом сразу</div><div class="s">после подтверждения оплаты</div></div></div>
+    <div class="rd-usp"><div class="ic">📜</div><div><div class="t">Электронные дипломы</div><div class="s">для аттестации педагога</div></div></div>
     <div class="rd-usp"><div class="ic">🎁</div><div><div class="t">Акция «2+1»</div><div class="s">третий конкурс — бесплатно</div></div></div>
     <div class="rd-usp"><div class="ic">🔒</div><div><div class="t">Безопасная оплата</div><div class="s">ЮКасса · PCI DSS</div></div></div>
   </div>
@@ -480,13 +488,13 @@ include __DIR__ . '/includes/header-redesign.php';
       </div>
       <div class="rd-step">
         <div class="rd-step-n">2</div>
-        <h4>Загрузите работу</h4>
-        <p>Метод. разработку, рисунок, проект или видео. Размер до 50 МБ.</p>
+        <h4>Заполните заявку</h4>
+        <p>Укажите участника, номинацию, название работы и выбранное место. Файл в форме не загружается.</p>
       </div>
       <div class="rd-step">
         <div class="rd-step-n">3</div>
         <h4>Оплатите участие</h4>
-        <p>Картой через ЮКассу. Защищено по PCI&nbsp;DSS. От 169&nbsp;₽.</p>
+        <p>Через ЮКассу. Итоговая сумма и скидки показаны в корзине до оплаты.</p>
       </div>
       <div class="rd-step">
         <div class="rd-step-n">4</div>
@@ -504,14 +512,14 @@ include __DIR__ . '/includes/header-redesign.php';
       <div class="rd-trust-grid">
         <div>
           <div class="rd-eyebrow">Документы и аккредитации</div>
-          <h2>Дипломы соответствуют ФГОС и принимаются при аттестации</h2>
-          <p>Мы — официальное СМИ и резидент Сколково с лицензией на образовательную деятельность. Каждый диплом можно проверить по реестру.</p>
+          <h2>Документы для вашего портфолио</h2>
+          <p>Диплом можно включить в портфолио. Возможность его учета уточните по требованиям вашей аттестационной комиссии.</p>
         </div>
         <div class="rd-tc-grid">
           <div class="rd-tc"><div class="badge">📜</div><h5>Лицензия</h5><p>№ Л035-01212-59 от 17.12.2021</p></div>
           <div class="rd-tc"><div class="badge">📰</div><h5>СМИ</h5><p>Эл. №ФС 77-74524 от 24.12.2018</p></div>
           <div class="rd-tc"><div class="badge">⚡</div><h5>Сколково</h5><p>Резидент №1127165 от 18.02.2025</p></div>
-          <div class="rd-tc"><div class="badge">✓</div><h5>ФГОС</h5><p>Дипломы соответствуют стандарту</p></div>
+          <div class="rd-tc"><div class="badge">✓</div><h5>Портфолио</h5><p>Условия учета определяет комиссия</p></div>
         </div>
       </div>
     </div>
@@ -555,7 +563,7 @@ endif; ?>
       <div>
         <div class="rd-eyebrow">Готовы участвовать?</div>
         <h2>Выберите конкурс и получите диплом сегодня</h2>
-        <p><?php echo $totalCompetitions; ?>+ активных конкурсов для педагогов всех уровней. Дипломы соответствуют ФГОС и принимаются при аттестации.</p>
+        <p><?php echo $totalCompetitions; ?>+ конкурсов. Участник, номинации, стоимость и документы указаны в карточке.</p>
       </div>
       <div class="actions">
         <a href="#catalog" class="rd-btn rd-btn-primary">К каталогу

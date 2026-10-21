@@ -4,6 +4,7 @@ if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') ===
 require_once __DIR__ . '/seo-url.php';
 require_once __DIR__ . '/seo-editorial.php';
 require_once __DIR__ . '/../classes/CatalogListing.php';
+require_once __DIR__ . '/competition-index.php';
 
 function catalogPageUrl(string $base, int $page): string {
     return rtrim($base, '/') . '/' . ($page > 1 ? 'page/' . $page . '/' : '');
@@ -113,6 +114,11 @@ function catalogPolicy(PDO $pdo, string $section, array $options, ?int $total = 
     }
     $override = seoPageData($pdo, $base);
     $hasLanding = $hasLanding || (!empty($override['index_catalog']) && !empty($override['intro_text']));
+    if ($section === 'konkursy' && isset(competitionRegistry()['categories'][$base]) && CatalogListing::usesCompetitionFacts()) {
+        $hasLanding = !empty($override['index_catalog']) && !empty($override['seo_h1'])
+            && !empty($override['meta_title']) && !empty($override['intro_text'])
+            && competitionClassificationReady($pdo, $options);
+    }
     return catalogIndexPolicy($section, $options, $total, $hasLanding, $page);
 }
 

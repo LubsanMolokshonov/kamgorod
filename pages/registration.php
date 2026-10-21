@@ -74,6 +74,7 @@ include __DIR__ . '/../includes/header.php';
 
                 <!-- Form Container -->
                 <form id="registrationForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCSRFToken(), ENT_QUOTES, 'UTF-8') ?>">
                     <input type="hidden" name="competition_id" value="<?php echo $competitionId; ?>">
                     <input type="hidden" name="template_id" id="selectedTemplateId">
                     <input type="hidden" name="current_tab" id="currentTab" value="participant">

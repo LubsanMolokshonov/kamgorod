@@ -12,37 +12,18 @@ require_once __DIR__ . '/../classes/Competition.php';
 require_once __DIR__ . '/../includes/url-helper.php';
 
 try {
-    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 21;
-    $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
-    $category = $_GET['category'] ?? 'all';
-    $audience = $_GET['audience'] ?? '';
-    $specialization = $_GET['specialization'] ?? '';
-
+    require_once __DIR__ . '/../includes/catalog-seo.php';
+    $limit = min(CatalogListing::PAGE_SIZE, max(1, (int)($_GET['limit'] ?? CatalogListing::PAGE_SIZE)));
+    $offset = max(0, (int)($_GET['offset'] ?? 0));
+    $category = is_string($_GET['category'] ?? '') ? ($_GET['category'] ?? '') : '';
+    $audience = is_string($_GET['audience'] ?? '') ? ($_GET['audience'] ?? '') : '';
+    $specialization = is_string($_GET['specialization'] ?? '') ? ($_GET['specialization'] ?? '') : '';
+    $options = ['category'=>$category, 'at'=>$audience, 'as'=>$specialization, 'ac'=>is_string($_GET['ac'] ?? '') ? ($_GET['ac'] ?? '') : ''];
+    if (!catalogOptionsExist($db, $options)) throw new InvalidArgumentException('Неизвестный фильтр');
+    $listing = new CatalogListing($db, 'konkursy', $options);
     $competitionObj = new Competition($db);
-
-    // Build filters array
-    $filters = [];
-    if (!empty($category) && $category !== 'all') {
-        $filters['category'] = $category;
-    }
-    if (!empty($audience)) {
-        $filters['audience_type'] = $audience;
-    }
-    if (!empty($specialization)) {
-        $filters['specialization'] = $specialization;
-    }
-
-    // Get competitions with filters
-    if (!empty($filters)) {
-        $allCompetitions = $competitionObj->getFilteredCompetitions($filters);
-    } else {
-        $allCompetitions = $competitionObj->getActiveCompetitions($category);
-    }
-
-    $totalCount = count($allCompetitions);
-
-    // Apply pagination
-    $competitions = array_slice($allCompetitions, $offset, $limit);
+    $totalCount = $listing->count();
+    $competitions = $listing->slice($limit, $offset);
     $hasMore = ($offset + $limit) < $totalCount;
 
     // Generate HTML for cards
@@ -89,6 +70,6 @@ HTML;
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Ошибка сервера: ' . $e->getMessage()
+        'error' => 'Не удалось загрузить каталог'
     ], JSON_UNESCAPED_UNICODE);
 }

@@ -65,7 +65,7 @@ try {
 
     // Выборка записей старше 10 минут без bitrix_lead_id
     $enrollments = $dbObj->query(
-        "SELECT ce.*, c.title AS course_title, c.program_type, c.hours, c.price, c.learning_format
+        "SELECT ce.*, COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS course_title, c.program_type, c.hours, c.price, c.learning_format
          FROM course_enrollments ce
          JOIN courses c ON c.id = ce.course_id
          WHERE ce.bitrix_lead_id IS NULL
@@ -101,6 +101,7 @@ try {
             $stage = ($fresh['status'] === 'paid') ? $stagePaid : $stageNew;
 
             $course = $courseObj->getById($fresh['course_id']);
+            if ($course && !empty($fresh['course_title_snapshot'])) $course['title'] = $fresh['course_title_snapshot'];
             if (!$course) {
                 $db->commit();
                 $skipped++;

@@ -161,6 +161,7 @@ include __DIR__ . '/../includes/header-redesign.php';
       <!-- Ростер участников -->
       <fieldset class="grp-card">
         <legend>Список участников</legend>
+        <div class="grp-table-scroll" tabindex="0" role="region" aria-label="Таблица участников">
         <table class="grp-table" id="grpTable">
           <thead>
             <tr>
@@ -173,6 +174,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           </thead>
           <tbody id="grpRows"></tbody>
         </table>
+        </div>
         <button type="button" class="rd-btn rd-btn-ghost" id="grpAddRow">+ ещё участник</button>
         <p class="grp-hint" id="grpLimitHint" style="display:none;">Достигнут максимум — <?php echo GROUP_MAX_PARTICIPANTS; ?> участников.</p>
       </fieldset>
@@ -215,22 +217,24 @@ include __DIR__ . '/../includes/header-redesign.php';
 <style>
 .grp-tiers{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 24px;}
 .grp-tier-pill{background:var(--indigo-50,#eef1ff);color:var(--indigo-700,#3a45c7);font-weight:600;font-size:13px;padding:6px 12px;border-radius:999px;}
-.grp-card{border:1px solid var(--line-200,#e6e8f0);border-radius:16px;padding:22px;margin:0 0 20px;}
+.grp-card{min-width:0;border:1px solid var(--line-200,#e6e8f0);border-radius:16px;padding:22px;margin:0 0 20px;}
 .grp-card legend{font:700 17px var(--font-sans);color:var(--ink-900);padding:0 8px;}
+.grp-card input:not([type=checkbox]):not([type=radio]),.grp-card select{font-size:16px;min-height:44px;}
 .grp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .grp-grid label,.grp-templates .grp-tpl-label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--ink-700,#444);}
-.grp-grid input,.grp-grid select{padding:10px 12px;border:1px solid var(--line-300,#d4d8e3);border-radius:10px;font-size:15px;font-weight:400;}
+.grp-grid input,.grp-grid select{min-width:0;padding:10px 12px;border:1px solid var(--line-300,#d4d8e3);border-radius:10px;font-size:16px;min-height:44px;font-weight:400;}
 .grp-templates{margin-top:16px;}
 .grp-tpl-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
 .grp-tpl{display:flex;align-items:center;gap:6px;font-weight:500;font-size:14px;border:1px solid var(--line-300,#d4d8e3);border-radius:10px;padding:8px 12px;cursor:pointer;}
-.grp-table{width:100%;border-collapse:collapse;margin-bottom:14px;}
+.grp-table-scroll{max-width:100%;overflow-x:auto;}
+.grp-table{min-width:680px;width:100%;border-collapse:collapse;margin-bottom:14px;}
 .grp-table th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-500,#777);padding:6px 8px;border-bottom:1px solid var(--line-200,#e6e8f0);}
 .grp-table td{padding:6px 8px;vertical-align:middle;}
-.grp-table input,.grp-table select{width:100%;padding:8px 10px;border:1px solid var(--line-300,#d4d8e3);border-radius:8px;font-size:14px;}
+.grp-table input,.grp-table select{width:100%;padding:8px 10px;border:1px solid var(--line-300,#d4d8e3);border-radius:8px;font-size:16px;min-height:44px;}
 .grp-num{color:var(--ink-500,#777);font-weight:600;text-align:center;}
 .grp-del{background:none;border:none;color:#c0392b;font-size:22px;line-height:1;cursor:pointer;padding:0 6px;}
 .grp-hint{font-size:13px;color:var(--ink-500,#777);margin:8px 0 0;}
-.grp-summary{position:sticky;bottom:0;background:#fff;border:1px solid var(--line-200,#e6e8f0);border-radius:16px;padding:20px;box-shadow:0 -4px 20px rgba(0,0,0,.04);}
+.grp-summary{position:relative;background:#fff;border:1px solid var(--line-200,#e6e8f0);border-radius:16px;padding:20px;box-shadow:0 -4px 20px rgba(0,0,0,.04);}
 .grp-sum-line{display:flex;justify-content:space-between;font-size:15px;color:var(--ink-700,#444);margin-bottom:6px;}
 .grp-sum-total{display:flex;justify-content:space-between;font:700 20px var(--font-sans);color:var(--ink-900);margin:10px 0 16px;padding-top:10px;border-top:1px solid var(--line-200,#e6e8f0);}
 .grp-summary .rd-btn{width:100%;justify-content:center;}

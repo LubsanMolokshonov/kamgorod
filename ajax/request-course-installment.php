@@ -92,6 +92,7 @@ try {
     }
 
     $course = $courseObj->getById($fullEnrollment['course_id']);
+    if ($course && !empty($fullEnrollment['course_title_snapshot'])) $course['title'] = $fullEnrollment['course_title_snapshot'];
     if (!$course) {
         throw new Exception('Курс не найден');
     }

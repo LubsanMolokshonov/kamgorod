@@ -131,6 +131,7 @@ try {
     // Save enrollment to database
     $enrollmentData = [
         'course_id' => $courseId,
+        'course_title_snapshot' => $course['title'],
         'user_id' => $userId,
         'full_name' => $fullName,
         'email' => $email,

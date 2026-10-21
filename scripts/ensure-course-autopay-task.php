@@ -33,7 +33,7 @@ require_once BASE_PATH . '/classes/CourseAccessTaskQueue.php';
 $dbHelper = new Database($db);
 $context = $dbHelper->queryOne(
     "SELECT ce.id AS enrollment_id, ce.full_name, ce.bitrix_lead_id,
-            c.title AS course_title,
+            COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS course_title,
             o.id AS order_id, o.order_number, o.yookassa_payment_id,
             oi.price AS paid_amount
      FROM course_enrollments ce

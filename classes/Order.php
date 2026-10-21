@@ -1,4 +1,5 @@
 <?php
+if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
 /**
  * Order Class
  * Handles order CRUD operations and Yookassa payment integration
@@ -238,7 +239,7 @@ class Order {
                     olr.score as olympiad_score,
                     ol.title as olympiad_title,
                     ce.course_id as ce_course_id, ce.full_name as ce_full_name,
-                    crs.title as course_title, crs.program_type as course_program_type
+                    COALESCE(NULLIF(ce.course_title_snapshot,''), crs.title) as course_title, crs.program_type as course_program_type
              FROM order_items oi
              LEFT JOIN registrations r ON oi.registration_id = r.id
              LEFT JOIN competitions c ON r.competition_id = c.id

@@ -1,0 +1,5379 @@
+{
+  "courses": [
+    {
+      "id": 103,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 1,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 2,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 3,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 4,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 5,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 6,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 7,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 8,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 9,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 10,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 11,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 12,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 13,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 14,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 15,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 16,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 17,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 18,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 19,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 20,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 21,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 22,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 23,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 25,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 26,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 27,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 28,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 29,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 30,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 31,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 32,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 33,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 34,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 35,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 36,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 37,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 38,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 39,
+      "status": "hold",
+      "issues": [
+        "Требуется решение владельца программы"
+      ]
+    },
+    {
+      "id": 40,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 41,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 42,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 43,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 44,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 45,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 46,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 47,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 48,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 49,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 50,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 51,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 52,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 53,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 54,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 55,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 56,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 57,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 58,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 59,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 60,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 61,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 62,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 63,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 64,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 65,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 66,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 67,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 68,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 69,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 70,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 71,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 72,
+      "status": "hold",
+      "issues": [
+        "Требуется решение владельца программы"
+      ]
+    },
+    {
+      "id": 73,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 74,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 75,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 76,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 77,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 78,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 79,
+      "status": "hold",
+      "issues": [
+        "Требуется решение владельца программы"
+      ]
+    },
+    {
+      "id": 80,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 81,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 82,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 83,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 84,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 85,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 86,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 87,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 88,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 89,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 116,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 117,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 118,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 119,
+      "status": "hold",
+      "issues": [
+        "Требуется решение владельца программы"
+      ]
+    },
+    {
+      "id": 120,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 121,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 122,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 123,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 124,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 125,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 126,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 127,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 128,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 129,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 130,
+      "status": "hold",
+      "issues": [
+        "Требуется решение владельца программы"
+      ]
+    },
+    {
+      "id": 131,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 132,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 133,
+      "status": "hold",
+      "issues": [
+        "Требуется решение владельца программы"
+      ]
+    },
+    {
+      "id": 134,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 135,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 136,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 137,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 138,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 139,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 140,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 141,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 142,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 143,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 144,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 145,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 146,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 147,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 148,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 149,
+      "status": "hold",
+      "issues": [
+        "Требуется решение владельца программы",
+        "Изменились исходные URL, название, часы или тип программы"
+      ]
+    },
+    {
+      "id": 150,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 151,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 152,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 153,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 154,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 155,
+      "status": "hold",
+      "issues": [
+        "Требуется решение владельца программы"
+      ]
+    },
+    {
+      "id": 156,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 157,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 158,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 159,
+      "status": "ready",
+      "issues": []
+    },
+    {
+      "id": 160,
+      "status": "ready",
+      "issues": []
+    }
+  ],
+  "competitions": [
+    {
+      "id": 1,
+      "slug": "innovacii-razvitie-rechi-dou",
+      "target_participants": "Воспитатели, педагоги дошкольного образования, логопеды",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 2,
+      "slug": "malenkie-hudozhniki-dou",
+      "target_participants": "Воспитатели, педагоги дополнительного образования",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 3,
+      "slug": "matematika-dlya-malyshey-dou",
+      "target_participants": "Воспитатели дошкольных образовательных учреждений",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 4,
+      "slug": "zdorovyy-doshkolnik",
+      "target_participants": "Инструкторы по физической культуре, воспитатели",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 5,
+      "slug": "muzykalnaya-palitra-dou",
+      "target_participants": "Музыкальные руководители, воспитатели",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 6,
+      "slug": "pervye-shagi-gramota",
+      "target_participants": "Учителя начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 7,
+      "slug": "zanimatelnaya-matematika-nachalnaya",
+      "target_participants": "Учителя начальных классов, педагоги дополнительного образования",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 8,
+      "slug": "mir-vokrug-nas-nachalnaya",
+      "target_participants": "Учителя начальных классов, ученики 1-4 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 9,
+      "slug": "kaleydoskop-vneurochnoy",
+      "target_participants": "Учителя начальных классов, педагоги дополнительного образования",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 10,
+      "slug": "masterskaya-slovesnika",
+      "target_participants": "Учителя русского языка и литературы 5-11 классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 11,
+      "slug": "matematicheskaya-vertikal",
+      "target_participants": "Учителя математики, алгебры, геометрии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 12,
+      "slug": "cifrovaya-shkola-it",
+      "target_participants": "Учителя информатики и ИКТ",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 13,
+      "slug": "fizika-vokrug-nas",
+      "target_participants": "Учителя физики 7-11 классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 14,
+      "slug": "himiya-v-deystvii",
+      "target_participants": "Учителя химии 8-11 классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 15,
+      "slug": "biologiya-issleduem",
+      "target_participants": "Учителя биологии 5-11 классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 16,
+      "slug": "geografiya-bez-granic",
+      "target_participants": "Учителя географии 5-11 классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 17,
+      "slug": "uroki-istorii",
+      "target_participants": "Учителя истории 5-11 классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 18,
+      "slug": "obshchestvoznanie-aktualnye",
+      "target_participants": "Учителя обществознания, права, экономики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 19,
+      "slug": "english-excellence",
+      "target_participants": "Учителя английского языка 2-11 классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 20,
+      "slug": "mir-inostrannyh-yazykov",
+      "target_participants": "Учителя иностранных языков",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 21,
+      "slug": "sport-i-zdorove",
+      "target_participants": "Учителя физической культуры",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 22,
+      "slug": "tehnologiya-budushchego",
+      "target_participants": "Учителя технологии 5-11 классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 23,
+      "slug": "osnovy-bezopasnosti",
+      "target_participants": "Учителя ОБЖ, преподаватели-организаторы ОБЖ",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 24,
+      "slug": "mhk-v-shkole",
+      "target_participants": "Учителя МХК, музыки, искусства",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 25,
+      "slug": "obshcheobrazovatelnaya-podgotovka-spo",
+      "target_participants": "Преподаватели СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 26,
+      "slug": "inzhenernaya-podgotovka-spo",
+      "target_participants": "Преподаватели технических колледжей",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 27,
+      "slug": "it-obrazovanie-spo",
+      "target_participants": "Преподаватели IT-дисциплин в СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 28,
+      "slug": "pedagogicheskoe-masterstvo-spo",
+      "target_participants": "Преподаватели педагогических колледжей",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 29,
+      "slug": "medicinskoe-obrazovanie-spo",
+      "target_participants": "Преподаватели медицинских колледжей",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 30,
+      "slug": "mir-professiy-proforientaciya",
+      "target_participants": "Классные руководители, педагоги-психологи, педагоги-организаторы",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 31,
+      "slug": "shkolnoe-samoupravlenie-lidery",
+      "target_participants": "Заместители директоров по воспитательной работе, педагоги-организаторы, классные руководители",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 32,
+      "slug": "kanikuly-s-polzoy",
+      "target_participants": "Воспитатели, учителя начальных классов, педагоги дополнительного образования",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 33,
+      "slug": "semeynye-cennosti-shkola-semya",
+      "target_participants": "Классные руководители, воспитатели, педагоги-психологи, социальные педагоги",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 34,
+      "slug": "prazdnichnyy-kaleydoskop-spo",
+      "target_participants": "Кураторы групп, педагоги-организаторы СПО, заместители директоров по воспитательной работе",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 35,
+      "slug": "pravovoe-prosveshchenie-molodezhi",
+      "target_participants": "Учителя обществознания, классные руководители, социальные педагоги",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 36,
+      "slug": "volonterskoe-dvizhenie-obrazovanie",
+      "target_participants": "Педагоги-организаторы, классные руководители, кураторы волонтерских отрядов",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 37,
+      "slug": "sportivnye-prazdniki-sorevnovaniya",
+      "target_participants": "Учителя физической культуры, инструкторы по физкультуре, педагоги-организаторы",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 38,
+      "slug": "socialnyy-proekt-delaem-mir-luchshe",
+      "target_participants": "Учащиеся 7-11 классов, студенты СПО",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 39,
+      "slug": "istoricheskoe-issledovanie-otkryvaem",
+      "target_participants": "Учащиеся 5-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 40,
+      "slug": "literaturnoe-tvorchestvo-pervye-stroki",
+      "target_participants": "Учащиеся 1-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 41,
+      "slug": "matematicheskiy-kaleydoskop-proekty",
+      "target_participants": "Учащиеся 1-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 42,
+      "slug": "moy-pervyy-biznes-plan",
+      "target_participants": "Студенты СПО экономических и гуманитарных специальностей",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 43,
+      "slug": "ekologicheskiy-monitoring-issleduem",
+      "target_participants": "Учащиеся 5-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 44,
+      "slug": "lingvisticheskiy-proekt-yazyki-mira",
+      "target_participants": "Учащиеся 5-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 45,
+      "slug": "tekhnicheskiy-proekt-inzhenery",
+      "target_participants": "Студенты СПО технических специальностей",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 46,
+      "slug": "vesennyaya-kapel-tvorchestvo",
+      "target_participants": "Дошкольники, учащиеся 1-4 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 47,
+      "slug": "den-pobedy-glazami-detey",
+      "target_participants": "Дошкольники, учащиеся 1-11 классов, студенты СПО",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 48,
+      "slug": "moy-lyubimyy-pitomec",
+      "target_participants": "Дошкольники, учащиеся 1-4 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 49,
+      "slug": "cifrovoe-tvorchestvo-art-v-cifre",
+      "target_participants": "Учащиеся 5-11 классов, студенты СПО",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 50,
+      "slug": "muzykalnyy-talant",
+      "target_participants": "Дошкольники, учащиеся 1-11 классов, студенты СПО",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 51,
+      "slug": "russkiy-yazyk-nachalnaya-shkola",
+      "target_participants": "Учителя начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 52,
+      "slug": "ekologicheskoe-vospitanie-doshkolnikov",
+      "target_participants": "Воспитатели дошкольных образовательных учреждений",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 53,
+      "slug": "socializaciya-doshkolnikov",
+      "target_participants": "Воспитатели, педагоги-психологи дошкольных учреждений",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 54,
+      "slug": "angliyskiy-yazyk-nachalnaya-shkola",
+      "target_participants": "Учителя английского языка начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 55,
+      "slug": "izo-nachalnaya-shkola",
+      "target_participants": "Учителя ИЗО, учителя начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 56,
+      "slug": "muzyka-nachalnaya-shkola",
+      "target_participants": "Учителя музыки начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 57,
+      "slug": "fizkultura-nachalnaya-shkola",
+      "target_participants": "Учителя физической культуры начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 58,
+      "slug": "tehnologiya-nachalnaya-shkola",
+      "target_participants": "Учителя начальных классов, учителя технологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 59,
+      "slug": "gumanitarnoe-obrazovanie-spo",
+      "target_participants": "Преподаватели гуманитарных дисциплин СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 60,
+      "slug": "ekonomicheskoe-obrazovanie-spo",
+      "target_participants": "Преподаватели экономических дисциплин СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 61,
+      "slug": "novogodnyaya-skazka",
+      "target_participants": "Дошкольники, учащиеся 1-11 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 62,
+      "slug": "zolotaya-osen-kraski",
+      "target_participants": "Дошкольники, учащиеся 1-11 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 63,
+      "slug": "kosmicheskie-dali",
+      "target_participants": "Дошкольники, учащиеся 1-11 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 64,
+      "slug": "zashchitniki-otechestva",
+      "target_participants": "Дошкольники, учащиеся 1-11 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 65,
+      "slug": "shirokaya-maslenica",
+      "target_participants": "Дошкольники, учащиеся 1-11 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 66,
+      "slug": "klassnoe-rukovodstvo-masterstvo",
+      "target_participants": "Классные руководители всех уровней образования",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 67,
+      "slug": "logopedicheskaya-masterskaya",
+      "target_participants": "Учителя-логопеды, дефектологи",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 68,
+      "slug": "psihologicheskaya-sluzhba",
+      "target_participants": "Педагоги-психологи образовательных организаций",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 69,
+      "slug": "socialnyy-pedagog-zashchita",
+      "target_participants": "Социальные педагоги, специалисты по работе с семьёй",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 70,
+      "slug": "biblioteka-centr-znaniy",
+      "target_participants": "Педагоги-библиотекари, школьные библиотекари",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 71,
+      "slug": "pedagog-dopolnitelnogo-obrazovaniya",
+      "target_participants": "Педагоги дополнительного образования, руководители кружков и секций",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 72,
+      "slug": "inklyuzivnoe-obrazovanie-ravnye",
+      "target_participants": "Педагоги, работающие с детьми с ОВЗ, дефектологи, тьюторы",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 73,
+      "slug": "odarennye-deti-raskryvaem",
+      "target_participants": "Педагоги, работающие с одарёнными детьми",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 74,
+      "slug": "stem-obrazovanie-robototehnika",
+      "target_participants": "Учителя информатики, технологии, педагоги дополнительного образования",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 75,
+      "slug": "finansovaya-gramotnost-uchimsya",
+      "target_participants": "Учителя обществознания, экономики, воспитатели, учителя начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 76,
+      "slug": "mediagramotnost-cifrovaya-bezopasnost",
+      "target_participants": "Учителя информатики, классные руководители, педагоги-библиотекари",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 77,
+      "slug": "patrioticheskoe-vospitanie-lyubov",
+      "target_participants": "Педагоги-организаторы, классные руководители, учителя истории и обществознания",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 78,
+      "slug": "fotokonkurs-mir-glazami-detey",
+      "target_participants": "Учащиеся 1-11 классов, студенты СПО",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 79,
+      "slug": "konkurs-chtecov-zhivoe-slovo",
+      "target_participants": "Дошкольники, учащиеся 1-11 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 80,
+      "slug": "olimpiadnye-zadaniya-resheniya",
+      "target_participants": "Учащиеся 5-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 81,
+      "slug": "konkurs-sochineniy-moe-pero",
+      "target_participants": "Учащиеся 5-11 классов, студенты СПО",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 82,
+      "slug": "yunyy-hudozhnik",
+      "target_participants": "Дошкольники, учащиеся 1-11 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 83,
+      "slug": "rabochaya-programma-pedagoga",
+      "target_participants": "Учителя-предметники, педагоги дополнительного образования",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 84,
+      "slug": "programma-vospitaniya-rastim",
+      "target_participants": "Заместители директоров по ВР, педагоги-организаторы, классные руководители",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 85,
+      "slug": "sovremennyy-urok-fgos",
+      "target_participants": "Учителя всех предметов",
+      "work_type": "methodology",
+      "status": "role_confirmed",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 86,
+      "slug": "den-znaniy-posledniy-zvonok",
+      "target_participants": "Педагоги-организаторы, заместители директоров по ВР, классные руководители",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 87,
+      "slug": "den-uchitelya-prazdnik",
+      "target_participants": "Педагоги-организаторы, классные руководители, учащиеся",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 88,
+      "slug": "ekologicheskie-akcii-proekty",
+      "target_participants": "Педагоги-организаторы, учителя биологии, классные руководители",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 89,
+      "slug": "shkolnyy-teatr-scena",
+      "target_participants": "Руководители театральных кружков, учителя литературы, педагоги дополнительного образования",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 90,
+      "slug": "zdorovyy-obraz-zhizni-vybiraem",
+      "target_participants": "Классные руководители, учителя физкультуры, педагоги-психологи",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 91,
+      "slug": "russkiy-yazyk-5-klass",
+      "target_participants": "Учителя русского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 92,
+      "slug": "russkiy-yazyk-6-klass",
+      "target_participants": "Учителя русского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 93,
+      "slug": "russkiy-yazyk-7-klass",
+      "target_participants": "Учителя русского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 94,
+      "slug": "russkiy-yazyk-8-klass",
+      "target_participants": "Учителя русского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 95,
+      "slug": "russkiy-yazyk-9-klass",
+      "target_participants": "Учителя русского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 96,
+      "slug": "literatura-5-klass",
+      "target_participants": "Учителя литературы",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 97,
+      "slug": "literatura-6-klass",
+      "target_participants": "Учителя литературы",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 98,
+      "slug": "literatura-7-klass",
+      "target_participants": "Учителя литературы",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 99,
+      "slug": "literatura-8-klass",
+      "target_participants": "Учителя литературы",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 100,
+      "slug": "literatura-9-klass",
+      "target_participants": "Учителя литературы",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 101,
+      "slug": "matematika-5-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 102,
+      "slug": "matematika-6-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 103,
+      "slug": "algebra-7-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 104,
+      "slug": "algebra-8-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 105,
+      "slug": "algebra-9-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 106,
+      "slug": "geometriya-7-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 107,
+      "slug": "geometriya-8-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 108,
+      "slug": "geometriya-9-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 109,
+      "slug": "fizika-7-klass",
+      "target_participants": "Учителя физики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 110,
+      "slug": "fizika-8-klass",
+      "target_participants": "Учителя физики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 111,
+      "slug": "fizika-9-klass",
+      "target_participants": "Учителя физики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 112,
+      "slug": "himiya-8-klass",
+      "target_participants": "Учителя химии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 113,
+      "slug": "himiya-9-klass",
+      "target_participants": "Учителя химии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 114,
+      "slug": "biologiya-5-klass",
+      "target_participants": "Учителя биологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 115,
+      "slug": "biologiya-6-klass",
+      "target_participants": "Учителя биологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 116,
+      "slug": "biologiya-7-klass",
+      "target_participants": "Учителя биологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 117,
+      "slug": "biologiya-8-klass",
+      "target_participants": "Учителя биологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 118,
+      "slug": "biologiya-9-klass",
+      "target_participants": "Учителя биологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 119,
+      "slug": "geografiya-5-klass",
+      "target_participants": "Учителя географии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 120,
+      "slug": "geografiya-6-klass",
+      "target_participants": "Учителя географии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 121,
+      "slug": "geografiya-7-klass",
+      "target_participants": "Учителя географии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 122,
+      "slug": "geografiya-8-klass",
+      "target_participants": "Учителя географии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 123,
+      "slug": "geografiya-9-klass",
+      "target_participants": "Учителя географии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 124,
+      "slug": "istoriya-5-klass",
+      "target_participants": "Учителя истории",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 125,
+      "slug": "istoriya-6-klass",
+      "target_participants": "Учителя истории",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 126,
+      "slug": "istoriya-7-klass",
+      "target_participants": "Учителя истории",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 127,
+      "slug": "istoriya-8-klass",
+      "target_participants": "Учителя истории",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 128,
+      "slug": "istoriya-9-klass",
+      "target_participants": "Учителя истории",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 129,
+      "slug": "obshchestvoznanie-6-klass",
+      "target_participants": "Учителя обществознания",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 130,
+      "slug": "obshchestvoznanie-7-klass",
+      "target_participants": "Учителя обществознания",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 131,
+      "slug": "obshchestvoznanie-8-klass",
+      "target_participants": "Учителя обществознания",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 132,
+      "slug": "obshchestvoznanie-9-klass",
+      "target_participants": "Учителя обществознания",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 133,
+      "slug": "angliyskiy-yazyk-5-klass",
+      "target_participants": "Учителя английского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 134,
+      "slug": "angliyskiy-yazyk-6-klass",
+      "target_participants": "Учителя английского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 135,
+      "slug": "angliyskiy-yazyk-7-klass",
+      "target_participants": "Учителя английского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 136,
+      "slug": "angliyskiy-yazyk-8-klass",
+      "target_participants": "Учителя английского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 137,
+      "slug": "angliyskiy-yazyk-9-klass",
+      "target_participants": "Учителя английского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 138,
+      "slug": "informatika-7-klass",
+      "target_participants": "Учителя информатики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 139,
+      "slug": "informatika-8-klass",
+      "target_participants": "Учителя информатики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 140,
+      "slug": "informatika-9-klass",
+      "target_participants": "Учителя информатики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 141,
+      "slug": "fizkultura-5-6-klassy",
+      "target_participants": "Учителя физической культуры",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 142,
+      "slug": "fizkultura-7-9-klassy",
+      "target_participants": "Учителя физической культуры",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 143,
+      "slug": "obzh-8-klass",
+      "target_participants": "Учителя ОБЖ",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 144,
+      "slug": "obzh-9-klass",
+      "target_participants": "Учителя ОБЖ",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 145,
+      "slug": "tehnologiya-5-6-klassy",
+      "target_participants": "Учителя технологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 146,
+      "slug": "tehnologiya-7-8-klassy",
+      "target_participants": "Учителя технологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 147,
+      "slug": "muzyka-5-7-klassy",
+      "target_participants": "Учителя музыки",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 148,
+      "slug": "izo-5-7-klassy",
+      "target_participants": "Учителя ИЗО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 149,
+      "slug": "russkiy-yazyk-10-klass",
+      "target_participants": "Учителя русского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 150,
+      "slug": "russkiy-yazyk-11-klass",
+      "target_participants": "Учителя русского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 151,
+      "slug": "literatura-10-klass",
+      "target_participants": "Учителя литературы",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 152,
+      "slug": "literatura-11-klass",
+      "target_participants": "Учителя литературы",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 153,
+      "slug": "algebra-10-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 154,
+      "slug": "algebra-11-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 155,
+      "slug": "geometriya-10-11-klassy",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 156,
+      "slug": "fizika-10-klass",
+      "target_participants": "Учителя физики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 157,
+      "slug": "fizika-11-klass",
+      "target_participants": "Учителя физики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 158,
+      "slug": "himiya-10-klass",
+      "target_participants": "Учителя химии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 159,
+      "slug": "himiya-11-klass",
+      "target_participants": "Учителя химии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 160,
+      "slug": "biologiya-10-klass",
+      "target_participants": "Учителя биологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 161,
+      "slug": "biologiya-11-klass",
+      "target_participants": "Учителя биологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 162,
+      "slug": "geografiya-10-11-klassy",
+      "target_participants": "Учителя географии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 163,
+      "slug": "istoriya-10-klass",
+      "target_participants": "Учителя истории",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 164,
+      "slug": "istoriya-11-klass",
+      "target_participants": "Учителя истории",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 165,
+      "slug": "obshchestvoznanie-10-klass",
+      "target_participants": "Учителя обществознания",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 166,
+      "slug": "obshchestvoznanie-11-klass",
+      "target_participants": "Учителя обществознания",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 167,
+      "slug": "angliyskiy-yazyk-10-klass",
+      "target_participants": "Учителя английского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 168,
+      "slug": "angliyskiy-yazyk-11-klass",
+      "target_participants": "Учителя английского языка",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 169,
+      "slug": "informatika-10-klass",
+      "target_participants": "Учителя информатики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 170,
+      "slug": "informatika-11-klass",
+      "target_participants": "Учителя информатики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 171,
+      "slug": "fizkultura-10-11-klassy",
+      "target_participants": "Учителя физической культуры",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 172,
+      "slug": "obzh-10-11-klassy",
+      "target_participants": "Учителя ОБЖ",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 173,
+      "slug": "mhk-10-11-klassy",
+      "target_participants": "Учителя МХК",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 174,
+      "slug": "astronomiya-10-11-klassy",
+      "target_participants": "Учителя астрономии и физики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 349,
+      "slug": "yunye-ekologi-dou",
+      "target_participants": "Воспитатели, педагоги дошкольного образования, экологи",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 350,
+      "slug": "mir-obshcheniya-dou",
+      "target_participants": "Воспитатели, педагоги-психологи, социальные педагоги",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 351,
+      "slug": "volshebnyy-mir-knigi",
+      "target_participants": "Учителя начальных классов, библиотекари",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 352,
+      "slug": "first-steps-english",
+      "target_participants": "Учителя английского языка начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 353,
+      "slug": "kraski-detstva-izo",
+      "target_participants": "Учителя начальных классов, учителя ИЗО",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 354,
+      "slug": "muzykalnaya-shkatulka",
+      "target_participants": "Учителя музыки, учителя начальных классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 355,
+      "slug": "veselye-starty-nachalnaya",
+      "target_participants": "Учителя физической культуры, учителя начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 356,
+      "slug": "masterilka-tehnologiya",
+      "target_participants": "Учителя начальных классов, учителя технологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 357,
+      "slug": "ekonomika-biznes-spo",
+      "target_participants": "Преподаватели экономических дисциплин в СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 358,
+      "slug": "tantsevalnaya-mozaika-metodiki-horeografii",
+      "target_participants": "Педагоги дополнительного образования, хореографы",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 359,
+      "slug": "ritm-i-dvizhenie-vneurochnaya-horeografiya",
+      "target_participants": "Педагоги дополнительного образования, хореографы",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 360,
+      "slug": "yunyy-tantsor-tvorcheskiy-konkurs",
+      "target_participants": "Воспитанники хореографических объединений",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 361,
+      "slug": "muzykalnaya-pedagogika-luchshie-praktiki",
+      "target_participants": "Педагоги дополнительного образования, музыкальные руководители",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 362,
+      "slug": "muzykalnaya-gostinaya",
+      "target_participants": "Педагоги дополнительного образования, музыкальные руководители",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 363,
+      "slug": "golosa-detstva-vokalnyy-konkurs",
+      "target_participants": "Воспитанники музыкальных объединений",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 364,
+      "slug": "palitra-masterstva-metodiki-izo-i-dpi",
+      "target_participants": "Педагоги дополнительного образования по ИЗО и ДПИ",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 365,
+      "slug": "tvorcheskaya-masterskaya-meropriyatiya-po-izo",
+      "target_participants": "Педагоги дополнительного образования по ИЗО и ДПИ",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 366,
+      "slug": "yunyy-hudozhnik-1",
+      "target_participants": "Воспитанники художественных объединений",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 367,
+      "slug": "teatralnaya-pedagogika-metodicheskie-razrabotki",
+      "target_participants": "Педагоги дополнительного образования, руководители театральных студий",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 368,
+      "slug": "teatralnyy-kaleydoskop",
+      "target_participants": "Педагоги дополнительного образования, руководители театральных студий",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 369,
+      "slug": "malenkie-artisty",
+      "target_participants": "Воспитанники театральных студий",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 370,
+      "slug": "sportivnaya-metodika-dopolnitelnoe-obrazovanie",
+      "target_participants": "Тренеры-преподаватели, педагоги дополнительного образования",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 371,
+      "slug": "sport-dlya-vseh-meropriyatiya-i-sorevnovaniya",
+      "target_participants": "Тренеры-преподаватели, педагоги дополнительного образования",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 372,
+      "slug": "yunyy-sportsmen",
+      "target_participants": "Воспитанники спортивных секций",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 373,
+      "slug": "it-pedagogika-metodiki-robototehniki-i-programmirovaniya",
+      "target_participants": "Педагоги дополнительного образования, руководители IT-кружков",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 374,
+      "slug": "tsifrovye-gorizonty",
+      "target_participants": "Педагоги дополнительного образования, руководители IT-кружков",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 375,
+      "slug": "yunyy-programmist",
+      "target_participants": "Воспитанники IT-кружков и секций робототехники",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 376,
+      "slug": "estestvennonauchnoe-obrazovanie-metodiki-i-programmy",
+      "target_participants": "Педагоги дополнительного образования естественнонаучного направления",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 377,
+      "slug": "mir-otkrytiy-estestvennonauchnye-meropriyatiya",
+      "target_participants": "Педагоги дополнительного образования естественнонаучного направления",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 378,
+      "slug": "yunyy-issledovatel-prirody",
+      "target_participants": "Воспитанники естественнонаучных объединений",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 379,
+      "slug": "sotsialno-gumanitarnoe-obrazovanie-metodiki",
+      "target_participants": "Педагоги дополнительного образования социально-гуманитарного направления",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 380,
+      "slug": "gumanitarnye-initsiativy",
+      "target_participants": "Педагоги дополнительного образования социально-гуманитарного направления",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 381,
+      "slug": "yunyy-grazhdanin",
+      "target_participants": "Воспитанники социально-гуманитарных объединений",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 382,
+      "slug": "turistsko-kraevedcheskoe-obrazovanie-metodiki",
+      "target_participants": "Педагоги дополнительного образования туристско-краеведческого направления",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 383,
+      "slug": "poznayom-rossiyu-turisticheskie-meropriyatiya",
+      "target_participants": "Педагоги дополнительного образования туристско-краеведческого направления",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 384,
+      "slug": "yunyy-kraeved",
+      "target_participants": "Воспитанники туристско-краеведческих объединений",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 385,
+      "slug": "logopedicheskaya-masterskaya-innovatsionnye-metodiki",
+      "target_participants": "Учителя-логопеды образовательных учреждений",
+      "work_type": "methodology",
+      "status": "role_confirmed",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 386,
+      "slug": "rechevaya-mozaika-logopedicheskie-meropriyatiya",
+      "target_participants": "Учителя-логопеды образовательных учреждений",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 387,
+      "slug": "govorim-pravilno-tvorcheskiy-konkurs",
+      "target_participants": "Воспитанники логопедических групп",
+      "work_type": "creative",
+      "status": "role_confirmed",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 388,
+      "slug": "defektologicheskaya-nauka-i-praktika",
+      "target_participants": "Учителя-дефектологи образовательных учреждений",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 389,
+      "slug": "osobye-deti-osobyy-podhod",
+      "target_participants": "Учителя-дефектологи образовательных учреждений",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 390,
+      "slug": "mir-ravnyh-vozmozhnostey",
+      "target_participants": "Воспитанники коррекционных групп и классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 391,
+      "slug": "psihologicheskaya-sluzhba-v-obrazovanii",
+      "target_participants": "Педагоги-психологи образовательных учреждений",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 392,
+      "slug": "psihologiya-dlya-vseh-meropriyatiya",
+      "target_participants": "Педагоги-психологи образовательных учреждений",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 393,
+      "slug": "poznay-sebya-proekty-po-psihologii",
+      "target_participants": "Обучающиеся образовательных учреждений",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 394,
+      "slug": "tyutorskoe-soprovozhdenie-metodiki-i-praktiki",
+      "target_participants": "Тьюторы образовательных учреждений",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 395,
+      "slug": "tyutorstvo-v-deystvii",
+      "target_participants": "Тьюторы образовательных учреждений",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 396,
+      "slug": "moy-obrazovatelnyy-put",
+      "target_participants": "Обучающиеся образовательных учреждений",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 397,
+      "slug": "sotsialnaya-pedagogika-metodicheskiy-opyt",
+      "target_participants": "Социальные педагоги образовательных учреждений",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 398,
+      "slug": "sotsialnye-initsiativy-v-shkole",
+      "target_participants": "Социальные педагоги образовательных учреждений",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 399,
+      "slug": "pomogaya-rastu",
+      "target_participants": "Обучающиеся образовательных учреждений",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 400,
+      "slug": "metodicheskaya-sluzhba-luchshie-praktiki",
+      "target_participants": "Методисты образовательных учреждений",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 401,
+      "slug": "metodicheskiy-kaleydoskop",
+      "target_participants": "Методисты образовательных учреждений",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 402,
+      "slug": "metodicheskoe-portfolio",
+      "target_participants": "Методисты образовательных учреждений",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 403,
+      "slug": "upravlenie-obrazovatelnoy-organizatsiey",
+      "target_participants": "Руководители образовательных организаций, заместители директоров",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 404,
+      "slug": "lidery-obrazovaniya",
+      "target_participants": "Руководители образовательных организаций, заместители директоров",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 405,
+      "slug": "effektivnaya-shkola",
+      "target_participants": "Руководители образовательных организаций, заместители директоров",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 406,
+      "slug": "bibliotechnaya-pedagogika",
+      "target_participants": "Педагоги-библиотекари образовательных учреждений",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 407,
+      "slug": "knizhnyy-mir-bibliotechnye-meropriyatiya",
+      "target_participants": "Педагоги-библиотекари образовательных учреждений",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 408,
+      "slug": "chitaem-vmeste",
+      "target_participants": "Обучающиеся образовательных учреждений",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 409,
+      "slug": "pedagog-organizator-metodicheskiy-arsenal",
+      "target_participants": "Педагоги-организаторы образовательных учреждений",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 410,
+      "slug": "prazdnik-v-shkole",
+      "target_participants": "Педагоги-организаторы образовательных учреждений",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 411,
+      "slug": "shkolnye-initsiativy",
+      "target_participants": "Обучающиеся образовательных учреждений",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 412,
+      "slug": "klassnyy-rukovoditel-masterstvo-i-opyt",
+      "target_participants": "Классные руководители образовательных учреждений",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 413,
+      "slug": "klassnyy-chas-bez-skuki",
+      "target_participants": "Классные руководители образовательных учреждений",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 414,
+      "slug": "nash-klass-nasha-semya",
+      "target_participants": "Классные коллективы образовательных учреждений",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 415,
+      "slug": "vospitatel-gpd-metodicheskie-nahodki",
+      "target_participants": "Воспитатели ГПД",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 416,
+      "slug": "prodlyonka-s-polzoy",
+      "target_participants": "Воспитатели ГПД",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 417,
+      "slug": "moya-prodlyonka-tvorcheskiy-konkurs",
+      "target_participants": "Воспитанники групп продлённого дня",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 418,
+      "slug": "inklyuzivnoe-obrazovanie-metodiki-i-praktiki",
+      "target_participants": "Педагоги, работающие с детьми с ОВЗ",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 419,
+      "slug": "inklyuziya-v-deystvii",
+      "target_participants": "Педагоги, работающие с детьми с ОВЗ",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 420,
+      "slug": "my-vmeste-konkurs-dlya-detey-s-ovz",
+      "target_participants": "Дети с ограниченными возможностями здоровья",
+      "work_type": "creative",
+      "status": "role_confirmed",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 421,
+      "slug": "gramotey-konkurs-po-russkomu-yazyku-1-4-klass",
+      "target_participants": "Учителя начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 422,
+      "slug": "vesyolaya-grammatika-1-4-klass",
+      "target_participants": "Учителя начальных классов",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 423,
+      "slug": "yunyy-gramotey-1-4-klass",
+      "target_participants": "Ученики 1-4 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 424,
+      "slug": "mir-chteniya-metodiki-1-4-klass",
+      "target_participants": "Учителя начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 425,
+      "slug": "knizhkiny-imeniny-1-4-klass",
+      "target_participants": "Учителя начальных классов",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 426,
+      "slug": "yunyy-chitatel-1-4-klass",
+      "target_participants": "Ученики 1-4 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 427,
+      "slug": "zanimatelnaya-matematika-metodiki-1-4-klass",
+      "target_participants": "Учителя начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 428,
+      "slug": "matematicheskiy-kaleydoskop-1-4-klass",
+      "target_participants": "Учителя начальных классов",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 429,
+      "slug": "yunyy-matematik-1-4-klass",
+      "target_participants": "Ученики 1-4 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 430,
+      "slug": "okruzhayuschiy-mir-luchshie-uroki-1-4-klass",
+      "target_participants": "Учителя начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 431,
+      "slug": "priroda-vokrug-nas-1-4-klass",
+      "target_participants": "Учителя начальных классов",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 432,
+      "slug": "yunyy-naturalist-1-4-klass",
+      "target_participants": "Ученики 1-4 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 433,
+      "slug": "english-for-kids-metodiki-1-4-klass",
+      "target_participants": "Учителя английского языка начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 434,
+      "slug": "fun-english-1-4-klass",
+      "target_participants": "Учителя английского языка начальных классов",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 435,
+      "slug": "my-first-english-project-1-4-klass",
+      "target_participants": "Ученики 1-4 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 436,
+      "slug": "muzyka-v-nachalnoy-shkole-metodiki",
+      "target_participants": "Учителя музыки начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 437,
+      "slug": "muzykalnaya-shkatulka-1-4-klass",
+      "target_participants": "Учителя музыки начальных классов",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 438,
+      "slug": "vesyolye-notki-1-4-klass",
+      "target_participants": "Ученики 1-4 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 439,
+      "slug": "fizkultura-v-nachalnoy-shkole-metodiki",
+      "target_participants": "Учителя физкультуры начальных классов",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 440,
+      "slug": "vesyolye-starty-1-4-klass",
+      "target_participants": "Учителя физкультуры начальных классов",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 441,
+      "slug": "sportivnye-zvyozdochki-1-4-klass",
+      "target_participants": "Ученики 1-4 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 442,
+      "slug": "tehnologiya-v-nachalnoy-shkole-metodiki",
+      "target_participants": "Учителя начальных классов, учителя технологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 443,
+      "slug": "masterskaya-umeltsev-1-4-klass",
+      "target_participants": "Учителя начальных классов, учителя технологии",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 444,
+      "slug": "zolotye-ruki-1-4-klass",
+      "target_participants": "Ученики 1-4 классов",
+      "work_type": "creative",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 445,
+      "slug": "russkiy-yazyk-i-literatura-metodika-dlya-5-8-klassov",
+      "target_participants": "Учителя русского языка и литературы",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 446,
+      "slug": "russkiy-yazyk-i-literatura-vneurochka-5-8-klass",
+      "target_participants": "Учителя русского языка и литературы",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 447,
+      "slug": "russkiy-yazyk-i-literatura-proekty-uchenikov-5-8-klass",
+      "target_participants": "Ученики 5-8 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 448,
+      "slug": "matematika-metodika-dlya-5-8-klassov",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 449,
+      "slug": "matematika-vneurochka-5-8-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 450,
+      "slug": "matematika-proekty-uchenikov-5-8-klass",
+      "target_participants": "Ученики 5-8 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 451,
+      "slug": "fizika-metodika-dlya-5-8-klassov",
+      "target_participants": "Учителя физики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 452,
+      "slug": "fizika-vneurochka-5-8-klass",
+      "target_participants": "Учителя физики",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 453,
+      "slug": "fizika-proekty-uchenikov-5-8-klass",
+      "target_participants": "Ученики 5-8 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 454,
+      "slug": "himiya-metodika-dlya-5-8-klassov",
+      "target_participants": "Учителя химии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 455,
+      "slug": "himiya-vneurochka-5-8-klass",
+      "target_participants": "Учителя химии",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 456,
+      "slug": "himiya-proekty-uchenikov-5-8-klass",
+      "target_participants": "Ученики 5-8 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 457,
+      "slug": "biologiya-metodika-dlya-5-8-klassov",
+      "target_participants": "Учителя биологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 458,
+      "slug": "biologiya-vneurochka-5-8-klass",
+      "target_participants": "Учителя биологии",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 459,
+      "slug": "biologiya-proekty-uchenikov-5-8-klass",
+      "target_participants": "Ученики 5-8 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 460,
+      "slug": "geografiya-metodika-dlya-5-8-klassov",
+      "target_participants": "Учителя географии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 461,
+      "slug": "geografiya-vneurochka-5-8-klass",
+      "target_participants": "Учителя географии",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 462,
+      "slug": "geografiya-proekty-uchenikov-5-8-klass",
+      "target_participants": "Ученики 5-8 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 463,
+      "slug": "istoriya-metodika-dlya-5-8-klassov",
+      "target_participants": "Учителя истории",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 464,
+      "slug": "istoriya-vneurochka-5-8-klass",
+      "target_participants": "Учителя истории",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 465,
+      "slug": "istoriya-proekty-uchenikov-5-8-klass",
+      "target_participants": "Ученики 5-8 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 466,
+      "slug": "obschestvoznanie-metodika-dlya-5-8-klassov",
+      "target_participants": "Учителя обществознания",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 467,
+      "slug": "obschestvoznanie-vneurochka-5-8-klass",
+      "target_participants": "Учителя обществознания",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 468,
+      "slug": "obschestvoznanie-proekty-uchenikov-5-8-klass",
+      "target_participants": "Ученики 5-8 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 469,
+      "slug": "tehnologiya-metodika-dlya-5-8-klassov",
+      "target_participants": "Учителя технологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 470,
+      "slug": "tehnologiya-vneurochka-5-8-klass",
+      "target_participants": "Учителя технологии",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 471,
+      "slug": "tehnologiya-proekty-uchenikov-5-8-klass",
+      "target_participants": "Ученики 5-8 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 472,
+      "slug": "russkiy-yazyk-i-literatura-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя русского языка и литературы",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 473,
+      "slug": "russkiy-yazyk-i-literatura-vneurochka-9-11-klass",
+      "target_participants": "Учителя русского языка и литературы",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 474,
+      "slug": "russkiy-yazyk-i-literatura-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 475,
+      "slug": "matematika-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя математики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 476,
+      "slug": "matematika-vneurochka-9-11-klass",
+      "target_participants": "Учителя математики",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 477,
+      "slug": "matematika-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 478,
+      "slug": "informatika-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя информатики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 479,
+      "slug": "informatika-vneurochka-9-11-klass",
+      "target_participants": "Учителя информатики",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 480,
+      "slug": "informatika-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 481,
+      "slug": "fizika-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя физики",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 482,
+      "slug": "fizika-vneurochka-9-11-klass",
+      "target_participants": "Учителя физики",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 483,
+      "slug": "fizika-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 484,
+      "slug": "himiya-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя химии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 485,
+      "slug": "himiya-vneurochka-9-11-klass",
+      "target_participants": "Учителя химии",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 486,
+      "slug": "himiya-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 487,
+      "slug": "biologiya-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя биологии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 488,
+      "slug": "biologiya-vneurochka-9-11-klass",
+      "target_participants": "Учителя биологии",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 489,
+      "slug": "biologiya-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 490,
+      "slug": "geografiya-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя географии",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 491,
+      "slug": "geografiya-vneurochka-9-11-klass",
+      "target_participants": "Учителя географии",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 492,
+      "slug": "geografiya-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 493,
+      "slug": "istoriya-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя истории",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 494,
+      "slug": "istoriya-vneurochka-9-11-klass",
+      "target_participants": "Учителя истории",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 495,
+      "slug": "istoriya-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 496,
+      "slug": "obschestvoznanie-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя обществознания",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 497,
+      "slug": "obschestvoznanie-vneurochka-9-11-klass",
+      "target_participants": "Учителя обществознания",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 498,
+      "slug": "obschestvoznanie-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 499,
+      "slug": "inostrannye-yazyki-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя иностранных языков",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 500,
+      "slug": "inostrannye-yazyki-vneurochka-9-11-klass",
+      "target_participants": "Учителя иностранных языков",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 501,
+      "slug": "inostrannye-yazyki-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 502,
+      "slug": "fizkultura-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя физкультуры и спорта",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 503,
+      "slug": "fizkultura-vneurochka-9-11-klass",
+      "target_participants": "Учителя физкультуры и спорта",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 504,
+      "slug": "fizkultura-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 505,
+      "slug": "muzyka-i-mhk-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя музыки и МХК",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 506,
+      "slug": "muzyka-i-mhk-vneurochka-9-11-klass",
+      "target_participants": "Учителя музыки и МХК",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 507,
+      "slug": "muzyka-i-mhk-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 508,
+      "slug": "obzh-metodika-dlya-9-11-klassov",
+      "target_participants": "Учителя ОБЖ",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 509,
+      "slug": "obzh-vneurochka-9-11-klass",
+      "target_participants": "Учителя ОБЖ",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 510,
+      "slug": "obzh-proekty-uchenikov-9-11-klass",
+      "target_participants": "Ученики 9-11 классов",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 511,
+      "slug": "obscheobrazovatelnye-distsipliny-spo-metodicheskie-razrabotki",
+      "target_participants": "Преподаватели общеобразовательных дисциплин СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 512,
+      "slug": "obscheobrazovatelnye-distsipliny-spo-vneurochnye-meropriyatiya",
+      "target_participants": "Преподаватели общеобразовательных дисциплин СПО",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 513,
+      "slug": "obscheobrazovatelnye-distsipliny-spo-studencheskie-proekty",
+      "target_participants": "Студенты СПО",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 514,
+      "slug": "tehnicheskie-distsipliny-spo-metodicheskie-razrabotki",
+      "target_participants": "Преподаватели технических дисциплин СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 515,
+      "slug": "tehnicheskie-distsipliny-spo-vneurochnye-meropriyatiya",
+      "target_participants": "Преподаватели технических дисциплин СПО",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 516,
+      "slug": "tehnicheskie-distsipliny-spo-studencheskie-proekty",
+      "target_participants": "Студенты СПО",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 517,
+      "slug": "ekonomicheskie-distsipliny-spo-metodicheskie-razrabotki",
+      "target_participants": "Преподаватели экономических дисциплин СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 518,
+      "slug": "ekonomicheskie-distsipliny-spo-vneurochnye-meropriyatiya",
+      "target_participants": "Преподаватели экономических дисциплин СПО",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 519,
+      "slug": "ekonomicheskie-distsipliny-spo-studencheskie-proekty",
+      "target_participants": "Студенты СПО",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 520,
+      "slug": "gumanitarnye-distsipliny-spo-metodicheskie-razrabotki",
+      "target_participants": "Преподаватели гуманитарных дисциплин СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 521,
+      "slug": "gumanitarnye-distsipliny-spo-vneurochnye-meropriyatiya",
+      "target_participants": "Преподаватели гуманитарных дисциплин СПО",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 522,
+      "slug": "gumanitarnye-distsipliny-spo-studencheskie-proekty",
+      "target_participants": "Студенты СПО",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 523,
+      "slug": "meditsinskie-distsipliny-spo-metodicheskie-razrabotki",
+      "target_participants": "Преподаватели медицинских дисциплин СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 524,
+      "slug": "meditsinskie-distsipliny-spo-vneurochnye-meropriyatiya",
+      "target_participants": "Преподаватели медицинских дисциплин СПО",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 525,
+      "slug": "meditsinskie-distsipliny-spo-studencheskie-proekty",
+      "target_participants": "Студенты СПО",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 526,
+      "slug": "pedagogicheskie-distsipliny-spo-metodicheskie-razrabotki",
+      "target_participants": "Преподаватели педагогических дисциплин СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 527,
+      "slug": "pedagogicheskie-distsipliny-spo-vneurochnye-meropriyatiya",
+      "target_participants": "Преподаватели педагогических дисциплин СПО",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 528,
+      "slug": "pedagogicheskie-distsipliny-spo-studencheskie-proekty",
+      "target_participants": "Студенты СПО",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 529,
+      "slug": "it-i-programmirovanie-spo-metodicheskie-razrabotki",
+      "target_participants": "Преподаватели IT и программирования СПО",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 530,
+      "slug": "it-i-programmirovanie-spo-vneurochnye-meropriyatiya",
+      "target_participants": "Преподаватели IT и программирования СПО",
+      "work_type": "extracurricular",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 531,
+      "slug": "it-i-programmirovanie-spo-studencheskie-proekty",
+      "target_participants": "Студенты СПО",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 532,
+      "slug": "umnyy-malysh-konkurs-dlya-doshkolnikov",
+      "target_participants": "Дошкольники (3-7 лет)",
+      "work_type": "creative",
+      "status": "role_confirmed",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 533,
+      "slug": "mir-doshkolyat-razvivayuschie-proekty",
+      "target_participants": "Дошкольники (3-7 лет)",
+      "work_type": "student_projects",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    },
+    {
+      "id": 534,
+      "slug": "doshkolnaya-palitra-metodiki-dlya-doshkolyat",
+      "target_participants": "Воспитатели, родители дошкольников",
+      "work_type": "methodology",
+      "status": "needs_classification",
+      "missing": [
+        "Подтвержденные предметы и ступени",
+        "Сроки",
+        "Требования к работе",
+        "Утвержденное положение и дата версии"
+      ]
+    }
+  ],
+  "missing_inputs": [
+    "Полное ТЗ 012",
+    "Подробное ТЗ 014",
+    "Семантика конкурсов",
+    "313 исторических сирот"
+  ]
+}

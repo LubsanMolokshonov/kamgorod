@@ -44,7 +44,7 @@ try {
     }
 
     // Only return data for succeeded orders
-    if ($order['payment_status'] !== 'succeeded') {
+    if ($order['payment_status'] !== 'succeeded' || !empty($order['metrika_sent_at'])) {
         echo json_encode(['success' => false, 'error' => 'Order not succeeded']);
         exit;
     }
@@ -77,7 +77,6 @@ try {
                 'price' => $item['is_free_promotion'] ? 0 : (float)$item['price'],
                 'brand' => 'Педпортал',
                 'category' => 'Конкурсы',
-                'variant' => $item['nomination'] ?? '',
                 'quantity' => 1
             ];
         } elseif (!empty($item['course_enrollment_id'])) {

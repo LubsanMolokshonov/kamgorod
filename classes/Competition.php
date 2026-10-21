@@ -1,4 +1,5 @@
 <?php
+if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
 /**
  * Competition Class
  * Handles competition CRUD operations
@@ -6,10 +7,12 @@
 
 class Competition {
     private $db;
+    private PDO $pdo;
     private $v2Ready = null;
 
     public function __construct($pdo) {
         $this->db = new Database($pdo);
+        $this->pdo = $pdo;
     }
 
     /**
@@ -372,20 +375,7 @@ class Competition {
      * Получить конкурсы по категории аудитории (Level 0)
      */
     public function getByAudienceCategory($categoryId, $category = 'all') {
-        $sql = "SELECT DISTINCT c.* FROM competitions c
-                JOIN competition_audience_categories cac ON c.id = cac.competition_id
-                WHERE c.is_active = 1 AND cac.category_id = ?";
-
-        $params = [$categoryId];
-
-        if ($category !== 'all') {
-            $sql .= " AND c.category = ?";
-            $params[] = $category;
-        }
-
-        $sql .= " ORDER BY c.display_order ASC, c.created_at DESC";
-
-        return $this->db->query($sql, $params);
+        return $this->getFilteredCompetitions(['audience_category'=>$categoryId, 'category'=>$category]);
     }
 
     /**
@@ -396,21 +386,14 @@ class Competition {
      * @return array Массив конкурсов
      */
     public function getByAudienceType($audienceTypeSlug, $category = 'all') {
-        $sql = "SELECT DISTINCT c.* FROM competitions c
-                JOIN competition_audience_types cat ON c.id = cat.competition_id
-                JOIN audience_types at ON cat.audience_type_id = at.id
-                WHERE c.is_active = 1 AND at.slug = ? AND at.is_active = 1";
-
-        $params = [$audienceTypeSlug];
-
-        if ($category !== 'all') {
-            $sql .= " AND c.category = ?";
-            $params[] = $category;
+        require_once __DIR__ . '/CatalogListing.php';
+        $filters = ['audience_type'=>$audienceTypeSlug, 'category'=>$category];
+        if (CatalogListing::usesCompetitionFacts()) {
+            $type = $this->db->queryOne('SELECT category_id FROM audience_types WHERE slug=? AND is_active=1', [$audienceTypeSlug]);
+            if (!$type) return [];
+            $filters['audience_category'] = $type['category_id'];
         }
-
-        $sql .= " ORDER BY c.display_order ASC, c.created_at DESC";
-
-        return $this->db->query($sql, $params);
+        return $this->getFilteredCompetitions($filters);
     }
 
     /**
@@ -421,21 +404,7 @@ class Competition {
      * @return array Массив конкурсов
      */
     public function getBySpecialization($specializationSlug, $category = 'all') {
-        $sql = "SELECT DISTINCT c.* FROM competitions c
-                JOIN competition_specializations cs ON c.id = cs.competition_id
-                JOIN audience_specializations s ON cs.specialization_id = s.id
-                WHERE c.is_active = 1 AND s.slug = ? AND s.is_active = 1";
-
-        $params = [$specializationSlug];
-
-        if ($category !== 'all') {
-            $sql .= " AND c.category = ?";
-            $params[] = $category;
-        }
-
-        $sql .= " ORDER BY c.display_order ASC, c.created_at DESC";
-
-        return $this->db->query($sql, $params);
+        return $this->getFilteredCompetitions(['specialization'=>$specializationSlug, 'category'=>$category]);
     }
 
     /**
@@ -445,49 +414,14 @@ class Competition {
      * @return array Массив конкурсов
      */
     public function getFilteredCompetitions($filters = []) {
-        $sql = "SELECT DISTINCT c.* FROM competitions c";
-        $joins = [];
-        $wheres = ["c.is_active = 1"];
-        $params = [];
-
-        // Фильтр по категории аудитории (Level 0)
+        require_once __DIR__ . '/CatalogListing.php';
+        $options = ['at'=>$filters['audience_type'] ?? '', 'as'=>$filters['specialization'] ?? '', 'category'=>$filters['category'] ?? ''];
         if (!empty($filters['audience_category'])) {
-            $joins[] = "LEFT JOIN competition_audience_categories cac ON c.id = cac.competition_id";
-            $wheres[] = "cac.category_id = ?";
-            $params[] = $filters['audience_category'];
+            $category = $this->db->queryOne('SELECT slug FROM audience_categories WHERE id=?', [$filters['audience_category']]);
+            if (!$category) return [];
+            $options['ac'] = $category['slug'];
         }
-
-        // Фильтр по типу аудитории
-        if (!empty($filters['audience_type'])) {
-            $joins[] = "LEFT JOIN competition_audience_types cat ON c.id = cat.competition_id";
-            $joins[] = "LEFT JOIN audience_types at ON cat.audience_type_id = at.id";
-            $wheres[] = "at.slug = ?";
-            $params[] = $filters['audience_type'];
-        }
-
-        // Фильтр по специализации
-        if (!empty($filters['specialization'])) {
-            $joins[] = "LEFT JOIN competition_specializations cs ON c.id = cs.competition_id";
-            $joins[] = "LEFT JOIN audience_specializations s ON cs.specialization_id = s.id";
-            $wheres[] = "s.slug = ?";
-            $params[] = $filters['specialization'];
-        }
-
-        // Фильтр по категории
-        if (!empty($filters['category']) && $filters['category'] !== 'all') {
-            $wheres[] = "c.category = ?";
-            $params[] = $filters['category'];
-        }
-
-        // Собрать SQL запрос
-        if (!empty($joins)) {
-            $sql .= " " . implode(" ", array_unique($joins));
-        }
-
-        $sql .= " WHERE " . implode(" AND ", $wheres);
-        $sql .= " ORDER BY c.display_order ASC, c.created_at DESC";
-
-        return $this->db->query($sql, $params);
+        return (new CatalogListing($this->pdo, 'konkursy', $options))->all();
     }
 
     /**

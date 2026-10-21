@@ -21,6 +21,10 @@ if (preg_match('~page/([^/]+)/$~', $path, $match)) { try { $page = catalogPageNu
 if ($isPublication && $page !== 1) catalogNotFound();
 if ($page === 1 && $path !== $base) { header('Location: ' . $base, true, 301); exit; }
 $items = []; $total = 0;
+if ($section === 'konkursy') {
+    $override = seoPageData($db, $base);
+    if (empty($override['index_catalog']) || !competitionClassificationReady($db, $options)) $robotsContent = 'noindex,follow';
+}
 if (!$isPublication) {
     $listing = new CatalogListing($db, $section, $options);
     $total = $listing->count();
@@ -80,4 +84,5 @@ $subjects=(new AudienceSpecialization($db))->getActiveByCoursesProgramType('kpk'
 <section><h2>Вопросы и ответы</h2><details><summary>Где узнать точные условия?</summary><p>Откройте карточку выбранного предложения. Условия и стоимость оформления показываются до оплаты.</p></details><details><summary>Можно ли гарантировать зачёт документа при аттестации?</summary><p>Нет. Проверьте действующие требования вашей организации и аттестационной комиссии.</p></details></section>
 <?php endif; ?>
 </div>
+<?php if ($section === 'konkursy') { require_once __DIR__.'/../includes/competition-presentation.php'; echo competitionRelatedLinks($base); } ?>
 <?php include __DIR__.'/../includes/footer-redesign.php'; ?>

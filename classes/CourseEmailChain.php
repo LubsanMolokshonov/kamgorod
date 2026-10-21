@@ -1,4 +1,5 @@
 <?php
+if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
 /**
  * CourseEmailChain
  * Email-цепочка дожима для неоплаченных записей на курсы.
@@ -34,7 +35,7 @@ class CourseEmailChain {
      */
     public function scheduleForEnrollment($enrollmentId) {
         $enrollment = $this->db->queryOne(
-            "SELECT ce.*, c.title AS course_title
+            "SELECT ce.*, COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS course_title
              FROM course_enrollments ce
              JOIN courses c ON ce.course_id = c.id
              WHERE ce.id = ? AND ce.status = 'new'",
@@ -111,7 +112,7 @@ class CourseEmailChain {
                     t.email_subject, t.email_template, t.code AS touchpoint_code,
                     t.delay_minutes, t.bitrix_stage_id, t.bitrix_only,
                     ce.course_id, ce.full_name, ce.user_id, ce.ab_variant,
-                    c.title AS course_title, c.price AS course_price,
+                    COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS course_title, c.price AS course_price,
                     c.hours AS course_hours, c.program_type AS course_program_type,
                     c.slug AS course_slug
              FROM course_email_log cel
@@ -344,7 +345,7 @@ class CourseEmailChain {
      */
     public function sendPaymentConfirmation($enrollmentId, $orderNumber = '') {
         $enrollment = $this->db->queryOne(
-            "SELECT ce.*, c.title AS course_title, c.price AS course_price,
+            "SELECT ce.*, COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS course_title, c.price AS course_price,
                     c.hours AS course_hours, c.program_type AS course_program_type,
                     c.slug AS course_slug
              FROM course_enrollments ce
@@ -445,7 +446,7 @@ class CourseEmailChain {
      */
     public function sendInstallmentRequestedConfirmation($enrollmentId, $monthly, $months) {
         $enrollment = $this->db->queryOne(
-            "SELECT ce.*, c.title AS course_title, c.hours AS course_hours,
+            "SELECT ce.*, COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS course_title, c.hours AS course_hours,
                     c.program_type AS course_program_type, c.slug AS course_slug
              FROM course_enrollments ce
              JOIN courses c ON ce.course_id = c.id

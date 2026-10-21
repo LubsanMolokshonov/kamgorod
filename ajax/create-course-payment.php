@@ -180,6 +180,7 @@ try {
 
                 if ($freshEnrollment && empty($freshEnrollment['bitrix_lead_id'])) {
                     $course = $courseObj->getById($freshEnrollment['course_id']);
+                    if ($course && !empty($freshEnrollment['course_title_snapshot'])) $course['title'] = $freshEnrollment['course_title_snapshot'];
                     if ($course) {
                         // OPPORTUNITY = фактически уплачено ($finalPrice уже учитывает
                         // AB-вариант, таймер-скидку 10%, loyalty и email-кампанию).

@@ -3,6 +3,7 @@ if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') ===
 // Initialize session for user authentication check
 require_once __DIR__ . '/session.php';
 require_once __DIR__ . '/asset-helpers.php';
+require_once __DIR__ . '/../classes/CatalogListing.php';
 initSession();
 
 // A/B-тест моделей оплаты: резолвим вариант ДО любого вывода (нужно для setcookie).
@@ -28,7 +29,7 @@ if (!empty($jsonLd) && in_array($jsonLd['@type'] ?? '', ['Article','BlogPosting'
 if (!empty($jsonLdArray)) {
     foreach ($jsonLdArray as &$seoSchema) {
         if (($seoSchema['@type'] ?? '') === 'BlogPosting' && !empty($seoPage['seo_h1'])) $seoSchema['headline'] = $seoPage['seo_h1'];
-        if (($seoSchema['@type'] ?? '') === 'CollectionPage' && ($seoLandingPath ?? '') === '/blog/') {
+        if (($seoSchema['@type'] ?? '') === 'CollectionPage' && (($seoLandingPath ?? '') === '/blog/' || str_starts_with($seoLandingPath ?? '', '/konkursy/'))) {
             $seoSchema['name'] = $pageTitle;
             $seoSchema['description'] = $pageDescription;
         }
@@ -68,6 +69,7 @@ if ($useSharedBreadcrumbs) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= htmlspecialchars(generateCSRFToken(), ENT_QUOTES, 'UTF-8') ?>">
     <title><?php echo htmlspecialchars($pageTitle ?? 'Педагогический портал', ENT_QUOTES, 'UTF-8'); ?></title>
     <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?? 'Всероссийские конкурсы для педагогов и школьников', ENT_QUOTES, 'UTF-8'); ?>">
 <?php $resolvedRobots = $robotsContent ?? (!empty($noindex) ? 'noindex, nofollow' : null); ?>
@@ -263,7 +265,9 @@ $isLoggedIn = isset($_SESSION['user_email']);
         </label>
         <div class="rd-search-dd" id="rdSearchDd">
           <div class="rd-search-dd-section">Быстрые переходы</div>
-          <a class="rd-sd-item" href="/konkursy/"><div class="ico">🏆</div><div><div class="t">Конкурсы для педагогов</div><div class="s">Официальные дипломы<?php echo PricingMode::isSubscriptionOnly() ? ' · по подписке' : ' · от 169 ₽'; ?></div></div></a>
+          <a class="rd-sd-item" href="/konkursy/"><div class="ico">🏆</div><div><div class="t">Конкурсы для педагогов</div><div class="s">Электронные дипломы<?php
+            $quickCompetitionPrice = isset($db) ? (new CatalogListing($db, 'konkursy'))->minimumCompetitionPrice() : 0;
+            echo PricingMode::isSubscriptionOnly() ? ' · по подписке' : ($quickCompetitionPrice > 0 ? ' · от ' . number_format($quickCompetitionPrice, 0, ',', ' ') . ' ₽' : ''); ?></div></div></a>
           <a class="rd-sd-item" href="/olimpiady/"><div class="ico">🎓</div><div><div class="t">Всероссийские олимпиады</div><div class="s">Бесплатно · диплом за 30 сек.</div></div></a>
           <a class="rd-sd-item" href="/kursy/"><div class="ico">📚</div><div><div class="t">Курсы повышения квалификации</div><div class="s">КПК и переподготовка · с удостоверением</div></div></a>
           <a class="rd-sd-item" href="/opublikovat/"><div class="ico">📝</div><div><div class="t">Опубликовать статью</div><div class="s">Свидетельство о публикации</div></div></a>

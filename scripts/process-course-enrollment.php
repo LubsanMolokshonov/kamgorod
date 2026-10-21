@@ -53,6 +53,7 @@ try {
 
 $courseObj = new Course($db);
 $course = $courseObj->getById($enrollment['course_id']);
+if ($course && !empty($enrollment['course_title_snapshot'])) $course['title'] = $enrollment['course_title_snapshot'];
 if (!$course) {
     error_log("process-course-enrollment: course #{$enrollment['course_id']} not found");
     exit(1);

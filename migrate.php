@@ -155,6 +155,7 @@ foreach ($migrations as $migration) {
                     strpos($msg, 'already exists') === false &&
                     strpos($msg, "Can't DROP") === false) {
                     echo "   ⚠️  " . substr($msg, 0, 80) . "\n";
+                    throw $e;
                 }
             }
         }
@@ -167,6 +168,7 @@ foreach ($migrations as $migration) {
         
     } catch (Exception $e) {
         echo "❌ $migration: " . $e->getMessage() . "\n\n";
+        exit(1);
     }
 }
 

@@ -1,4 +1,5 @@
 <?php
+if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
 /**
  * Review
  * Универсальные отзывы (звёзды 1–5 + опциональный текст) для всех продуктов.
@@ -137,6 +138,10 @@ class Review {
         if (!self::isValidType($entityType)) {
             return ['avg' => 0.0, 'count' => 0];
         }
+        if ($entityType === 'competition') {
+            $row = $this->db->queryOne("SELECT AVG(rating) AS avg, COUNT(*) AS cnt FROM reviews WHERE entity_type=? AND entity_id=? AND status='approved' AND content_source='user'", [$entityType, (int)$entityId]);
+            return ['avg'=>(float)($row['avg'] ?? 0), 'count'=>(int)($row['cnt'] ?? 0)];
+        }
         $row = $this->db->queryOne(
             "SELECT rating_avg, rating_count FROM review_stats WHERE entity_type = ? AND entity_id = ?",
             [$entityType, (int)$entityId]
@@ -155,6 +160,10 @@ class Review {
     public function getTypeAggregate($entityType) {
         if (!self::isValidType($entityType)) {
             return ['avg' => 0.0, 'count' => 0];
+        }
+        if ($entityType === 'competition') {
+            $row = $this->db->queryOne("SELECT AVG(rating) AS avg, COUNT(*) AS cnt FROM reviews WHERE entity_type=? AND status='approved' AND content_source='user'", [$entityType]);
+            return ['avg'=>(float)($row['avg'] ?? 0), 'count'=>(int)($row['cnt'] ?? 0)];
         }
         $row = $this->db->queryOne(
             "SELECT SUM(rating_count) AS cnt,
@@ -177,10 +186,12 @@ class Review {
             return [];
         }
         $limit = max(1, min(100, (int)$limit)); // safe: приведено к int, интерполяция в LIMIT безопасна
+        $sourceFilter = $entityType === 'competition' ? "AND content_source='user'" : '';
         return $this->db->query(
             "SELECT id, author_name, author_role, rating, review_text, content_source, created_at
              FROM reviews
              WHERE entity_type = ? AND entity_id = ? AND status = 'approved'
+               $sourceFilter
                AND review_text IS NOT NULL AND review_text <> ''
              ORDER BY (content_source = 'user') DESC, created_at DESC
              LIMIT {$limit}",
@@ -201,10 +212,12 @@ class Review {
         $ids = array_values(array_unique(array_map('intval', $entityIds)));
         $ph  = implode(',', array_fill(0, count($ids), '?'));
         $limit = max(1, min(100, (int)$limit)); // safe: int, интерполяция в LIMIT безопасна
+        $sourceFilter = $entityType === 'competition' ? "AND content_source='user'" : '';
         return $this->db->query(
             "SELECT id, entity_id, author_name, author_role, rating, review_text, content_source, created_at
              FROM reviews
              WHERE entity_type = ? AND entity_id IN ($ph) AND status = 'approved'
+               $sourceFilter
                AND review_text IS NOT NULL AND review_text <> ''
              ORDER BY (content_source = 'user') DESC, created_at DESC
              LIMIT {$limit}",

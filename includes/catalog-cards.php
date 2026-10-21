@@ -57,7 +57,7 @@ require_once __DIR__ . '/../classes/PricingMode.php';
 require_once __DIR__ . '/../classes/SubscriptionService.php';
 global $db;
 $subscriber = !empty($_SESSION['user_id']) && (new SubscriptionService($db))->coversCertificates((int)$_SESSION['user_id']);
-$subscriptionOnly = PricingMode::isSubscriptionOnly() && !$subscriber;
+$subscriptionOnly = PricingMode::isSubscriptionOnly() || $subscriber;
 foreach ($items as $item): ?>
 <a class="rd-card" data-product-id="<?= (int)$item['id'] ?>" href="<?= htmlspecialchars(buildProductUrl('konkursy', $item['slug'], $item['id']), ENT_QUOTES, 'UTF-8') ?>">
 <div class="rd-card-pat"></div><div class="rd-card-tags"><span class="rd-tag indigo"><?= htmlspecialchars(COMPETITION_CATEGORIES[$item['category']] ?? '', ENT_QUOTES, 'UTF-8') ?></span></div>

@@ -1,0 +1,1037 @@
+{
+  "sources": {
+    "FGOS_134_SEO_names_NEW.xlsx": "b79032fffbb74bb8abba0cdf9d56a414b341981b2186a2895a6ffd4015bc4c60",
+    "ТЗ_конкурсы_реестры URL.xlsx": "ecdd4cdeb1845a2a600d93ddef8297a2e8788e767763ef5b4023f23ffea8cf89",
+    "ТЗ_конкурсы.docx": "ff08a681f433e487bdfd38d2ccea3a46b704dc6c94a81252ebc5c1a92cdec9e6"
+  },
+  "categories": {
+    "/konkursy/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA"
+      ]
+    },
+    "/konkursy/dlya-attestacii/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA"
+      ]
+    },
+    "/konkursy/doshkolnikam/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/doshkolnikam/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/dou/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/fizkultura-sport/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/geografiya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/himiya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/informatika/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/logopediya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/metodist/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/metodist/dopolnitelnoe-obrazovanie/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/metodist/dou/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/metodist/spo/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/nachalnaya-shkola/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/pedagog-organizator/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/pedagog-psiholog/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/pedagog-psiholog/dou/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/pedagogi/rabota-s-ovz/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/shkolnikam/himiya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/shkolnikam/obshchestvoznanie/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/metodika/shkolnikam/russkiy-yazyk-literatura/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/angliiskiy-yazyk/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/defektologiya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/defektologiya/nachalnaya-shkola/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/dou/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/fizkultura-sport/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/fizkultura/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/geografiya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/gumanitarnye/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/himiya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/horeografiya-tantsy/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/informatika/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/inostrannye-yazyki/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/istoriya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/izo/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/logopediya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/matematika-algebra-geometriya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/medicinskiye/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/muzyka-vokal/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/nachalnaya-shkola/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA"
+      ]
+    },
+    "/konkursy/pedagogi/pedagog-psiholog/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/pedagog-psiholog/dopolnitelnoe-obrazovanie/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/pedagog-psiholog/dou/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/rabota-s-ovz/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/russkiy-yazyk-literatura/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/russkiy-yazyk/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/socialnaya-pedagogika/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/teatralnoe-iskusstvo/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/tehnologiya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/tyutorstvo/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/pedagogi/vospitatel-gpd/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/pedagogi/fizika/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/pedagogi/informatika/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/pedagogi/matematika/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/pedagogi/matematika/nachalnaya-shkola/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/pedagogi/nachalnaya-shkola/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/shkolnikam/angliiskiy-yazyk/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/shkolnikam/biologiya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/shkolnikam/fizkultura-sport/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/shkolnikam/geografiya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/shkolnikam/himiya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/shkolnikam/inostrannye-yazyki/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/shkolnikam/obshchestvoznanie/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/proekty/shkolnikam/russkiy-yazyk-literatura/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/shkolnikam/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/shkolnikam/2-klass/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/shkolnikam/angliiskiy-yazyk/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/shkolnikam/fizika/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/shkolnikam/informatika/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/shkolnikam/izo/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/shkolnikam/muzyka/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/shkolnikam/obshchestvoznanie/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/shkolnikam/russkiy-yazyk/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/shkolnikam/tehnologiya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/studentam-spo/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/studentam-spo/it-programmirovanie/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/tvorchestvo/pedagogi/fizkultura/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/vneurochnaya/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/vneurochnaya/pedagogi/pedagog-organizator/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/vneurochnaya/pedagogi/pedagog-psiholog/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/vneurochnaya/pedagogi/pedagog-psiholog/dou/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/vneurochnaya/pedagogi/vospitatel-gpd/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    },
+    "/konkursy/vneurochnaya/studentam-spo/pedagogicheskie/": {
+      "actions": [
+        "KEEP_CATEGORY",
+        "AUDIENCE_FILTER",
+        "META",
+        "PRICE",
+        "SCHEMA",
+        "SELF_CANONICAL",
+        "ADD_SITEMAP"
+      ]
+    }
+  },
+  "links": [
+    {
+      "from": "/konkursy/",
+      "to": "/konkursy/pedagogi/",
+      "anchor": "Конкурсы для педагогов",
+      "placement": "Первый экран, выбор участника"
+    },
+    {
+      "from": "/konkursy/",
+      "to": "/konkursy/shkolnikam/",
+      "anchor": "Конкурсы для школьников",
+      "placement": "Первый экран, выбор участника"
+    },
+    {
+      "from": "/konkursy/",
+      "to": "/konkursy/doshkolnikam/",
+      "anchor": "Конкурсы для дошкольников",
+      "placement": "Первый экран, выбор участника"
+    },
+    {
+      "from": "/konkursy/",
+      "to": "/konkursy/studentam-spo/",
+      "anchor": "Конкурсы для студентов СПО",
+      "placement": "Первый экран, выбор участника"
+    },
+    {
+      "from": "/konkursy/pedagogi/",
+      "to": "/konkursy/dlya-attestacii/",
+      "anchor": "Конкурсы для профессионального портфолио",
+      "placement": "Блок документы после условий"
+    },
+    {
+      "from": "/konkursy/dlya-attestacii/",
+      "to": "/konkursy/pedagogi/",
+      "anchor": "Все конкурсы собственных работ педагогов",
+      "placement": "Перед подборкой"
+    },
+    {
+      "from": "/konkursy/pedagogi/",
+      "to": "/konkursy/pedagogi/nachalnaya-shkola/",
+      "anchor": "Конкурсы для учителей начальных классов",
+      "placement": "Специализации"
+    },
+    {
+      "from": "/nachalnaya-shkola/",
+      "to": "/konkursy/pedagogi/nachalnaya-shkola/",
+      "anchor": "Конкурсы работ учителей начальных классов",
+      "placement": "Раздел конкурсов"
+    },
+    {
+      "from": "/dou/",
+      "to": "/konkursy/pedagogi/dou/",
+      "anchor": "Конкурсы собственных работ воспитателей",
+      "placement": "Педагогическое участие"
+    },
+    {
+      "from": "/dou/",
+      "to": "/konkursy/doshkolnikam/",
+      "anchor": "Конкурсы детских работ дошкольников",
+      "placement": "Детское участие"
+    },
+    {
+      "from": "/konkursy/shkolnikam/",
+      "to": "/konkursy/pedagogi/",
+      "anchor": "Конкурсы собственных работ учителя",
+      "placement": "Пояснение для взрослого руководителя"
+    },
+    {
+      "from": "/konkursy/pedagogi/logopediya/",
+      "to": "/konkursy/govorim-pravilno-tvorcheskiy-konkurs/",
+      "anchor": "Говорим правильно для воспитанников логопедических групп",
+      "placement": "Отдельный блок детских работ"
+    },
+    {
+      "from": "/konkursy/govorim-pravilno-tvorcheskiy-konkurs/",
+      "to": "/konkursy/logopedicheskaya-masterskaya-innovatsionnye-metodiki/",
+      "anchor": "Конкурс собственной методической разработки логопеда",
+      "placement": "Связанное участие педагога"
+    },
+    {
+      "from": "/konkursy/umnyy-malysh-konkurs-dlya-doshkolnikov/",
+      "to": "/konkursy/doshkolnikam/",
+      "anchor": "Другие конкурсы для дошкольников",
+      "placement": "После требований и номинаций"
+    },
+    {
+      "from": "/konkursy/my-vmeste-konkurs-dlya-detey-s-ovz/",
+      "to": "/konkursy/pedagogi/rabota-s-ovz/",
+      "anchor": "Конкурсы педагогических разработок по работе с ОВЗ",
+      "placement": "Педагогу автору своей методики"
+    }
+  ]
+}

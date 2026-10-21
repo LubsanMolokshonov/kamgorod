@@ -70,33 +70,7 @@ if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') ===
   </div>
 </footer>
 
-<!-- E-commerce DataLayer -->
-<script>window.dataLayer = window.dataLayer || [];</script>
-<script>
-(function() {
-  try {
-    var pendingOrders = JSON.parse(localStorage.getItem('pending_ecommerce_orders') || '[]');
-    if (!pendingOrders.length) return;
-    var remaining = [], processed = 0, total = pendingOrders.length;
-    pendingOrders.forEach(function(orderNum) {
-      fetch('/api/get-ecommerce-data.php?order_number=' + encodeURIComponent(orderNum))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.success && data.ecommerce) window.dataLayer.push({ ecommerce: data.ecommerce });
-          else if (data.error === 'Order not succeeded') remaining.push(orderNum);
-        })
-        .catch(function() { remaining.push(orderNum); })
-        .finally(function() {
-          processed++;
-          if (processed === total) {
-            if (remaining.length) localStorage.setItem('pending_ecommerce_orders', JSON.stringify(remaining));
-            else localStorage.removeItem('pending_ecommerce_orders');
-          }
-        });
-    });
-  } catch(e) {}
-})();
-</script>
+
 
 <?php // jQuery самохост (sha256 сверен с code.jquery.com). defer безопасен:
       // все скрипты, использующие $, тоже defer и стоят в DOM ниже. ?>

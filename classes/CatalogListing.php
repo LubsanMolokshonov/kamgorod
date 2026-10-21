@@ -13,6 +13,10 @@ class CatalogListing {
     private string $columns;
     public const PAGE_SIZE = 50;
 
+    public static function usesCompetitionFacts(): bool {
+        return defined('COMPETITION_CATALOG_FACTS_ENABLED') && COMPETITION_CATALOG_FACTS_ENABLED;
+    }
+
     public function __construct(PDO $pdo, string $section, array $options = [], string $search = '') {
         $this->db = new Database($pdo);
         $this->section = $section;
@@ -48,8 +52,20 @@ class CatalogListing {
                   'at' => ['audience_types', 'audience_type_id', 'audience_types'],
                   'as' => ['specializations', 'specialization_id', 'audience_specializations']] as $key => [$junction, $foreign, $lookup]) {
             if (!empty($options[$key])) {
+                if ($section === 'konkursy' && self::usesCompetitionFacts()) continue;
                 $wheres[] = "EXISTS (SELECT 1 FROM {$entity}_{$junction} j JOIN $lookup a ON a.id = j.$foreign WHERE j.{$entity}_id = p.id AND a.slug = ? AND a.is_active = 1)";
                 $this->params[] = $options[$key];
+            }
+        }
+        if ($section === 'konkursy' && self::usesCompetitionFacts() && array_filter(array_intersect_key($options, array_flip(['ac','at','as','category'])) , static fn($v) => $v !== '' && $v !== 'all')) {
+            $this->from .= ' JOIN competition_catalog_facts cf ON cf.competition_id=p.id';
+            foreach (['ac'=>'participant_roles','at'=>'education_stages','as'=>'subject_slugs'] as $key=>$column) {
+                if (empty($options[$key])) continue;
+                $wheres[] = "JSON_CONTAINS(cf.$column, ?)";
+                $this->params[] = json_encode((string)$options[$key], JSON_THROW_ON_ERROR);
+            }
+            if (!empty($options['category']) && $options['category'] !== 'all') {
+                $wheres[] = 'cf.work_type=?'; $this->params[] = $options['category'];
             }
         }
         if ($section === 'kursy' && !empty($options['program_type']) && $options['program_type'] !== 'all') {
@@ -86,6 +102,13 @@ class CatalogListing {
         return $this->db->query("SELECT {$this->columns} FROM {$this->from} WHERE {$this->where} ORDER BY {$this->order} LIMIT ? OFFSET ?",
             [...$this->params, self::PAGE_SIZE, ($page - 1) * self::PAGE_SIZE]);
     }
+    public function slice(int $limit, int $offset): array {
+        if ($limit < 1 || $limit > self::PAGE_SIZE || $offset < 0) throw new InvalidArgumentException('Некорректная граница списка');
+        return $this->db->query("SELECT {$this->columns} FROM {$this->from} WHERE {$this->where} ORDER BY {$this->order} LIMIT ? OFFSET ?", [...$this->params, $limit, $offset]);
+    }
+    public function all(): array {
+        return $this->db->query("SELECT p.* FROM {$this->from} WHERE {$this->where} ORDER BY {$this->order}", $this->params);
+    }
     /** Небольшие метаданные для преподавателей, отзывов и диапазона цен. Без тел программ. */
     public function courseMetadata(): array {
         if ($this->section !== 'kursy') return [];
@@ -96,6 +119,6 @@ class CatalogListing {
     }
     public function minimumCompetitionPrice(): float {
         if ($this->section !== 'konkursy') throw new LogicException('Только конкурсы');
-        return (float)($this->db->queryOne("SELECT MIN(NULLIF(p.price, 0)) AS price FROM {$this->from} WHERE {$this->where}", $this->params)['price'] ?? 0);
+        return (float)($this->db->queryOne("SELECT MIN(p.price) AS price FROM {$this->from} WHERE {$this->where}", $this->params)['price'] ?? 0);
     }
 }

@@ -29,7 +29,8 @@ if (file_exists($envFile)) {
             $_ENV[$key] = $value;
             // Этап оплаченного курса вычисляется ниже: устаревший .env не должен
             // возвращать оплаты на промежуточный этап «Оплаченная сделка».
-            if ($key !== 'BITRIX24_COURSE_STAGE_PAID' && !defined($key)) {
+            // Флаг классификации ниже преобразуется из строки в настоящий bool.
+            if (!in_array($key, ['BITRIX24_COURSE_STAGE_PAID', 'COMPETITION_CATALOG_FACTS_ENABLED'], true) && !defined($key)) {
                 define($key, $value);
             }
         }
@@ -58,6 +59,8 @@ if (!defined('PUBLIC_SITE_URL')) {
 }
 if (!defined('SITE_NAME')) define('SITE_NAME', $_ENV['SITE_NAME'] ?? 'Педагогический портал');
 if (!defined('APP_ENV')) define('APP_ENV', $_ENV['APP_ENV'] ?? 'local');
+// Включать после предметной приемки классификации всего действующего каталога.
+if (!defined('COMPETITION_CATALOG_FACTS_ENABLED')) define('COMPETITION_CATALOG_FACTS_ENABLED', filter_var($_ENV['COMPETITION_CATALOG_FACTS_ENABLED'] ?? false, FILTER_VALIDATE_BOOLEAN));
 if (!defined('BASE_PATH')) define('BASE_PATH', dirname(__DIR__));
 
 // Yookassa Configuration

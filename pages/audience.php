@@ -271,6 +271,7 @@ include __DIR__ . '/../includes/header-redesign.php';
 
       <!-- Каталог + карточки -->
       <div class="rd-catalog-main">
+<?php if ($audienceSlug === 'dou') { require_once __DIR__ . '/../includes/competition-presentation.php'; echo competitionRelatedLinks('/dou/'); } ?>
         <?php if (empty($competitions)): ?>
           <div style="text-align:center;padding:60px 0;color:var(--ink-500);">
             <p style="font-size:18px;margin-bottom:16px;">Конкурсы не найдены</p>

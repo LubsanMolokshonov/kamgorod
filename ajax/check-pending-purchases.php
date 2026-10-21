@@ -18,6 +18,7 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
+require_once __DIR__ . '/../classes/PricingMode.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'orders' => []]);
@@ -49,7 +50,7 @@ $db = new Database($GLOBALS['db']);
 // Берём только заказы за последние 7 дней — старые не релевантны и могли уже
 // быть учтены руками (в случае ручной правки без metrika_sent_at).
 $params = [$userId];
-$sql = "SELECT id, order_number, final_amount, discount_amount, paid_at,
+$sql = "SELECT id, order_number, final_amount, discount_amount, paid_at, subscription_plan_id,
                utm_source, utm_medium, utm_campaign, utm_content, utm_term
         FROM orders
         WHERE user_id = ?
@@ -75,12 +76,12 @@ $itemsByOrder = [];
 $orderIds = array_column($rows, 'id');
 $idsPh = implode(',', array_fill(0, count($orderIds), '?'));
 $itemRows = $db->query(
-    "SELECT oi.order_id, oi.price,
+    "SELECT oi.order_id, oi.price, oi.is_free_promotion,
             r.id AS reg_id, r.competition_id, c.title AS competition_title, r.nomination,
             cert.id AS cert_id, cert.publication_id, p.title AS publication_title,
             wcert.id AS wcert_id, wcert.webinar_id, w.title AS webinar_title,
             oreg.id AS oreg_id, oreg.olympiad_id, o.title AS olympiad_title,
-            ce.id AS ce_id, ce.course_id AS ce_course_id, course.title AS course_title
+            ce.id AS ce_id, ce.ab_variant, ce.course_id AS ce_course_id, COALESCE(NULLIF(ce.course_title_snapshot,''), course.title) AS course_title
      FROM order_items oi
      LEFT JOIN registrations r ON oi.registration_id = r.id
      LEFT JOIN competitions c ON r.competition_id = c.id
@@ -96,21 +97,24 @@ $itemRows = $db->query(
     $orderIds
 );
 
+$couponParts = [];
 foreach ($itemRows as $it) {
+    if (!empty($it['is_free_promotion'])) $couponParts[$it['order_id']]['2+1'] = true;
+    if (!empty($it['ab_variant']) && $it['ab_variant'] !== 'A') $couponParts[$it['order_id']]['ab-цена-' . $it['ab_variant']] = true;
     $product = null;
     if (!empty($it['reg_id'])) {
-        $product = ['id' => (string)$it['competition_id'], 'name' => (string)$it['competition_title'], 'category' => 'Конкурсы', 'variant' => (string)$it['nomination']];
+        $product = ['id' => (string)$it['competition_id'], 'name' => (string)$it['competition_title'], 'category' => 'Конкурсы'];
     } elseif (!empty($it['cert_id'])) {
         $product = ['id' => 'pub-' . $it['publication_id'], 'name' => (string)$it['publication_title'], 'category' => 'Публикации'];
     } elseif (!empty($it['wcert_id'])) {
-        $product = ['id' => 'webinar-' . $it['webinar_id'], 'name' => (string)$it['webinar_title'], 'category' => 'Вебинары'];
+        $product = ['id' => 'wc-' . $it['webinar_id'], 'name' => (string)$it['webinar_title'], 'category' => 'Вебинары'];
     } elseif (!empty($it['oreg_id'])) {
         $product = ['id' => 'olymp-' . $it['olympiad_id'], 'name' => (string)$it['olympiad_title'], 'category' => 'Олимпиады'];
     } elseif (!empty($it['ce_id'])) {
         $product = ['id' => 'course-' . $it['ce_course_id'], 'name' => (string)$it['course_title'], 'category' => 'Курсы'];
     }
     if ($product) {
-        $product['price'] = (float)$it['price'];
+        $product['price'] = !empty($it['is_free_promotion']) ? 0 : (float)$it['price'];
         $product['brand'] = 'Педпортал';
         $product['quantity'] = 1;
         $itemsByOrder[$it['order_id']][] = $product;
@@ -119,10 +123,16 @@ foreach ($itemRows as $it) {
 
 $result = [];
 foreach ($rows as $row) {
+    $coupons = array_keys($couponParts[$row['id']] ?? []);
+    if ((float)$row['discount_amount'] > 0 && !in_array('2+1', $coupons, true)) $coupons[] = 'discount';
+    if (PricingMode::isActive()) $coupons[] = 'pm-' . PricingMode::label();
     $result[] = [
         'order_number' => $row['order_number'],
         'revenue'      => (float)$row['final_amount'],
-        'coupon'       => (float)$row['discount_amount'] > 0 ? 'discount' : '',
+        'coupon'       => implode(',', $coupons),
+        'pricing_ab'   => PricingMode::label(),
+        'is_subscription' => !empty($row['subscription_plan_id']),
+        'order_id'     => (int)$row['id'],
         'products'     => $itemsByOrder[$row['id']] ?? [],
     ];
 }

@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
+
 
 require_once __DIR__ . '/Bitrix24Integration.php';
 require_once __DIR__ . '/Course.php';
@@ -160,7 +162,7 @@ class CourseAccessTaskQueue
                         ce.full_name, ce.email, ce.phone,
                         ce.utm_source, ce.utm_medium, ce.utm_campaign,
                         ce.utm_content, ce.utm_term, ce.ym_uid, ce.source_page,
-                        c.id AS course_id, c.title AS course_title, c.price AS course_price,
+                        c.id AS course_id, COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS course_title, c.price AS course_price,
                         c.program_type, c.hours, c.learning_format
                  FROM course_access_task_jobs j
                  JOIN orders o ON o.id=j.order_id
