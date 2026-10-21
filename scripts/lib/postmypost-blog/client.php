@@ -80,7 +80,9 @@ final class PmpBlogClient implements PmpBlogGateway
     public function publication(int $id): array
     {
         $data = $this->api('GET', '/publications/' . $id);
-        return isset($data['id']) ? $data : ($data['data'] ?? throw new RuntimeException('Postmypost: нет публикации в ответе'));
+        $post = isset($data['id']) ? $data : ($data['data'] ?? []);
+        if ((int)($post['id'] ?? 0) !== $id) { throw new RuntimeException('Postmypost: ответ содержит другой ID публикации'); }
+        return $post;
     }
 
     public function upload(string $bytes, string $mime): int

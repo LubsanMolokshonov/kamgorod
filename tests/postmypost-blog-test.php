@@ -122,6 +122,10 @@ $api->missing = false; $p->run(true); pmpCheck($api->creates === 1, 'Known accep
 $f = pmpFixture(); [$db, $api] = $f; $p = pmpPublisher($f); $p->initialize(); pmpArticle($db, 1); $api->brokenRead = true;
 pmpFails(fn() => $p->run(true), 'Incomplete external listing stops sending'); pmpCheck($api->creates === 0, 'Provider read outage causes no post');
 
+$f = pmpFixture(); [$db, $api] = $f; $p = pmpPublisher($f); $p->initialize(); pmpArticle($db, 1); $p->run(true);
+$api->items[101]['details'][0]['content'] = 'Manually changed'; $p->run(false); $p->run(true);
+pmpCheck($api->creates === 1 && $db->query('SELECT state FROM vk_blog_deliveries')->fetchColumn() === 'blocked', 'Changed accepted object is held without modifying or recreating it');
+
 $calls = [];
 $client = new PmpBlogClient('secret', 10, 7, 42, function ($method, $path) use (&$calls): array {
     $calls[] = $path;
@@ -130,4 +134,6 @@ $client = new PmpBlogClient('secret', 10, 7, 42, function ($method, $path) use (
 pmpCheck(count($client->publications(['2026-10-21'])) === 2 && count($calls) === 2, 'Reconciliation reads every provider page');
 pmpCheck(str_contains($calls[0], 'post_date=2026-10-21') && str_contains($calls[0], 'publication_status='), 'Provider list explicitly selects date and all statuses');
 pmpCheck(!PmpBlogClient::mentions(['account_ids' => [8], 'details' => [['content' => 'https://fgos.pro/blog/article-1/']]], 'https://fgos.pro/blog/article-1/', 7), 'Other account posts cannot match');
+$wrong = new PmpBlogClient('secret', 10, 7, 42, fn() => ['id' => 999]);
+pmpFails(fn() => $wrong->publication(100), 'GET response with a different publication ID is rejected');
 echo "Postmypost blog checks passed\n";

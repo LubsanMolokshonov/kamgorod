@@ -105,6 +105,11 @@ final class PmpBlogPublisher
                     if ($e->http === 404) { $this->hold((int)$row['id'], 'blocked', 'Postmypost: запись удалена или недоступна; восстановление запрещено'); continue; }
                     throw $e;
                 }
+                $expected = json_decode((string)$row['request_body'], true);
+                if (is_array($expected) && !PmpBlogClient::exact($post, $expected, $this->account)) {
+                    $this->hold((int)$row['id'], 'blocked', 'Postmypost: текст или изображение принятой записи изменены; нужна ручная сверка');
+                    continue;
+                }
                 $this->accept((int)$row['id'], $post);
                 continue;
             }
