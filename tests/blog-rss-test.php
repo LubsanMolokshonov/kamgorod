@@ -16,6 +16,7 @@ UPDATE publications SET annotation='' WHERE id=9;");
 $image=fn(string $url)=>['url'=>'https://fgos.pro'.$url,'mime'=>'image/png','length'=>123];
 $xml=simplexml_load_string(FgosBlogDraftRss::render($db,$image));
 rssCheck($xml!==false && count($xml->channel->item)===2,'Only eligible published articles; sent/unknown/sending excluded');
+rssCheck((string)$xml->channel->item[0]->link==='https://fgos.pro/blog/slug-1/?utm_source=vk&utm_campaign=blog','Article URL contains VK tracking parameters');
 rssCheck((string)$xml->channel->item[0]->guid==='fgos.pro:blog:publication:1','Permanent database ID used as GUID');
 rssCheck((string)$xml->channel->item[0]->description==='Announcement & more','Existing announcement cleaned and XML escaped');
 rssCheck((string)$xml->channel->item[1]->description==='Fallback body','Fallback uses article text');

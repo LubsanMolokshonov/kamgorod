@@ -51,7 +51,7 @@ final class FgosBlogDraftRss
             if ($annotation === '') { $annotation = mb_substr(self::plain((string)$article['content']), 0, 300); }
             $xml->startElement('item');
             $xml->writeElement('title', self::plain((string)$article['title']));
-            $xml->writeElement('link', 'https://fgos.pro/blog/' . rawurlencode($article['slug']) . '/');
+            $xml->writeElement('link', 'https://fgos.pro/blog/' . rawurlencode($article['slug']) . '/?utm_source=vk&utm_campaign=blog');
             $xml->startElement('guid'); $xml->writeAttribute('isPermaLink', 'false');
             $xml->text('fgos.pro:blog:publication:' . (int)$article['id']); $xml->endElement();
             $xml->writeElement('description', $annotation);

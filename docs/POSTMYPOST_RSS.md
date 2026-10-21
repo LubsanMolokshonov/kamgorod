@@ -27,3 +27,4 @@ Postmypost с постоянным журналом и сверкой неопр
 администратором или сверки с сервисом. RSS самостоятельно ничего в VK не публикует.
 
 Проверка: php -d extension=pdo_sqlite tests/blog-rss-test.php
+Ссылки item/link содержат ?utm_source=vk&utm_campaign=blog. GUID и URL изображения не меняются.
