@@ -157,10 +157,9 @@ if (isCartEmpty()) {
 
     // Объёмная скидка по группам (групповое участие). Зеркалит create-payment.php:
     // тариф зафиксирован в participant_groups, групповые позиции вне акции «2+1».
-    $groupDiscount = 0;
     $groupObjCart = new ParticipantGroup($db);
     $groupPercentCacheCart = [];
-    foreach ($allItems as $cIdx => $cItem) {
+    foreach ($allItems as $cItem) {
         $bId = $cItem['raw_data']['group_batch_id'] ?? null;
         if (empty($bId)) {
             continue;
@@ -169,15 +168,10 @@ if (isCartEmpty()) {
             $g = $groupObjCart->getByBatchId($bId);
             $groupPercentCacheCart[$bId] = $g ? (int)$g['discount_percent'] : 0;
         }
-        $pc = $groupPercentCacheCart[$bId];
-        if ($pc > 0) {
-            $origP = (float)$cItem['price'];
-            $redP = round($origP * (100 - $pc) / 100, 2);
-            $allItems[$cIdx]['price'] = $redP;
-            $groupDiscount += ($origP - $redP);
-        }
-        $allItems[$cIdx]['in_group'] = true;
     }
+    $groupPricing = groupApplyDiscounts($allItems, $groupPercentCacheCart);
+    $allItems = $groupPricing['items'];
+    $groupDiscount = $groupPricing['discount'];
 
     // Акция «2+1»: только для одиночных (негрупповых) позиций.
     $discount = 0;
@@ -306,7 +300,7 @@ include __DIR__ . '/../includes/header.php';
                     <div class="promotion-icon">🎁</div>
                     <div class="promotion-content">
                         <h3>Акция применена!</h3>
-                        <p>При оплате 2 мероприятий — третье бесплатно! Вы экономите <?php echo number_format($discount, 0, ',', ' '); ?> ₽</p>
+                        <p>При оплате 2 мероприятий — третье бесплатно! Вы экономите <?php echo groupFormatMoney($discount); ?> ₽</p>
                     </div>
                 </div>
             <?php elseif (count($allItems) < 3): ?>
@@ -331,7 +325,7 @@ include __DIR__ . '/../includes/header.php';
                     <div class="loyalty-banner-icon">🏆</div>
                     <div class="loyalty-banner-content">
                         <h3>Действует пожизненная скидка <?php echo $loyaltyRatePercent; ?>%</h3>
-                        <p>Вы уже оплачивали у нас заказ — скидка применена автоматически. Экономия: <?php echo number_format($loyaltyDiscount, 0, ',', ' '); ?> ₽.</p>
+                        <p>Вы уже оплачивали у нас заказ — скидка применена автоматически. Экономия: <?php echo groupFormatMoney($loyaltyDiscount); ?> ₽.</p>
                     </div>
                 </div>
             <?php endif; ?>
@@ -341,7 +335,7 @@ include __DIR__ . '/../includes/header.php';
                     <div class="loyalty-banner-icon">🎁</div>
                     <div class="loyalty-banner-content">
                         <h3>Скидка <?php echo $campaignRatePercent; ?>% по персональному предложению</h3>
-                        <p>Применена автоматически. Экономия: <?php echo number_format($campaignDiscount, 0, ',', ' '); ?> ₽<?php if ($campaignExpiresAt): ?>. Действует до <?php echo date('d.m.Y', strtotime($campaignExpiresAt)); ?><?php endif; ?>.</p>
+                        <p>Применена автоматически. Экономия: <?php echo groupFormatMoney($campaignDiscount); ?> ₽<?php if ($campaignExpiresAt): ?>. Действует до <?php echo date('d.m.Y', strtotime($campaignExpiresAt)); ?><?php endif; ?>.</p>
                     </div>
                 </div>
             <?php endif; ?>
@@ -362,10 +356,10 @@ include __DIR__ . '/../includes/header.php';
                             <?php if ($pmSubscriptionOnly): ?>
                                 <span class="sub-included">🔒&nbsp;Откроется по подписке</span>
                             <?php elseif ($item['is_free']): ?>
-                                <span class="original-price"><?php echo number_format($item['price'], 0, ',', ' '); ?> ₽</span>
+                                <span class="original-price"><?php echo groupFormatMoney($item['price']); ?> ₽</span>
                                 <span class="free-label">БЕСПЛАТНО</span>
                             <?php else: ?>
-                                <?php echo number_format($item['price'], 0, ',', ' '); ?> ₽
+                                <?php echo groupFormatMoney($item['price']); ?> ₽
                             <?php endif; ?>
                         </div>
 
@@ -411,40 +405,40 @@ include __DIR__ . '/../includes/header.php';
             <div class="price-summary">
                 <div class="summary-row">
                     <span>Сумма:</span>
-                    <span><?php echo number_format($subtotal, 0, ',', ' '); ?> ₽</span>
+                    <span><?php echo groupFormatMoney($subtotal); ?> ₽</span>
                 </div>
 
                 <?php if ($discount > 0): ?>
                     <div class="summary-row discount">
                         <span>Скидка (акция 2+1):</span>
-                        <span>-<?php echo number_format($discount, 0, ',', ' '); ?> ₽</span>
+                        <span>-<?php echo groupFormatMoney($discount); ?> ₽</span>
                     </div>
                 <?php endif; ?>
 
                 <?php if ($groupDiscount > 0): ?>
                     <div class="summary-row discount">
                         <span>Скидка за группу:</span>
-                        <span>-<?php echo number_format($groupDiscount, 0, ',', ' '); ?> ₽</span>
+                        <span>-<?php echo groupFormatMoney($groupDiscount); ?> ₽</span>
                     </div>
                 <?php endif; ?>
 
                 <?php if ($hasLoyalty && $loyaltyDiscount > 0): ?>
                     <div class="summary-row discount">
                         <span>Пожизненная скидка <?php echo $loyaltyRatePercent; ?>%:</span>
-                        <span>-<?php echo number_format($loyaltyDiscount, 0, ',', ' '); ?> ₽</span>
+                        <span>-<?php echo groupFormatMoney($loyaltyDiscount); ?> ₽</span>
                     </div>
                 <?php endif; ?>
 
                 <?php if ($hasCampaignDiscount && $campaignDiscount > 0): ?>
                     <div class="summary-row discount">
                         <span>Скидка по персональному предложению <?php echo $campaignRatePercent; ?>%:</span>
-                        <span>-<?php echo number_format($campaignDiscount, 0, ',', ' '); ?> ₽</span>
+                        <span>-<?php echo groupFormatMoney($campaignDiscount); ?> ₽</span>
                     </div>
                 <?php endif; ?>
 
                 <div class="summary-row total">
                     <span>Итого к оплате:</span>
-                    <span><?php echo number_format($grandTotal, 0, ',', ' '); ?> ₽</span>
+                    <span><?php echo groupFormatMoney($grandTotal); ?> ₽</span>
                 </div>
             </div>
             <?php endif; // !$pmSubscriptionOnly — итоговая сумма скрыта в варианте B ?>
@@ -463,7 +457,7 @@ include __DIR__ . '/../includes/header.php';
                     <form action="/ajax/create-payment.php" method="POST" id="paymentForm">
                         <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                         <button type="submit" class="btn btn-danger payment-btn">
-                            Перейти к оплате (<?php echo number_format($grandTotal, 0, ',', ' '); ?> ₽)
+                            Перейти к оплате (<?php echo groupFormatMoney($grandTotal); ?> ₽)
                         </button>
                     </form>
                     <p style="margin-top: 16px; color: var(--text-medium); font-size: 14px;">

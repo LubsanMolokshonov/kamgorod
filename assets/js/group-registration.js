@@ -26,7 +26,11 @@
   var totalEl = document.getElementById('grpTotal');
 
   function fmt(n) {
-    return Math.round(n).toLocaleString('ru-RU') + ' ₽';
+    var minor = Math.round(n * 100);
+    return (minor / 100).toLocaleString('ru-RU', {
+      minimumFractionDigits: minor % 100 === 0 ? 0 : 2,
+      maximumFractionDigits: 2
+    }) + ' ₽';
   }
 
   function discountPercent(size) {
@@ -70,9 +74,10 @@
     });
 
     var pct = discountPercent(valid);
-    var gross = valid * unitPrice;
-    var disc = Math.round(gross * pct / 100);
-    var total = gross - disc;
+    var grossMinor = valid * Math.round(unitPrice * 100);
+    var discMinor = Math.min(grossMinor, Math.round(grossMinor * pct / 10000) * 100);
+    var total = (grossMinor - discMinor) / 100;
+    var disc = discMinor / 100;
 
     countEl.textContent = valid;
     if (pct > 0) {

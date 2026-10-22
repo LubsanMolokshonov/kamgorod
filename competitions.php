@@ -99,7 +99,8 @@ if ($selectedType) {
 }
 
 $hasAnyFilter = ($category !== 'all') || !empty($selectedCategoryData) || !empty($selectedTypeData) || !empty($selectedSpecData);
-$audienceSeoPhrase = buildAudienceSeoPhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData);
+$selectedCategoryData = competitionAudienceCategory($selectedCategoryData);
+$audienceSeoPhrase = competitionAudienceSeoPhrase($selectedCategoryData, $selectedTypeData, $selectedSpecData);
 
 $competitionObj = new Competition($db);
 $filters = [];
@@ -226,7 +227,12 @@ $competitionPath = buildSeoUrl('konkursy', [
 ]);
 $pageKey = landingPageKey(parse_url($competitionPath, PHP_URL_PATH) ?: $competitionPath);
 
-$landingSeoHtml = getLandingSeoHtml($db, $pageKey);
+// Старые SEO-тексты смешивали автора и заявителя. Используем контекст конкурса.
+$competitionRoleIntro = competitionCatalogIntro($selectedCategory);
+$landingSeoHtml = '<p>' . htmlspecialchars($competitionRoleIntro, ENT_QUOTES, 'UTF-8') . '</p><p>'
+    . htmlspecialchars(competitionProcessText(), ENT_QUOTES, 'UTF-8') . '</p>';
+$h1Subtext = $competitionRoleIntro;
+$skipSeoPageMetadata = true;
 require_once __DIR__ . '/classes/Review.php';
 $landingReviews = (new Review($db))->getApprovedForEntities('competition', array_column($competitions, 'id'), 12);
 foreach ($landingReviews as &$savedReview) $savedReview['review_date'] = $savedReview['created_at'];
@@ -248,6 +254,7 @@ $faqItems = buildLandingFaq(competitionsLandingFaqPool($selectedCategory === 'pe
     'price_min' => $compPriceMin,
     'category'  => $selectedCategoryData['name'] ?? '',
 ], 6);
+array_unshift($faqItems, ['q'=>'Кто участвует и кто оформляет заявку?', 'a'=>htmlspecialchars($competitionRoleIntro, ENT_QUOTES, 'UTF-8')]);
 if ($compPriceMin === '') $faqItems = array_values(array_filter($faqItems, static fn($item) => $item['q'] !== 'Сколько стоит участие?'));
 $jsonLdArray = [buildFaqJsonLd($faqItems)];
 
@@ -412,7 +419,7 @@ include __DIR__ . '/includes/header-redesign.php';
           <?php foreach ($audienceCategories as $ac): ?>
           <div class="rd-chip-row<?php echo $selectedCategory === $ac['slug'] ? ' active' : ''; ?>">
             <label>
-              <a href="<?php echo buildSeoUrl('konkursy', ['category' => $category !== 'all' ? $category : '', 'ac' => $ac['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars($ac['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+              <a href="<?php echo buildSeoUrl('konkursy', ['category' => $category !== 'all' ? $category : '', 'ac' => $ac['slug']]); ?>" style="text-decoration:none;color:inherit;"><?php echo htmlspecialchars(competitionAudienceCategory($ac)['name'], ENT_QUOTES, 'UTF-8'); ?></a>
             </label>
           </div>
           <?php endforeach; ?>

@@ -18,6 +18,39 @@ function competitionProcessText(): string {
     return 'В заявке указываются участник, номинация, название работы и выбранное заявителем место. Файл в этой форме не загружается. Оформление не включает новую независимую экспертную оценку работы. Перед оплатой проверьте данные и итоговую сумму.';
 }
 
+/** Заявитель и автор работы — отдельные роли; неизвестные данные не угадываем. */
+function competitionApplicantText(array $roles = []): string {
+    $roles = array_values(array_unique($roles));
+    if ($roles === ['pedagogi']) return 'Участник — педагог, представляющий собственную профессиональную работу. Он может оформить заявку сам. При групповом оформлении каждый автор указывается отдельным участником.';
+    if ($roles && !array_diff($roles, ['doshkolnikam', 'shkolnikam'])) return 'Участник — ребенок, чья работа представлена на конкурс. Заявку оформляет взрослый: родитель или педагог. В данных участника указывается ребенок; данные заявителя и руководителя указываются отдельно.';
+    return 'Участник — автор представленной работы. Заявитель оформляет участие. Указывайте ФИО участника отдельно от данных заявителя и руководителя; допустимый состав участников уточните в условиях конкурса.';
+}
+
+/** Словоформы только конкурсов; общая карта курсов и вебинаров не меняется. */
+function competitionAudienceCategory(?array $category): ?array {
+    if (!$category) return null;
+    $names = ['pedagogi'=>'Педагоги', 'doshkolnikam'=>'Дошкольники', 'shkolnikam'=>'Школьники', 'studentam-spo'=>'Студенты СПО'];
+    if (isset($names[$category['slug']])) $category['name'] = $names[$category['slug']];
+    return $category;
+}
+
+function competitionAudienceSeoPhrase(?array $category, ?array $type, ?array $subject): string {
+    require_once __DIR__ . '/catalog-meta.php';
+    $names = ['pedagogi'=>'педагогов', 'doshkolnikam'=>'дошкольников', 'shkolnikam'=>'школьников', 'studentam-spo'=>'студентов СПО'];
+    $slug = $category['slug'] ?? '';
+    if (!isset($names[$slug])) return buildAudienceSeoPhrase($category, $type, $subject);
+    $suffix = $slug === 'pedagogi' ? buildAudienceSeoPhrase(null, $type, $subject)
+        : trim(($subject ? 'направление «' . $subject['name'] . '» ' : '') . ($type['seo_phrase'] ?? $type['name'] ?? ''));
+    return trim('для ' . $names[$slug] . ' ' . $suffix);
+}
+
+function competitionCatalogIntro(string $role): string {
+    if ($role === 'pedagogi') return 'Здесь выбирают конкурс для собственной профессиональной работы педагога. Если вы оформляете работу ребенка, выбирайте раздел по возрасту участника. Номинации, стоимость и условия оформления указаны в карточках.';
+    if (in_array($role, ['doshkolnikam','shkolnikam'], true)) return 'Участник конкурса — ребенок, автор работы. Взрослый оформляет заявку и указывает свои данные отдельно. Выбирайте конкурс по возрасту участника, номинации и виду работы; проверьте условия в карточке.';
+    if ($role === 'studentam-spo') return 'Подборка для работ студентов СПО. Преподаватель со своей профессиональной разработкой выбирает конкурсы для педагогов. Допустимый состав участников и порядок оформления указаны в карточке.';
+    return 'Выберите конкурс по автору работы: педагог, ребенок или студент. Человек, оформляющий заявку, может быть заявителем, а участником будет автор работы. Условия, номинации и стоимость указаны в карточках.';
+}
+
 function competitionPortfolioText(array $roles = []): string {
     $text = 'Диплом можно включить в портфолио участника.';
     if (in_array('pedagogi', $roles, true)) $text .= ' Возможность его учета уточните по требованиям вашей аттестационной комиссии.';
@@ -41,7 +74,7 @@ function competitionDeadline(array $content): string {
 
 function competitionFaq(array $competition, array $nominations, array $roles = []): array {
     $items = [
-        ['q' => 'Кто участвует и кто оформляет заявку?', 'a' => 'Участники: ' . $competition['target_participants'] . '. Заявку на ребенка оформляет взрослый. Данные участника и руководителя указываются отдельно.'],
+        ['q' => 'Кто участвует и кто оформляет заявку?', 'a' => 'Участники: ' . $competition['target_participants'] . '. ' . competitionApplicantText($roles)],
         ['q' => 'Какие номинации доступны?', 'a' => $nominations ? implode('; ', $nominations) . '.' : 'Уточните доступные номинации у поддержки перед оформлением.'],
         ['q' => 'Как оформляется участие?', 'a' => competitionProcessText()],
         ['q' => 'Когда доступен документ?', 'a' => 'Электронный диплом доступен в личном кабинете после подтверждения оплаты или оформления по условиям вашей подписки.'],

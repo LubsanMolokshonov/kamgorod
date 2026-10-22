@@ -28,7 +28,7 @@ if ($productType === 'olympiad') {
     $product = $olympiadObj->getById($productId);
     if (!$product) { header('Location: /olimpiady'); exit; }
     $productTitle = $product['title'];
-    $unitPrice = (int)($product['diploma_price'] ?? OLYMPIAD_DIPLOMA_PRICE);
+    $unitPrice = (float)($product['diploma_price'] ?? OLYMPIAD_DIPLOMA_PRICE);
     $backUrl = '/olimpiady';
     $placementOptions = ['1' => '1 место', '2' => '2 место', '3' => '3 место'];
 } else {
@@ -36,7 +36,7 @@ if ($productType === 'olympiad') {
     $product = $competitionObj->getById($productId);
     if (!$product) { header('Location: /konkursy'); exit; }
     $productTitle = $product['title'];
-    $unitPrice = (int)$product['price'];
+    $unitPrice = (float)$product['price'];
     $backUrl = '/konkursy';
     $nominations = $competitionObj->getNominationOptions($productId);
     $placementOptions = ['1' => '1 место', '2' => '2 место', '3' => '3 место', 'участник' => 'Участник'];
@@ -102,11 +102,11 @@ include __DIR__ . '/../includes/header-redesign.php';
       <fieldset class="grp-card">
         <legend>Общие данные (для всех участников)</legend>
         <div class="grp-grid">
-          <label>Email учителя *
+          <label>Email заявителя *
             <input type="email" name="email" required value="<?php echo htmlspecialchars($userData['email'] ?? ''); ?>">
           </label>
-          <label>ФИО руководителя (учителя)
-            <input type="text" name="supervisor_name" maxlength="55" value="<?php echo htmlspecialchars($userData['full_name'] ?? ''); ?>" placeholder="Иванова Мария Петровна">
+          <label>ФИО заявителя (руководителя) *
+            <input type="text" name="supervisor_name" maxlength="55" required value="<?php echo htmlspecialchars($userData['full_name'] ?? ''); ?>" placeholder="Иванова Мария Петровна">
           </label>
           <label>Образовательное учреждение *
             <input type="text" name="organization" required value="<?php echo htmlspecialchars($userData['organization'] ?? ''); ?>">
@@ -182,7 +182,7 @@ include __DIR__ . '/../includes/header-redesign.php';
       <!-- Превью цены -->
       <div class="grp-summary">
         <div class="grp-sum-line"><span>Участников:</span> <strong id="grpCount">0</strong></div>
-        <div class="grp-sum-line"><span>Цена за диплом:</span> <strong><?php echo number_format($unitPrice, 0, ',', ' '); ?> ₽</strong></div>
+        <div class="grp-sum-line"><span>Цена за диплом:</span> <strong><?php echo groupFormatMoney($unitPrice); ?> ₽</strong></div>
         <div class="grp-sum-line" id="grpDiscLine" style="display:none;"><span>Скидка группы:</span> <strong id="grpDiscount">−0 ₽ (0%)</strong></div>
         <div class="grp-sum-total"><span>Итого:</span> <strong id="grpTotal">0 ₽</strong></div>
         <button type="submit" class="rd-btn rd-btn-primary" id="grpSubmit" disabled>

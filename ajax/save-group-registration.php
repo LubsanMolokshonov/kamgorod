@@ -24,7 +24,7 @@ require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/group-pricing.php';
 
 // CSRF
-if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
+if (!is_string($_POST['csrf_token'] ?? null) || !validateCSRFToken($_POST['csrf_token'])) {
     echo json_encode(['success' => false, 'message' => 'Недействительный CSRF токен']);
     exit;
 }
@@ -35,12 +35,17 @@ $productId   = (int)($_POST['product_id'] ?? 0);
 
 // Общая валидация
 $validator = new Validator($_POST);
-$required = ['email', 'organization', 'participation_date', 'template_id'];
+$required = ['email', 'supervisor_name', 'organization', 'participation_date', 'template_id'];
 if ($productType === 'competition') {
     $required[] = 'nomination';
 }
+if (!is_string($_POST['supervisor_name'] ?? '') || trim($_POST['supervisor_name'] ?? '') === '') {
+    echo json_encode(['success' => false, 'message' => 'Укажите ФИО заявителя (руководителя)']);
+    exit;
+}
 $validator->required($required)
           ->email('email')
+          ->maxLength('supervisor_name', 55)
           ->date('participation_date');
 
 if ($validator->fails() || $productId <= 0) {
@@ -92,15 +97,15 @@ if (count($participants) < GROUP_MIN_PARTICIPANTS) {
 try {
     $data = $validator->getData();
 
-    // Руководитель группы = учитель (владелец аккаунта)
-    $supervisorName = !empty($data['supervisor_name']) ? mb_substr(trim($data['supervisor_name']), 0, 55) : null;
+    // ФИО взрослого заявителя обязательно; ФИО участников хранится отдельно в ростере.
+    $supervisorName = trim($data['supervisor_name']);
     $supervisorEmail = !empty($data['supervisor_email']) ? trim($data['supervisor_email']) : null;
     $supervisorOrg  = !empty($data['supervisor_organization']) ? trim($data['supervisor_organization']) : null;
 
-    $accountOwnerName = $supervisorName ?: null; // в группе владелец — учитель
+    $accountOwnerName = $supervisorName;
     $accountOwnerOrg  = $supervisorOrg ?: ($data['organization'] ?? null);
 
-    // find-or-create teacher user
+    // Найти или создать аккаунт заявителя; текущий простой вход сохранен.
     $userObj = new User($db);
     $user = $userObj->findByEmail($data['email']);
     if (!$user) {

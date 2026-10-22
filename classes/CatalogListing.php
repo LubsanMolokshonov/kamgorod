@@ -57,6 +57,12 @@ class CatalogListing {
                 $this->params[] = $options[$key];
             }
         }
+        // До полной классификации сохраняем исторические наборы, исключая
+        // подтвержденное противоречие роли. Неразобранные карточки не добавляем.
+        if ($section === 'konkursy' && !self::usesCompetitionFacts() && !empty($options['ac'])) {
+            $wheres[] = 'NOT EXISTS (SELECT 1 FROM competition_catalog_facts role_fact WHERE role_fact.competition_id=p.id AND JSON_LENGTH(role_fact.participant_roles)>0 AND NOT JSON_CONTAINS(role_fact.participant_roles, ?))';
+            $this->params[] = json_encode((string)$options['ac'], JSON_THROW_ON_ERROR);
+        }
         if ($section === 'konkursy' && self::usesCompetitionFacts() && array_filter(array_intersect_key($options, array_flip(['ac','at','as','category'])) , static fn($v) => $v !== '' && $v !== 'all')) {
             $this->from .= ' JOIN competition_catalog_facts cf ON cf.competition_id=p.id';
             foreach (['ac'=>'participant_roles','at'=>'education_stages','as'=>'subject_slugs'] as $key=>$column) {

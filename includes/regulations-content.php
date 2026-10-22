@@ -27,8 +27,8 @@ function generateRegulationsContent($competition, ?array $content = null) {
     if ($content === null) $content = $facts['content_json'] ?? [];
     $e = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     $title = $e($competition['title']);
-    $html = '<p>Редакция условий оформления: <time datetime="2026-10-21">21.10.2026</time>.</p>';
-    $html .= '<h3>Участник и заявитель</h3><p>«' . $title . '». Участники: ' . $e($competition['target_participants']) . '. Заявку на ребенка оформляет взрослый; участник и руководитель указываются отдельно.</p>';
+    $html = '<p>Редакция условий оформления: <time datetime="2026-10-22">22.10.2026</time>.</p>';
+    $html .= '<h3>Участник и заявитель</h3><p>«' . $title . '». Участники: ' . $e($competition['target_participants']) . '. ' . $e(competitionApplicantText($facts['participant_roles'] ?? [])) . '</p>';
     $nominations = json_decode($competition['nomination_options'] ?? '', true);
     if (!is_array($nominations)) $nominations = preg_split('/\r?\n/', $competition['nomination_options'] ?? '');
     $html .= '<h3>Номинации</h3><ul>';

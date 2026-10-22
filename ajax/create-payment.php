@@ -27,7 +27,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use YooKassa\Client;
 
 // Validate CSRF token
-if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
+if (!is_string($_POST['csrf_token'] ?? null) || !validateCSRFToken($_POST['csrf_token'])) {
     echo json_encode([
         'success' => false,
         'message' => 'Недействительный CSRF токен'
@@ -180,10 +180,9 @@ try {
     // Объёмная скидка по группам (групповое участие). Тариф зафиксирован в
     // participant_groups при создании группы — НЕ пересчитывается по числу позиций
     // в корзине. Групповые позиции исключаются из акции «2+1».
-    $groupDiscount = 0;
     $groupObj = new ParticipantGroup($db);
     $groupPercentCache = [];
-    foreach ($allItems as $idx => $item) {
+    foreach ($allItems as $item) {
         $batchId = $item['raw_data']['group_batch_id'] ?? null;
         if (empty($batchId)) {
             continue;
@@ -192,15 +191,10 @@ try {
             $grp = $groupObj->getByBatchId($batchId);
             $groupPercentCache[$batchId] = $grp ? (int)$grp['discount_percent'] : 0;
         }
-        $percent = $groupPercentCache[$batchId];
-        if ($percent > 0) {
-            $orig = (float)$item['price'];
-            $reduced = round($orig * (100 - $percent) / 100, 2);
-            $allItems[$idx]['price'] = $reduced;
-            $groupDiscount += ($orig - $reduced);
-        }
-        $allItems[$idx]['in_group'] = true; // вне акции «2+1»
     }
+    $groupPricing = groupApplyDiscounts($allItems, $groupPercentCache);
+    $allItems = $groupPricing['items'];
+    $groupDiscount = $groupPricing['discount'];
 
     // Акция «2+1»: только для одиночных (негрупповых) позиций — каждая 3-я бесплатно.
     $discount = 0;

@@ -57,6 +57,7 @@ $audienceTypes = $competitionObj->getAudienceTypes($competition['id']);
 $specializations = $competitionObj->getSpecializations($competition['id']);
 
 $competitionSummary = $competitionContent['intro'] ?? ($competition['title'] . '. Участники: ' . $competition['target_participants'] . '. ' . competitionProcessText());
+$competitionSummary .= ' ' . competitionApplicantText($competitionFacts['participant_roles'] ?? []);
 $pageTitle = $competition['title'] . ' | ' . SITE_NAME;
 $pageDescription = mb_substr($competitionSummary, 0, 300);
 $canonicalUrl = SITE_URL . '/konkursy/' . $competition['slug'] . '/';
