@@ -192,6 +192,7 @@ class CourseAccessTaskQueue
             $paidStage = defined('BITRIX24_COURSE_STAGE_PAID')
                 ? (string)BITRIX24_COURSE_STAGE_PAID
                 : 'C108:WON';
+            $responsibleId = Bitrix24Integration::coursePaidResponsibleId();
             $deal = $this->bitrix->getDeal($dealId);
             if (!$deal) {
                 throw new RuntimeException("Bitrix24 deal {$dealId} lookup failed");
@@ -244,28 +245,13 @@ class CourseAccessTaskQueue
                 );
                 $dealId = (int)$newDealId;
             } else {
-                $needsUpdate = (string)($deal['STAGE_ID'] ?? '') !== $paidStage;
-                if ($paidAmount !== null) {
-                    $needsUpdate = $needsUpdate
-                        || abs((float)($deal['OPPORTUNITY'] ?? 0) - $paidAmount) > 0.009;
-                }
+                $needsUpdate = Bitrix24Integration::paidCourseDealNeedsUpdate($deal, $paidAmount);
                 if ($needsUpdate) {
-                    $dealFields = ['STAGE_ID' => $paidStage];
-                    if ($paidAmount !== null) {
-                        $dealFields['OPPORTUNITY'] = $paidAmount;
-                        $dealFields['CURRENCY_ID'] = 'RUB';
-                    }
+                    $dealFields = Bitrix24Integration::buildPaidCourseDealFields($paidAmount);
                     if (!$this->bitrix->updateDeal($dealId, $dealFields)) {
                         throw new RuntimeException("Bitrix24 deal {$dealId} auto-payment update failed");
                     }
                 }
-            }
-
-            $responsibleId = defined('BITRIX24_COURSE_ACCESS_RESPONSIBLE_ID')
-                ? (int)BITRIX24_COURSE_ACCESS_RESPONSIBLE_ID
-                : 47640;
-            if ($responsibleId <= 0) {
-                throw new RuntimeException('BITRIX24_COURSE_ACCESS_RESPONSIBLE_ID is invalid');
             }
 
             $taskId = $this->bitrix->findCourseAccessTask($dealId);

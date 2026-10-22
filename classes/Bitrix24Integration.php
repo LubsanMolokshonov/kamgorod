@@ -8,6 +8,59 @@ class Bitrix24Integration {
     /** ID ответственного менеджера за курсы (контакт + сделка) */
     const COURSE_RESPONSIBLE_USER_ID = 52226;
 
+    /** Ответственный за оплаченную онлайн курсовую сделку и задачу на допуск. */
+    public static function coursePaidResponsibleId() {
+        $responsibleId = defined('BITRIX24_COURSE_ACCESS_RESPONSIBLE_ID')
+            ? (int)BITRIX24_COURSE_ACCESS_RESPONSIBLE_ID
+            : 47640;
+
+        if ($responsibleId <= 0) {
+            throw new RuntimeException('BITRIX24_COURSE_ACCESS_RESPONSIBLE_ID is invalid');
+        }
+
+        return $responsibleId;
+    }
+
+    /** Ответственный сделки зависит от того, подтверждена ли онлайн-оплата. */
+    public static function courseDealResponsibleId($stageId) {
+        $paidStage = defined('BITRIX24_COURSE_STAGE_PAID')
+            ? (string)BITRIX24_COURSE_STAGE_PAID
+            : 'C108:WON';
+
+        return (string)$stageId === $paidStage
+            ? self::coursePaidResponsibleId()
+            : self::COURSE_RESPONSIBLE_USER_ID;
+    }
+
+    /** Поля, которые атомарно фиксируют подтверждённую онлайн-оплату в CRM. */
+    public static function buildPaidCourseDealFields($amount = null) {
+        $fields = [
+            'STAGE_ID' => defined('BITRIX24_COURSE_STAGE_PAID')
+                ? (string)BITRIX24_COURSE_STAGE_PAID
+                : 'C108:WON',
+            'ASSIGNED_BY_ID' => self::coursePaidResponsibleId(),
+        ];
+
+        if ($amount !== null) {
+            $fields['OPPORTUNITY'] = (float)$amount;
+            $fields['CURRENCY_ID'] = 'RUB';
+        }
+
+        return $fields;
+    }
+
+    /** Требуется ли синхронизация оплаченной сделки, включая ответственного. */
+    public static function paidCourseDealNeedsUpdate(array $deal, $amount = null) {
+        $expected = self::buildPaidCourseDealFields($amount);
+        if ((string)($deal['STAGE_ID'] ?? '') !== (string)$expected['STAGE_ID']
+            || (int)($deal['ASSIGNED_BY_ID'] ?? 0) !== (int)$expected['ASSIGNED_BY_ID']) {
+            return true;
+        }
+
+        return $amount !== null
+            && abs((float)($deal['OPPORTUNITY'] ?? 0) - (float)$amount) > 0.009;
+    }
+
     private $webhookUrl;
     private $logFile;
     /** HTTP-код последнего вызова call() — позволяет отличить «сделка удалена» (400) от временного сбоя */
@@ -854,7 +907,7 @@ class Bitrix24Integration {
             'PROBABILITY' => 50,
             'OPPORTUNITY' => $adjustedPrice ?? $course['price'] ?? 0,
             'CURRENCY_ID' => 'RUB',
-            'ASSIGNED_BY_ID' => self::COURSE_RESPONSIBLE_USER_ID,
+            'ASSIGNED_BY_ID' => self::courseDealResponsibleId($stageId),
         ];
 
         // UTM-метки (стандартные поля Bitrix24)

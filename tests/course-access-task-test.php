@@ -113,7 +113,29 @@ $newDeal = $bitrix->lastCall('crm.deal.add')['params']['fields'] ?? [];
 assertCourseAccess($newDeal['ASSIGNED_BY_ID'] === 52226, 'обычная неоплаченная заявка остаётся на Першиной');
 $bitrix->createCourseDeal($enrollment, $course, 'C108:WON', 2916);
 $paidDeal = $bitrix->lastCall('crm.deal.add')['params']['fields'] ?? [];
-assertCourseAccess($paidDeal['ASSIGNED_BY_ID'] === 52226, 'автоплата не меняет ответственного самой сделки');
+assertCourseAccess($paidDeal['ASSIGNED_BY_ID'] === 47640, 'новая оплаченная сделка назначается Юлии Стефанович');
+
+$paidFields = Bitrix24Integration::buildPaidCourseDealFields(2916);
+assertCourseAccess($paidFields['STAGE_ID'] === 'C108:WON', 'автоплата переводит сделку на успешный этап');
+assertCourseAccess($paidFields['ASSIGNED_BY_ID'] === 47640, 'автоплата переназначает существующую сделку Юлии Стефанович');
+assertCourseAccess($paidFields['OPPORTUNITY'] === 2916.0, 'автоплата передаёт фактически уплаченную сумму');
+assertCourseAccess($paidFields['CURRENCY_ID'] === 'RUB', 'автоплата сохраняет валюту сделки');
+assertCourseAccess(
+    Bitrix24Integration::paidCourseDealNeedsUpdate([
+        'STAGE_ID' => 'C108:WON',
+        'ASSIGNED_BY_ID' => 52226,
+        'OPPORTUNITY' => 2916,
+    ], 2916),
+    'очередь исправляет ответственного даже при правильных этапе и сумме'
+);
+assertCourseAccess(
+    !Bitrix24Integration::paidCourseDealNeedsUpdate([
+        'STAGE_ID' => 'C108:WON',
+        'ASSIGNED_BY_ID' => 47640,
+        'OPPORTUNITY' => 2916,
+    ], 2916),
+    'очередь не обновляет уже синхронизированную оплаченную сделку'
+);
 
 assertCourseAccess(
     $bitrix->createCourseAccessTask(1499366, 47640, 'Клиент', 'Курс') === '777',

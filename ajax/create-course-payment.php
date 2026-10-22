@@ -219,21 +219,16 @@ try {
                         }
                         error_log("Local course payment: deal {$freshEnrollment['bitrix_lead_id']} in pipeline {$dealCategory} — not moving");
                     } else {
-                        $moved = $bitrix->moveDeal($freshEnrollment['bitrix_lead_id'], $paidStage);
+                        $moved = $bitrix->updateDeal(
+                            $freshEnrollment['bitrix_lead_id'],
+                            Bitrix24Integration::buildPaidCourseDealFields($finalPrice)
+                        );
                         if ($moved) {
-                            try {
-                                $bitrix->updateDeal($freshEnrollment['bitrix_lead_id'], [
-                                    'OPPORTUNITY' => $finalPrice,
-                                    'CURRENCY_ID' => 'RUB',
-                                ]);
-                            } catch (Exception $e) {
-                                error_log("Local course payment Bitrix24 updateDeal OPPORTUNITY failed for deal {$freshEnrollment['bitrix_lead_id']}: " . $e->getMessage());
-                            }
                             $dbObj->update('course_enrollments', [
                                 'bitrix_stage' => $paidStage,
                             ], 'id = ?', [$enrollmentId]);
                         } else {
-                            error_log("Local course payment: moveDeal FAILED for deal {$freshEnrollment['bitrix_lead_id']} → {$paidStage}");
+                            error_log("Local course payment: paid update FAILED for deal {$freshEnrollment['bitrix_lead_id']} → {$paidStage}");
                         }
                     }
                 }

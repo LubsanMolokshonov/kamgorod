@@ -589,25 +589,18 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
                                     logWebhook('WARNING', $paymentId, "Bitrix24: course #{$enrollment['course_id']} not found, skipped new deal for enrollment {$item['course_enrollment_id']}", '');
                                 }
                             } else {
-                                $moved = $bitrix->moveDeal($enrollment['bitrix_lead_id'], $paidStage);
+                                $paidAmount = floatval($item['price']);
+                                $moved = $bitrix->updateDeal(
+                                    $enrollment['bitrix_lead_id'],
+                                    Bitrix24Integration::buildPaidCourseDealFields($paidAmount)
+                                );
                                 if ($moved) {
-                                    // Скорректировать OPPORTUNITY на фактически уплаченную сумму
-                                    // (учитывает таймер-скидку 10 минут, loyalty, email-кампанию).
-                                    $paidAmount = floatval($item['price']);
-                                    try {
-                                        $bitrix->updateDeal($enrollment['bitrix_lead_id'], [
-                                            'OPPORTUNITY' => $paidAmount,
-                                            'CURRENCY_ID' => 'RUB',
-                                        ]);
-                                    } catch (Exception $e) {
-                                        logWebhook('WARNING', $paymentId, "Bitrix24 updateDeal OPPORTUNITY failed for deal {$enrollment['bitrix_lead_id']}: " . $e->getMessage(), '');
-                                    }
                                     $dbHelper->update('course_enrollments', [
                                         'bitrix_stage' => $paidStage,
                                     ], 'id = ?', [$item['course_enrollment_id']]);
-                                    logWebhook('INFO', $paymentId, "Bitrix24 deal {$enrollment['bitrix_lead_id']} moved to {$paidStage}, OPPORTUNITY={$paidAmount} for enrollment {$item['course_enrollment_id']}", '');
+                                    logWebhook('INFO', $paymentId, "Bitrix24 deal {$enrollment['bitrix_lead_id']} moved to {$paidStage}, OPPORTUNITY={$paidAmount}, ASSIGNED_BY_ID=" . Bitrix24Integration::coursePaidResponsibleId() . " for enrollment {$item['course_enrollment_id']}", '');
                                 } else {
-                                    logWebhook('ERROR', $paymentId, "Bitrix24 moveDeal FAILED for deal {$enrollment['bitrix_lead_id']} → {$paidStage} (enrollment {$item['course_enrollment_id']})", '');
+                                    logWebhook('ERROR', $paymentId, "Bitrix24 paid update FAILED for deal {$enrollment['bitrix_lead_id']} → {$paidStage} (enrollment {$item['course_enrollment_id']})", '');
                                 }
                             }
                         }
