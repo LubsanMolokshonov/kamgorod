@@ -70,6 +70,17 @@ final class FakeNoTaskScopeBitrix extends Bitrix24Integration
     }
 }
 
+final class FakeLegacyTaskScopeBitrix extends Bitrix24Integration
+{
+    public function isConfigured() { return true; }
+    protected function call($method, $params = [])
+    {
+        return $method === 'methods'
+            ? ['result' => ['crm.deal.update', 'task.item.list', 'task.item.add']]
+            : null;
+    }
+}
+
 $deadline = '2026-09-29T13:30:00+03:00';
 $fields = Bitrix24Integration::buildCourseAccessTaskFields(
     1533066,
@@ -105,6 +116,11 @@ assertCourseAccess(
 
 $bitrix = new FakeCourseBitrix();
 assertCourseAccess($bitrix->hasTaskApiAccess(), 'webhook scope содержит tasks.task.list/add');
+$legacyScopeBitrix = new FakeLegacyTaskScopeBitrix();
+assertCourseAccess(
+    $legacyScopeBitrix->hasTaskApiAccess(),
+    'webhook scope task распознаётся по legacy-методам облачного Bitrix24'
+);
 
 $enrollment = ['full_name' => 'Тест Тест', 'email' => 'test@example.com', 'phone' => ''];
 $course = ['title' => 'Тестовый курс', 'price' => 3000];

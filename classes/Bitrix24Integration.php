@@ -345,8 +345,14 @@ class Bitrix24Integration {
 
         $result = $this->call('methods');
         $methods = is_array($result['result'] ?? null) ? $result['result'] : [];
-        return $this->taskApiAvailable = in_array('tasks.task.list', $methods, true)
+        $hasModernMethods = in_array('tasks.task.list', $methods, true)
             && in_array('tasks.task.add', $methods, true);
+        $hasLegacyMethods = in_array('task.item.list', $methods, true)
+            && in_array('task.item.add', $methods, true);
+
+        // На части облачных порталов scope `task` разрешает современный
+        // tasks.task.* API, но метод `methods` перечисляет только legacy-алиасы.
+        return $this->taskApiAvailable = $hasModernMethods || $hasLegacyMethods;
     }
 
     /**
