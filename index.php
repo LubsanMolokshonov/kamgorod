@@ -174,7 +174,7 @@ include __DIR__ . '/includes/header-redesign.php';
   <div class="rd-wrap rd-hero-grid">
     <div>
       <div class="rd-pill-row reveal-stagger">
-        <span class="rd-pill"><span class="dot"></span>Резидент Сколково</span>
+        <span class="rd-pill"><span class="dot"></span>Разрешение Сколково № 068</span>
         <span class="rd-pill indigo">Лицензия № Л035-01212-59</span>
         <span class="rd-pill">СМИ Эл. №ФС 77-74524</span>
       </div>
@@ -206,31 +206,13 @@ include __DIR__ . '/includes/header-redesign.php';
       </div>
     </div>
 
-    <div class="rd-hero-art reveal">
+    <div class="rd-hero-art rd-hero-art-cat reveal">
       <div class="rd-blob"></div>
-      <div class="rd-hero-circle">
-        <div class="rd-hero-figure">
-          <div class="rd-diploma">
-            <span class="ribbon"></span>
-            <div style="font:700 13px var(--font-sans);color:var(--indigo-700);letter-spacing:.04em;">ДИПЛОМ</div>
-            <div style="font:600 12px var(--font-sans);color:var(--ink-500);">Всероссийский конкурс</div>
-            <div class="lines"><span></span><span></span><span></span></div>
-            <div class="stamp">ФГОС<br>.ПРО</div>
-          </div>
-        </div>
-      </div>
-      <div class="rd-float-card rd-fc-1">
-        <div class="rd-fc-icon">🏆</div>
-        <div class="rd-fc-text"><div class="rd-fc-t">Диплом за 30 сек.</div><div class="rd-fc-s">после прохождения олимпиады</div></div>
-      </div>
-      <div class="rd-float-card rd-fc-2">
-        <div class="rd-fc-icon">✓</div>
-        <div class="rd-fc-text"><div class="rd-fc-t">Принимается при аттестации</div><div class="rd-fc-s">официальное СМИ</div></div>
-      </div>
-      <div class="rd-float-card rd-fc-3">
-        <div class="rd-fc-icon">⚡</div>
-        <div class="rd-fc-text"><div class="rd-fc-t">Оплата онлайн</div><div class="rd-fc-s">ЮКасса · от 169 ₽</div></div>
-      </div>
+      <a class="rd-skolkovo-doc" href="/assets/images/razreshenie-skolkovo-068.png" aria-label="Увеличить разрешение Сколково № 068">
+        <span class="rd-skolkovo-badge"><img src="/assets/images/skolkovo.webp" alt="" width="20" height="20">Фонд «Сколково» · № 068</span>
+        <img class="rd-skolkovo-img" src="/assets/images/razreshenie-skolkovo-068.png" alt="Разрешение Фонда «Сколково» № 068 на образовательную деятельность" loading="eager" fetchpriority="high">
+        <span class="rd-skolkovo-caption">Нажмите, чтобы увеличить</span>
+      </a>
     </div>
   </div>
 </section>

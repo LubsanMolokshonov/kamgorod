@@ -285,6 +285,14 @@ if (!defined('IMAP_PASSWORD')) define('IMAP_PASSWORD', $_ENV['IMAP_PASSWORD'] ??
 if (!defined('IMAP_ENCRYPTION')) define('IMAP_ENCRYPTION', $_ENV['IMAP_ENCRYPTION'] ?? 'ssl');
 if (!defined('IMAP_MAILBOX')) define('IMAP_MAILBOX', $_ENV['IMAP_MAILBOX'] ?? 'INBOX');
 
+// История сервисного отдела: отдельное IMAP-подключение только для чтения.
+// ENABLED парсится через FILTER_VALIDATE_BOOLEAN в ServiceHistoryImapReader.
+if (!defined('SERVICE_HISTORY_IMAP_ENABLED')) define('SERVICE_HISTORY_IMAP_ENABLED', $_ENV['SERVICE_HISTORY_IMAP_ENABLED'] ?? '0');
+if (!defined('SERVICE_HISTORY_IMAP_HOST')) define('SERVICE_HISTORY_IMAP_HOST', $_ENV['SERVICE_HISTORY_IMAP_HOST'] ?? 'imap.mail.ru');
+if (!defined('SERVICE_HISTORY_IMAP_PORT')) define('SERVICE_HISTORY_IMAP_PORT', (int)($_ENV['SERVICE_HISTORY_IMAP_PORT'] ?? 993));
+if (!defined('SERVICE_HISTORY_IMAP_USERNAME')) define('SERVICE_HISTORY_IMAP_USERNAME', $_ENV['SERVICE_HISTORY_IMAP_USERNAME'] ?? '');
+if (!defined('SERVICE_HISTORY_IMAP_PASSWORD')) define('SERVICE_HISTORY_IMAP_PASSWORD', $_ENV['SERVICE_HISTORY_IMAP_PASSWORD'] ?? '');
+
 // ВКонтакте Callback API (алерты из сообщений группы)
 if (!defined('VK_CALLBACK_SECRET')) define('VK_CALLBACK_SECRET', $_ENV['VK_CALLBACK_SECRET'] ?? '');
 if (!defined('VK_CONFIRMATION_STRING')) define('VK_CONFIRMATION_STRING', $_ENV['VK_CONFIRMATION_STRING'] ?? '');

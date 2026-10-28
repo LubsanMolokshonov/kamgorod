@@ -71,6 +71,12 @@ $credentialType = $course['program_type'] === 'pp'
     ? 'Диплом о профессиональной переподготовке'
     : 'Удостоверение о повышении квалификации';
 $credentialShort = $course['program_type'] === 'pp' ? 'Диплом' : 'Удостоверение';
+$credentialPrepositional = $course['program_type'] === 'pp' ? 'дипломе' : 'удостоверении';
+$credentialInstrumental = $course['program_type'] === 'pp' ? 'дипломом' : 'удостоверением';
+$credentialGenitive = $course['program_type'] === 'pp' ? 'диплома' : 'удостоверения';
+$credentialTypeInstrumental = $course['program_type'] === 'pp'
+    ? 'дипломом о профессиональной переподготовке'
+    : 'удостоверением о повышении квалификации';
 
 $pageTitle = htmlspecialchars($course['title']) . ' — ' . $programLabel . ' | ' . SITE_NAME;
 $pageDescription = htmlspecialchars(mb_substr(strip_tags($course['description']), 0, 120))
@@ -268,7 +274,7 @@ $installment = calculateInstallment($abPrice);
       <div class="cd-benefit">
         <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg></div>
         <h3>В ФИС ФРДО</h3>
-        <p>Запись о <?php echo mb_strtolower($credentialShort); ?> вносится в Федеральный реестр и видна на Госуслугах.</p>
+        <p>Запись о <?php echo $credentialPrepositional; ?> вносится в Федеральный реестр и видна на Госуслугах.</p>
       </div>
       <div class="cd-benefit">
         <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
@@ -460,7 +466,7 @@ $installment = calculateInstallment($abPrice);
             <span class="cd-full-price-badge">−<?php echo $discountPercent; ?>%</span>
           <?php endif; ?>
         </div>
-        <div class="cd-full-price-meta"><?php echo htmlspecialchars(Course::formatHours($course['hours'])); ?> обучения с <?php echo mb_strtolower($credentialType); ?></div>
+        <div class="cd-full-price-meta"><?php echo htmlspecialchars(Course::formatHours($course['hours'])); ?> обучения с <?php echo $credentialTypeInstrumental; ?></div>
       <?php else: ?>
         <div class="label">Стоимость обучения</div>
         <div class="amount">
@@ -472,7 +478,7 @@ $installment = calculateInstallment($abPrice);
             <span class="amount-badge">−<?php echo $discountPercent; ?>%</span>
           <?php endif; ?>
         </div>
-        <div class="note"><?php echo htmlspecialchars(Course::formatHours($course['hours'])); ?> обучения с <?php echo mb_strtolower($credentialType); ?></div>
+        <div class="note"><?php echo htmlspecialchars(Course::formatHours($course['hours'])); ?> обучения с <?php echo $credentialTypeInstrumental; ?></div>
       <?php endif; ?>
 
       <button type="button" class="rd-btn rd-btn-primary" onclick="openEnrollmentModal()">
@@ -487,7 +493,7 @@ $installment = calculateInstallment($abPrice);
         </div>
         <div class="feat">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          С <?php echo mb_strtolower($credentialShort); ?>
+          С <?php echo $credentialInstrumental; ?>
         </div>
         <div class="feat">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -646,7 +652,7 @@ $installment = calculateInstallment($abPrice);
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
       <span class="rd-eyebrow">Как пройти обучение</span>
-      <h2 class="rd-section-title">Всего 4 шага до <?php echo mb_strtolower($credentialShort); ?>а</h2>
+      <h2 class="rd-section-title">Всего 4 шага до <?php echo $credentialGenitive; ?></h2>
     </div>
     <div class="rd-steps four reveal-stagger">
       <div class="rd-step">

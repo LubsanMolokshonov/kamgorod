@@ -1,126 +1,136 @@
-# Педпортал «Каменный город» (fgos.pro)
+# Педпортал «Каменный город» — fgos.pro
 
-Образовательная платформа: конкурсы, олимпиады, вебинары, курсы (КПК/ПП), публикации.
+Общая инструкция для Codex в приложении и VS Code. Открой корень этого репозитория;
+специальная агентная среда не нужна. `CLAUDE.md` ссылается сюда, правила не дублируются.
 
-## Стек
-PHP 8.2 (без фреймворка) · MySQL 8 utf8mb4 PDO · Apache mod_rewrite · jQuery 3.6 · Docker · Composer (yookassa-sdk, mpdf, phpmailer, tntsearch).
+## Назначение и источники
 
-## Как работать с этим проектом (для Codex)
+Платформа для педагогов: выбор конкурса/олимпиады, регистрация и оплата, прохождение
+теста и получение диплома; вебинары и сертификаты; запись на КПК/ПП; журнал и публикации.
+PHP 8.2 + Apache (без фреймворка), MySQL 8 / PDO / utf8mb4, jQuery, Docker, Composer.
+Версию образа задаёт `Dockerfile`; `composer.json` допускает PHP ^8.0.
 
-**Не вычитывай весь репозиторий.** Используй карту ниже, открывай только нужный файл.
+- [Рабочее окружение, проверки, выпуск и восстановление](docs/DEVELOPMENT.md) — текущая навигация.
+- Источник фактов о поведении — относящийся к задаче код и выполненная проверка.
+  Документ, прежний отчёт и память агента сами по себе не доказывают состояние production.
+- Исторические `docs/DEPLOYMENT.md` и `docs/INTEGRATION_README.md` не являются runbook:
+  в них остались SMTP и старые процедуры. Текущий транспорт — Unisender Go API.
 
-- Не делай `Read` без `limit` для файлов >300 строк — сначала посмотри размер.
-- Для широкого поиска по коду — `Agent` с `subagent_type=Explore` (не льёт excerpt'ы в основной контекст).
-- Подробные доки лежат в `docs/` — читай их только когда задача прямо в эту тему.
+## Порядок задачи
 
-## Карта файлов
+1. Определи ожидаемый результат и критерии готовности. Для небольшой правки достаточно
+   короткого описания; отдельный план, новый тест и полный прогон нужны не всегда.
+2. Проверь `git status --short --untracked-files=all` и diff затрагиваемых файлов.
+   Не перезаписывай чужую работу, не делай reset/clean или общий stash ради чистоты.
+3. Читай только относящиеся к задаче части. Для файлов >300 строк сначала узнай размер,
+   затем читай диапазоны. Ищи через `rg`; при широком исследовании можно делегировать Explore.
+4. При пересечении правок согласуй владение файлами или используй отдельный worktree/ветку
+   от подходящей базы. Незакоммиченные изменения в новый worktree сами не попадут.
+   Отдельная ветка для каждой мелкой задачи не обязательна; существующую ветку не переключай без нужды.
+5. Вноси минимальные связанные изменения. При изменении поведения обновляй тематическую инструкцию.
+6. Выбери проверки по масштабу и риску из `docs/DEVELOPMENT.md`; сначала проверь их побочные эффекты.
+7. Просмотри итоговый diff. В отчёте: что изменено, что проверено и каким способом,
+   что не проверено, оставшиеся ограничения. Не выдавай технический smoke за пользовательскую приёмку.
 
-### Бизнес-домены (продукты)
-| Домен | Класс | Список | Деталь | URL |
-|-------|-------|--------|--------|-----|
-| Конкурсы | `classes/Competition.php` | `pages/competitions.php` (root) | `pages/competition-detail.php` | `/konkursy/` |
-| Олимпиады | `classes/Olympiad.php` (+ `OlympiadRegistration`, `OlympiadQuiz`, `OlympiadDiploma`) | — | `pages/olympiad-detail.php`, `olympiad-test.php`, `olympiad-result.php` | `/olimpiady/` |
-| Вебинары | `classes/Webinar.php` (+ `WebinarRegistration`, `WebinarQuiz`, `WebinarCertificate`) | `pages/webinars.php` | `pages/webinar.php` | `/vebinary/` |
-| Курсы | `classes/Course.php` (+ `CourseExpert`, `CoursePriceAB`) | `pages/courses.php` (root) | `pages/course-detail.php` | `/kursy/` |
-| Публикации | `classes/Publication.php` (+ `PublicationType`, `PublicationTag`, `PublicationCertificate`) | `pages/journal.php` | `pages/publication.php`, `submit-publication.php` | `/zhurnal/` |
+## Карта кода
 
-(списки `competitions.php` и `courses.php` лежат в корне репо, не в `pages/`)
+| Область | Точка входа / реализация |
+|---|---|
+| Конкурсы | `competitions.php`, `pages/competition-detail.php`, `classes/Competition.php` |
+| Олимпиады | `pages/olympiad-{detail,test,result}.php`, `classes/Olympiad*.php` |
+| Курсы КПК/ПП | `courses.php`, `pages/course-detail.php`, `classes/Course*.php` |
+| Вебинары | `pages/webinars.php`, `pages/webinar.php`, `classes/Webinar*.php` |
+| Журнал, публикации | `pages/journal.php`, `pages/publication.php`, `pages/submit-publication.php`, `classes/Publication*.php` |
+| Страницы / JSON / админка | `pages/`, `ajax/`, `api/`, `admin/` |
+| Оплата | `classes/Order.php`, `ajax/create-payment.php`, `api/webhook/yookassa.php` |
+| Общие шаблоны и хелперы | `includes/`, в том числе `header.php`, `footer.php`, `session.php` |
+| Роутинг | `.htaccess`, `includes/seo-url.php`; URL-маппинги в `config/config.php` |
+| Конфигурация / БД | `.env` → `config/config.php`, `config/database.php` → глобальный PDO `$db` |
+| Ассеты | `assets/css/`, `assets/js/`, `assets/fonts/`, `assets/images/` |
+| Фоновые задачи | `cron/`, `scripts/`; расписание образа — `Dockerfile` |
+| Утилиты | `Database`, `Validator`, `FileUploader`, `SearchService` (TNTSearch / MySQL FULLTEXT), `IcsGenerator` |
+| PDF | mPDF: `Diploma`, `OlympiadDiploma`, `WebinarCertificate`, `PublicationCertificate`, `*Preview` |
+| AI и мессенджеры | `ai-consultant/`, сервисы `ai-consultant` и `messenger-worker` в Compose |
+| Схема / проверки | `database/migrations/`, `migrate.php`, `tests/`, `tests/ui/` |
+| Редакционные комплекты / очередь | `editorial/articles/`, `editorial/schedules/` |
 
-### Email-инфраструктура
-- Транспорт: `EmailDispatcher` → `UnisenderClient` → Unisender Go API. **Никаких SMTP**.
-- Трекинг: `EmailTracker` (open-pixel + click-rewrite, таблица `email_events`), эндпоинты в `api/email-track/`.
-- Транзакционка: `includes/email-helper.php` (payment-success, failure, lifetime-discount).
-- Шаблоны: `includes/email-templates/`.
-- Cron-цепочки (каждые 5 мин, lock-файлы в `/tmp/`, batch 50, до 3 ретраев):
-  - `EmailJourney` — неоплаченные регистрации
-  - `WebinarEmailJourney` — вебинары
-  - `PublicationEmailChain` — публикации
-  - `AutowebinarEmailChain` — видеолекции
-  - `CourseEmailChain`, `CoursePromoEmailCampaign` — курсы (ротация sender'а через `pickPersonalSender`)
-  - `OlympiadEmailChain`, `SilentReengagementCampaign`
-- Надзор: `cron/email-volume-alert.php` (каждые 15 мин) — алерт в Telegram и на `ALERT_EMAIL` при аномальном объёме отправки.
+## Команды из корня
 
-### Утилиты и интеграции
-- `Database` — обёртка PDO (`query`, `queryOne`, `execute`, `insert`, `update`, `delete`, транзакции).
-- `Validator` — chainable валидатор для `$_POST` (`required`, `email`, `phone`, `maxLength`, `fails`, `getFirstError`, `getData`).
-- `FileUploader` — загрузки.
-- `Bitrix24Integration` · `YandexGPTModerator` · `SearchService` (TNTSearch + MySQL FULLTEXT fallback) · `IcsGenerator`.
-- Yookassa SDK + вебхук `api/webhook/yookassa.php`. Акция «2+1».
-- PDF: mPDF (`Diploma`, `OlympiadDiploma`, `WebinarCertificate`, `PublicationCertificate`, `*Preview`).
-
-### Аудитория (3 уровня)
-`AudienceCategory` → `AudienceType` → `AudienceSpecialization`. v2-таблицы могут отсутствовать — классы проверяют через `isV2()`.
-
-### Конфиг и роутинг
-- `.env` → `config/config.php` (`define()` всех констант).
-- `config/database.php` — глобальный `$db` (PDO).
-- Роутинг: `.htaccess` (RewriteRule) + `includes/seo-url.php` (`buildSeoUrl`, `getSectionPathPrefix`, `redirectToSeoUrl`).
-- Маппинги слагов: константы-массивы в `config.php` (`COMPETITION_CATEGORY_URL_MAP`, `WEBINAR_STATUS_URL_MAP`, `COURSE_TYPE_URL_MAP`, `AUDIENCE_CATEGORIES`).
-
-### Разное
-- `includes/header.php` / `footer.php` — общие шаблоны (страницы передают `$pageTitle`, `$pageDescription`, `$canonicalUrl`, `$additionalCSS`, `$additionalJS`, `$noindex`).
-- `includes/session.php` — `generateCSRFToken()`, `validateCSRFToken()`.
-- `cron/` — фоновые процессоры (11 файлов).
-- `admin/` — админка.
-- `scripts/` — утилиты (импорт, индексация, ad-hoc); ⚠️ старые `send_*.php` ссылаются на удалённые SMTP-константы.
-
-## Стандартный код-паттерн
-
-**Класс:** конструктор принимает `$pdo`, оборачивает в `Database`. Все запросы через `?` placeholders.
-**Страница:** `session_start()` → requires → инстанс класса → `$pageTitle`/etc → `include header.php` → HTML → `include footer.php`.
-**AJAX:** `header('Content-Type: application/json')` → `Validator` → бизнес-логика → `echo json_encode([...])`. Ловить `Exception`, логировать, возвращать `{success:false}`.
-
-## Соглашения
-- SQL: только prepared statements.
-- XSS: `htmlspecialchars($v, ENT_QUOTES, 'UTF-8')`.
-- CSRF: `validateCSRFToken()` для форм.
-- Ассеты с версией: `?v=<?= filemtime(...) ?>` (для `$additionalCSS`/`$additionalJS` версию дописывает `assetUrl()` из `includes/asset-helpers.php`).
-- Глобальный CSS склеен в `assets/css/bundle.min.css`: после правок `fonts|main|search|redesign|redesign-info.css` пересобрать — `docker exec pedagogy_web php scripts/build-assets.php` — и закоммитить артефакт (иначе header.php безопасно откатится на отдельные `<link>`).
-- Шрифты Onest/Inter самохостятся (`assets/fonts/`, `assets/css/fonts.css`). Google Fonts не подключать.
-- utf8mb4 везде. Язык: русский (UI, комментарии, коммиты).
-- `.env` — НЕ коммитить.
-- **Весь репозиторий лежит в docroot** — Apache исполнит любой `.php` по прямой ссылке. Всё вне точек входа (`pages/`, `ajax/`, `api/`, `admin/`, `ai-consultant/` и корень) обязано начинаться с `if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }` — после `declare(strict_types=1)`, если он есть. `scripts/`, `cron/`, `database/`, `tests/`, `logs/` дополнительно закрыты в `.htaccess`; pre-commit хук режет коммит без guard'а. Повод: 10.08.2026 сканер выполнил `scripts/preview_html_emails.php` и `reset-test-data.php` из веба.
-- Рассылочный скрипт обязан требовать явный флаг `--send` (dry-run по умолчанию).
-- Отправка почты ограничена предохранителями в `EmailDispatcher`: рубильник `EMAIL_SENDING_ENABLED` и капы `EMAIL_CAP_RECIPIENT_HOUR|DAY`, `EMAIL_CAP_GLOBAL_HOUR`. Для служебных писем — `'bypass_cap' => true`. Аномалии ловит `cron/email-volume-alert.php` (Telegram + письмо).
-
-## Команды
 ```bash
-docker-compose up -d         # web:8080, phpmyadmin:8081
-php migrate.php              # миграции (трекинг — таблица migrations)
-php scripts/build-search-index.php
+git status --short --untracked-files=all
+git diff --check -- AGENTS.md CLAUDE.md docs/DEVELOPMENT.md
+php -l path/to/changed.php                 # подставить изменённый PHP-файл
+php tests/ai-messenger-test.php            # изолированный parser/policy, без отправок
+php tests/bitrix-payment-classification-test.php  # локальная классификация, без CRM API
+php tests/blog-queue-test.php              # временные файлы, без публикации
+php scripts/build-assets.php              # пишет CSS-бандл; нужен vendor с dev-зависимостями
 ```
-Деплой: навык `.agents/skills/fgos-deploy/SKILL.md` (git-based, через
-`docker exec pedagogy_web` на 141.105.69.45).
+Другие команды, предпосылки запуска и матрица сценариев — в `docs/DEVELOPMENT.md`.
+Не запускай общий `docker compose up -d` как нейтральную проверку: worker имеет `--send`,
+а web запускает cron. Миграции и построение поискового индекса также изменяют данные/файлы.
 
-## Подробные доки (читать по необходимости)
-- `docs/AUDIENCE_SEGMENTATION_GUIDE.md`, `docs/README_AUDIENCES.md`, `docs/ADMIN_GUIDE_AUDIENCES.md` — аудитория
-- `.claude/commands/deploy.md` — поддерживаемая процедура production-деплоя
-- `docs/DEPLOYMENT.md` — устаревшая инструкция ЮKassa, не использовать для текущего деплоя
-- `docs/INTEGRATION_README.md` — интеграции
-- `docs/выбор_курсов_переподготовки.md` — бизнес-логика курсов ПП
+## Правила кода
 
-## Редакционные статьи блога
-При создании, проверке и публикации редакционных педагогических статей прочитай
-`.agents/skills/pedagogical-articles/SKILL.md`. Это рабочий процесс в VS Code;
-пользовательский генератор на YandexGPT — отдельный продукт. Служебные материалы
-хранятся в закрытом каталоге `editorial/`. Структуру отдельно не согласовывать:
-пользователь согласует готовую статью и обложку перед публикацией.
+- Класс обычно принимает `$pdo` и использует `Database`. SQL — prepared statements с placeholders.
+- Страница: сессия → requires → бизнес-класс → метаданные → header → HTML → footer.
+- AJAX: JSON Content-Type → `Validator` → бизнес-логика → JSON; исключения логировать,
+  клиенту возвращать `{success:false}` без секретов и внутренних подробностей.
+- XSS: `htmlspecialchars($v, ENT_QUOTES, 'UTF-8')`; формы — `validateCSRFToken()`.
+- Метаданные: `$pageTitle`, `$pageDescription`, `$canonicalUrl`, `$additionalCSS`, `$additionalJS`, `$noindex`.
+- Версии ассетов — `filemtime`; для `$additionalCSS`/`$additionalJS` это делает `assetUrl()`.
+- После изменения `fonts|main|search|redesign|redesign-info.css` пересобери
+  `assets/css/bundle.min.css` и включи артефакт в будущий коммит с исходниками.
+  Альтернатива при доступном локальном контейнере: `docker exec pedagogy_web php scripts/build-assets.php`.
+- Onest/Inter самохостятся; Google Fonts не подключать. UI, комментарии и коммиты — русский.
+- Весь репозиторий — docroot. Служебный исполняемый PHP должен иметь
+  `if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }`
+  после `declare(strict_types=1)`, если он есть. Не ставь CLI-only в подключаемые классы/шаблоны.
+  `.htaccess` закрывает служебные каталоги; `.githooks/pre-commit` проверяет часть staged PHP
+  и секреты при наличии gitleaks. Это дополнительные рубежи, не замена ручной проверке.
 
-## Регенерация пользовательских публикаций
-При переработке уже существующей статьи на `/publikaciya/<slug>/` прочитай
-`.agents/skills/user-publication-regeneration/SKILL.md`. Это отдельный процесс:
-сохраняются ID, URL и авторство, исходник страхуется хешем и резервной копией, а
-production обновляется только после отдельного явного разрешения пользователя.
+## Почта и внешние системы
 
-## Деплой production
-При запросе на развёртывание или публикацию на сервере прочитай
-`.agents/skills/fgos-deploy/SKILL.md`. Пользователь должен явно запросить деплой;
-одобрение статьи само по себе не разрешает коммит, push и изменение production.
+- Почта: `EmailDispatcher` → `UnisenderClient` → Unisender Go; SMTP не добавлять.
+- Трекинг: `EmailTracker`, `email_events`, `api/email-track/`; транзакционные письма —
+  `includes/email-helper.php`, шаблоны — `includes/email-templates/`.
+- Цепочки: `EmailJourney`, `WebinarEmailJourney`, `PublicationEmailChain`, `AutowebinarEmailChain`,
+  `CourseEmailChain`, `CoursePromoEmailCampaign`, `OlympiadEmailChain`, `SilentReengagementCampaign`.
+  Проверяй lock, batch, retry и расписание конкретной цепочки по коду, не по общему описанию.
+- Сохраняй ротацию sender через `pickPersonalSender`, выключатель `EMAIL_SENDING_ENABLED`,
+  капы `EMAIL_CAP_RECIPIENT_HOUR|DAY`, `EMAIL_CAP_GLOBAL_HOUR`; служебный `bypass_cap` — только по назначению.
+- Рассылочный скрипт: dry-run по умолчанию, отправка только с явным `--send`.
+  `cron/email-volume-alert.php` сам отправляет алерты. Старые `scripts/send_*.php` не считать безопасными тестами.
 
-## Локальные файлы и состав деплоя
+## Тематические инструкции
 
-- При создании служебных файлов сразу добавляй в `.gitignore` точное правило для файлов, которые не нужны production: временных скриптов, отчётов проверок, скриншотов, превью, выгрузок, архивов и локальных черновиков. Не откладывай это до деплоя.
-- Для редакционных рабочих материалов используй игнорируемые `editorial/reviews/`, `editorial/articles/*/previews/` и `editorial/local-drafts/`. Сохраняй их локально; не коммить и не отправляй на сервер.
-- Перед коммитом проверяй `git status --short --untracked-files=all` и состав staged diff. Уже отслеживаемые служебные файлы исключай через `git rm --cached`, сохраняя локальные копии. Не используй `assume-unchanged` или `skip-worktree` для сокрытия изменений.
-- Не игнорируй исходный код, миграции, необходимые ассеты, проверенные комплекты статей и расписания только ради чистого `git status`: сначала проверь зависимости production и очереди. Документацию, инструкции и воспроизводимые проверки храни в Git.
-- Несогласованные редакции опубликованных или запланированных статей храни отдельно в `editorial/local-drafts/`; перед переносом сверяй резервную копию по SHA256. В серверном комплекте сохраняй согласованную версию и хеши расписания.
+- Аудитории: [сегментация](docs/AUDIENCE_SEGMENTATION_GUIDE.md), [обзор](docs/README_AUDIENCES.md),
+  [админка](docs/ADMIN_GUIDE_AUDIENCES.md). V2 может отсутствовать: сохраняй проверки `isV2()`.
+- Курсы ПП: [выбор курсов](docs/выбор_курсов_переподготовки.md).
+- [Автоответчик Telegram/MAX](docs/AI_MESSENGER_AUTOREPLIES.md), [возвраты](docs/REFUND_ACCOUNTING.md),
+  [обсуждения блога](docs/BLOG_DISCUSSION.md).
+- Редакционные статьи: [.agents/skills/pedagogical-articles/SKILL.md](.agents/skills/pedagogical-articles/SKILL.md).
+  Генератор пользователей — отдельный продукт. Структуру отдельно не согласовывать;
+  согласуется готовая статья с обложкой, кроме уже порученной автоматической очереди по навыку.
+- Замена существующей `/publikaciya/<slug>/`:
+  [.agents/skills/user-publication-regeneration/SKILL.md](.agents/skills/user-publication-regeneration/SKILL.md).
+  Сохраняй ID, URL, автора; исходник страхуй резервной копией и SHA256.
+- Выпуск: [.agents/skills/fgos-deploy/SKILL.md](.agents/skills/fgos-deploy/SKILL.md) →
+  [.claude/commands/deploy.md](.claude/commands/deploy.md). Конфигурация nginx вне Git: [описание](docs/NGINX_PROD.md).
+
+## Данные, Git и production
+
+- `.env`, ключи, vendor и личные файлы не коммитить. Не выводи секреты, содержимое `.env`,
+  токены, персональные данные и дампы в отчёты.
+- Коммит, push, деплой, миграции рабочих данных и отправки выполняй только в рамках поручения.
+  Уже данное разрешение действует; повторное подтверждение без новой причины не требуется.
+  Одобрение текста статьи само по себе не разрешает выпуск (учитывай порученную очередь в навыке).
+- fgos.pro, включая дипломы: отдельный сервер `root@141.105.69.45`, `/var/www/kamgorod`.
+  Общий `h1pro-main` / `mail.h1pro.ru` с 21.10.2026 — `185.70.105.59`; старый `158.255.6.202`
+  устарел. Это не замена адреса fgos.pro. DNS обновляет пользователь.
+- Временные отчёты, скриншоты, выгрузки и скрипты сразу исключай точным правилом `.gitignore`.
+  Редакционные локальные материалы — `editorial/reviews/`, `editorial/articles/*/previews/`,
+  `editorial/local-drafts/`. Проверенные комплекты, исходники, миграции и расписания не скрывать.
+- Перед коммитом проверь полный status и staged diff. Служебные tracked-файлы исключай
+  через `git rm --cached`, сохраняя копию; не используй assume-unchanged/skip-worktree.
+- Несогласованные редакции храни в `editorial/local-drafts/`; перед переносом сверяй SHA256
+  резервной копии. Серверный комплект сохраняет согласованную версию и хеши расписания.

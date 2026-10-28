@@ -7,6 +7,34 @@ TLS терминируется фронтовым nginx на 141.105.69.45, PHP-
 ⚠️ Бэкапы vhost класть **не** в `sites-enabled/` — nginx подключает `sites-enabled/*` целиком
 и подхватит копию как второй конфиг («conflicting server name … ignored»). Класть в `/root/`.
 
+## HTTPS-сертификат (27.10.2026)
+
+nginx использует `/etc/letsencrypt/live/fgos.pro/fullchain.pem` и
+`/etc/letsencrypt/live/fgos.pro/privkey.pem` для `fgos.pro` и `www.fgos.pro`.
+Старый wildcard GlobalSign в `/etc/ssl/fgos.pro/` истёк 26.10.2026; подключение
+этой статической копии при наличии действующего Let's Encrypt вызывало
+`NET::ERR_CERT_DATE_INVALID`. Старые файлы сохранены, nginx на них больше не ссылается.
+
+Продление выполняет включённый `certbot.timer`, проверка доменов — webroot
+`/var/www/certbot`. Hook `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx`
+выполняет `nginx -t` и `systemctl reload nginx` после успешного продления.
+Резервная копия vhost до исправления:
+`/root/kamgorod.nginx-before-tls-20261027T041305Z`.
+
+Проверка продления конкретного сертификата:
+
+```bash
+certbot renew --cert-name fgos.pro --dry-run --run-deploy-hooks --no-random-sleep-on-renew
+```
+
+27.10.2026 эта проверка и deploy hook прошли успешно. Внешние HTTPS-запросы
+с проверкой доверия получили 200 для `fgos.pro` и 301 для `www.fgos.pro`;
+подключённый сертификат действует до 10.12.2026.
+
+На сервере также есть отдельный истёкший сертификат `mail.fgos.pro`, продление
+которого завершается ошибкой. Он не используется vhost сайта; его состояние
+следует проверять отдельно, не удаляя сертификат без проверки потребителей.
+
 ## Схема в заголовке Location (08.09.2026)
 
 **Симптом:** 301-редиректы отдавали `Location: http://fgos.pro/...` — при том что сайт живёт
