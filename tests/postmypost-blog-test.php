@@ -62,8 +62,8 @@ $p->run(true);
 pmpCheck(in_array('2026-10-01', $api->readDates, true) && in_array('2026-10-21', $api->readDates, true), 'Explicit dates include archive and current day; API default today is not used');
 pmpCheck($api->creates === 3, 'All new published articles plus one oldest archive');
 $contents = array_map(fn($r) => $r['details'][0]['content'], array_values($api->items));
-pmpCheck(str_contains($contents[0], 'article-3/') && str_contains($contents[1], 'article-4/') && str_contains($contents[2], 'article-1/'), 'New articles precede chronological archive');
-pmpCheck(str_contains($contents[0], '?utm_source=vk&utm_campaign=blog'), 'VK UTM parameters included');
+pmpCheck(str_contains($contents[0], '/s/vk/3') && str_contains($contents[1], '/s/vk/4') && str_contains($contents[2], '/s/vk/1'), 'New articles precede chronological archive');
+pmpCheck(str_contains($contents[0], 'https://fgos.pro/s/vk/3') && !str_contains($contents[0], 'utm_'), 'Короткая ссылка без видимых UTM');
 pmpCheck((int)$db->query("SELECT COUNT(*) FROM vk_blog_deliveries WHERE state='submitted'")->fetchColumn() === 3, 'Provider acceptance is not mistaken for VK publication');
 $p->run(true); pmpCheck($api->creates === 3, 'Repeat run does not duplicate pending service publications or archive');
 $api->publishAll(); $p->run(false);
@@ -104,7 +104,7 @@ $p->run(true); pmpCheck($api->creates === 0, 'Unpublishing during upload blocks 
 
 $f = pmpFixture(); [$db, $api] = $f; pmpArticle($db, 1); pmpArticle($db, 2); $p = pmpPublisher($f); $p->initialize();
 $db->exec("UPDATE publications SET cover_image_url='' WHERE id=1"); $p->run(true);
-pmpCheck($api->creates === 1 && str_contains($api->items[101]['details'][0]['content'], 'article-2/'), 'Missing archive cover does not consume quota before validation');
+pmpCheck($api->creates === 1 && str_contains($api->items[101]['details'][0]['content'], '/s/vk/2'), 'Missing archive cover does not consume quota before validation');
 
 $f = pmpFixture(); [$db, $api] = $f; $p = pmpPublisher($f); $p->initialize(); pmpArticle($db, 1);
 $api->items[77] = ['id' => 77, 'account_ids' => [7], 'details' => [['publication_type' => 1, 'content' => 'RSS draft https://fgos.pro/blog/article-1/?utm_source=vk']], 'publication_status' => 4, 'posts' => []];
@@ -139,4 +139,7 @@ pmpCheck(str_contains($calls[0], 'post_date=2026-10-21') && str_contains($calls[
 pmpCheck(!PmpBlogClient::mentions(['account_ids' => [8], 'details' => [['content' => 'https://fgos.pro/blog/article-1/']]], 'https://fgos.pro/blog/article-1/', 7), 'Other account posts cannot match');
 $wrong = new PmpBlogClient('secret', 10, 7, 42, fn() => ['id' => 999]);
 pmpFails(fn() => $wrong->publication(100), 'GET response with a different publication ID is rejected');
+pmpCheck(PmpBlogClient::mentions(['account_ids' => [7], 'details' => [['content' => 'https://fgos.pro/s/vk/1']]], 'https://fgos.pro/blog/article-1/', 7, ['https://fgos.pro/s/vk/1']), 'Короткая ссылка распознаётся при сверке старого payload');
+pmpCheck(!PmpBlogClient::mentions(['account_ids' => [7], 'details' => [['content' => 'https://fgos.pro/s/vk/11']]], 'https://fgos.pro/s/vk/1', 7), 'Соседний ID не считается совпадением');
+pmpCheck(PmpBlogClient::mentions(['account_ids' => [7], 'details' => [['content' => 'https://fgos.pro/s/vk/1/?utm_source=vk']]], 'https://fgos.pro/s/vk/1', 7), 'Завершающий слеш короткой ссылки не создаёт повторную публикацию');
 echo "Postmypost blog checks passed\n";

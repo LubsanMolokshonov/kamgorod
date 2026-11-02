@@ -51,7 +51,7 @@ final class FakeBlogSite implements VkBlogSiteGateway
     {
         if (++$this->calls === $this->failOnCall || $this->down || empty($article['cover_image_url'])) { throw new RuntimeException('Нет сайта/обложки'); }
         if ($this->during) { ($this->during)(); }
-        return ['payload' => VkBlogSite::payload($article, 'https://fgos.pro/blog/' . $article['slug'] . '/'),
+        return ['payload' => VkBlogSite::payload($article, BlogSocialLink::url('vk', (int)$article['id'])),
             'sha256' => hash('sha256', $article['cover_image_url']), 'bytes' => 'same-cover', 'mime' => 'image/png'];
     }
 }
@@ -86,6 +86,8 @@ article($db, 1); article($db, 2); article($db, 3, 'draft'); article($db, 4, 'pub
 $db->exec("UPDATE publications SET redirect_to_slug='replacement' WHERE id=2");
 $p = publisher($f);
 check(count($p->preview('https://fgos.pro')) === 1, 'предпросмотр исключает черновики, чужой раздел и редиректы');
+check($p->preview('https://fgos.pro')[0]['url'] === 'https://fgos.pro/s/vk/1' && str_ends_with($p->preview('https://fgos.pro')[0]['message'], 'https://fgos.pro/s/vk/1'), 'предпросмотр содержит короткую ссылку в тексте');
+check((new VkBlogSite('https://fgos.pro'))->url(['slug'=>'article-1']) === 'https://fgos.pro/blog/article-1/', 'проверка страницы использует canonical URL');
 check((int)$db->query('SELECT count(*) FROM vk_blog_deliveries')->fetchColumn() === 0 && !$vk->posts, 'предпросмотр не меняет базу и VK');
 fails(fn() => $p->run(), 'отправка до фиксации архива запрещена');
 $db->exec('UPDATE publications SET redirect_to_slug=NULL WHERE id=2');
@@ -95,7 +97,7 @@ article($db, 5); article($db, 6);
 $p->run();
 check(count($vk->posts) === 3, 'все новые и одна архивная статья');
 $urls = array_column(array_column($vk->posts, 'payload'), 'url');
-check(str_contains($urls[0], 'article-5') && str_contains($urls[1], 'article-6') && str_contains($urls[2], 'article-1'), 'новые первыми, архив от старых к новым');
+check($urls === ['https://fgos.pro/s/vk/5','https://fgos.pro/s/vk/6','https://fgos.pro/s/vk/1'], 'новые первыми, архив от старых к новым');
 $p->run();
 check(count($vk->posts) === 3, 'повторный запуск не отправляет второй архив');
 $db->exec("UPDATE publications SET title='Правка', slug='new-slug', published_at='2027-01-01' WHERE id=1");
@@ -205,7 +207,7 @@ $f = fixture(); [$db, $vk, $site] = $f;
 article($db, 1); article($db, 2);
 $db->exec("UPDATE publications SET cover_image_url='' WHERE id=1");
 $p = publisher($f); $p->initialize(); $p->run();
-check(count($vk->posts) === 1 && str_contains(current($vk->posts)['payload']['url'], 'article-2'),
+check(count($vk->posts) === 1 && current($vk->posts)['payload']['url'] === 'https://fgos.pro/s/vk/2',
     'архивная статья без обложки не блокирует другие статьи');
 
 $f = fixture(); [$db, $vk, $site] = $f;
@@ -233,7 +235,7 @@ check(count($vk->posts) === 1, 'изменение счётчика просмо
 $f = fixture(); [$db, $vk] = $f;
 $f[2] = new class implements VkBlogSiteGateway {
     public function prepare(array $a): array {
-        return ['payload' => VkBlogSite::payload($a, 'https://fgos.pro/blog/' . $a['slug'] . '/') + ['text_only' => true],
+        return ['payload' => VkBlogSite::payload($a, BlogSocialLink::url('vk', (int)$a['id'])) + ['text_only' => true],
             'sha256' => '', 'bytes' => '', 'mime' => ''];
     }
 };
@@ -241,11 +243,24 @@ article($db, 1); article($db, 2);
 $p = publisher($f); $p->initialize(); article($db, 3);
 $vk->loseResponse = true;
 $p->run(2);
-check(count($vk->posts) === 1 && str_contains($vk->posts[100]['payload']['url'], 'article-2'), 'выбор ID отправляет только указанную статью');
+check(count($vk->posts) === 1 && $vk->posts[100]['payload']['url'] === 'https://fgos.pro/s/vk/2', 'выбор ID отправляет только указанную статью');
 check($vk->uploads === 0 && $vk->posts[100]['photo'] === '', 'режим без фото не загружает изображений');
 check($db->query("SELECT state FROM vk_blog_deliveries WHERE publication_id=2")->fetchColumn() === 'unknown', 'потеря ответа текстового поста блокирует повтор');
 $vk->loseResponse = false; $p->run(2); $p->run(2);
 check(count($vk->posts) === 1 && $db->query("SELECT state FROM vk_blog_deliveries WHERE publication_id=2")->fetchColumn() === 'sent', 'текстовый пост сверяется и не дублируется');
 check(VkBlogClient::matches(['from_id' => -42, 'text' => 'text', 'attachments' => []], ['message' => 'text', 'text_only' => true], '', 42), 'сверка текста без фото проверяет автора и текст');
 check(!VkBlogClient::matches(['from_id' => -42, 'text' => 'text', 'attachments' => [['type' => 'photo']]], ['message' => 'text', 'text_only' => true], '', 42), 'сверка без фото отклоняет запись с неожиданным вложением');
+// Неизвестная отправка старого формата сверяется по сохранённому снимку, без новой короткой ссылки.
+$f = fixture(); [$db, $vk] = $f;
+$p = publisher($f); $p->initialize(); article($db, 1);
+$vk->loseResponse = true; $p->run();
+$legacy = $vk->posts[100]['payload'];
+$legacy['message'] = str_replace($legacy['url'], 'https://fgos.pro/blog/article-1/?utm_source=vk&utm_campaign=blog', $legacy['message']);
+$legacy['url'] = 'https://fgos.pro/blog/article-1/?utm_source=vk&utm_campaign=blog';
+$legacyEncoded = json_encode($legacy, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+$db->prepare('UPDATE vk_blog_deliveries SET payload=? WHERE publication_id=1')->execute([$legacyEncoded]);
+$vk->posts[100]['payload'] = $legacy; $vk->loseResponse = false;
+$p->run();
+check(count($vk->posts) === 1 && $db->query('SELECT state FROM vk_blog_deliveries')->fetchColumn() === 'sent', 'старая неизвестная отправка сверяется по исходному полному URL');
+check($db->query('SELECT payload FROM vk_blog_deliveries')->fetchColumn() === $legacyEncoded, 'сверка сохраняет исторический payload без замены ссылки');
 echo "Все проверки пройдены\n";

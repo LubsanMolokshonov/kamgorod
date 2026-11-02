@@ -5,7 +5,7 @@ if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }
 interface TgBlogGateway
 {
     public function preflight(): string;
-    public function send(array $photo, string $caption): int;
+    public function send(array $photo, string $caption, array $replyMarkup): int;
 }
 final class TgBlogRejected extends RuntimeException {}
 final class TgBlogUnknown extends RuntimeException {}
@@ -79,11 +79,12 @@ final class TgBlogClient implements TgBlogGateway
         return (string)$chat['id'];
     }
 
-    public function send(array $photo, string $caption): int
+    public function send(array $photo, string $caption, array $replyMarkup): int
     {
         $result = $this->request('sendPhoto', ['chat_id' => $this->channel,
             'photo' => new CURLStringFile($photo['bytes'], 'cover.' . ($photo['mime'] === 'image/png' ? 'png' : 'jpg'), $photo['mime']),
-            'caption' => $caption]);
+            'caption' => $caption,
+            'reply_markup' => json_encode($replyMarkup, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
         if (empty($result['message_id'])) { throw new TgBlogUnknown('Telegram не вернул message_id'); }
         return (int)$result['message_id'];
     }

@@ -129,8 +129,8 @@ final class PmpBlogClient implements PmpBlogGateway
     public static function articlePath(string $url): ?string
     {
         $parts = parse_url(html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        if (!$parts || ($parts['host'] ?? '') !== 'fgos.pro' || !preg_match('~^/blog/[^/]+/$~D', $parts['path'] ?? '')) { return null; }
-        return $parts['path'];
+        if (!$parts || ($parts['host'] ?? '') !== 'fgos.pro' || !preg_match('~^(?:/blog/[^/]+/|/s/vk/[1-9][0-9]*/?)$~D', $parts['path'] ?? '')) { return null; }
+        return str_starts_with($parts['path'], '/s/vk/') ? rtrim($parts['path'], '/') : $parts['path'];
     }
 
     public static function detail(array $post, int $account): ?array
@@ -145,14 +145,15 @@ final class PmpBlogClient implements PmpBlogGateway
         return count($chosen) === 1 ? $chosen[0] : null;
     }
 
-    public static function mentions(array $post, string $url, int $account): bool
+    public static function mentions(array $post, string $url, int $account, array $aliases = []): bool
     {
-        $detail = self::detail($post, $account); $path = self::articlePath($url);
-        if (!$detail || !$path) { return false; }
+        $detail = self::detail($post, $account);
+        $paths = array_values(array_filter(array_map([self::class, 'articlePath'], array_merge([$url], $aliases))));
+        if (!$detail || !$paths) { return false; }
         $links = [(string)($detail['link'] ?? '')];
-        preg_match_all('~https://fgos\.pro/blog/[^\s<>"\x{00a0}]+~u', (string)($detail['content'] ?? ''), $matches);
+        preg_match_all('~https://fgos\.pro/(?:blog/|s/vk/)[^\s<>"\x{00a0}]+~u', (string)($detail['content'] ?? ''), $matches);
         $links = array_merge($links, $matches[0]);
-        foreach ($links as $link) { if (self::articlePath($link) === $path) { return true; } }
+        foreach ($links as $link) { if (in_array(self::articlePath($link), $paths, true)) { return true; } }
         return false;
     }
 

@@ -53,7 +53,7 @@ $vk = new class implements VkBlogGateway {
 };
 $site = new class implements VkBlogSiteGateway {
     public function prepare(array $a): array {
-        return ['payload'=>VkBlogSite::payload($a, 'https://fgos.pro/blog/' . $a['slug'] . '/'),
+        return ['payload'=>VkBlogSite::payload($a, BlogSocialLink::url('vk', (int)$a['id'])),
             'sha256'=>'hash', 'bytes'=>'source', 'mime'=>'image/png'];
     }
 };

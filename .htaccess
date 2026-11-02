@@ -53,7 +53,7 @@ RewriteRule ^(\.well-known/)?apple-app-site-association$ - [R=410,L]
 RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/(api|ajax|ai-chat|ai-consultant)(/|$)
+RewriteCond %{REQUEST_URI} !^/(api|ajax|ai-chat|ai-consultant|s)(/|$)
 RewriteCond %{REQUEST_URI} !\.[a-zA-Z0-9]+$
 RewriteCond %{REQUEST_URI} !/$
 RewriteRule ^(.+)$ %{ENV:SEO_ORIGIN}/$1/ [R=301,L]
@@ -80,6 +80,9 @@ RewriteRule ^feeds/(competitions-ad|competitions|olympiads-ad|olympiads|courses-
 # ================================================
 # ГЛАВНАЯ СТРАНИЦА
 # ================================================
+
+# Короткие ссылки блога: параметры читаются только из исходного пути, query отбрасываем.
+RewriteRule ^s(?:/.*)?$ pages/blog-social-redirect.php [END,QSD]
 
 # Magic Link auth (path-only формат: устойчив к мангелингу URL в редиректорах Unisender/Gmail/антиспам)
 RewriteRule ^m/([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+)/?$ pages/magic-auth.php?token=$1&r=$2 [L,QSA]

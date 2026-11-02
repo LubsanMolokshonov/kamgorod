@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }
+require_once __DIR__ . '/../../../classes/BlogSocialLink.php';
 
 interface VkBlogSiteGateway
 {
@@ -100,6 +101,7 @@ final class VkBlogSite implements VkBlogSiteGateway
     {
         if (!$this->textOnly && empty($article['cover_image_url'])) { throw new RuntimeException('У статьи нет обложки'); }
         $url = $this->url($article);
+        $postUrl = BlogSocialLink::url('vk', (int)$article['id'], $this->baseUrl);
         $html = $this->fetch($url, 5000000);
         $dom = new DOMDocument();
         $previous = libxml_use_internal_errors(true);
@@ -111,13 +113,13 @@ final class VkBlogSite implements VkBlogSiteGateway
         $cover = $xpath->query('//img[contains(concat(" ",normalize-space(@class)," ")," pub-cover ")]/@src')->item(0)?->nodeValue;
         if ($this->textOnly) {
             if ($canonical !== $url) { throw new RuntimeException('Страница не соответствует статье'); }
-            return ['payload' => self::payload($article, $url) + ['text_only' => true],
+            return ['payload' => self::payload($article, $postUrl) + ['text_only' => true],
                 'sha256' => '', 'bytes' => '', 'mime' => ''];
         }
         if ($canonical !== $url || !$cover || $this->absolute($cover) !== $this->absolute($article['cover_image_url'])) {
             throw new RuntimeException('Страница не соответствует статье или обложка на сайте изменилась');
         }
         $source = $this->fetch($this->absolute($cover), 20000000);
-        return ['payload' => self::payload($article, $url), 'sha256' => hash('sha256', $source)] + self::image($source);
+        return ['payload' => self::payload($article, $postUrl), 'sha256' => hash('sha256', $source)] + self::image($source);
     }
 }

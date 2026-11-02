@@ -58,7 +58,7 @@ final class VkBlogPublisher
         // Не требует миграции или подключения к VK; не пишет в БД.
         $rows = $this->query('SELECT * FROM publications WHERE ' . self::ELIGIBLE . ' ORDER BY published_at, id')->fetchAll(PDO::FETCH_ASSOC);
         return array_map(static fn(array $a) => ['publication_id' => $a['id']] +
-            VkBlogSite::payload($a, rtrim($baseUrl, '/') . '/blog/' . rawurlencode($a['slug']) . '/'), $rows);
+            VkBlogSite::payload($a, BlogSocialLink::url('vk', (int)$a['id'], $baseUrl)), $rows);
     }
 
     public function run(?int $articleId = null): array

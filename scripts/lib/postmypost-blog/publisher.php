@@ -3,6 +3,7 @@ declare(strict_types=1);
 if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }
 require_once __DIR__ . '/client.php';
 require_once __DIR__ . '/../vk-blog/site.php';
+require_once __DIR__ . '/../../../classes/BlogSocialLink.php';
 
 final class PmpBlogPublisher
 {
@@ -51,7 +52,16 @@ final class PmpBlogPublisher
             LEFT JOIN vk_blog_deliveries d ON d.publication_id=p.id AND d.group_id=?
             WHERE p." . self::ELIGIBLE . " AND (d.id IS NULL OR d.state='pending')
             ORDER BY COALESCE(d.is_archive,0),p.published_at,p.id", [$this->group])->fetchAll(PDO::FETCH_ASSOC);
-        return array_map(static fn(array $r): array => $r + ['url' => 'https://fgos.pro/blog/' . rawurlencode($r['slug']) . '/?utm_source=vk&utm_campaign=blog'], $rows);
+        return array_map(static fn(array $r): array => $r + ['url' => BlogSocialLink::url('vk', (int)$r['id'])], $rows);
+    }
+
+    // При переходе на короткие URL прежние внешние черновики остаются теми же статьями.
+    private function articleLinkAliases(int $id): array
+    {
+        $aliases = [BlogSocialLink::url('vk', $id)];
+        $slug = $this->q("SELECT slug FROM publications WHERE id=? AND source='blog'", [$id])->fetchColumn();
+        if (is_string($slug) && $slug !== '') { $aliases[] = 'https://fgos.pro/blog/' . rawurlencode($slug) . '/'; }
+        return $aliases;
     }
 
     private function providerRow(int $id): array
@@ -111,7 +121,7 @@ final class PmpBlogPublisher
                     continue;
                 }
                 $payload = json_decode((string)$row['payload'], true);
-                if (!is_array($expected) && (!is_array($payload) || !PmpBlogClient::mentions($post, (string)($payload['url'] ?? ''), $this->account))) {
+                if (!is_array($expected) && (!is_array($payload) || !PmpBlogClient::mentions($post, (string)($payload['url'] ?? ''), $this->account, $this->articleLinkAliases((int)$row['publication_id'])))) {
                     $this->hold((int)$row['id'], 'blocked', 'Postmypost: сохранённый внешний черновик больше не соответствует статье');
                     continue;
                 }
@@ -194,12 +204,13 @@ final class PmpBlogPublisher
             $prepared = $this->site->prepare($article);
             if ($this->article((int)$row['publication_id']) !== $article) { throw new RuntimeException('Статья изменилась во время проверки'); }
             $payload = $prepared['payload'];
-            $payload['message'] = str_replace($payload['url'], $payload['url'] . '?utm_source=vk&utm_campaign=blog', $payload['message']);
-            $payload['url'] .= '?utm_source=vk&utm_campaign=blog';
+            $shortUrl = BlogSocialLink::url('vk', (int)$article['id']);
+            $payload['message'] = str_replace($payload['url'], $shortUrl, $payload['message']);
+            $payload['url'] = $shortUrl;
             $payload['cover_sha256'] = $prepared['sha256'];
             $this->q('UPDATE vk_blog_deliveries SET payload=? WHERE id=?',
                 [json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $id]);
-            $existing = array_values(array_filter($posts, fn(array $p): bool => PmpBlogClient::mentions($p, $payload['url'], $this->account)));
+            $existing = array_values(array_filter($posts, fn(array $p): bool => PmpBlogClient::mentions($p, $payload['url'], $this->account, ['https://fgos.pro/blog/' . rawurlencode($article['slug']) . '/'])));
             $provider = $this->providerRow($id);
             if ($provider['provider_id']) { $this->accept($id, $this->api->publication((int)$provider['provider_id'])); return false; }
             if ($existing) {

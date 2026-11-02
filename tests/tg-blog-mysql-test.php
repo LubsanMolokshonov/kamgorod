@@ -22,8 +22,8 @@ $add = static function(int $id) use ($insert): void { $insert->execute([$id,'art
 $tg = new class implements TgBlogGateway {
     public array $posts=[]; public ?Throwable $error=null;
     public function preflight(): string { return '-10042'; }
-    public function send(array $photo,string $caption): int {
-        if ($this->error) { throw $this->error; } $this->posts[]=$caption; return count($this->posts);
+    public function send(array $photo,string $caption,array $replyMarkup): int {
+        if ($this->error) { throw $this->error; } $this->posts[]=['caption'=>$caption,'reply_markup'=>$replyMarkup]; return count($this->posts);
     }
 };
 $site = new class implements TgBlogSiteGateway {
@@ -36,13 +36,14 @@ $site = new class implements TgBlogSiteGateway {
 };
 $p = new TgBlogPublisher($db,$tg,$site,'-10042','https://fgos.pro');
 $day = static fn(string $date,string $time='12:00'): DateTimeImmutable => new DateTimeImmutable("$date $time",new DateTimeZone('Europe/Moscow'));
-$add(0);$add(1);$add(2);$add(3);$add(4);$add(5);$add(6);
-$db->exec('UPDATE publications SET cover_image_url=NULL WHERE id=0');
+$add(90);$add(1);$add(2);$add(3);$add(4);$add(5);$add(6);
+$db->exec('UPDATE publications SET cover_image_url=NULL WHERE id=90');
 $db->exec("UPDATE publications SET status='draft' WHERE id=3");
 $db->exec("UPDATE publications SET source='user' WHERE id=4");
 $db->exec("UPDATE publications SET redirect_to_slug='replacement' WHERE id=5");
 $db->exec("UPDATE publications SET published_at='2037-01-01' WHERE id=6");
 assertTg(count($p->preview())===3,'Предпросмотр исключает черновики, чужие разделы, редиректы и будущие даты');
+assertTg($p->preview()[0]['reply_markup']['inline_keyboard'][0][0]['url']==='https://fgos.pro/s/tg/1','Предпросмотр содержит кнопку с постоянным ID');
 assertTg((int)$db->query('SELECT COUNT(*) FROM tg_blog_deliveries')->fetchColumn()===0,'Предпросмотр не пишет в очередь');
 throwsTg(fn()=>$p->run('archive',$day('2026-10-19')),'До инициализации отправка запрещена');
 $p->initialize();
@@ -50,7 +51,10 @@ throwsTg(fn()=>$p->initialize(),'Повторная инициализация �
 $add(7);$add(8);
 assertTg($p->run('archive',$day('2026-10-19','09:59'))['state']==='too_early','Архив не отправляется до 10');
 assertTg($p->run('archive',$day('2026-10-19','10:00'))['publication_id']===1,'Первая архивная статья в 10');
-assertTg($db->query('SELECT state FROM tg_blog_deliveries WHERE publication_id=0')->fetchColumn()==='pending','Статья без обложки остаётся в очереди и не блокирует следующую');
+$stored = json_decode($db->query('SELECT payload FROM tg_blog_deliveries WHERE publication_id=1')->fetchColumn(), true);
+assertTg($stored['reply_markup']===$tg->posts[0]['reply_markup'] && $stored['caption']===$tg->posts[0]['caption'], 'Подпись и кнопка сохранены перед отправкой и переданы в Telegram');
+assertTg($stored['reply_markup']['inline_keyboard'][0][0]['url']==='https://fgos.pro/s/tg/1' && !str_contains($stored['caption'],'https://'), 'Отправка содержит кнопку без URL в подписи');
+assertTg($db->query('SELECT state FROM tg_blog_deliveries WHERE publication_id=90')->fetchColumn()==='pending','Статья без обложки остаётся в очереди и не блокирует следующую');
 assertTg($p->run('archive',$day('2026-10-19'))['state']==='daily_limit','Повторный запуск не даёт второй архив');
 assertTg($p->run('new',$day('2026-10-19'))['publication_id']===7,'Одна новая статья в 12');
 assertTg($p->run('new',$day('2026-10-19'))['state']==='daily_limit','Лимит новой очереди');
@@ -76,8 +80,8 @@ assertTg(count($tg->posts)===5,'Отправлены только пять по�
 $db->exec("UPDATE tg_blog_deliveries SET state='sending' WHERE publication_id=10");
 throwsTg(fn()=>$p->run('new',$day('2026-10-26')),'Аварийный sending превращается в unknown');
 assertTg($db->query("SELECT state FROM tg_blog_deliveries WHERE publication_id=10")->fetchColumn()==='unknown','Восстановление состояния после аварии');
-$db->exec("UPDATE publications SET cover_image_url='/cover.png' WHERE id=0");
-assertTg($p->run('archive',$day('2026-10-26'))['publication_id']===0,'После появления обложки отложенная статья снова участвует в очереди');
+$db->exec("UPDATE publications SET cover_image_url='/cover.png' WHERE id=90");
+assertTg($p->run('archive',$day('2026-10-26'))['publication_id']===90,'После появления обложки отложенная статья снова участвует в очереди');
 // Реальная MySQL-блокировка между двумя подключениями.
 $other = new PDO('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',DB_USER,DB_PASS);
 $key='tg_blog_test_'.bin2hex(random_bytes(8));
