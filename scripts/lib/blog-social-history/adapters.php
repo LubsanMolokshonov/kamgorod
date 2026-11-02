@@ -6,6 +6,7 @@ require_once __DIR__ . '/../vk-blog/client.php';
 
 final class BlogHistoryTelegram
 {
+    private ?CurlHandle $handle = null;
     public function __construct(private string $token, private string $channel = 'merovospitatel', private string $ipv4 = '149.154.167.220')
     {
         $this->channel = ltrim($this->channel, '@');
@@ -18,13 +19,37 @@ final class BlogHistoryTelegram
             throw new RuntimeException('Не настроен Telegram API');
         }
         if (!in_array($method, ['getMe', 'getChat', 'getChatMember', 'editMessageCaption'], true)) { throw new LogicException('Метод запрещён'); }
-        $ch = curl_init('https://api.telegram.org/bot' . $this->token . '/' . $method);
-        curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => http_build_query($data), CURLOPT_RETURNTRANSFER => true,
+        for ($attempt = 0; ; $attempt++) {
+            try { return $this->performApi($method, $data); }
+            catch (BlogHistoryRejected $e) { throw $e; }
+            catch (RuntimeException $e) {
+                // Только чтение: неизвестный результат редактирования никогда не повторяем.
+                if ($method === 'editMessageCaption' || $attempt >= 2) { throw $e; }
+                usleep(250000);
+            }
+        }
+    }
+
+    private function performApi(string $method, array $data): array
+    {
+        // Переиспользуем HTTPS-соединение между проверками и редактированием.
+        $ch = $this->handle ??= curl_init('https://api.telegram.org/bot' . $this->token . '/' . $method);
+        curl_setopt_array($ch, [CURLOPT_URL => 'https://api.telegram.org/bot' . $this->token . '/' . $method,
+            CURLOPT_POST => true, CURLOPT_POSTFIELDS => http_build_query($data), CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_TIMEOUT => 35, CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_RESOLVE => ['api.telegram.org:443:' . $this->ipv4], CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]);
-        $raw = curl_exec($ch); $status = curl_getinfo($ch, CURLINFO_HTTP_CODE); $error = curl_errno($ch); curl_close($ch);
-        if ($error || !is_string($raw)) { throw new RuntimeException('Сбой транспорта Telegram'); }
-        $result = self::decodeResponse($status, $raw);
+        $raw = curl_exec($ch); $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $error = curl_errno($ch);
+        if ($error || !is_string($raw)) {
+            $this->handle = null;
+            // Не выводим curl_error/URL: они могут содержать токен.
+            throw new RuntimeException('Сбой транспорта Telegram: ' . $method . ' (cURL ' . $error . ', HTTP ' . $status . ')');
+        }
+        try { $result = self::decodeResponse($status, $raw); }
+        catch (BlogHistoryRejected $e) { throw $e; }
+        catch (RuntimeException $e) {
+            $this->handle = null;
+            throw new RuntimeException('Неопределённый ответ Telegram: ' . $method . ' (cURL ' . $error . ', HTTP ' . $status . ')');
+        }
         usleep(500000);
         return $result;
     }
