@@ -35,10 +35,12 @@ foreach ([[500, '{"ok":false,"error_code":500}'], [200, 'bad json'], [200, '{"ok
 }
 try { BlogHistoryTelegram::decodeResponse(403, '{"ok":false,"error_code":403}'); throw new LogicException('Ожидался отказ'); }
 catch (BlogHistoryRejected $e) { historyCheck(true, 'Однозначный отказ 403 распознаётся'); }
-historyCheck(BlogHistoryPlan::telegram($after, $lookup) === $after, 'Повторное преобразование ничего не меняет');
+historyCheck(BlogHistoryPlan::telegram($after, $lookup, $caption) === $after, 'Повторное преобразование ничего не меняет');
+historySkip(fn() => BlogHistoryPlan::telegram($snapshot, $lookup), 'Незарегистрированный пост не меняется: widget может скрывать клавиатуру');
+historySkip(fn() => BlogHistoryPlan::telegram($snapshot, $lookup, $caption, true), 'Отправка с сохранённым reply_markup не перезаписывается даже при отсутствии кнопок в widget');
 historySkip(fn() => BlogHistoryPlan::telegram($snapshot, $lookup, 'Отредактированный текст'), 'Ручная правка после отправки не затирается');
 $withButton = $snapshot; $withButton['buttons'] = [['text' => 'Другая кнопка', 'url' => 'https://example.com']];
-historySkip(fn() => BlogHistoryPlan::telegram($withButton, $lookup), 'Неподдержанные кнопки сохраняются пропуском');
+historySkip(fn() => BlogHistoryPlan::telegram($withButton, $lookup, $caption), 'Неподдержанные кнопки сохраняются пропуском');
 $formatted = BlogHistoryTelegram::parse(str_replace('Описание 😀', '<b>Описание 😀</b>', $html), 534);
 historySkip(fn() => BlogHistoryPlan::telegram($formatted, $lookup), 'Форматированная подпись не теряется');
 foreach (['?utm_source=email&utm_campaign=blog', '?utm_source=telegram&utm_campaign=blog&utm_content=extra', '?utm_source=telegram&utm_source=vk&utm_campaign=blog', '#fragment'] as $suffix) {
@@ -75,6 +77,9 @@ try {
     historyCheck($done['state'] === 'done' && $writes === 1, 'Проверенный снимок применяется один раз');
     $repeat = $runner->run('tg:534', $after, fn() => $after, $transform, $writer, true);
     historyCheck($repeat['state'] === 'already_done' && $writes === 1, 'Повтор запуска не вызывает API редактирования');
+    $publicAfter = $after; $publicAfter['buttons'] = [];
+    $unconfirmedWidget = $runner->run('tg:534', $publicAfter, fn() => $publicAfter, $transform, $writer, true);
+    historyCheck($unconfirmedWidget['state'] === 'skipped' && $writes === 1, 'Widget без клавиатуры не считается подтверждением текущих кнопок и не вызывает повтор');
     $changed = $snapshot; $changed['text'] .= 'Правка';
     $conflict = $runner->run('tg:535', $snapshot, fn() => $changed, $transform, $writer, true);
     historyCheck($conflict['state'] === 'conflict' && $writes === 1, 'Конкурентное изменение блокирует запись');

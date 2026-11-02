@@ -79,7 +79,9 @@ try {
                 try {
                     $observed = $adapter->read($id);
                     $transform = $current === 'tg'
-                        ? static fn(array $snapshot): array => BlogHistoryPlan::telegram($snapshot, $lookup, isset($known[$id]['caption']) ? (string)$known[$id]['caption'] : null)
+                        ? static fn(array $snapshot): array => BlogHistoryPlan::telegram($snapshot, $lookup,
+                            isset($known[$id]['caption']) ? (string)$known[$id]['caption'] : null,
+                            array_key_exists('reply_markup', $known[$id] ?? []))
                         : static fn(array $snapshot): array => BlogHistoryPlan::vk($snapshot, $lookup);
                     $result = $runner->run($current . ':' . $id, $observed, static fn(): array => $adapter->read($id), $transform,
                         static fn(array $after): array => $adapter->edit($after), $apply);

@@ -47,10 +47,15 @@ final class BlogHistoryPlan
         return $id;
     }
 
-    public static function telegram(array $before, Closure $lookup, ?string $savedCaption = null): array
+    public static function telegram(array $before, Closure $lookup, ?string $savedCaption = null, bool $savedReplyMarkupPresent = false): array
     {
         if (($before['kind'] ?? '') !== 'photo') { throw new BlogHistorySkip('Поддерживается только одиночная фотография с простой подписью'); }
         if (!empty($before['unsupported'])) { throw new BlogHistorySkip((string)$before['unsupported']); }
+        // Telegram widget может вообще не показывать inline-клавиатуру. Поэтому
+        // отсутствие кнопок в HTML не разрешает менять неизвестную старую запись.
+        if ($savedCaption === null || $savedReplyMarkupPresent) {
+            throw new BlogHistorySkip('Нет подтверждённой legacy-отправки с подписью без reply_markup; публичный widget не показывает все кнопки');
+        }
         $text = (string)$before['text'];
         if (!preg_match('~\n\nЧитать на сайте: (https?://[^\s]+)\s*$~uD', $text, $match)) {
             if (count($before['buttons'] ?? []) === 1 && ($before['buttons'][0]['text'] ?? '') === self::BUTTON
@@ -59,7 +64,7 @@ final class BlogHistoryPlan
             }
             throw new BlogHistorySkip('Не найден однозначный автоматический анонс блога');
         }
-        if ($savedCaption !== null && self::normalize($savedCaption) !== self::normalize($text)) {
+        if (self::normalize($savedCaption) !== self::normalize($text)) {
             throw new BlogHistorySkip('Текущая подпись отличается от сохранённой отправки');
         }
         if (!empty($before['buttons'])) { throw new BlogHistorySkip('Существующие кнопки нельзя безопасно восстановить из публичного снимка'); }
