@@ -81,10 +81,15 @@ final class TgBlogClient implements TgBlogGateway
 
     public function send(array $photo, string $caption, array $replyMarkup): int
     {
-        $result = $this->request('sendPhoto', ['chat_id' => $this->channel,
+        $data = [
+            'chat_id' => $this->channel,
             'photo' => new CURLStringFile($photo['bytes'], 'cover.' . ($photo['mime'] === 'image/png' ? 'png' : 'jpg'), $photo['mime']),
             'caption' => $caption,
-            'reply_markup' => json_encode($replyMarkup, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
+        ];
+        if ($replyMarkup !== []) {
+            $data['reply_markup'] = json_encode($replyMarkup, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        $result = $this->request('sendPhoto', $data);
         if (empty($result['message_id'])) { throw new TgBlogUnknown('Telegram не вернул message_id'); }
         return (int)$result['message_id'];
     }

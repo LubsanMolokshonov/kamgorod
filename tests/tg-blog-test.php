@@ -5,20 +5,18 @@ require_once __DIR__ . '/../scripts/lib/tg-blog/publisher.php';
 function tgCheck(bool $ok, string $label): void {
     if (!$ok) { throw new RuntimeException($label); } echo "OK: $label\n";
 }
-$a = ['id'=>911, 'title'=>'<b>Заголовок</b>', 'annotation'=>'', 'content'=>'<script>bad()</script><p>Первый</p><p>второй &amp; третий</p>'];
-$caption = TgBlogPublisher::caption($a);
-tgCheck($caption === "Заголовок\n\nПервый второй & третий", 'HTML очищен, длинной ссылки в подписи нет');
-$markup = TgBlogPublisher::replyMarkup($a, 'https://fgos.pro');
-tgCheck($markup === ['inline_keyboard'=>[[['text'=>'Читать статью на fgos.pro','url'=>'https://fgos.pro/s/tg/911']]]], 'Кнопка содержит короткую ссылку Telegram на ID статьи');
+$baseUrl = 'https://fgos.pro';
+$a = ['id'=>911, 'slug'=>'article', 'title'=>'<b>Заголовок</b>', 'annotation'=>'', 'content'=>'<script>bad()</script><p>Первый</p><p>второй &amp; третий</p>'];
+$url = $baseUrl . '/blog/article/?utm_source=telegram&utm_campaign=blog';
+$caption = TgBlogPublisher::caption($a, $baseUrl);
+tgCheck($caption === "Заголовок\n\nПервый второй & третий\n\nЧитать статью: " . $url, 'HTML очищен, в подписи прямая ссылка с UTM');
 $a['annotation'] = str_repeat('😀Описание ', 500);
-$caption = TgBlogPublisher::caption($a);
-tgCheck(strlen(mb_convert_encoding($caption, 'UTF-16LE', 'UTF-8')) / 2 <= 1024 && !str_contains($caption, 'https://'), 'Длинная подпись с emoji укладывается в лимит без адреса');
+$caption = TgBlogPublisher::caption($a, $baseUrl);
+tgCheck(strlen(mb_convert_encoding($caption, 'UTF-16LE', 'UTF-8')) / 2 <= 1024 && str_ends_with($caption, $url), 'Длинная подпись с emoji сохраняет полную ссылку и укладывается в лимит');
 $a['annotation'] = 'Готовая аннотация';
-tgCheck(str_contains(TgBlogPublisher::caption($a), 'Готовая аннотация'), 'Используется аннотация сайта');
-$a['slug'] = 'new-slug';
-tgCheck(TgBlogPublisher::replyMarkup($a, 'https://fgos.pro') === $markup, 'Изменение slug не меняет кнопку');
+tgCheck(str_contains(TgBlogPublisher::caption($a, $baseUrl), 'Готовая аннотация'), 'Используется аннотация сайта');
 $longTitle = $a; $longTitle['title'] = str_repeat('😀', 501);
-try { TgBlogPublisher::caption($longTitle); throw new LogicException('Длинный заголовок принят'); }
+try { TgBlogPublisher::caption($longTitle, $baseUrl); throw new LogicException('Длинный заголовок принят'); }
 catch (RuntimeException $e) { tgCheck(true, 'Заголовок за пределами лимита отклонён до отправки'); }
 foreach ([['archive','09:59',false],['archive','10:00',true],['new','11:59',false],['new','12:00',true]] as [$queue,$time,$due]) {
     tgCheck(TgBlogPublisher::slotDue($queue,new DateTimeImmutable("2026-10-19T$time:00+03:00")) === $due, "$queue $time МСК");

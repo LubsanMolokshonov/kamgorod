@@ -3,7 +3,6 @@ declare(strict_types=1);
 if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }
 require_once __DIR__ . '/client.php';
 require_once __DIR__ . '/site.php';
-require_once __DIR__ . '/../../../classes/BlogSocialLink.php';
 
 final class TgBlogPublisher
 {
@@ -23,25 +22,21 @@ final class TgBlogPublisher
         $q = $this->db->prepare($sql); $q->execute($params); return $q;
     }
 
-    public static function caption(array $article): string
+    public static function caption(array $article, string $baseUrl): string
     {
         $title = TgBlogSite::plain((string)$article['title']);
         $description = TgBlogSite::plain((string)($article['annotation'] ?? ''));
         if ($description === '') { $description = TgBlogSite::plain((string)($article['content'] ?? '')); }
+        $url = rtrim($baseUrl, '/') . '/blog/' . rawurlencode($article['slug']) . '/?utm_source=telegram&utm_campaign=blog';
+        $suffix = "\n\nЧитать статью: " . $url;
         // Telegram считает лимиты в UTF-16; оставляем запас и не разрываем emoji.
         $units = static fn(string $s): int => intdiv(strlen(mb_convert_encoding($s, 'UTF-16LE', 'UTF-8')), 2);
-        if ($units($title) > 1000) { throw new RuntimeException('Заголовок не помещается в подпись'); }
-        $available = 1000 - $units($title . "\n\n");
+        if ($units($title . $suffix) > 1000) { throw new RuntimeException('Заголовок и ссылка не помещаются в подпись'); }
+        $available = 1000 - $units($title . "\n\n" . $suffix);
         while ($description !== '' && $units($description) > $available) {
             $description = mb_substr($description, 0, max(0, mb_strlen($description) - 10));
         }
-        return $title . ($description !== '' ? "\n\n" . $description : '');
-    }
-
-    public static function replyMarkup(array $article, string $baseUrl): array
-    {
-        return ['inline_keyboard' => [[['text' => 'Читать статью на fgos.pro',
-            'url' => BlogSocialLink::url('tg', (int)$article['id'], $baseUrl)]]]];
+        return $title . ($description !== '' ? "\n\n" . $description : '') . $suffix;
     }
 
     public static function slotDue(string $queue, DateTimeImmutable $now): bool
@@ -63,7 +58,7 @@ final class TgBlogPublisher
     {
         $rows = $this->query('SELECT * FROM publications WHERE ' . self::ELIGIBLE . ' ORDER BY published_at,id')->fetchAll(PDO::FETCH_ASSOC);
         return array_map(fn(array $a): array => ['publication_id' => $a['id'], 'cover' => $a['cover_image_url'],
-            'caption' => self::caption($a), 'reply_markup' => self::replyMarkup($a, $this->baseUrl)], $rows);
+            'caption' => self::caption($a, $this->baseUrl), 'reply_markup' => []], $rows);
     }
 
     private function enqueue(string $queue): void
@@ -110,8 +105,8 @@ final class TgBlogPublisher
         try {
             $photo = $this->site->prepare($a);
             self::validatePhoto($photo);
-            $caption = self::caption($a);
-            $replyMarkup = self::replyMarkup($a, $this->baseUrl);
+            $caption = self::caption($a, $this->baseUrl);
+            $replyMarkup = [];
             $latest = $this->query('SELECT * FROM publications WHERE id=? AND ' . self::ELIGIBLE, [$a['id']])->fetch(PDO::FETCH_ASSOC);
             foreach (['title','slug','annotation','content','cover_image_url'] as $key) {
                 if (!$latest || ($latest[$key] ?? null) !== ($a[$key] ?? null)) { throw new RuntimeException('Статья изменилась во время подготовки'); }
