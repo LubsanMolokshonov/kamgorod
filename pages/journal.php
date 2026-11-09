@@ -276,10 +276,17 @@ include __DIR__ . '/../includes/header-redesign.php';
             <input type="hidden" name="<?= $key ?>" value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>">
           <?php endif; ?>
         <?php endforeach; ?>
-        <input type="search" name="q" id="publicationSearchInput" maxlength="200"
-               placeholder="Поиск по публикациям" aria-label="Поиск по публикациям"
-               value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>">
-        <button type="submit" class="rd-btn rd-btn-primary">Найти</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div style="position:relative;flex:1;min-width:0;">
+            <svg aria-hidden="true" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--ink-400);pointer-events:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="search" name="q" id="publicationSearchInput" maxlength="200"
+                   placeholder="Поиск по публикациям — например, «методическая разработка» или «дошкольники»"
+                   aria-label="Поиск по публикациям" autocomplete="off"
+                   value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>"
+                   style="width:100%;padding:14px 16px 14px 46px;font-size:15px;border:1.5px solid var(--ink-200,#e5e7eb);border-radius:12px;background:#fff;">
+          </div>
+          <button type="submit" class="rd-btn rd-btn-primary">Найти</button>
+        </div>
         <?php if ($search !== ''): ?>
           <a href="<?= htmlspecialchars(buildUrl(['q' => null]), ENT_QUOTES, 'UTF-8') ?>">Очистить</a>
         <?php endif; ?>
