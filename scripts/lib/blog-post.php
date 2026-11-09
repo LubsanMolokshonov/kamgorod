@@ -73,7 +73,9 @@ function blogPostPackage(array $input, string $root): array {
     }
     $coverPath = realpath($root . $cover);
     $coverRoot = realpath($root . '/assets/images/blog');
-    if (!$coverPath || !$coverRoot || !str_starts_with($coverPath, $coverRoot . '/') || !is_file($coverPath)) {
+    $coverPathNormalized = str_replace('\\', '/', $coverPath ?: '');
+    $coverRootNormalized = str_replace('\\', '/', $coverRoot ?: '');
+    if (!$coverPath || !$coverRoot || !str_starts_with($coverPathNormalized, $coverRootNormalized . '/') || !is_file($coverPath)) {
         throw new InvalidArgumentException('Файл обложки отсутствует или находится за пределами каталога.');
     }
     $info = @getimagesize($coverPath);
