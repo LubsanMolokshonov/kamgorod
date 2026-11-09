@@ -14,19 +14,20 @@ require_once __DIR__ . '/../classes/AudienceCategory.php';
 require_once __DIR__ . '/../classes/AudienceType.php';
 require_once __DIR__ . '/../includes/seo-url.php';
 require_once __DIR__ . '/../includes/catalog-meta.php';
+require_once __DIR__ . '/../includes/seo-catalog-archive.php';
 
 $publicationObj = new Publication($db);
 $typeObj = new PublicationType($db);
 $tagObj = new PublicationTag($db);
 
-$selectedCategory = $_GET['ac'] ?? '';
-$selectedType = $_GET['at'] ?? '';
-$selectedSpec = $_GET['as'] ?? '';
+$selectedCategory = is_string($_GET['ac'] ?? null) ? $_GET['ac'] : '';
+$selectedType = is_string($_GET['at'] ?? null) ? $_GET['at'] : '';
+$selectedSpec = is_string($_GET['as'] ?? null) ? $_GET['as'] : '';
 
-$tagSlug = $_GET['tag'] ?? null;
-$typeSlug = $_GET['type'] ?? null;
-$sort = $_GET['sort'] ?? 'date';
-$search = $_GET['q'] ?? '';
+$tagSlug = is_string($_GET['tag'] ?? null) ? $_GET['tag'] : null;
+$typeSlug = is_string($_GET['type'] ?? null) ? $_GET['type'] : null;
+$sort = is_string($_GET['sort'] ?? null) ? $_GET['sort'] : 'date';
+$search = is_string($_GET['q'] ?? null) ? mb_substr(trim($_GET['q']), 0, 200) : '';
 
 redirectToSeoUrl('zhurnal', [
     'ac' => $selectedCategory,
@@ -88,13 +89,12 @@ if (!empty($selectedSpec)) {
     if ($selectedSpecData) { $filters['specialization_id'] = $selectedSpecData['id']; }
 }
 
-if ($search) {
-    $publications = $publicationObj->search($search, $filters, $perPage, $offset);
-    $totalCount = count($publicationObj->search($search, $filters, 1000, 0));
-} else {
-    $publications = $publicationObj->getPublished($perPage, $offset, $filters);
-    $totalCount = $publicationObj->countPublished($filters);
+if ($search !== '') {
+    $filters['q'] = $search;
+    $filters['indexable_only'] = true;
 }
+$publications = $publicationObj->getPublished($perPage, $offset, $filters);
+$totalCount = (int)$publicationObj->countPublished($filters);
 
 $totalPages = ceil($totalCount / $perPage);
 
@@ -147,6 +147,25 @@ if (!empty($selectedCategory)) {
     $canonicalPath = '/zhurnal/';
 }
 $canonicalUrl = SITE_URL . $canonicalPath;
+$archiveEmptyCopy = seoCatalogArchive()['journal_empty'][$canonicalPath] ?? null;
+$showArchiveEmpty = $archiveEmptyCopy !== null && $totalCount === 0;
+if ($showArchiveEmpty) $robotsContent = 'noindex,follow';
+if ($archiveEmptyCopy !== null) {
+    $typeContext = $filters;
+    unset($typeContext['type_id']);
+    $tagContext = $filters;
+    unset($tagContext['tag_id']);
+    foreach ($types as &$facet) {
+        $facet['publications_count'] = (int)$publicationObj->countPublished($typeContext + ['type_id' => $facet['id']]);
+    }
+    unset($facet);
+    foreach ($subjects as &$facet) {
+        $facet['publications_count'] = (int)$publicationObj->countPublished($tagContext + ['tag_id' => $facet['id']]);
+    }
+    unset($facet);
+    $types = array_filter($types, static fn($facet) => $facet['publications_count'] > 0);
+    $subjects = array_filter($subjects, static fn($facet) => $facet['publications_count'] > 0);
+}
 
 // --- Уникализация посадочной: SEO-текст + витрина отзывов (как на olympiads.php/competitions.php) ---
 require_once __DIR__ . '/../includes/landing-content-helper.php';
@@ -200,28 +219,7 @@ if (!empty($landingReviews)) {
     $jsonLdArray[] = buildListingSchema($db, 'publication', 'zhurnal', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
 }
 
-// Готовим данные для клиентского поиска по публикациям (когда показан каталог)
-$allForSearch = [];
-if (!$showLanding) {
-    $searchFilters = $filters;
-    $searchFilters['indexable_only'] = true;
-    $searchPool = $publicationObj->getPublished(1000, 0, $searchFilters);
-    foreach ($searchPool as $p) {
-        $allForSearch[] = [
-            'id' => $p['id'],
-            'title' => $p['title'],
-            'author' => $p['author_name'] ?? '',
-            'type' => $p['type_name'] ?? '',
-            'annotation' => mb_substr(strip_tags($p['annotation'] ?? ''), 0, 160),
-            'url' => '/publikaciya/' . $p['slug'] . '/',
-            'date' => $p['published_at'],
-            'views' => (int)($p['views_count'] ?? 0),
-            'cover' => $p['cover_image_url'] ?? '',
-        ];
-    }
-}
 
-$russianMonths = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 function jr_format_date($iso, $months) {
     $date = new DateTime($iso);
     return $date->format('d') . ' ' . $months[$date->format('n') - 1] . ' ' . $date->format('Y');
@@ -272,16 +270,20 @@ include __DIR__ . '/../includes/header-redesign.php';
 
     <div class="rd-catalog">
       <!-- Поиск (на мобильных — над фильтрами) -->
-      <div class="rd-comp-search" style="margin-bottom:16px;">
-        <div style="position:relative;">
-          <svg style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--ink-400);pointer-events:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="search" id="publicationSearchInput" placeholder="Поиск по публикациям — например, «методическая разработка» или «дошкольники»" autocomplete="off" value="<?php echo htmlspecialchars($search); ?>" style="width:100%;padding:14px 44px 14px 46px;font-size:15px;border:1.5px solid var(--ink-200,#e5e7eb);border-radius:12px;background:#fff;outline:none;transition:border-color .15s, box-shadow .15s;" onfocus="this.style.borderColor='var(--indigo-500,#6366f1)';this.style.boxShadow='0 0 0 4px rgba(99,102,241,.12)';" onblur="this.style.borderColor='var(--ink-200,#e5e7eb)';this.style.boxShadow='none';">
-          <button type="button" id="publicationSearchClear" aria-label="Очистить" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer;padding:8px;color:var(--ink-400);line-height:0;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </div>
-        <div id="publicationSearchStatus" style="display:none;margin-top:10px;font-size:14px;color:var(--ink-500,#6b7280);"></div>
-      </div>
+      <form method="get" action="<?= htmlspecialchars($canonicalPath, ENT_QUOTES, 'UTF-8') ?>#catalog" class="rd-comp-search" style="margin-bottom:16px;">
+        <?php foreach (['tag' => $tagSlug, 'type' => $selectedCategory ? $typeSlug : null, 'sort' => $sort !== 'date' ? $sort : null] as $key => $value): ?>
+          <?php if ($value !== null && $value !== ''): ?>
+            <input type="hidden" name="<?= $key ?>" value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>">
+          <?php endif; ?>
+        <?php endforeach; ?>
+        <input type="search" name="q" id="publicationSearchInput" maxlength="200"
+               placeholder="Поиск по публикациям" aria-label="Поиск по публикациям"
+               value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>">
+        <button type="submit" class="rd-btn rd-btn-primary">Найти</button>
+        <?php if ($search !== ''): ?>
+          <a href="<?= htmlspecialchars(buildUrl(['q' => null]), ENT_QUOTES, 'UTF-8') ?>">Очистить</a>
+        <?php endif; ?>
+      </form>
 
       <!-- Sidebar -->
       <aside class="rd-filters" id="rdFiltersPanel">
@@ -337,7 +339,15 @@ include __DIR__ . '/../includes/header-redesign.php';
           </div>
         </div>
 
-        <?php if (empty($publications)): ?>
+        <?php if ($showArchiveEmpty): ?>
+          <div class="rd-empty-state">
+            <h3><?= htmlspecialchars($archiveEmptyCopy['empty_heading'], ENT_QUOTES, 'UTF-8') ?></h3>
+            <p><?= htmlspecialchars($archiveEmptyCopy['empty_text'], ENT_QUOTES, 'UTF-8') ?></p>
+            <a class="rd-btn rd-btn-primary" href="<?= htmlspecialchars($archiveEmptyCopy['back_link']['href'], ENT_QUOTES, 'UTF-8') ?>">
+              <?= htmlspecialchars($archiveEmptyCopy['back_link']['text'], ENT_QUOTES, 'UTF-8') ?>
+            </a>
+          </div>
+        <?php elseif (empty($publications)): ?>
           <div class="rd-empty-state">
             <div class="ic">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -355,7 +365,7 @@ include __DIR__ . '/../includes/header-redesign.php';
         <?php else: ?>
           <div class="rd-grid reveal-stagger" id="publicationsGrid">
             <?php foreach ($publications as $pub): ?>
-              <a class="rd-card pub-card<?php echo !empty($pub['cover_image_url']) ? ' has-cover' : ''; ?>" href="/publikaciya/<?php echo urlencode($pub['slug']); ?>/">
+              <a class="rd-card pub-card<?php echo !empty($pub['cover_image_url']) ? ' has-cover' : ''; ?>" href="<?= htmlspecialchars(publicationSeoPath('/publikaciya/' . rawurlencode($pub['slug']) . '/'), ENT_QUOTES, 'UTF-8') ?>">
                 <?php if (!empty($pub['cover_image_url'])): ?>
                   <img class="pub-card-cover" src="<?php echo htmlspecialchars($pub['cover_image_url']); ?>" alt="<?php echo htmlspecialchars($pub['title']); ?>" loading="lazy">
                 <?php else: ?>
@@ -441,90 +451,7 @@ include __DIR__ . '/../includes/header-redesign.php';
   </div>
 </section>
 
-<script>
-var allPublicationsData = <?php echo json_encode($allForSearch, JSON_UNESCAPED_UNICODE); ?>;
 
-(function() {
-    var input = document.getElementById('publicationSearchInput');
-    var clearBtn = document.getElementById('publicationSearchClear');
-    var status = document.getElementById('publicationSearchStatus');
-    var grid = document.getElementById('publicationsGrid');
-    if (!input || !grid) return;
-
-    var originalGridHtml = null;
-    var debounceTimer = null;
-
-    function _esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
-    function normalize(s) { return (s || '').toString().toLowerCase().replace(/ё/g, 'е').trim(); }
-
-    function fmtNumber(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
-    function fmtDate(iso) {
-        try {
-            var d = new Date(iso);
-            var months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-            return ('0' + d.getDate()).slice(-2) + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
-        } catch(e) { return ''; }
-    }
-
-    function renderCard(p) {
-        var ann = p.annotation ? p.annotation.substring(0, 130) + (p.annotation.length > 130 ? '…' : '') : '';
-        return '<a class="rd-card pub-card' + (p.cover ? ' has-cover' : '') + '" href="' + _esc(p.url) + '">' +
-            (p.cover ? '<img class="pub-card-cover" src="' + _esc(p.cover) + '" alt="' + _esc(p.title) + '" loading="lazy">' : '<div class="rd-card-pat"></div>') +
-            (p.type ? '<div class="rd-card-tags"><span class="rd-tag indigo">' + _esc(p.type) + '</span></div>' : '') +
-            '<h4>' + _esc(p.title) + '</h4>' +
-            (ann ? '<div class="rd-card-meta">' + _esc(ann) + '</div>' : '') +
-            '<div class="pub-author">' + _esc(p.author) + '</div>' +
-            '<div class="pub-meta-line">' +
-              '<span>' + fmtDate(p.date) + '</span>' +
-              '<span class="meta-views"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>' + fmtNumber(p.views) + '</span>' +
-            '</div>' +
-          '</a>';
-    }
-
-    function applyFilter(q) {
-        q = normalize(q);
-        if (!q) {
-            if (originalGridHtml !== null) { grid.innerHTML = originalGridHtml; originalGridHtml = null; }
-            status.style.display = 'none';
-            clearBtn.style.display = 'none';
-            return;
-        }
-        if (originalGridHtml === null) originalGridHtml = grid.innerHTML;
-        clearBtn.style.display = '';
-
-        var tokens = q.split(/\s+/).filter(Boolean);
-        var matches = allPublicationsData.filter(function(p) {
-            var hay = normalize((p.title || '') + ' ' + (p.author || '') + ' ' + (p.annotation || '') + ' ' + (p.type || ''));
-            return tokens.every(function(t) { return hay.indexOf(t) !== -1; });
-        });
-
-        if (matches.length === 0) {
-            grid.innerHTML = '';
-            status.style.display = '';
-            status.innerHTML = 'По запросу «' + _esc(q) + '» ничего не найдено. <a href="#" id="pubSearchResetLink" style="color:var(--indigo-600);">Сбросить</a>';
-            var rl = document.getElementById('pubSearchResetLink');
-            if (rl) rl.addEventListener('click', function(e) { e.preventDefault(); input.value = ''; applyFilter(''); input.focus(); });
-            return;
-        }
-        grid.innerHTML = matches.map(renderCard).join('');
-        status.style.display = '';
-        var n = matches.length;
-        var word = (n % 10 === 1 && n % 100 !== 11) ? 'публикация' : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'публикации' : 'публикаций');
-        status.textContent = 'Найдено: ' + n + ' ' + word;
-    }
-
-    input.addEventListener('input', function() {
-        clearTimeout(debounceTimer);
-        var v = input.value;
-        debounceTimer = setTimeout(function() { applyFilter(v); }, 120);
-    });
-    clearBtn.addEventListener('click', function() { input.value = ''; applyFilter(''); input.focus(); });
-    input.addEventListener('keydown', function(e) { if (e.key === 'Escape' && input.value) { input.value = ''; applyFilter(''); } });
-
-    // Если уже есть значение из URL — сразу применим
-    if (input.value) applyFilter(input.value);
-})();
-</script>
 <?php endif; /* !$showLanding */ ?>
 
 <?php

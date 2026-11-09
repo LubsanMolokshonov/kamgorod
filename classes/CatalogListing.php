@@ -2,6 +2,8 @@
 if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
 /** Ограниченные выборки каталогов для SSR, поиска и AJAX. */
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/../includes/seo-catalog-archive.php';
+require_once __DIR__ . '/../includes/seo-publication-registry.php';
 
 class CatalogListing {
     private Database $db;
@@ -31,6 +33,7 @@ class CatalogListing {
         $this->order = 'p.display_order ASC, p.created_at DESC, p.id DESC';
         if ($section === 'publikacii') {
             $this->from .= ' LEFT JOIN publication_types pt ON pt.id = p.publication_type_id LEFT JOIN users u ON u.id = p.user_id';
+            $wheres[] = 'p.id NOT IN (' . implode(',', publicationSeoExcludedIds()) . ')';
             $this->columns .= ', p.source, p.annotation, p.published_at, p.created_at, p.views_count, p.rating_count, p.rating_avg, pt.name AS type_name, u.full_name AS author_name';
             $this->order = 'p.published_at DESC, p.id DESC';
             // В публичном каталоге и поиске один и тот же доступный роботам набор.
@@ -48,9 +51,22 @@ class CatalogListing {
             $this->columns = 'p.*, sp.full_name AS speaker_name, sp.photo AS speaker_photo';
             $this->order = 'p.scheduled_at DESC, p.id DESC';
         }
+        $selectionKey = null;
+        if ($section === 'kursy' && empty($options['ac']) && ($options['at'] ?? '') === 'dou'
+            && ($options['as'] ?? '') === 'rabota-s-ovz' && ($options['program_type'] ?? '') === 'kpk') {
+            $selectionKey = 'ovz_dou';
+        } elseif ($section === 'konkursy' && ($options['archive_selection'] ?? '') === 'dou' && ($options['at'] ?? '') === 'dou') {
+            $selectionKey = 'dou';
+        }
+        if ($selectionKey !== null) {
+            $selection = seoCatalogArchive()['selection'][$selectionKey];
+            $wheres[] = 'p.slug IN (' . implode(',', array_fill(0, count($selection), '?')) . ')';
+            array_push($this->params, ...$selection);
+        }
         foreach (['ac' => ['audience_categories', 'category_id', 'audience_categories'],
                   'at' => ['audience_types', 'audience_type_id', 'audience_types'],
                   'as' => ['specializations', 'specialization_id', 'audience_specializations']] as $key => [$junction, $foreign, $lookup]) {
+            if ($selectionKey === 'ovz_dou' || ($selectionKey === 'dou' && $key === 'at')) continue;
             if (!empty($options[$key])) {
                 if ($section === 'konkursy' && self::usesCompetitionFacts()) continue;
                 $wheres[] = "EXISTS (SELECT 1 FROM {$entity}_{$junction} j JOIN $lookup a ON a.id = j.$foreign WHERE j.{$entity}_id = p.id AND a.slug = ? AND a.is_active = 1)";
@@ -63,12 +79,13 @@ class CatalogListing {
             $wheres[] = 'NOT EXISTS (SELECT 1 FROM competition_catalog_facts role_fact WHERE role_fact.competition_id=p.id AND JSON_LENGTH(role_fact.participant_roles)>0 AND NOT JSON_CONTAINS(role_fact.participant_roles, ?))';
             $this->params[] = json_encode((string)$options['ac'], JSON_THROW_ON_ERROR);
         }
-        if ($section === 'konkursy' && self::usesCompetitionFacts() && array_filter(array_intersect_key($options, array_flip(['ac','at','as','category'])) , static fn($v) => $v !== '' && $v !== 'all')) {
+        $factsOptions = $selectionKey === 'dou' ? array_diff_key($options, ['at' => true]) : $options;
+        if ($section === 'konkursy' && self::usesCompetitionFacts() && array_filter(array_intersect_key($factsOptions, array_flip(['ac','at','as','category'])), static fn($v) => $v !== '' && $v !== 'all')) {
             $this->from .= ' JOIN competition_catalog_facts cf ON cf.competition_id=p.id';
             foreach (['ac'=>'participant_roles','at'=>'education_stages','as'=>'subject_slugs'] as $key=>$column) {
-                if (empty($options[$key])) continue;
+                if (empty($factsOptions[$key])) continue;
                 $wheres[] = "JSON_CONTAINS(cf.$column, ?)";
-                $this->params[] = json_encode((string)$options[$key], JSON_THROW_ON_ERROR);
+                $this->params[] = json_encode((string)$factsOptions[$key], JSON_THROW_ON_ERROR);
             }
             if (!empty($options['category']) && $options['category'] !== 'all') {
                 $wheres[] = 'cf.work_type=?'; $this->params[] = $options['category'];

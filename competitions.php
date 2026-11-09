@@ -268,6 +268,8 @@ $jsonLdArray[] = [
     ], $competitions, array_keys($competitions))]
 ];
 
+$archiveCatalogCopy = $catalogRequest['page'] === 1 && $catalogRequest['q'] === ''
+    ? seoCatalogArchiveLanding($catalogRequest['base']) : [];
 $catalogPolicy = catalogPolicy($db, 'konkursy', $catalogOptions, $totalCompetitions, $catalogRequest['page']);
 $canonicalUrl = $catalogPolicy['canonical'];
 $robotsContent = $catalogRequest['q'] !== '' ? 'noindex,follow' : $catalogPolicy['robots'];

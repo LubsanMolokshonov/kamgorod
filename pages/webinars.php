@@ -28,6 +28,7 @@ $status           = $_GET["status"] ?? "";
 require_once __DIR__ . '/../includes/catalog-seo.php';
 $catalogOptions = ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec, 'status' => $status];
 $catalogRequest = catalogRequest($db, 'vebinary', $catalogOptions);
+$archiveCatalogCopy = $catalogRequest['page'] === 1 ? (seoCatalogArchive()['a05'][$catalogRequest['base']] ?? []) : [];
 $catalogListing = new CatalogListing($db, 'vebinary', $catalogOptions, $catalogRequest['q']);
 
 redirectToSeoUrl('vebinary', [
@@ -205,6 +206,7 @@ $faqItems = [
     ['q' => 'Как получить сертификат?', 'a' => 'После просмотра пройдите короткий тест из 5 вопросов. Затем оформите именной сертификат на 2 ак. часа — он сразу появится в личном кабинете.'],
     ['q' => 'Принимается ли сертификат при аттестации?', 'a' => 'Сертификаты выдаются от имени зарегистрированного СМИ (Эл. №ФС 77-74524) и принимаются в портфолио. Для аттестации лучше сочетать с курсами повышения квалификации в ФИС ФРДО.'],
 ];
+$faqItems = $archiveCatalogCopy['faq'] ?? $faqItems;
 $jsonLdArray = [buildFaqJsonLd($faqItems)];
 
 // Микроразметка Schema.org/Product для листинга (гибрид рейтинга)
@@ -241,7 +243,9 @@ include __DIR__ . "/../includes/header-redesign.php";
       </div>
       <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo !empty($seoPage['seo_h1']) ? htmlspecialchars(seoHeading(''), ENT_QUOTES, 'UTF-8') : $h1Html; ?></h1>
       <?= renderSeoEditorial($seoPage ?? []) ?>
-      <p class="rd-hero-sub reveal"><?php echo $h1Subtext; ?></p>
+      <p class="rd-hero-sub reveal"><?php if ($archiveCatalogCopy): ?>
+          <?= htmlspecialchars($archiveCatalogCopy['hero'], ENT_QUOTES, 'UTF-8') ?>
+        <?php else: ?><?php echo $h1Subtext; ?><?php endif; ?></p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Бесплатное участие в прямом эфире</div>
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Видеолекции — смотрите в любое время</div>
@@ -249,7 +253,7 @@ include __DIR__ . "/../includes/header-redesign.php";
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Запись эфира и материалы — после участия</div>
       </div>
       <div class="rd-hero-cta reveal">
-        <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать вебинар
+        <a href="#catalog" class="rd-btn rd-btn-primary"><?= htmlspecialchars($archiveCatalogCopy['primary_cta']['text'] ?? 'Выбрать вебинар', ENT_QUOTES, 'UTF-8') ?>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
         <span style="font-size:13px;color:var(--ink-500);"><?php echo $pmSubscriptionOnly ? 'Бесплатно · Сертификат по подписке' : 'Бесплатно · Сертификат от 200 ₽'; ?></span>
@@ -291,12 +295,13 @@ include __DIR__ . "/../includes/header-redesign.php";
 </div>
 
 <!-- Каталог -->
+<?php renderArchiveCatalogInfo($archiveCatalogCopy); ?>
 <section class="rd-section" id="catalog">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
       <div>
         <div class="rd-eyebrow">Каталог вебинаров</div>
-        <h2 class="rd-section-title"><?php echo htmlspecialchars($h2Title, ENT_QUOTES, 'UTF-8'); ?></h2>
+        <h2 class="rd-section-title"><?= htmlspecialchars($archiveCatalogCopy['catalog_h2'] ?? $h2Title, ENT_QUOTES, 'UTF-8') ?></h2>
       </div>
       <p class="rd-section-sub"><?php echo $h2Subtext; ?></p>
       <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
@@ -431,6 +436,7 @@ include __DIR__ . "/../includes/header-redesign.php";
     </div>
   </div>
 </section>
+<?php renderArchiveCatalogLinks($archiveCatalogCopy); ?>
 
 <!-- 4 шага -->
 <section class="rd-path rd-section">
@@ -495,7 +501,7 @@ include __DIR__ . "/../includes/header-redesign.php";
       <div class="rd-section-head reveal">
         <div>
           <div class="rd-eyebrow">FAQ</div>
-          <h2 class="rd-section-title">Вопросы о вебинарах</h2>
+          <h2 class="rd-section-title"><?= htmlspecialchars($archiveCatalogCopy['faq_h2'] ?? 'Вопросы о вебинарах', ENT_QUOTES, 'UTF-8') ?></h2>
         </div>
         <p class="rd-section-sub">Не нашли ответ? Напишите <a href="mailto:info@fgos.pro" style="color:var(--indigo-600)">info@fgos.pro</a> или позвоните <a href="tel:+79223044413" style="color:var(--indigo-600)">+7 (922) 304-44-13</a>. Ежедневно 9:00–21:00.</p>
       </div>
@@ -510,8 +516,13 @@ include __DIR__ . "/../includes/header-redesign.php";
     <div class="rd-final-cta reveal">
       <div>
         <div class="rd-eyebrow">Готовы участвовать?</div>
-        <h2>Выберите вебинар и получите сертификат</h2>
+        <?php if ($archiveCatalogCopy): ?>
+          <h2><?= htmlspecialchars($archiveCatalogCopy['bottom_h2'], ENT_QUOTES, 'UTF-8') ?></h2>
+          <p><?= htmlspecialchars($archiveCatalogCopy['bottom_text'], ENT_QUOTES, 'UTF-8') ?></p>
+        <?php else: ?>
+          <h2>Выберите вебинар и получите сертификат</h2>
         <p><?php echo ($counts["upcoming"] + $counts["autowebinars"]); ?>+ вебинаров и видеолекций для педагогов. Бесплатное участие, именной сертификат на 2 ак. часа.</p>
+        <?php endif; ?>
       </div>
       <div class="actions">
         <a href="#catalog" class="rd-btn rd-btn-primary">К каталогу

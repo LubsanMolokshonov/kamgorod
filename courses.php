@@ -34,6 +34,7 @@ $selectedSpec     = $_GET['as'] ?? '';
 
 $catalogOptions = ['ac' => $selectedCategory, 'at' => $selectedType, 'as' => $selectedSpec, 'program_type' => $programType !== 'all' ? $programType : ''];
 $catalogRequest = catalogRequest($db, 'kursy', $catalogOptions);
+$archiveCatalogCopy = $catalogRequest['page'] === 1 ? (seoCatalogArchive()['a05'][$catalogRequest['base']] ?? []) : [];
 $catalogListing = new CatalogListing($db, 'kursy', $catalogOptions, $catalogRequest['q']);
 
 redirectToSeoUrl('kursy', [
@@ -306,6 +307,7 @@ $faqVars = [
 ];
 // Гибрид: детерминированный поднабор вопросов по seed страницы + подстановка переменных.
 $faqItems = buildLandingFaq(coursesLandingFaqPool(), $pageKey, $faqVars, 6);
+$faqItems = $archiveCatalogCopy['faq'] ?? $faqItems;
 $jsonLdArray = [buildFaqJsonLd($faqItems)];
 
 // Витрина отзывов каталоговой страницы: пользовательские отзывы курсов среза,
@@ -419,7 +421,9 @@ include __DIR__ . '/includes/header-redesign.php';
       </nav>
       <?php endif; ?>
 
-      <p class="rd-hero-sub reveal"><?php echo htmlspecialchars($heroSubText); ?></p>
+      <p class="rd-hero-sub reveal"><?php if ($archiveCatalogCopy): ?>
+          <?= htmlspecialchars($archiveCatalogCopy['hero'], ENT_QUOTES, 'UTF-8') ?>
+        <?php else: ?><?php echo htmlspecialchars($heroSubText); ?><?php endif; ?></p>
       <div class="rd-hero-bullets reveal-stagger">
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><?php echo htmlspecialchars($heroDocBullet); ?></div>
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Дистанционно — учитесь в удобном темпе</div>
@@ -427,7 +431,7 @@ include __DIR__ . '/includes/header-redesign.php';
         <div class="rd-hb"><span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Оплата для физ. и юр. лиц</div>
       </div>
       <div class="rd-hero-cta reveal">
-        <a href="#catalog" class="rd-btn rd-btn-primary">Выбрать курс
+        <a href="#catalog" class="rd-btn rd-btn-primary"><?= htmlspecialchars($archiveCatalogCopy['primary_cta']['text'] ?? 'Выбрать курс', ENT_QUOTES, 'UTF-8') ?>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
         <button type="button" class="rd-btn rd-btn-ghost" onclick="openConsultationModal()">Получить консультацию</button>
@@ -459,6 +463,9 @@ include __DIR__ . '/includes/header-redesign.php';
   </div>
 </div>
 
+<?php if ($archiveCatalogCopy): ?>
+  <?php renderArchiveCatalogInfo($archiveCatalogCopy); ?>
+<?php else: ?>
 <!-- Признание Сколково / 8 организаций -->
 <section class="rd-section rd-section-skolkovo">
   <div class="rd-wrap">
@@ -487,12 +494,13 @@ include __DIR__ . '/includes/header-redesign.php';
 </section>
 
 <!-- Каталог -->
+<?php endif; ?>
 <section class="rd-section" id="catalog">
   <div class="rd-wrap">
     <div class="rd-section-head reveal">
       <div>
         <div class="rd-eyebrow">Каталог курсов</div>
-        <h2 class="rd-section-title">Выберите программу под свой уровень и предмет</h2>
+        <h2 class="rd-section-title"><?= htmlspecialchars($archiveCatalogCopy['catalog_h2'] ?? 'Выберите программу под свой уровень и предмет', ENT_QUOTES, 'UTF-8') ?></h2>
       </div>
       <p class="rd-section-sub">Найдено: <strong><?php echo $totalCourses; ?></strong> программ. Все с удостоверением установленного образца и записью в ФИС ФРДО.</p>
       <button class="rd-filter-toggle" id="rdFilterToggle" type="button">
@@ -607,6 +615,7 @@ include __DIR__ . '/includes/header-redesign.php';
     </div>
   </div>
 </section>
+<?php renderArchiveCatalogLinks($archiveCatalogCopy); ?>
 
 <?php if (!empty($categoryExperts) && count($categoryExperts) >= 3): ?>
 <!-- Преподаватели -->
@@ -860,7 +869,7 @@ endif; ?>
       <div class="rd-section-head reveal">
         <div>
           <div class="rd-eyebrow">FAQ</div>
-          <h2 class="rd-section-title">Вопросы о курсах</h2>
+          <h2 class="rd-section-title"><?= htmlspecialchars($archiveCatalogCopy['faq_h2'] ?? 'Вопросы о курсах', ENT_QUOTES, 'UTF-8') ?></h2>
         </div>
         <p class="rd-section-sub">Не нашли ответ? Напишите <a href="mailto:info@fgos.pro" style="color:var(--indigo-600)">info@fgos.pro</a> или позвоните <a href="tel:+79223044413" style="color:var(--indigo-600)">+7 (922) 304-44-13</a>. Ежедневно 9:00–21:00.</p>
       </div>
@@ -875,8 +884,13 @@ endif; ?>
     <div class="rd-final-cta reveal">
       <div>
         <div class="rd-eyebrow">Готовы учиться?</div>
-        <h2>Выберите программу и начните обучение сегодня</h2>
+        <?php if ($archiveCatalogCopy): ?>
+          <h2><?= htmlspecialchars($archiveCatalogCopy['bottom_h2'], ENT_QUOTES, 'UTF-8') ?></h2>
+          <p><?= htmlspecialchars($archiveCatalogCopy['bottom_text'], ENT_QUOTES, 'UTF-8') ?></p>
+        <?php else: ?>
+          <h2>Выберите программу и начните обучение сегодня</h2>
         <p><?php echo $totalCourses; ?>+ программ КПК и переподготовки. Удостоверение установленного образца, запись в ФИС ФРДО, дистанционный формат.</p>
+        <?php endif; ?>
       </div>
       <div class="actions">
         <a href="#catalog" class="rd-btn rd-btn-primary">К каталогу

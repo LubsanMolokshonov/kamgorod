@@ -1,5 +1,6 @@
 <?php
 if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(403); die('CLI only'); }
+require_once __DIR__ . '/seo-publication-registry.php';
 /**
  * URL Helper Functions
  * Smart URL generation for competitions based on audience context
@@ -45,7 +46,7 @@ function normalizeInternalUrl(string $url): string {
     $path = $parts['path'] ?? '/';
     if (preg_match('~^/(?:api|ajax|ai-chat|ai-consultant)(?:/|$)~', $path)
         || preg_match('~\.[^/]+$~', $path)) return $url;
-    $path = rtrim($path, '/') . '/';
+    $path = publicationSeoPath(rtrim($path, '/') . '/');
     return ($host !== '' ? 'https://fgos.pro' : '') . $path
         . (isset($parts['query']) ? '?' . $parts['query'] : '')
         . (isset($parts['fragment']) ? '#' . $parts['fragment'] : '');

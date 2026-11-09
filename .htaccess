@@ -54,6 +54,7 @@ RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_URI} !^/(api|ajax|ai-chat|ai-consultant|s)(/|$)
+RewriteCond %{REQUEST_URI} !^/publikaciya/[a-z0-9-]+$
 RewriteCond %{REQUEST_URI} !\.[a-zA-Z0-9]+$
 RewriteCond %{REQUEST_URI} !/$
 RewriteRule ^(.+)$ %{ENV:SEO_ORIGIN}/$1/ [R=301,L]
@@ -292,7 +293,8 @@ RewriteRule ^zhurnal/(pedagogi|doshkolnikam|shkolnikam|studentam-spo)/?$ pages/j
 
 # Детальная страница публикации
 # Канонический URL — со слэшем на конце. Без слэша — 301-редирект.
-RewriteRule ^publikaciya/([a-z0-9-]+)$ /publikaciya/$1/ [R=301,L]
+# Ссылки без завершающего слеша проверяются в обработчике, чтобы A01 не создавал цепочку.
+RewriteRule ^publikaciya/([a-z0-9-]+)$ pages/publication.php?slug=$1 [L,QSA]
 RewriteRule ^publikaciya/([a-z0-9-]+)/$ pages/publication.php?slug=$1 [L,QSA]
 
 # Страница автора публикаций

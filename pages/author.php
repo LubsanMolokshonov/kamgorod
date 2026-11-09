@@ -16,7 +16,7 @@ $userObj = new User($db);
 $user = $id > 0 ? $userObj->getById($id) : null;
 
 $publicationObj = new Publication($db);
-$publications = $user ? array_values(array_filter($publicationObj->getByUser($id, 'published'), static fn($p) => empty($p['redirect_to_slug']))) : [];
+$publications = $user ? array_values(array_filter($publicationObj->getByUser($id, 'published'), static fn($p) => empty($p['redirect_to_slug']) && !in_array((int)$p['id'], publicationSeoExcludedIds(), true))) : [];
 
 // 404, если автора нет или у него нет опубликованных материалов
 // (профили обычных зарегистрированных пользователей не открываем).
@@ -257,7 +257,7 @@ include __DIR__ . '/../includes/header-redesign.php';
     <h2 class="author-pubs-title">Публикации автора</h2>
     <div class="rd-grid">
       <?php foreach ($publications as $pub): ?>
-        <a class="rd-card pub-card" href="/publikaciya/<?php echo urlencode($pub['slug']); ?>/">
+        <a class="rd-card pub-card" href="<?= htmlspecialchars(publicationSeoPath('/publikaciya/' . rawurlencode($pub['slug']) . '/'), ENT_QUOTES, 'UTF-8') ?>">
           <div class="rd-card-pat"></div>
           <div class="rd-card-tags">
             <?php if (!empty($pub['type_name'])): ?>

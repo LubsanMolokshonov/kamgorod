@@ -5,6 +5,7 @@ require_once __DIR__ . '/seo-url.php';
 require_once __DIR__ . '/seo-editorial.php';
 require_once __DIR__ . '/../classes/CatalogListing.php';
 require_once __DIR__ . '/competition-index.php';
+require_once __DIR__ . '/seo-catalog-archive.php';
 
 function catalogPageUrl(string $base, int $page): string {
     return rtrim($base, '/') . '/' . ($page > 1 ? 'page/' . $page . '/' : '');
@@ -118,6 +119,9 @@ function catalogPolicy(PDO $pdo, string $section, array $options, ?int $total = 
         $hasLanding = !empty($override['index_catalog']) && !empty($override['seo_h1'])
             && !empty($override['meta_title']) && !empty($override['intro_text'])
             && competitionClassificationReady($pdo, $options);
+    }
+    if ($page === 1 && seoCatalogArchiveLanding($base)) {
+        $hasLanding = true;
     }
     return catalogIndexPolicy($section, $options, $total, $hasLanding, $page);
 }

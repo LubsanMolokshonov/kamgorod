@@ -16,6 +16,27 @@ require_once __DIR__ . '/includes/catalog-seo.php';
 require_once __DIR__ . '/includes/catalog-cards.php';
 require_once __DIR__ . '/includes/catalog-meta.php';
 
+$originalPath = parse_url($_SERVER['REQUEST_URI'] ?? '/olimpiady/', PHP_URL_PATH);
+parse_str((string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY), $originalQuery);
+$tracking = array_filter($originalQuery, static fn($value, $key): bool =>
+    is_string($key) && str_starts_with($key, 'utm_') && is_string($value), ARRAY_FILTER_USE_BOTH);
+if (($originalQuery['ac'] ?? null) === 'pedagogi'
+    && !array_diff_key($originalQuery, ['ac' => true, 'page' => true], $tracking)) {
+    $pathPage = preg_match('~^/olimpiady/pedagogi/page/([^/]+)/?$~D', (string)$originalPath, $matches);
+    if ($pathPage || (rtrim((string)$originalPath, '/') === '/olimpiady' && array_key_exists('page', $originalQuery))) {
+        try {
+            $legacyPage = catalogPageNumber($pathPage ? $matches[1] : $originalQuery['page']);
+        } catch (InvalidArgumentException $e) {
+            catalogNotFound();
+        }
+        $legacyTotal = (new CatalogListing($db, 'olimpiady', ['ac' => 'pedagogi']))->count();
+        if ($legacyPage > max(1, (int)ceil($legacyTotal / CatalogListing::PAGE_SIZE))) catalogNotFound();
+        header('Location: ' . catalogPageUrl('/olimpiady/pedagogi/', $legacyPage)
+            . ($tracking ? '?' . http_build_query($tracking, '', '&', PHP_QUERY_RFC3986) : ''), true, 301);
+        exit;
+    }
+}
+
 $selectedCategory = $_GET['ac'] ?? '';
 $selectedType     = $_GET['at'] ?? '';
 $selectedSpec     = $_GET['as'] ?? '';
@@ -242,6 +263,11 @@ if (!empty($landingReviews)) {
     $jsonLdArray[] = buildListingSchema($db, 'olympiad', 'olimpiady', $pageTitle, $pageDescription, $ogImage, SITE_NAME);
 }
 
+$archiveCatalogCopy = $catalogRequest['page'] === 1 && $catalogRequest['q'] === ''
+    ? seoCatalogArchiveLanding($catalogRequest['base']) : [];
+$h1Subtext = isset($archiveCatalogCopy['hero'])
+    ? htmlspecialchars($archiveCatalogCopy['hero'], ENT_QUOTES, 'UTF-8') : $h1Subtext;
+$h2Title = $archiveCatalogCopy['catalog_heading'] ?? $h2Title;
 $catalogPolicy = catalogPolicy($db, 'olimpiady', $catalogOptions, $totalOlympiads, $catalogRequest['page']);
 $canonicalUrl = $catalogPolicy['canonical'];
 $robotsContent = $catalogRequest['q'] !== '' ? 'noindex,follow' : $catalogPolicy['robots'];
@@ -263,7 +289,7 @@ include __DIR__ . '/includes/header-redesign.php';
       <div class="rd-pill-row reveal-stagger">
         <span class="rd-pill free"><span class="dot"></span>Бесплатное участие</span>
         <span class="rd-pill"><?php echo $totalOlympiads; ?>+ активных олимпиад</span>
-        <span class="rd-pill indigo">Соответствует ФГОС</span>
+        <span class="rd-pill indigo"><?= htmlspecialchars($archiveCatalogCopy['participant_label'] ?? 'Соответствует ФГОС', ENT_QUOTES, 'UTF-8') ?></span>
       </div>
       <h1 class="rd-hero-title rd-hero-title-sm reveal"><?php echo !empty($seoPage['seo_h1']) ? htmlspecialchars(seoHeading(''), ENT_QUOTES, 'UTF-8') : $h1Html; ?></h1>
       <?= renderSeoEditorial($seoPage ?? []) ?>

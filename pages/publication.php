@@ -12,6 +12,25 @@ require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/article-toc.php';
 require_once __DIR__ . '/../includes/course-card.php';
 
+require_once __DIR__ . '/../includes/seo-publication-registry.php';
+
+$requestedPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$registeredPath = is_string($requestedPath) ? rtrim($requestedPath, '/') . '/' : '/';
+$redirect = publicationSeoPath($registeredPath);
+if ($redirect !== $registeredPath) {
+    // Берём параметры исходного запроса, без внутренних параметров Apache.
+    parse_str((string)parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY), $requestQuery);
+    $utm = array_filter($requestQuery, static fn($value, $key): bool =>
+        is_string($key) && str_starts_with($key, 'utm_') && is_string($value), ARRAY_FILTER_USE_BOTH);
+    header('Location: ' . $redirect . ($utm ? '?' . http_build_query($utm, '', '&', PHP_QUERY_RFC3986) : ''), true, 301);
+    exit;
+}
+if (preg_match('~^/publikaciya/[a-z0-9-]+$~D', $requestedPath ?? '')) {
+    $query = parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+    header('Location: ' . $registeredPath . ($query ? '?' . $query : ''), true, 301);
+    exit;
+}
+
 $publicationObj = new Publication($db);
 
 $slug = $_GET['slug'] ?? null;
@@ -20,7 +39,7 @@ $id = $_GET['id'] ?? null;
 if ($slug) {
     $publication = $publicationObj->getBySlug($slug);
     // Склейка дублей-тайтлов (SEO): проигравшая версия 301-редиректится на канонический слаг
-    if ($publication && !empty($publication['redirect_to_slug'])) {
+    if ($publication && !publicationSeoEntry((int)$publication['id']) && !empty($publication['redirect_to_slug'])) {
         header('Location: /publikaciya/' . urlencode($publication['redirect_to_slug']) . '/', true, 301);
         exit;
     }
@@ -47,6 +66,38 @@ if (!$publication || $publication['status'] !== 'published') {
         <h1 style="font:800 32px var(--font-sans);color:var(--ink-900);margin-bottom:14px;">Публикация не найдена</h1>
         <p style="color:var(--ink-500);margin-bottom:24px;">Запрашиваемая публикация не существует или была удалена.</p>
         <a href="/zhurnal/" class="rd-btn rd-btn-primary">Перейти к журналу</a>
+      </div>
+    </section>
+    <?php
+    include __DIR__ . '/../includes/footer-redesign.php';
+    exit;
+}
+
+
+$registeredPublication = publicationSeoEntry((int)$publication['id']);
+if ($registeredPublication) {
+    $publicationSeoMetadata = array_filter([
+        'meta_title' => $registeredPublication['title'] ?? null,
+        'meta_description' => $registeredPublication['description'] ?? null,
+    ]);
+}
+if (($registeredPublication['action'] ?? '') === 'HIDE_PENDING_ORIGINAL') {
+    $notice = publicationSeoRegistry()['notice'];
+    $pageTitle = $publicationSeoMetadata['meta_title'] ?? $notice['heading'];
+    $pageDescription = $publicationSeoMetadata['meta_description'] ?? $notice['text'];
+    $canonicalUrl = rtrim(SITE_URL, '/') . $registeredPublication['canonical'];
+    $robotsContent = 'noindex,follow';
+    $skipSeoPageMetadata = true;
+    $rdActivePage = 'zhurnal';
+    include __DIR__ . '/../includes/header-redesign.php';
+    ?>
+    <section class="rd-section">
+      <div class="rd-wrap">
+        <h1><?= htmlspecialchars($notice['heading'], ENT_QUOTES, 'UTF-8') ?></h1>
+        <p><?= htmlspecialchars($notice['text'], ENT_QUOTES, 'UTF-8') ?></p>
+        <a class="rd-btn rd-btn-primary" href="<?= htmlspecialchars($notice['link']['href'], ENT_QUOTES, 'UTF-8') ?>">
+          <?= htmlspecialchars($notice['link']['text'], ENT_QUOTES, 'UTF-8') ?>
+        </a>
       </div>
     </section>
     <?php
@@ -102,6 +153,13 @@ $pageTitle = ($publication['meta_title'] ?: $publication['title']) . ' | ' . SIT
 $pageDescription = mb_substr($publication['meta_description'] ?: $publication['annotation'], 0, 160);
 $canonicalUrl = SITE_URL . '/publikaciya/' . $publication['slug'] . '/';
 $noindex = !$publicationObj->isIndexable($publication);
+if ($registeredPublication) {
+    $canonicalUrl = rtrim(SITE_URL, '/') . $registeredPublication['canonical'];
+    $pageTitle = $publicationSeoMetadata['meta_title'] ?? $pageTitle;
+    $pageDescription = $publicationSeoMetadata['meta_description'] ?? $pageDescription;
+    $noindex = false;
+    $robotsContent = 'index,follow';
+}
 
 $rdActivePage = 'zhurnal';
 $additionalCSS = [
@@ -127,7 +185,7 @@ $jsonLd = [
     '@type' => 'Article',
     'headline' => $publication['title'],
     'description' => mb_substr(strip_tags($publication['annotation']), 0, 300),
-    'url' => SITE_URL . '/publikaciya/' . $publication['slug'] . '/',
+    'url' => $canonicalUrl,
     'image' => $ogImage,
     'author' => [
         '@type' => 'Person',
@@ -297,7 +355,7 @@ include __DIR__ . '/../includes/header-redesign.php';
           <ul class="related-list">
             <?php foreach ($related as $rel): ?>
               <li>
-                <a href="/publikaciya/<?php echo urlencode($rel['slug']); ?>/">
+                <a href="<?= htmlspecialchars(publicationSeoPath('/publikaciya/' . rawurlencode($rel['slug']) . '/'), ENT_QUOTES, 'UTF-8') ?>">
                   <span class="related-title"><?php echo htmlspecialchars($rel['title']); ?></span>
                   <span class="related-author"><?php echo htmlspecialchars($rel['author_name']); ?></span>
                 </a>

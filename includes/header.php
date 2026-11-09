@@ -23,15 +23,31 @@ if (http_response_code() < 400 && isset($seoLandingDefinitions[$seoLandingPath])
 }
 
 if (!empty($skipSeoPageMetadata)) $seoPage = [];
+if (!empty($publicationSeoMetadata)) $seoPage = array_replace($seoPage, $publicationSeoMetadata);
+if (!empty($archiveCatalogCopy)) {
+    $seoPage['meta_title'] = $archiveCatalogCopy['title'];
+    $seoPage['meta_description'] = $archiveCatalogCopy['description'];
+    $seoPage['seo_h1'] = $archiveCatalogCopy['h1'];
+}
 if (!empty($seoPage['meta_title'])) $pageTitle = $seoPage['meta_title'];
 if (!empty($seoPage['meta_description'])) $pageDescription = $seoPage['meta_description'];
 if (!empty($jsonLd) && in_array($jsonLd['@type'] ?? '', ['Article','BlogPosting','Course','LearningResource'],true)) $jsonLd = seoEditorialSchema($jsonLd,seoEditorial($seoPage));
+if (!empty($archiveCatalogCopy) && ($jsonLd['@type'] ?? '') === 'CollectionPage') {
+    $jsonLd['name'] = $pageTitle;
+    $jsonLd['description'] = $pageDescription;
+    $jsonLd['url'] = $canonicalUrl;
+}
 if (!empty($jsonLdArray)) {
     foreach ($jsonLdArray as &$seoSchema) {
         if (($seoSchema['@type'] ?? '') === 'BlogPosting' && !empty($seoPage['seo_h1'])) $seoSchema['headline'] = $seoPage['seo_h1'];
         if (($seoSchema['@type'] ?? '') === 'CollectionPage' && (($seoLandingPath ?? '') === '/blog/' || str_starts_with($seoLandingPath ?? '', '/konkursy/'))) {
             $seoSchema['name'] = $pageTitle;
             $seoSchema['description'] = $pageDescription;
+        }
+        if (!empty($archiveCatalogCopy) && ($seoSchema['@type'] ?? '') === 'CollectionPage') {
+            $seoSchema['name'] = $pageTitle;
+            $seoSchema['description'] = $pageDescription;
+            $seoSchema['url'] = $canonicalUrl;
         }
         if (is_array($seoSchema) && in_array($seoSchema['@type'] ?? '', ['Article','BlogPosting','Course','LearningResource'], true)) {
             $seoSchema = seoEditorialSchema($seoSchema, seoEditorial($seoPage));

@@ -1,0 +1,303 @@
+{
+  "pages": {
+    "/publikaciya/razgovory-o-vazhnom-2026-2027/": {
+      "redirect": "/blog/razgovory-o-vazhnom-2026-2027/"
+    },
+    "/publikaciya/fgos-2026-2027-izmeneniya-dlya-uchitelya/": {
+      "redirect": "/blog/fgos-2026-2027-izmeneniya-dlya-uchitelya/"
+    },
+    "/publikaciya/kalendarno-tematicheskoe-planirovanie/": {
+      "redirect": "/blog/kalendarno-tematicheskoe-planirovanie/"
+    },
+    "/publikaciya/tehnologicheskaya-karta-uroka-po-fgos/": {
+      "redirect": "/blog/tehnologicheskaya-karta-uroka-po-fgos/"
+    },
+    "/publikaciya/ugadaj-melodiyu-dlya-detej/": {
+      "redirect": "/blog/ugadaj-melodiyu-dlya-detej/"
+    },
+    "/publikaciya/den-materi-v-detskom-sadu/": {
+      "redirect": "/blog/den-materi-v-detskom-sadu/"
+    },
+    "/publikaciya/zagadki-pro-semyu/": {
+      "redirect": "/blog/zagadki-pro-semyu/"
+    },
+    "/publikaciya/solnyshko-i-dozhdik/": {
+      "redirect": "/blog/solnyshko-i-dozhdik/"
+    },
+    "/publikaciya/den-narodnogo-edinstva-v-shkole/": {
+      "redirect": "/blog/den-narodnogo-edinstva-v-shkole/"
+    },
+    "/publikaciya/cvety-iz-salfetok/": {
+      "redirect": "/blog/cvety-iz-salfetok/"
+    },
+    "/publikaciya/palchikovye-igry-dlya-detej/": {
+      "redirect": "/blog/palchikovye-igry-dlya-detej/"
+    },
+    "/publikaciya/kak-narisovat-ezhika/": {
+      "redirect": "/blog/kak-narisovat-ezhika/"
+    },
+    "/publikaciya/pozdravlenie-rebenku-s-dnem-rozhdeniya/": {
+      "redirect": "/blog/pozdravlenie-rebenku-s-dnem-rozhdeniya/"
+    },
+    "/publikaciya/detskie-schitalki/": {
+      "redirect": "/blog/detskie-schitalki/"
+    },
+    "/publikaciya/osennyaya-applikaciya/": {
+      "redirect": "/blog/osennyaya-applikaciya/"
+    },
+    "/publikaciya/kak-narisovat-lyagushku/": {
+      "redirect": "/blog/kak-narisovat-lyagushku/"
+    },
+    "/publikaciya/poslovicy-o-trude/": {
+      "redirect": "/blog/poslovicy-o-trude/"
+    },
+    "/publikaciya/prazdnik-oseni-v-detskom-sadu/": {
+      "redirect": "/blog/prazdnik-oseni-v-detskom-sadu/"
+    },
+    "/publikaciya/poslovicy-o-vremenah-goda/": {
+      "redirect": "/blog/poslovicy-o-vremenah-goda/"
+    },
+    "/publikaciya/roditelskoe-sobranie-v-nachalnoj-shkole/": {
+      "redirect": "/blog/roditelskoe-sobranie-v-nachalnoj-shkole/"
+    },
+    "/publikaciya/podelki-dlya-papy/": {
+      "redirect": "/blog/podelki-dlya-papy/"
+    },
+    "/publikaciya/kak-narisovat-medvedya/": {
+      "redirect": "/blog/kak-narisovat-medvedya/"
+    },
+    "/publikaciya/prazdniki-v-detskom-sadu/": {
+      "redirect": "/blog/prazdniki-v-detskom-sadu/"
+    },
+    "/publikaciya/den-otca-v-detskom-sadu/": {
+      "redirect": "/blog/den-otca-v-detskom-sadu/"
+    },
+    "/publikaciya/razgovory-o-vazhnom-po-klassam/": {
+      "redirect": "/blog/razgovory-o-vazhnom-po-klassam/"
+    },
+    "/publikaciya/kak-provodit-razgovory-o-vazhnom/": {
+      "redirect": "/blog/kak-provodit-razgovory-o-vazhnom/"
+    },
+    "/publikaciya/gde-skachat-materialy-razgovory-o-vazhnom/": {
+      "redirect": "/blog/gde-skachat-materialy-razgovory-o-vazhnom/"
+    },
+    "/publikaciya/etapy-uroka-po-fgos/": {
+      "redirect": "/blog/etapy-uroka-po-fgos/"
+    },
+    "/publikaciya/olimpiada-po-geografii-dlya-pedagogov/": {
+      "redirect": "/blog/olimpiada-po-geografii-dlya-pedagogov/"
+    },
+    "/publikaciya/olimpiada-po-istorii-dlya-pedagogov/": {
+      "redirect": "/blog/olimpiada-po-istorii-dlya-pedagogov/"
+    },
+    "/publikaciya/olimpiada-po-matematike-dlya-pedagogov/": {
+      "redirect": "/blog/olimpiada-po-matematike-dlya-pedagogov/"
+    },
+    "/publikaciya/metodicheskoe-soprovozhdenie-fizicheskogo-razvitiya-doshkolnikov-modeli-effektivnogo-vzaimodeystviya/": {
+      "id": 786,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/metodicheskoe-soprovozhdenie-fizicheskogo-razvitiya-doshkolnikov-modeli-effektivnogo-vzaimodeystviya-s-semey-v-kontekste-sovremennyh-obrazovatelnyh-standartov/"
+    },
+    "/publikaciya/metodicheskoe-soprovozhdenie-fizicheskogo-razvitiya-doshkolnikov-modeli-effektivnogo-vzaimodeystviya-1/": {
+      "id": 787,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/metodicheskoe-soprovozhdenie-fizicheskogo-razvitiya-doshkolnikov-modeli-effektivnogo-vzaimodeystviya-s-semey-v-kontekste-sovremennyh-obrazovatelnyh-standartov/"
+    },
+    "/publikaciya/metodicheskoe-soprovozhdenie-fizicheskogo-razvitiya-doshkolnikov-modeli-effektivnogo-vzaimodeystviya-s-semey-v-kontekste-sovremennyh-obrazovatelnyh-standartov/": {
+      "id": 785,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/metodicheskoe-soprovozhdenie-fizicheskogo-razvitiya-doshkolnikov-modeli-effektivnogo-vzaimodeystviya-s-semey-v-kontekste-sovremennyh-obrazovatelnyh-standartov/",
+      "title": "Физическое развитие дошкольников: взаимодействие с семьёй — ФГОС-Практикум",
+      "description": "Методическое сопровождение физического развития дошкольников и взаимодействие с семьёй. Статья для специалистов дошкольного образования."
+    },
+    "/publikaciya/konspekt-otkrytogo-zanyatiya-po-razvitiyu-rechi-po-dorogam-skazok-1/": {
+      "id": 497,
+      "action": "HIDE_PENDING_ORIGINAL",
+      "canonical": "/publikaciya/konspekt-otkrytogo-zanyatiya-po-razvitiyu-rechi-po-dorogam-skazok-1/",
+      "title": "Конспект открытого занятия по развитию речи «По дорогам сказок» — материал временно недоступен",
+      "description": "Публикация временно недоступна. Посмотрите другие материалы в каталоге педагогического портала."
+    },
+    "/publikaciya/konspekt-zanyatiya-po-patrioticheskomu-vospitaniyu-geroy-che-imya-zhivet/": {
+      "id": 500,
+      "action": "HIDE_PENDING_ORIGINAL",
+      "canonical": "/publikaciya/konspekt-zanyatiya-po-patrioticheskomu-vospitaniyu-geroy-che-imya-zhivet/",
+      "title": "Конспект занятия по патриотическому воспитанию «Герой, чье имя живет» — материал временно недоступен",
+      "description": "Публикация временно недоступна. Посмотрите другие материалы в каталоге педагогического портала."
+    },
+    "/publikaciya/konspekt-zanyatiya-po-poznavatelnomu-i-hudozhestvenno-esteticheskomu-razvitiyu-volshebnaya-bumaga/": {
+      "id": 499,
+      "action": "HIDE_PENDING_ORIGINAL",
+      "canonical": "/publikaciya/konspekt-zanyatiya-po-poznavatelnomu-i-hudozhestvenno-esteticheskomu-razvitiyu-volshebnaya-bumaga/",
+      "title": "Конспект занятия по познавательному и художественно-эстетическому развитию «Волшебная бумага» — материал временно недоступен",
+      "description": "Публикация временно недоступна. Посмотрите другие материалы в каталоге педагогического портала."
+    },
+    "/publikaciya/konspekt-zanyatiya-volshebstvo-letnego-sada/": {
+      "id": 498,
+      "action": "HIDE_PENDING_ORIGINAL",
+      "canonical": "/publikaciya/konspekt-zanyatiya-volshebstvo-letnego-sada/",
+      "title": "Конспект занятия «Волшебство летнего сада» — материал временно недоступен",
+      "description": "Публикация временно недоступна. Посмотрите другие материалы в каталоге педагогического портала."
+    },
+    "/publikaciya/konspekt-otkrytogo-zanyatiya-po-razvitiyu-rechi-po-dorogam-skazok/": {
+      "id": 496,
+      "action": "HIDE_PENDING_ORIGINAL",
+      "canonical": "/publikaciya/konspekt-otkrytogo-zanyatiya-po-razvitiyu-rechi-po-dorogam-skazok/",
+      "title": "Конспект открытого занятия по развитию речи &#039;По дорогам сказок&#039; — материал временно недоступен",
+      "description": "Публикация временно недоступна. Посмотрите другие материалы в каталоге педагогического портала."
+    },
+    "/publikaciya/matematika-v-zhizni-otvety-na-vopros-zachem-my-eto-uchim-spravochnik-pomoschnik-uchitelya-matematiki/": {
+      "id": 998,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/matematika-v-zhizni-otvety-na-vopros-zachem-my-eto-uchim-spravochnik-pomoschnik-uchitelya-matematiki-dlya-5-8-klassov/"
+    },
+    "/publikaciya/matematika-v-zhizni-otvety-na-vopros-zachem-my-eto-uchim-spravochnik-pomoschnik-uchitelya-matematiki-dlya-5-8-klassov/": {
+      "id": 997,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/matematika-v-zhizni-otvety-na-vopros-zachem-my-eto-uchim-spravochnik-pomoschnik-uchitelya-matematiki-dlya-5-8-klassov/",
+      "title": "Математика в жизни: справочник учителя для 5–8 классов — ФГОС-Практикум",
+      "description": "Справочник для учителя математики 5–8 классов: примеры применения математики в жизни и материалы для объяснения практического смысла учебных тем."
+    },
+    "/publikaciya/bloki-denesha-kak-sredstvo-dlya-formirovaniya-matematicheskih-predstavleniy/": {
+      "id": 33,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/bloki-denesha-kak-sredstvo-dlya-formirovaniya-matematicheskih-predstavleniy/",
+      "title": "Блоки Дьенеша для формирования математических представлений — ФГОС-Практикум",
+      "description": "Материал об использовании блоков Дьенеша для развития математических представлений: классификация, сравнение и работа с геометрическими признаками."
+    },
+    "/publikaciya/bloki-denesha-dlya-formirovaniya-matematicheskih-predstavleniy/": {
+      "id": 44,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/bloki-denesha-kak-sredstvo-dlya-formirovaniya-matematicheskih-predstavleniy/"
+    },
+    "/publikaciya/razvitie-svyaznoy-rechi-u-detey-3-4-let-s-obschim-nedorazvitiem-rechi-s-ispolzovaniem-tehniki-netraditsionnogo-risovaniya/": {
+      "id": 830,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/razvitie-svyaznoy-rechi-u-detey-3-4-let-s-obschim-nedorazvitiem-rechi-s-ispolzovaniem-tehniki-netraditsionnogo-risovaniya/",
+      "title": "Развитие речи у детей 3–4 лет с ОНР через рисование — ФГОС-Практикум",
+      "description": "Статья о развитии связной речи у детей 3–4 лет с общим недоразвитием речи с использованием техники нетрадиционного рисования."
+    },
+    "/publikaciya/razvitie-svyaznoy-rechi-u-detey-3-4-let-s-obschim-nedorazvitiem-rechi/": {
+      "id": 829,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/razvitie-svyaznoy-rechi-u-detey-3-4-let-s-obschim-nedorazvitiem-rechi-s-ispolzovaniem-tehniki-netraditsionnogo-risovaniya/"
+    },
+    "/publikaciya/rabochaya-programma-po-obrazovatelnomu-komponentu-pervye-shagi-v-astronomiyu-dlya-starshey-gruppy-obscherazvivayuschey-napravlennosti-s-5-do-6-let/": {
+      "id": 828,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/rabochaya-programma-po-obrazovatelnomu-komponentu-pervye-shagi-v-astronomiyu-dlya-starshey-gruppy-obscherazvivayuschey-napravlennosti-s-5-do-6-let/",
+      "title": "Первые шаги в астрономию: программа для детей 5–6 лет — ФГОС-Практикум",
+      "description": "Рабочая программа «Первые шаги в астрономию» для старшей группы детей 5–6 лет: содержание образовательного компонента и планирование работы."
+    },
+    "/publikaciya/rabochaya-programma-pervye-shagi-v-astronomiyu/": {
+      "id": 827,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/rabochaya-programma-po-obrazovatelnomu-komponentu-pervye-shagi-v-astronomiyu-dlya-starshey-gruppy-obscherazvivayuschey-napravlennosti-s-5-do-6-let/"
+    },
+    "/publikaciya/iz-opyta-raboty-podgotovka-shkolnikov-ko-vserossiyskoy-olimpiade-po-fizicheskoy-kulture/": {
+      "id": 741,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/esse-uchitelya-fizicheskoy-kultury-podgotovka-ko-vserossiyskoy-olimpiade-shkolnikov/"
+    },
+    "/publikaciya/esse-uchitelya-fizicheskoy-kultury-podgotovka-ko-vserossiyskoy-olimpiade-shkolnikov/": {
+      "id": 740,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/esse-uchitelya-fizicheskoy-kultury-podgotovka-ko-vserossiyskoy-olimpiade-shkolnikov/",
+      "title": "Подготовка школьников к олимпиаде по физкультуре — ФГОС-Практикум",
+      "description": "Материал из опыта подготовки школьников ко всероссийской олимпиаде по физической культуре. Подходы к организации подготовки и работе с участниками."
+    },
+    "/publikaciya/stsenariy-po-pdd/": {
+      "id": 718,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/razvlechenie-po-pravilam-dorozhnogo-dvizheniya/"
+    },
+    "/publikaciya/razvlechenie-po-pravilam-dorozhnogo-dvizheniya/": {
+      "id": 713,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/razvlechenie-po-pravilam-dorozhnogo-dvizheniya/",
+      "title": "Развлечение по правилам дорожного движения — ФГОС-Практикум",
+      "description": "Сценарий развлечения по правилам дорожного движения с ведущим в роли инспектора, играми и заданиями для детей."
+    },
+    "/publikaciya/patrioticheskoe-vospitanie-mladshih-shkolnikov-na-urokah-vo-2-klasse/": {
+      "id": 386,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/patrioticheskoe-vospitanie-mladshih-shkolnikov-na-urokah-v-2-klasse/"
+    },
+    "/publikaciya/patrioticheskoe-vospitanie-mladshih-shkolnikov-na-urokah-v-2-klasse/": {
+      "id": 385,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/patrioticheskoe-vospitanie-mladshih-shkolnikov-na-urokah-v-2-klasse/",
+      "title": "Патриотическое воспитание во 2 классе: примеры для уроков — ФГОС-Практикум",
+      "description": "Материал о гражданско-патриотическом воспитании второклассников на уроках русского языка, чтения, математики и окружающего мира."
+    },
+    "/publikaciya/metodicheskaya-razrabotka-predane-stariny-glubokoy/": {
+      "id": 265,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/predane-stariny-glubokoy/"
+    },
+    "/publikaciya/predane-stariny-glubokoy/": {
+      "id": 264,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/predane-stariny-glubokoy/",
+      "title": "Преданье старины глубокой: внеклассная разработка — ФГОС-Практикум",
+      "description": "Внеклассная разработка «Преданье старины глубокой»: цели, оборудование и ход мероприятия о традициях и прошлом своей Родины."
+    },
+    "/publikaciya/urok-tehnologii-v-7-gigiena-truda/": {
+      "id": 205,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/urok-tehnologii-v-7-gigiena-truda/",
+      "title": "Гигиена труда и производственная санитария: урок технологии — ФГОС-Практикум",
+      "description": "Конспект урока технологии о гигиене труда и производственной санитарии: цели, задачи, оборудование и ход занятия."
+    },
+    "/publikaciya/urok-tehnologii-v-7-klasse-mastiki-i-klei-dlya-linoleuma-2/": {
+      "id": 204,
+      "action": "HIDE_PENDING_ORIGINAL",
+      "canonical": "/publikaciya/urok-tehnologii-v-7-klasse-mastiki-i-klei-dlya-linoleuma-2/",
+      "title": "Урок технологии в 7 классе: мастики и клеи для линолеума — материал временно недоступен",
+      "description": "Публикация временно недоступна. Посмотрите другие материалы в каталоге педагогического портала."
+    },
+    "/publikaciya/iskusstvennyy-intellekt-v-doshkolnom-obrazovanii/": {
+      "id": 193,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/iskusstvennyy-intellekt-ii-v-detskom-sadu-perspektivy-razvitiya/"
+    },
+    "/publikaciya/iskusstvennyy-intellekt-ii-v-detskom-sadu-perspektivy-razvitiya/": {
+      "id": 192,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/iskusstvennyy-intellekt-ii-v-detskom-sadu-perspektivy-razvitiya/",
+      "title": "ИИ в дошкольном образовании: перспективы развития — ФГОС-Практикум",
+      "description": "Материал о перспективах использования искусственного интеллекта в дошкольном образовании и возможных направлениях его применения."
+    },
+    "/publikaciya/teatralizatsiya-na-urokah-literaturnogo-chteniya-kak-sredstvo-povysheniya-chitatelskogo-interesa-u-mladshih-shkolnikov/": {
+      "id": 188,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/teatralizatsiya-na-urokah-literaturnogo-chteniya-kak-sredstvo-povysheniya-chitatelskogo-interesa-u-mladshih-shkolnikov/",
+      "title": "Театрализация на уроках литературного чтения — ФГОС-Практикум",
+      "description": "Методическая разработка об использовании театрализации на уроках литературного чтения для развития читательского интереса младших школьников."
+    },
+    "/publikaciya/teatralizatsiya-na-urokah-literaturnogo-chteniya/": {
+      "id": 187,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/teatralizatsiya-na-urokah-literaturnogo-chteniya-kak-sredstvo-povysheniya-chitatelskogo-interesa-u-mladshih-shkolnikov/"
+    },
+    "/publikaciya/razrabotka-uroka-po-okruzhayuschemu-miru-na-temu-chem-chelovek-otlichaetsya-ot-zhivotnyh/": {
+      "id": 83,
+      "action": "PRIMARY",
+      "canonical": "/publikaciya/razrabotka-uroka-po-okruzhayuschemu-miru-na-temu-chem-chelovek-otlichaetsya-ot-zhivotnyh/",
+      "title": "Человек и животные: технологическая карта урока — ФГОС-Практикум",
+      "description": "Технологическая карта урока окружающего мира об отличительных особенностях человека и животных: цели, результаты и организация учебной работы."
+    },
+    "/publikaciya/tehnologicheskaya-karta-uroka-po-okruzhayuschemu-miru/": {
+      "id": 82,
+      "action": "CANONICAL_ALIAS",
+      "canonical": "/publikaciya/razrabotka-uroka-po-okruzhayuschemu-miru-na-temu-chem-chelovek-otlichaetsya-ot-zhivotnyh/"
+    }
+  },
+  "notice": {
+    "heading": "Материал временно недоступен",
+    "text": "Публикация временно снята с публичного показа для проверки содержания. Посмотрите другие материалы в каталоге.",
+    "link": {
+      "text": "Перейти к каталогу публикаций",
+      "href": "/publikacii/"
+    }
+  }
+}

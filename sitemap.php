@@ -8,6 +8,7 @@
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/catalog-seo.php';
 require_once __DIR__ . '/includes/url-helper.php';
+require_once __DIR__ . '/classes/Publication.php';
 
 header('Content-Type: application/xml; charset=UTF-8');
 
@@ -34,6 +35,8 @@ function sitemapUrl($loc, $priority = '0.5', $changefreq = 'monthly', $lastmod =
     if (isset($seen[$loc])) return;
     $seen[$loc] = true;
     $path = parse_url($loc, PHP_URL_PATH);
+    $publicationRule = publicationSeoRegistry()['pages'][$path] ?? [];
+    if (isset($publicationRule['redirect']) || in_array($publicationRule['action'] ?? '', ['CANONICAL_ALIAS', 'HIDE_PENDING_ORIGINAL'], true)) return;
     $landings = json_decode(file_get_contents(__DIR__ . '/includes/seo-landing-data.json'), true);
     $specialLanding = isset($landings[$path]) && $path !== '/kursy/povyshenie-kvalifikatsii/nachalnaya-shkola/';
     if ($specialLanding && str_starts_with($path, '/konkursy/')) {
@@ -61,6 +64,34 @@ function sitemapUrl($loc, $priority = '0.5', $changefreq = 'monthly', $lastmod =
 function fileLastmod($absPath) {
     // mtime меняется при checkout/deploy и не доказывает изменение содержания.
     return null;
+}
+
+foreach (array_keys(seoCatalogArchive()['landings']) as $archivePath) {
+    sitemapUrl($baseUrl . $archivePath, '0.6', 'weekly');
+}
+foreach (seoCatalogArchive()['journal_empty'] as $archivePath => $unused) {
+    [, $category, $type, $specialization] = explode('/', trim($archivePath, '/'));
+    $filters = [];
+    foreach ([
+        'category_id' => ['audience_categories', $category],
+        'audience_type_id' => ['audience_types', $type],
+        'specialization_id' => ['audience_specializations', $specialization],
+    ] as $key => [$table, $slug]) {
+        $statement = $db->prepare("SELECT id FROM $table WHERE slug = ? AND is_active = 1");
+        $statement->execute([$slug]);
+        $id = $statement->fetchColumn();
+        if ($id === false) continue 2;
+        $filters[$key] = (int)$id;
+    }
+    if ((new Publication($db))->countPublished($filters) > 0) {
+        sitemapUrl($baseUrl . $archivePath, '0.6', 'weekly');
+    }
+}
+$primaryPublication = $db->prepare("SELECT 1 FROM publications WHERE id = ? AND slug = ? AND status = 'published'");
+foreach (publicationSeoRegistry()['pages'] as $archivePath => $rule) {
+    if (($rule['action'] ?? '') !== 'PRIMARY') continue;
+    $primaryPublication->execute([$rule['id'], basename($archivePath)]);
+    if ($primaryPublication->fetchColumn()) sitemapUrl($baseUrl . $archivePath, '0.7', 'monthly');
 }
 
 // Префетч MAX(updated_at) по основным таблицам — для каталогов и главной

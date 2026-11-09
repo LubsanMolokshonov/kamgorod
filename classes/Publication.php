@@ -4,6 +4,8 @@
  * Handles publication CRUD operations for the journal section
  */
 
+require_once __DIR__ . '/../includes/seo-publication-registry.php';
+
 class Publication {
     private $db;
 
@@ -186,13 +188,13 @@ class Publication {
      * @return array Publications
      */
     public function getPublished($limit = 20, $offset = 0, $filters = []) {
-        $sql = "SELECT p.*, pt.name as type_name, pt.slug as type_slug,
+        $sql = "SELECT DISTINCT p.*, pt.name as type_name, pt.slug as type_slug,
                        u.full_name as author_name, u.organization as author_organization
                 FROM publications p
                 LEFT JOIN publication_types pt ON p.publication_type_id = pt.id
                 LEFT JOIN users u ON p.user_id = u.id";
 
-        $wheres = ["p.status = 'published'", "(p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')"];
+        $wheres = [self::publicVisibilitySql('p'), "p.status = 'published'", "(p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')"];
         $params = [];
 
         if (!empty($filters['indexable_only'])) {
@@ -241,14 +243,15 @@ class Publication {
             $params[] = $filters['specialization_id'];
         }
 
+        self::appendCatalogSearch($filters['q'] ?? '', $wheres, $params);
         $sql .= " WHERE " . implode(" AND ", $wheres);
 
         // Sorting
         $sortBy = $filters['sort'] ?? 'date';
         if ($sortBy === 'popular') {
-            $sql .= " ORDER BY p.views_count DESC, p.published_at DESC";
+            $sql .= " ORDER BY p.views_count DESC, p.published_at DESC, p.id DESC";
         } else {
-            $sql .= " ORDER BY p.published_at DESC";
+            $sql .= " ORDER BY p.published_at DESC, p.id DESC";
         }
 
         $sql .= " LIMIT ? OFFSET ?";
@@ -274,7 +277,7 @@ class Publication {
              LEFT JOIN users u ON p.user_id = u.id
              JOIN publication_tag_relations ptr ON p.id = ptr.publication_id
              JOIN publication_tags t ON ptr.tag_id = t.id
-             WHERE t.slug = ? AND p.status = 'published'
+             WHERE t.slug = ? AND p.status = 'published' AND " . self::publicVisibilitySql('p') . "
              ORDER BY p.published_at DESC
              LIMIT ? OFFSET ?",
             [$tagSlug, $limit, $offset]
@@ -295,7 +298,7 @@ class Publication {
              FROM publications p
              JOIN publication_types pt ON p.publication_type_id = pt.id
              LEFT JOIN users u ON p.user_id = u.id
-             WHERE pt.slug = ? AND p.status = 'published'
+             WHERE pt.slug = ? AND p.status = 'published' AND " . self::publicVisibilitySql('p') . "
              ORDER BY p.published_at DESC
              LIMIT ? OFFSET ?",
             [$typeSlug, $limit, $offset]
@@ -336,7 +339,7 @@ class Publication {
              FROM publications p
              LEFT JOIN publication_types pt ON p.publication_type_id = pt.id
              LEFT JOIN users u ON p.user_id = u.id
-             WHERE p.status = 'published' AND (p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')
+             WHERE p.status = 'published' AND " . self::publicVisibilitySql('p') . " AND (p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')
              ORDER BY p.published_at DESC
              LIMIT ?",
             [$limit]
@@ -354,7 +357,7 @@ class Publication {
              FROM publications p
              LEFT JOIN publication_types pt ON p.publication_type_id = pt.id
              LEFT JOIN users u ON p.user_id = u.id
-             WHERE p.status = 'published' AND (p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')
+             WHERE p.status = 'published' AND " . self::publicVisibilitySql('p') . " AND (p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')
              ORDER BY p.views_count DESC
              LIMIT ?",
             [$limit]
@@ -377,6 +380,7 @@ class Publication {
                 LEFT JOIN users u ON p.user_id = u.id";
 
         $wheres = [
+            self::publicVisibilitySql('p'),
             "p.status = 'published'",
             $this->indexableSql('p'),
             "MATCH(p.title, p.annotation) AGAINST(? IN NATURAL LANGUAGE MODE)",
@@ -638,8 +642,11 @@ class Publication {
      */
     public function countPublished($filters = []) {
         $sql = "SELECT COUNT(DISTINCT p.id) as total FROM publications p";
-        $wheres = ["p.status = 'published'", "(p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')"];
+        $wheres = [self::publicVisibilitySql('p'), "p.status = 'published'", "(p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')"];
         $params = [];
+        if (($filters['q'] ?? '') !== '') {
+            $sql .= ' LEFT JOIN publication_types pt ON pt.id = p.publication_type_id LEFT JOIN users u ON u.id = p.user_id';
+        }
 
         if (!empty($filters['indexable_only'])) {
             $wheres[] = $this->indexableSql('p');
@@ -678,6 +685,7 @@ class Publication {
             $params[] = $filters['specialization_id'];
         }
 
+        self::appendCatalogSearch($filters['q'] ?? '', $wheres, $params);
         $sql .= " WHERE " . implode(" AND ", $wheres);
 
         $result = $this->db->queryOne($sql, $params);
@@ -690,6 +698,21 @@ class Publication {
         }
 
         return (new DateTimeImmutable($publishedAt))->modify('+35 days')->format('Y-m-d H:i:s');
+    }
+
+    private static function appendCatalogSearch(string $query, array &$wheres, array &$params): void {
+        $query = mb_strtolower(str_replace(['ё', 'Ё'], ['е', 'е'], trim($query)));
+        if ($query === '') return;
+        $text = "REPLACE(LOWER(CONCAT_WS(' ', p.title, p.annotation, u.full_name, pt.name)), 'ё', 'е')";
+        foreach (array_slice(preg_split('/\s+/u', $query), 0, 12) as $word) {
+            $wheres[] = "$text LIKE ? ESCAPE '!'";
+            $params[] = '%' . strtr($word, ['!' => '!!', '%' => '!%', '_' => '!_']) . '%';
+        }
+    }
+
+    public static function publicVisibilitySql(string $alias): string {
+        // ID проверены против реестра. Фильтр не применяется к кабинетам и админке.
+        return "{$alias}.id NOT IN (" . implode(',', publicationSeoExcludedIds()) . ')';
     }
 
     private function indexableSql(string $alias): string {
@@ -724,7 +747,7 @@ class Publication {
              LEFT JOIN users u ON p.user_id = u.id
              JOIN publication_tag_relations ptr ON p.id = ptr.publication_id
              WHERE ptr.tag_id IN ($placeholders)
-             AND p.id != ? AND p.status = 'published' AND (p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')
+             AND p.id != ? AND p.status = 'published' AND " . self::publicVisibilitySql('p') . " AND (p.redirect_to_slug IS NULL OR p.redirect_to_slug = '')
              GROUP BY p.id
              ORDER BY tag_matches DESC, p.views_count DESC
              LIMIT ?",

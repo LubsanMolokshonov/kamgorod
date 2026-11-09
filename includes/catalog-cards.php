@@ -66,7 +66,8 @@ foreach ($items as $item): ?>
 <?php endforeach; endif; ?>
 <?php if ($section === 'olimpiady'): $olympiads = $items; ?>
 <?php foreach ($olympiads as $olympiad):
-                $audLabel = Olympiad::getAudienceLabel($olympiad['target_audience'] ?? '');
+                require_once __DIR__ . '/seo-catalog-archive.php';
+                $audLabel = olympiadVisibleAudience($olympiad);
                 $oUrl     = buildProductUrl('olimpiady', $olympiad['slug'], $olympiad['id']);
                 $oPrice   = (int)($olympiad['diploma_price'] ?? 229);
             ?>

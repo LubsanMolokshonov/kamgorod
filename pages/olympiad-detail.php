@@ -52,7 +52,8 @@ if (!$olympiad) {
     exit;
 }
 
-$audienceLabel = Olympiad::getAudienceLabel($olympiad['target_audience']);
+require_once __DIR__ . '/../includes/seo-catalog-archive.php';
+$audienceLabel = olympiadVisibleAudience($olympiad);
 $diplomaPrice  = (int)($olympiad['diploma_price'] ?? 229);
 $academicYear  = $olympiad['academic_year'] ?? '';
 
