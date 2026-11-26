@@ -25,6 +25,8 @@
 
 require_once __DIR__ . '/Database.php';
 require_once __DIR__ . '/Order.php';
+require_once __DIR__ . '/CourseCheckout.php';
+require_once __DIR__ . '/CoursePaymentEvent.php';
 require_once __DIR__ . '/SubscriptionService.php';
 require_once __DIR__ . '/TelegramNotifier.php';
 require_once __DIR__ . '/UserTokens.php';
@@ -65,40 +67,158 @@ class PaymentReconciliation
         $stats = ['checked' => 0, 'recovered' => 0, 'failed_marked' => 0, 'still_pending' => 0, 'errors' => 0];
 
         $rows = $this->db->query(
-            "SELECT id, order_number, user_id, subscription_plan_id, subscription_period,
-                    final_amount, payment_status, yookassa_payment_id
-               FROM orders
-              WHERE payment_status = 'pending'
-                AND yookassa_payment_id IS NOT NULL AND yookassa_payment_id <> ''
-                AND created_at <= (NOW() - INTERVAL ? MINUTE)
-                AND created_at >= (NOW() - INTERVAL ? DAY)
-              ORDER BY id",
-            [$minAgeMinutes, $maxAgeDays]
+            "SELECT o.id, o.order_number, o.user_id, o.subscription_plan_id, o.subscription_period,
+                    o.final_amount, o.payment_status, o.yookassa_payment_id,
+                    (SELECT MIN(oi.course_enrollment_id) FROM order_items oi WHERE oi.order_id = o.id) AS enrollment_id
+               FROM orders o
+               LEFT JOIN course_checkout_payments a ON a.order_id = o.id
+              WHERE (o.payment_status = 'pending' OR (
+                        o.payment_status = 'processing'
+                        AND EXISTS (SELECT 1 FROM order_items oi WHERE oi.order_id = o.id AND oi.course_enrollment_id IS NOT NULL)
+                    ))
+                AND o.yookassa_payment_id IS NOT NULL AND o.yookassa_payment_id <> ''
+                AND ((a.attempt_started_at IS NULL
+                      AND o.created_at BETWEEN (NOW() - INTERVAL ? DAY) AND (NOW() - INTERVAL ? MINUTE))
+                     OR (a.attempt_started_at IS NOT NULL
+                         AND a.attempt_started_at BETWEEN (UTC_TIMESTAMP() - INTERVAL ? DAY)
+                                                      AND (UTC_TIMESTAMP() - INTERVAL ? MINUTE)))
+              ORDER BY o.id",
+            [$maxAgeDays, $minAgeMinutes, $maxAgeDays, $minAgeMinutes]
         );
 
         foreach ($rows as $o) {
             $stats['checked']++;
             try {
                 $payment = $this->client->getPaymentInfo($o['yookassa_payment_id']);
-                $status  = $payment->getStatus();
-
-                if ($status === \YooKassa\Model\PaymentStatus::SUCCEEDED) {
-                    if ($this->heal($o, $payment)) $stats['recovered']++;
-                    else $stats['still_pending']++; // уже обработан кем-то в гонке
-                } elseif ($status === \YooKassa\Model\PaymentStatus::CANCELED) {
-                    (new Order($this->pdo))->updatePaymentStatus((int)$o['id'], 'failed');
-                    $this->emit('INFO', "order {$o['order_number']} → failed (Yookassa canceled)");
-                    $stats['failed_marked']++;
-                } else {
-                    $stats['still_pending']++; // pending / waiting_for_capture — ждём
-                }
+                $enrollmentId = (int)$o['enrollment_id'];
+                $apply = fn(): string => $this->applyCurrentPayment($o, $payment);
+                $result = $enrollmentId > 0
+                    ? CourseCheckout::withEnrollmentLock($this->pdo, $enrollmentId, $apply)
+                    : $apply();
+                $stats[$result]++;
             } catch (\Throwable $e) {
                 $stats['errors']++;
                 $this->emit('ERROR', "order {$o['order_number']} ({$o['yookassa_payment_id']}): " . $e->getMessage());
             }
         }
 
+        $this->reconcileUnattachedPayments($minAgeMinutes, $maxAgeDays, $stats);
         return $stats;
+    }
+
+    private function applyCurrentPayment(array $order, object $payment): string
+    {
+        $current = $this->db->queryOne(
+            "SELECT payment_status FROM orders WHERE id = ? AND yookassa_payment_id = ?",
+            [$order['id'], $payment->getId()]
+        );
+        if (!$current || !in_array($current['payment_status'], ['pending', 'processing'], true)) {
+            return 'still_pending';
+        }
+        if (!empty($order['enrollment_id']) && !CoursePaymentEvent::matchesAmount($order, $payment)) {
+            throw new RuntimeException('Сумма оплаты курса отличается от заказа');
+        }
+        if (!empty($order['enrollment_id']) && $payment->getStatus() === \YooKassa\Model\PaymentStatus::WAITING_FOR_CAPTURE) {
+            (new Order($this->pdo))->updateActiveYookassaStatus((int)$order['id'], $payment->getId(), 'processing');
+        }
+        if ($payment->getStatus() === \YooKassa\Model\PaymentStatus::SUCCEEDED) {
+            $refunded = empty($order['enrollment_id']) ? null : $payment->getRefundedAmount();
+            if ($refunded && $refunded->getCurrency() === 'RUB'
+                && (string)$refunded->getValue() === number_format((float)$order['final_amount'], 2, '.', '')) {
+                $updated = (new Order($this->pdo))->updateActiveYookassaStatus((int)$order['id'], $payment->getId(), 'refunded');
+                return $updated ? 'recovered' : 'still_pending';
+            }
+            return $this->heal($order, $payment) ? 'recovered' : 'still_pending';
+        }
+        if ($payment->getStatus() === \YooKassa\Model\PaymentStatus::CANCELED
+            && (new Order($this->pdo))->cancelYookassaPayment((int)$order['id'], $payment->getId())) {
+            $this->emit('INFO', "order {$order['order_number']} → failed (Yookassa canceled)");
+            return 'failed_marked';
+        }
+        return 'still_pending';
+    }
+
+    /** Восстановить потерянный ответ на создание по платежам магазина и сохранённой попытке. */
+    private function reconcileUnattachedPayments(int $minAgeMinutes, int $maxAgeDays, array &$stats): void
+    {
+        $attempts = $this->db->query(
+            "SELECT a.enrollment_id, a.attempt_key, a.attempt_started_at,
+                    o.id, o.order_number, o.user_id, o.subscription_plan_id, o.final_amount
+               FROM course_checkout_payments a JOIN orders o ON o.id = a.order_id
+              WHERE a.attempt_payload IS NOT NULL AND a.attempt_key IS NOT NULL
+                AND (o.yookassa_payment_id IS NULL OR o.yookassa_payment_id = '')
+                AND o.payment_status IN ('pending', 'processing')
+                AND a.attempt_started_at <= (UTC_TIMESTAMP() - INTERVAL ? MINUTE)
+                AND a.attempt_started_at >= (UTC_TIMESTAMP() - INTERVAL ? DAY)
+              ORDER BY a.attempt_started_at ASC LIMIT 200",
+            [$minAgeMinutes, $maxAgeDays]
+        );
+        $cartAttempts = $this->db->query(
+            "SELECT o.id, o.created_at AS attempt_started_at
+               FROM cart_payment_attempts a JOIN orders o ON o.id = a.order_id
+              WHERE (o.yookassa_payment_id IS NULL OR o.yookassa_payment_id = '')
+                AND o.payment_status = 'pending'
+                AND o.created_at BETWEEN (NOW() - INTERVAL ? DAY) AND (NOW() - INTERVAL ? MINUTE)
+              ORDER BY o.created_at LIMIT 200",
+            [$maxAgeDays, $minAgeMinutes]
+        );
+        if (!$attempts && !$cartAttempts) {
+            return;
+        }
+
+        $unattached = array_column($attempts, null, 'attempt_key');
+        $cartOrders = array_column($cartAttempts, null, 'id');
+        $since = min(array_column(array_merge($attempts, $cartAttempts), 'attempt_started_at'));
+        $filter = ['created_at_gte' => str_replace(' ', 'T', $since) . 'Z', 'limit' => 100];
+        $orderObj = new Order($this->pdo);
+        try {
+            for ($page = 0; $page < 10; $page++) {
+                $response = $this->client->getPayments($filter);
+                foreach ($response->getItems() as $payment) {
+                    $meta = $payment->getMetadata();
+                    $cartOrderId = (int)($meta['order_id'] ?? 0);
+                    if (($meta['payment_type'] ?? '') === 'cart' && isset($cartOrders[$cartOrderId])) {
+                        // Штатный вебхук или следующий проход со связанным ID доведёт выдачу до конца.
+                        if ($orderObj->attachVerifiedCartPayment($payment)) {
+                            unset($cartOrders[$cartOrderId]);
+                            $stats['checked']++;
+                            if ($payment->getStatus() === \YooKassa\Model\PaymentStatus::CANCELED
+                                && $orderObj->cancelYookassaPayment($cartOrderId, $payment->getId())) {
+                                $stats['failed_marked']++;
+                            } else {
+                                $stats['still_pending']++;
+                            }
+                        }
+                        continue;
+                    }
+                    $key = CoursePaymentEvent::attemptKey($payment);
+                    if (!isset($unattached[$key])) {
+                        continue;
+                    }
+                    $order = $unattached[$key];
+                    $enrollmentId = (int)$order['enrollment_id'];
+                    $result = CourseCheckout::withEnrollmentLock($this->pdo, $enrollmentId, function () use ($enrollmentId, $order, $payment): string {
+                        if (!CoursePaymentEvent::attachVerified($this->pdo, $enrollmentId, $payment)) {
+                            return 'still_pending';
+                        }
+                        return $this->applyCurrentPayment($order, $payment);
+                    });
+                    $stats['checked']++;
+                    $stats[$result]++;
+                    unset($unattached[$key]);
+                }
+                $filter['cursor'] = $response->getNextCursor();
+                if (!$filter['cursor'] || (!$unattached && !$cartOrders)) {
+                    break;
+                }
+            }
+            if (($unattached || $cartOrders) && !empty($filter['cursor'])) {
+                $this->emit('WARN', 'Сверка заказов без ID ЮKassa достигла лимита страниц');
+            }
+        } catch (Throwable $e) {
+            $stats['errors']++;
+            $this->emit('ERROR', 'Сверка заказов без ID ЮKassa: ' . get_class($e));
+        }
     }
 
     /**
@@ -110,7 +230,7 @@ class PaymentReconciliation
         $orderId = (int)$o['id'];
 
         $cur = $this->db->queryOne("SELECT payment_status FROM orders WHERE id = ?", [$orderId]);
-        if (!$cur || $cur['payment_status'] === 'succeeded') {
+        if (!$cur || !in_array($cur['payment_status'], ['pending', 'processing'], true)) {
             return false; // вебхук успел раньше
         }
 
@@ -141,9 +261,9 @@ class PaymentReconciliation
             $this->alertRecovered($o, "подписка активирована (sub #{$subId})");
         } else {
             // --- Обычный заказ: выдать документы единым движком (как вебхук) ---
-            $orderObj->updatePaymentStatus($orderId, 'succeeded', date('Y-m-d H:i:s'));
             $log = $this->log;
-            fulfillOrderItems($this->pdo, $orderId, 'reconcile', static function (string $l, string $m) use ($log): void {
+            $source = empty($o['enrollment_id']) ? 'reconcile' : 'reconcile_course_payment';
+            fulfillOrderItems($this->pdo, $orderId, $source, static function (string $l, string $m) use ($log): void {
                 $log($l, $m);
             });
             $this->bestEffort(fn() => (new MaxCourseRecommendationChain($this->pdo))->schedule($orderId));

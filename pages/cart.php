@@ -29,6 +29,8 @@ $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
 // Check if cart exists
 $registrations = getCart();
 $certificates = getCartCertificates();
+sort($registrations, SORT_NUMERIC);
+sort($certificates, SORT_NUMERIC);
 
 // Общие дефолты для loyalty (перекрываются ниже при наличии статуса)
 $loyaltyDiscount = 0;
@@ -116,6 +118,7 @@ if (isCartEmpty()) {
     // Get webinar certificates
     $webCertObj = new WebinarCertificate($db);
     $webinarCertificates = getCartWebinarCertificates();
+    sort($webinarCertificates, SORT_NUMERIC);
     foreach ($webinarCertificates as $webCertId) {
         $webCert = $webCertObj->getById($webCertId);
         if ($webCert) {
@@ -134,6 +137,7 @@ if (isCartEmpty()) {
     // Get olympiad registrations
     $olympRegObj = new OlympiadRegistration($db);
     $olympiadRegistrations = getCartOlympiadRegistrations();
+    sort($olympiadRegistrations, SORT_NUMERIC);
     foreach ($olympiadRegistrations as $olympRegId) {
         $olympReg = $olympRegObj->getById($olympRegId);
         if ($olympReg) {
@@ -459,6 +463,7 @@ include __DIR__ . '/../includes/header.php';
                         <button type="submit" class="btn btn-danger payment-btn">
                             Перейти к оплате (<?php echo groupFormatMoney($grandTotal); ?> ₽)
                         </button>
+                        <p id="cart-payment-message" role="alert" hidden></p>
                     </form>
                     <p style="margin-top: 16px; color: var(--text-medium); font-size: 14px;">
                         Оплата через ЮКасса • Банковские карты, электронные кошельки, СБП
@@ -498,15 +503,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Payment form handler
     const form = document.getElementById('paymentForm');
     if (form) {
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) window.location.reload();
+        });
         form.addEventListener('submit', function(e) {
             e.preventDefault();
 
             const btn = this.querySelector('button[type="submit"]');
+            if (btn.disabled) return;
+            const label = btn.textContent;
+            const message = document.getElementById('cart-payment-message');
             const formData = new FormData(this);
 
             // Disable button
             btn.disabled = true;
             btn.textContent = 'Обработка...';
+            message.hidden = true;
+
+            function showPaymentError(text) {
+                message.textContent = text;
+                message.hidden = false;
+                btn.textContent = label;
+                btn.disabled = false;
+            }
 
             // Добавляем UTM из sessionStorage; fallback — cookie _fgos_utm_* (90 дней),
             // которое переживает закрытие браузера/переход из почтового клиента.
@@ -514,12 +533,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
                 return m ? decodeURIComponent(m[1]) : '';
             }
-            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function(key) {
-                var val = sessionStorage.getItem('_fgos_' + key) || getCookieVal('_fgos_' + key);
-                if (val) formData.append(key, val);
-            });
-            var visitId = sessionStorage.getItem('_fgos_visit_id');
-            if (visitId) formData.append('visit_id', visitId);
+            try {
+                ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function(key) {
+                    var val = sessionStorage.getItem('_fgos_' + key) || getCookieVal('_fgos_' + key);
+                    if (val) formData.append(key, val);
+                });
+                var visitId = sessionStorage.getItem('_fgos_visit_id');
+                if (visitId) formData.append('visit_id', visitId);
+            } catch (e) {
+                // Ограничения хранилища браузера не должны прерывать оплату.
+            }
 
             // Send request
             fetch('/ajax/create-payment.php', {
@@ -549,16 +572,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     window.location.href = data.redirect_url;
                 } else {
-                    alert(data.message || 'Произошла ошибка');
-                    btn.disabled = false;
-                    btn.textContent = 'Перейти к оплате';
+                    showPaymentError(data.message || 'Не удалось открыть оплату. Попробуйте ещё раз.');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Произошла ошибка при обработке запроса');
-                btn.disabled = false;
-                btn.textContent = 'Перейти к оплате';
+                showPaymentError('Не удалось получить ответ сайта. Проверьте соединение и нажмите кнопку ещё раз.');
             });
         });
     }

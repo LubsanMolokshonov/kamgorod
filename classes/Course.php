@@ -415,6 +415,21 @@ class Course {
         );
     }
 
+    /** История онлайн-заказов владельца по заявкам, которые уже закрыты. */
+    public function getClosedPaymentAttempts(int $userId): array {
+        return $this->db->query(
+            "SELECT o.order_number, COALESCE(NULLIF(ce.course_title_snapshot, ''), c.title) AS title
+             FROM orders o
+             JOIN order_items oi ON oi.order_id = o.id
+             JOIN course_enrollments ce ON ce.id = oi.course_enrollment_id
+             JOIN courses c ON c.id = ce.course_id
+             WHERE o.user_id = ? AND ce.status = 'cancelled'
+               AND o.yookassa_payment_id <> '' AND o.yookassa_payment_id NOT LIKE 'bitrix:%'
+             ORDER BY o.created_at DESC, o.id DESC",
+            [$userId]
+        );
+    }
+
     /**
      * Get single enrollment with course data by enrollment ID
      */

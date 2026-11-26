@@ -92,6 +92,9 @@ RewriteRule ^m/([A-Za-z0-9_-]+)/?$ pages/magic-auth.php?token=$1 [L,QSA]
 # Recovery link для failed-заказов (см. PaymentRecoveryChain). Path-формат как у /m/.
 RewriteRule ^r/([A-Za-z0-9_-]+)/?$ pages/cart-restore.php?token=$1 [L,QSA]
 
+# Токен ссылки Bitrix24 передаётся во фрагменте, идентификатор заявки — в пути.
+RewriteRule ^oplata-kursa(?:/[1-9][0-9]{0,9})?/?$ pages/course-checkout.php [END]
+
 # Email click-tracker (path-only формат, аналогично magic)
 RewriteRule ^c/([a-f0-9]{32})/([A-Za-z0-9_-]+)/?$ api/email-track/click.php?mid=$1&u=$2 [L,QSA]
 
@@ -480,6 +483,9 @@ Options -Indexes
     Header set X-Frame-Options "SAMEORIGIN"
     Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
+    <Files "course-checkout.php">
+        Header set Referrer-Policy "no-referrer"
+    </Files>
     # HSTS. TLS терминируется на фронтовом nginx, поэтому внутри Apache %{HTTPS} != on —
     # ставим безусловно (клиент всё равно получает ответ только по HTTPS через nginx,
     # а по HTTP браузеры HSTS игнорируют).

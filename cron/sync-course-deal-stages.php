@@ -8,7 +8,8 @@
  * сделки, которые менеджер вручную закрывает в B24. Чтобы админка
  * (admin/courses/) корректно показывала paid_count, нужно подтянуть
  * результат обратно: STAGE_ID → bitrix_stage, при «Оплаченная сделка» →
- * status='paid', при LOSE → status='cancelled'.
+ * status='paid'. При LOSE незавершённая онлайн-оплата откладывает отмену
+ * заявки до следующей сверки с окончательным результатом ЮKassa.
  *
  * Что НЕ делает: не двигает сделки в Битрикс — двигают только Битрикс-роботы.
  *
@@ -17,7 +18,8 @@
  */
 
 if (php_sapi_name() !== 'cli') {
-    die('This script can only be run from command line');
+    http_response_code(403);
+    die('CLI only');
 }
 
 set_time_limit(0);
@@ -155,30 +157,31 @@ try {
             // Заявку в статусе 'enrolled' (менеджер уже завёл человека на обучение)
             // не отменяем автоматически: LOSE в CRM может быть переносом сделки, а
             // 'cancelled' убирает курс из личного кабинета и гасит email-цепочку.
-            $lostApplies = in_array($r['status'], ['new', 'installment_requested'], true);
-
-            $statusChange = null;
-            if ($isWon && $r['status'] !== 'paid') {
-                $update['status'] = 'paid';
-                $statusChange = 'paid';
-                $paid++;
-            } elseif ($isLost && $lostApplies && $r['status'] !== 'cancelled') {
-                $update['status'] = 'cancelled';
-                $statusChange = 'cancelled';
-                $lost++;
-            }
-
-            $dbObj->update('course_enrollments', $update, 'id = ?', [$r['id']]);
-            $synced++;
-
-            // Оффлайн-оплата (рассрочка/счёт) не создаёт заказа в orders — материализуем
-            // синтетический заказ, чтобы продажа попала во все отчёты по выручке.
-            // Хелпер сам идемпотентен и пропускает заявки с уже существующим заказом.
-            if ($statusChange === 'paid') {
-                $orderId = materializeOfflineCourseOrder($dbObj, (int)$r['id'], $deal);
-                if ($orderId) {
-                    log_line("OFFLINE_ORDER | Enrollment #{$r['id']} | Deal #{$r['bitrix_lead_id']} | order #{$orderId} (sum=" . (float)($deal['OPPORTUNITY'] ?? 0) . ")");
+            $statusChange = CourseCheckout::withEnrollmentLock($db, (int)$r['id'], static function () use (
+                $dbObj, $r, $deal, $isWon, $isLost, $update
+            ): ?string {
+                $fresh = $dbObj->queryOne('SELECT status, bitrix_lead_id FROM course_enrollments WHERE id = ?', [$r['id']]);
+                if (!$fresh || (int)$fresh['bitrix_lead_id'] !== (int)$r['bitrix_lead_id'] || $fresh['status'] === 'paid') {
+                    return null;
                 }
+                $dbObj->update('course_enrollments', $update, 'id = ?', [$r['id']]);
+
+                if ($isWon) {
+                    $orderId = materializeOfflineCourseOrder($dbObj, (int)$r['id'], $deal);
+                    if ($orderId) {
+                        log_line("OFFLINE_ORDER | Enrollment #{$r['id']} | Deal #{$r['bitrix_lead_id']} | order #{$orderId}");
+                        return 'paid';
+                    }
+                } elseif ($isLost && CourseCheckout::cancelAfterDealLoss($dbObj, (int)$r['id'], (int)$r['bitrix_lead_id'])) {
+                    return 'cancelled';
+                }
+                return null;
+            });
+            $synced++;
+            if ($statusChange === 'paid') {
+                $paid++;
+            } elseif ($statusChange === 'cancelled') {
+                $lost++;
             }
 
             if ($oldStage !== $stageId || $statusChange) {

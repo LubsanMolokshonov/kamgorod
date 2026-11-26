@@ -11,37 +11,45 @@ session_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Course.php';
+require_once __DIR__ . '/../classes/CourseCheckout.php';
 require_once __DIR__ . '/../includes/session.php';
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        throw new Exception('Метод не поддерживается');
+        throw new DomainException('Метод не поддерживается');
     }
 
-    if (empty($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
-        throw new Exception('Ошибка безопасности. Обновите страницу.');
+    $csrf = $_POST['csrf_token'] ?? null;
+    if (!is_string($csrf) || $csrf === '' || !validateCSRFToken($csrf)) {
+        throw new DomainException('Ошибка безопасности. Обновите страницу.');
     }
 
     $userEmail = $_SESSION['user_email'] ?? null;
-    if (!$userEmail) {
-        throw new Exception('Необходимо авторизоваться');
+    $userId = (int)getUserId();
+    if (!$userEmail || !$userId) {
+        throw new DomainException('Необходимо авторизоваться');
     }
 
-    $enrollmentId = (int)($_POST['enrollment_id'] ?? 0);
+    $enrollmentId = filter_var($_POST['enrollment_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     if (!$enrollmentId) {
-        throw new Exception('Заявка не указана');
+        throw new DomainException('Заявка не указана');
     }
 
-    $course = new Course($db);
-    if (!$course->cancelEnrollmentByUser($enrollmentId, $userEmail)) {
-        throw new Exception('Эту заявку нельзя удалить (уже оплачена, отменена или отправлена на рассрочку)');
-    }
+    CourseCheckout::withEnrollmentLock($db, $enrollmentId, function () use ($db, $enrollmentId, $userId, $userEmail): void {
+        (new CourseCheckout($db))->assertEnrollmentCanChange($enrollmentId, $userId);
+        if (!(new Course($db))->cancelEnrollmentByUser($enrollmentId, $userEmail)) {
+            throw new DomainException('Эту заявку нельзя удалить');
+        }
+    });
 
     echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
 
-} catch (Exception $e) {
+} catch (DomainException $e) {
     echo json_encode([
         'success' => false,
         'error'   => $e->getMessage(),
     ], JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    error_log('Не удалось отменить заявку на курс (' . get_class($e) . ')');
+    echo json_encode(['success' => false, 'error' => 'Не удалось отменить заявку. Попробуйте позже.'], JSON_UNESCAPED_UNICODE);
 }

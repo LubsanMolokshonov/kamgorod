@@ -28,7 +28,7 @@ if (!function_exists('applyCourseOrderAttribution')) {
      * @param int $enrollmentId Заявка course_enrollments
      * @return bool true, если удалось определить utm_source
      */
-    function applyCourseOrderAttribution(PDO $pdo, int $orderId, int $enrollmentId): bool
+    function applyCourseOrderAttribution(PDO $pdo, int $orderId, int $enrollmentId, bool $useBrowserCookies = true): bool
     {
         $db = new Database($pdo);
 
@@ -77,7 +77,7 @@ if (!function_exists('applyCourseOrderAttribution')) {
         }
 
         // 4. Cookie первого клика — переживает закрытие браузера и переход из почты.
-        if (!$utm && !empty($_COOKIE['_fgos_utm_source'])) {
+        if (!$utm && $useBrowserCookies && !empty($_COOKIE['_fgos_utm_source'])) {
             $utm = [
                 'utm_source'   => mb_substr(trim((string)$_COOKIE['_fgos_utm_source']), 0, 255),
                 'utm_medium'   => mb_substr(trim((string)($_COOKIE['_fgos_utm_medium'] ?? '')), 0, 255) ?: null,

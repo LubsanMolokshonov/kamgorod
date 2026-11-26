@@ -269,6 +269,75 @@ class Order {
         return $this->db->update('orders', $updateData, 'id = ?', [$orderId]);
     }
 
+    /** Позднее уведомление предыдущей попытки не должно менять текущий платёж. */
+    public function updateActiveYookassaStatus(int $orderId, string $paymentId, string $status): bool {
+        return $this->db->execute(
+            "UPDATE orders SET payment_status = ?
+             WHERE id = ? AND yookassa_payment_id = ?
+               AND payment_status IN ('pending', 'processing')",
+            [$status, $orderId, $paymentId]
+        ) > 0;
+    }
+
+    /** Зафиксировать подтверждённую отмену и вернуть позиции этого заказа в корзину. */
+    public function cancelYookassaPayment(int $orderId, string $paymentId): bool {
+        $pdo = $this->db->getPDO();
+        $ownTransaction = !$pdo->inTransaction();
+        if ($ownTransaction) {
+            $pdo->beginTransaction();
+        }
+        try {
+            $lock = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
+            $order = $this->db->queryOne(
+                'SELECT payment_status FROM orders WHERE id = ? AND yookassa_payment_id = ?' . $lock,
+                [$orderId, $paymentId]
+            );
+            $canRelease = $order && in_array($order['payment_status'], ['pending', 'processing', 'failed'], true);
+            if ($canRelease) {
+                if ($order['payment_status'] !== 'failed') {
+                    $this->updateActiveYookassaStatus($orderId, $paymentId, 'failed');
+                }
+                $this->db->execute(
+                    'UPDATE cart_items SET reserved_in_order_id = NULL WHERE reserved_in_order_id = ?',
+                    [$orderId]
+                );
+            }
+            if ($ownTransaction) {
+                $pdo->commit();
+            }
+            return $canRelease;
+        } catch (Throwable $e) {
+            if ($ownTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /** Привязка из ответа API магазина, когда уведомление опередило ответ на создание платежа. */
+    public function attachVerifiedCartPayment(object $payment): bool {
+        $meta = $payment->getMetadata();
+        $amount = $payment->getAmount();
+        if (($meta['payment_type'] ?? null) !== 'cart' || !$amount || $amount->getCurrency() !== 'RUB'
+            || !ctype_digit((string)($meta['order_id'] ?? '')) || !ctype_digit((string)($meta['user_id'] ?? ''))
+            || empty($meta['order_number']) || !$payment->getId()) {
+            return false;
+        }
+        $confirmation = $payment->getConfirmation();
+        $url = $confirmation && method_exists($confirmation, 'getConfirmationUrl') ? $confirmation->getConfirmationUrl() : null;
+        return $this->db->execute(
+            "UPDATE orders SET yookassa_payment_id = ?, yookassa_confirmation_url = ?
+             WHERE id = ? AND order_number = ? AND user_id = ? AND final_amount = ?
+               AND (yookassa_payment_id IS NULL OR yookassa_payment_id = '')
+               AND payment_status = 'pending' AND subscription_plan_id IS NULL
+               AND EXISTS (SELECT 1 FROM cart_payment_attempts WHERE order_id = orders.id)
+               AND EXISTS (SELECT 1 FROM order_items WHERE order_id = orders.id)
+               AND NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = orders.id
+                               AND (course_enrollment_id IS NOT NULL OR covered_by_subscription = 1))",
+            [$payment->getId(), $url, $meta['order_id'], $meta['order_number'], $meta['user_id'], $amount->getValue()]
+        ) === 1;
+    }
+
     /**
      * Update order with Yookassa payment details
      */

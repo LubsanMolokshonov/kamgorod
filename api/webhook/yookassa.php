@@ -23,7 +23,9 @@ register_shutdown_function(function() {
         $logFile = __DIR__ . '/../../logs/webhook.log';
         $message = "[" . date('Y-m-d H:i:s') . "] FATAL_ERROR | {$error['message']} in {$error['file']}:{$error['line']}\n";
         error_log($message, 3, $logFile);
-        http_response_code(($GLOBALS['eventType'] ?? '') === 'refund.succeeded' ? 503 : 200);
+        $retryEvent = in_array($GLOBALS['eventType'] ?? '', ['refund.succeeded', 'payment.canceled'], true)
+            || !empty($GLOBALS['coursePaymentEvent']) || !empty($GLOBALS['cartPaymentEvent']);
+        http_response_code($retryEvent ? 503 : 200);
         echo json_encode(['status' => 'error', 'message' => 'Internal error']);
     }
 });
@@ -32,6 +34,7 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../classes/Database.php';
 require_once __DIR__ . '/../../classes/Order.php';
+require_once __DIR__ . '/../../classes/CoursePaymentEvent.php';
 require_once __DIR__ . '/../../classes/Registration.php';
 require_once __DIR__ . '/../../classes/PublicationCertificate.php';
 require_once __DIR__ . '/../../classes/WebinarCertificate.php';
@@ -106,9 +109,37 @@ try {
         require_once __DIR__ . '/../../classes/PaymentRefundAccounting.php';
         $refundResult = (new PaymentRefundAccounting($GLOBALS['db'], $client))->syncRefund($paymentId);
         $orderObj = new Order($GLOBALS['db']);
-        $order = $orderObj->getByPaymentId($refundResult['payment_id']);
-        if ($order && $refundResult['full'] && $order['payment_status'] !== 'refunded') {
-            handleRefundSucceeded($orderObj, $order, $payment);
+        if ($refundResult['full']) {
+            $originalPaymentId = $refundResult['payment_id'];
+            $order = $orderObj->getByPaymentId($originalPaymentId) ?: null;
+            $enrollmentId = CoursePaymentEvent::enrollmentForOrder($order);
+            $verified = null;
+            if (!$order && !$refundResult['linked']) {
+                $verified = $client->getPaymentInfo($originalPaymentId);
+                if ($verified->getId() === $originalPaymentId) {
+                    $enrollmentId = CoursePaymentEvent::enrollmentForAttempt($GLOBALS['db'], CoursePaymentEvent::attemptKey($verified));
+                    if (!$enrollmentId && ($verified->getMetadata()['payment_type'] ?? '') === 'cart') {
+                        $orderObj->attachVerifiedCartPayment($verified);
+                        $order = $orderObj->getByPaymentId($originalPaymentId) ?: null;
+                    }
+                }
+            }
+            if ($enrollmentId > 0) {
+                require_once BASE_PATH . '/classes/CourseCheckout.php';
+                CourseCheckout::withEnrollmentLock($GLOBALS['db'], $enrollmentId, static function () use (
+                    $orderObj, $payment, $verified, $enrollmentId, $originalPaymentId
+                ): void {
+                    $current = $orderObj->getByPaymentId($originalPaymentId);
+                    if (!$current && $verified && CoursePaymentEvent::attachVerified($GLOBALS['db'], $enrollmentId, $verified)) {
+                        $current = $orderObj->getByPaymentId($originalPaymentId);
+                    }
+                    if ($current && $current['payment_status'] !== 'refunded') {
+                        handleRefundSucceeded($orderObj, $current, $payment);
+                    }
+                });
+            } elseif ($order && $order['payment_status'] !== 'refunded') {
+                handleRefundSucceeded($orderObj, $order, $payment);
+            }
         }
         logWebhook('INFO', $paymentId, 'Refund accounted: ' . $refundResult['refunded_amount'], '');
         http_response_code(200);
@@ -325,49 +356,80 @@ try {
     $orderObj = new Order($GLOBALS['db']);
     $registrationObj = new Registration($GLOBALS['db']);
 
-    // Find order by payment ID
-    $order = $orderObj->getByPaymentId($paymentId);
-
-    if (!$order) {
-        logWebhook('WARNING', $paymentId, 'Order not found', '');
-        http_response_code(200); // Always return 200 to prevent retries
-        echo json_encode(['status' => 'order_not_found']);
-        exit;
+    $order = $orderObj->getByPaymentId($paymentId) ?: null;
+    $cartPaymentEvent = ($metaArray['payment_type'] ?? '') === 'cart';
+    if (!$order && $cartPaymentEvent) {
+        $verified = $client->getPaymentInfo($paymentId);
+        if ($verified->getId() !== $paymentId || ($verified->getMetadata()['payment_type'] ?? '') !== 'cart') {
+            throw new RuntimeException('ЮKassa не подтвердила платёж корзины');
+        }
+        $orderObj->attachVerifiedCartPayment($verified);
+        $order = $orderObj->getByPaymentId($paymentId) ?: null;
+        if (!$order) {
+            throw new RuntimeException('Не удалось связать платёж с заказом корзины');
+        }
+        $payment = $verified;
+        $eventType = 'payment.' . $payment->getStatus();
+    }
+    $courseEnrollmentId = CoursePaymentEvent::enrollmentForOrder($order);
+    $attemptKey = CoursePaymentEvent::attemptKey($payment);
+    $coursePaymentEvent = $courseEnrollmentId > 0 || $attemptKey !== '';
+    if (!$order && $attemptKey !== '') {
+        $courseEnrollmentId = CoursePaymentEvent::enrollmentForAttempt($GLOBALS['db'], $attemptKey);
     }
 
-    $orderId = $order['id'];
-    $orderNumber = $order['order_number'];
-    $userId = $order['user_id'];
+    $processEvent = static function (?array $currentOrder) use ($orderObj, $registrationObj, $payment, $paymentId, $eventType): string {
+        if (!$currentOrder) {
+            logWebhook('WARNING', $paymentId, 'Order not found for current payment', '');
+            return 'order_not_found';
+        }
+        if (in_array($currentOrder['payment_status'], ['succeeded', 'refunded'], true)) {
+            return 'already_processed';
+        }
+        switch ($eventType) {
+            case 'payment.succeeded':
+                handlePaymentSucceeded($orderObj, $registrationObj, $currentOrder, $payment);
+                break;
 
-    // Check idempotency - prevent duplicate processing
-    if ($orderObj->isProcessed($paymentId)) {
-        logWebhook('INFO', $paymentId, "Order {$orderNumber} already processed", '');
-        http_response_code(200);
-        echo json_encode(['status' => 'already_processed']);
-        exit;
+            case 'payment.canceled':
+                handlePaymentCanceled($orderObj, $currentOrder, $payment);
+                break;
+
+            case 'payment.waiting_for_capture':
+                handlePaymentWaitingForCapture($orderObj, $currentOrder, $payment);
+                break;
+
+            default:
+                logWebhook('INFO', $paymentId, "Unhandled event type: {$eventType}", '');
+        }
+        return 'ok';
+    };
+
+    if ($courseEnrollmentId > 0) {
+        require_once BASE_PATH . '/classes/CourseCheckout.php';
+        $status = CourseCheckout::withEnrollmentLock($GLOBALS['db'], $courseEnrollmentId, static function () use (
+            $orderObj, $client, $courseEnrollmentId, $payment, $paymentId, $attemptKey, $processEvent
+        ): string {
+            $currentOrder = $orderObj->getByPaymentId($paymentId) ?: null;
+            if (!$currentOrder && CoursePaymentEvent::enrollmentForAttempt($GLOBALS['db'], $attemptKey) === $courseEnrollmentId) {
+                // API, а не metadata входящего уведомления, подтверждает новый ID платежа.
+                $verified = $client->getPaymentInfo($paymentId);
+                if ($verified->getId() === $paymentId && CoursePaymentEvent::attachVerified($GLOBALS['db'], $courseEnrollmentId, $verified)) {
+                    $currentOrder = $orderObj->getByPaymentId($paymentId) ?: null;
+                }
+            }
+            if ($currentOrder && !CoursePaymentEvent::matchesAmount($currentOrder, $payment)) {
+                logWebhook('ERROR', $paymentId, 'Course payment amount does not match the order', '');
+                return 'amount_mismatch';
+            }
+            return $processEvent($currentOrder);
+        });
+    } else {
+        $status = $processEvent($order);
     }
 
-    // Handle different event types
-    switch ($eventType) {
-        case 'payment.succeeded':
-            handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment);
-            break;
-
-        case 'payment.canceled':
-            handlePaymentCanceled($orderObj, $order, $payment);
-            break;
-
-        case 'payment.waiting_for_capture':
-            handlePaymentWaitingForCapture($orderObj, $order, $payment);
-            break;
-
-        default:
-            logWebhook('INFO', $paymentId, "Unhandled event type: {$eventType}", '');
-    }
-
-    // Always return 200 to Yookassa
     http_response_code(200);
-    echo json_encode(['status' => 'ok']);
+    echo json_encode(['status' => $status]);
 
 } catch (Throwable $e) {
     // Ловим Throwable (не только Exception): PHP-Error вроде «class not found» — это Error,
@@ -375,7 +437,9 @@ try {
     // Ошибки возвратов требуют повтора: иначе финансовая корректировка потеряется.
     logWebhook('ERROR', $paymentId ?? 'unknown', 'Exception: ' . $e->getMessage(), $e->getTraceAsString());
 
-    http_response_code(($eventType ?? '') === 'refund.succeeded' ? 503 : 200);
+    $retryEvent = in_array($eventType ?? '', ['refund.succeeded', 'payment.canceled'], true)
+        || !empty($coursePaymentEvent) || !empty($cartPaymentEvent);
+    http_response_code($retryEvent ? 503 : 200);
     echo json_encode(['status' => 'error']);
 }
 
@@ -478,7 +542,6 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
         try {
             require_once BASE_PATH . '/classes/Bitrix24Integration.php';
             require_once BASE_PATH . '/classes/Course.php';
-            require_once BASE_PATH . '/classes/CoursePriceAB.php';
 
             $bitrix = new Bitrix24Integration();
             if ($bitrix->isConfigured()) {
@@ -502,109 +565,43 @@ function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
 
                         $paidStage = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:WON';
 
-                        if (empty($enrollment['bitrix_lead_id'])) {
-                            // Сделка ещё не создана — создаём на успешном этапе WON.
+                        $dealId = (int)($enrollment['bitrix_lead_id'] ?? 0);
+                        $paidAmount = (float)$item['price'];
+                        if (!$dealId) {
                             $course = $courseObj->getById($enrollment['course_id']);
-                            if ($course && !empty($enrollment['course_title_snapshot'])) $course['title'] = $enrollment['course_title_snapshot'];
+                            if ($course && !empty($enrollment['course_title_snapshot'])) {
+                                $course['title'] = $enrollment['course_title_snapshot'];
+                            }
                             if ($course) {
-                                // OPPORTUNITY = фактически уплачено (order_items.price уже
-                                // содержит final_amount c учётом таймер-скидки 10%, loyalty,
-                                // email-кампании и AB-варианта; см. Order::createForCourseEnrollment).
-                                $paidAmount = floatval($item['price']);
-
-                                $dealId = $bitrix->createCourseDeal([
-                                    'user_id' => $enrollment['user_id'] ?? null,
-                                    'full_name' => $enrollment['full_name'],
-                                    'email' => $enrollment['email'],
-                                    'phone' => $enrollment['phone'],
-                                    'utm_source' => $enrollment['utm_source'] ?? '',
-                                    'utm_medium' => $enrollment['utm_medium'] ?? '',
-                                    'utm_campaign' => $enrollment['utm_campaign'] ?? '',
-                                    'utm_content' => $enrollment['utm_content'] ?? '',
-                                    'utm_term' => $enrollment['utm_term'] ?? '',
-                                    'ym_uid' => $enrollment['ym_uid'] ?? '',
-                                    'source_page' => $enrollment['source_page'] ?? '',
-                                ], $course, $paidStage, $paidAmount);
-
+                                $dealId = (int)$bitrix->createCourseDeal(
+                                    $enrollment + ['enrollment_id' => (int)$enrollment['id']],
+                                    $course,
+                                    $paidStage,
+                                    $paidAmount
+                                );
                                 if ($dealId) {
                                     $dbHelper->update('course_enrollments', [
                                         'bitrix_lead_id' => $dealId,
-                                        'bitrix_stage' => $paidStage,
-                                    ], 'id = ?', [$item['course_enrollment_id']]);
-                                    logWebhook('INFO', $paymentId, "Bitrix24 course deal {$dealId} created (stage: {$paidStage}, OPPORTUNITY={$paidAmount}) for enrollment {$item['course_enrollment_id']}", '');
-                                }
-                            }
-                        } else {
-                            // Сделка уже создана (cron-ом или ajax-ом) — переводим на успешный этап WON.
-                            // Сначала проверяем CATEGORY_ID: если сделка перенесена менеджером в чужую воронку
-                            // (например, ЦДО для подготовки документов), не трогаем — она уже в работе.
-                            $coursePipelineId = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
-                            $dealData = $bitrix->getDeal($enrollment['bitrix_lead_id']);
-                            $dealCategory = $dealData ? (int)($dealData['CATEGORY_ID'] ?? -1) : -1;
-
-                            if ($dealCategory !== $coursePipelineId) {
-                                // Сделка перенесена менеджером в чужую воронку (например, ЦДО).
-                                // Перенести её обратно через API нельзя (crm.deal.update игнорирует
-                                // CATEGORY_ID), поэтому создаём НОВУЮ сделку в воронке курсов на
-                                // успешном этапе WON, а в старой сделке оставляем комментарий.
-                                $course = $courseObj->getById($enrollment['course_id']);
-                            if ($course && !empty($enrollment['course_title_snapshot'])) $course['title'] = $enrollment['course_title_snapshot'];
-                                $oldDealId = $enrollment['bitrix_lead_id'];
-                                if ($course) {
-                                    $paidAmount = floatval($item['price']);
-                                    $newDealId = $bitrix->createCourseDeal([
-                                        'user_id' => $enrollment['user_id'] ?? null,
-                                        'full_name' => $enrollment['full_name'],
-                                        'email' => $enrollment['email'],
-                                        'phone' => $enrollment['phone'],
-                                        'utm_source' => $enrollment['utm_source'] ?? '',
-                                        'utm_medium' => $enrollment['utm_medium'] ?? '',
-                                        'utm_campaign' => $enrollment['utm_campaign'] ?? '',
-                                        'utm_content' => $enrollment['utm_content'] ?? '',
-                                        'utm_term' => $enrollment['utm_term'] ?? '',
-                                        'ym_uid' => $enrollment['ym_uid'] ?? '',
-                                        'source_page' => $enrollment['source_page'] ?? '',
-                                    ], $course, $paidStage, $paidAmount);
-
-                                    if ($newDealId) {
-                                        $dbHelper->update('course_enrollments', [
-                                            'bitrix_lead_id' => $newDealId,
-                                            'bitrix_stage' => $paidStage,
-                                        ], 'id = ?', [$item['course_enrollment_id']]);
-
-                                        try {
-                                            $bitrix->addDealComment($oldDealId,
-                                                "Клиент оплатил этот курс онлайн на сайте (" . number_format($paidAmount, 2, ',', ' ') . " ₽). "
-                                                . "Оплата отражена новой сделкой #{$newDealId} в воронке «ФГОС-Практикум (Курсы)» → «Сделка успешно». "
-                                                . "Эта сделка в воронке #{$dealCategory} — возможный дубль.");
-                                        } catch (Exception $e) {
-                                            logWebhook('WARNING', $paymentId, "Bitrix24 addDealComment failed for old deal {$oldDealId}: " . $e->getMessage(), '');
-                                        }
-
-                                        logWebhook('INFO', $paymentId, "Bitrix24 deal {$oldDealId} is in pipeline {$dealCategory} (not {$coursePipelineId}) — created new course deal {$newDealId} (stage: {$paidStage}, OPPORTUNITY={$paidAmount}) for enrollment {$item['course_enrollment_id']}", '');
-                                    } else {
-                                        logWebhook('ERROR', $paymentId, "Bitrix24 failed to create course deal for enrollment {$item['course_enrollment_id']} (old deal {$oldDealId} in pipeline {$dealCategory})", '');
-                                    }
-                                } else {
-                                    logWebhook('WARNING', $paymentId, "Bitrix24: course #{$enrollment['course_id']} not found, skipped new deal for enrollment {$item['course_enrollment_id']}", '');
-                                }
-                            } else {
-                                $paidAmount = floatval($item['price']);
-                                $moved = $bitrix->updateDeal(
-                                    $enrollment['bitrix_lead_id'],
-                                    Bitrix24Integration::buildPaidCourseDealFields($paidAmount)
-                                );
-                                if ($moved) {
-                                    $dbHelper->update('course_enrollments', [
-                                        'bitrix_stage' => $paidStage,
-                                    ], 'id = ?', [$item['course_enrollment_id']]);
-                                    logWebhook('INFO', $paymentId, "Bitrix24 deal {$enrollment['bitrix_lead_id']} moved to {$paidStage}, OPPORTUNITY={$paidAmount}, ASSIGNED_BY_ID=" . Bitrix24Integration::coursePaidResponsibleId() . " for enrollment {$item['course_enrollment_id']}", '');
-                                } else {
-                                    logWebhook('ERROR', $paymentId, "Bitrix24 paid update FAILED for deal {$enrollment['bitrix_lead_id']} → {$paidStage} (enrollment {$item['course_enrollment_id']})", '');
+                                    ], 'id = ?', [$enrollment['id']]);
                                 }
                             }
                         }
 
+                        if ($dealId) {
+                            $deal = $bitrix->getDeal($dealId);
+                            if ($deal) {
+                                $fields = Bitrix24Integration::coursePaidDealChanges($deal, $paidAmount);
+                                if (!$fields || $bitrix->updateDeal($dealId, $fields)) {
+                                    $dbHelper->update('course_enrollments', [
+                                        'bitrix_stage' => $fields['STAGE_ID'] ?? $deal['STAGE_ID'] ?? null,
+                                    ], 'id = ?', [$enrollment['id']]);
+                                } else {
+                                    logWebhook('WARNING', $paymentId, "Bitrix24 paid update failed for deal {$dealId}", '');
+                                }
+                            } else {
+                                logWebhook('WARNING', $paymentId, "Bitrix24 deal {$dealId} lookup failed", '');
+                            }
+                        }
                         $GLOBALS['db']->commit();
                     } catch (Exception $e) {
                         if ($GLOBALS['db']->inTransaction()) {
@@ -737,12 +734,9 @@ function handlePaymentCanceled($orderObj, $order, $payment) {
     $orderId = $order['id'];
 
     try {
-        // Update order status to failed
-        $orderObj->updatePaymentStatus($orderId, 'failed');
-
-        // Снять резерв с cart_items — позиции снова видны в корзине,
-        // юзер сможет повторить попытку оплаты.
-        releaseCartItemsReservation((int)$orderId);
+        if (!$orderObj->cancelYookassaPayment((int)$orderId, $paymentId)) {
+            return;
+        }
 
         logWebhook('INFO', $paymentId, "Order {$orderNumber} marked as failed (canceled)", '');
 
@@ -764,7 +758,9 @@ function handlePaymentWaitingForCapture($orderObj, $order, $payment) {
 
     try {
         // Update order status to processing
-        $orderObj->updatePaymentStatus($orderId, 'processing');
+        if (!$orderObj->updateActiveYookassaStatus((int)$orderId, $paymentId, 'processing')) {
+            return;
+        }
 
         logWebhook('INFO', $paymentId, "Order {$orderNumber} marked as processing (waiting for capture)", '');
 

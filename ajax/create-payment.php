@@ -17,6 +17,7 @@ require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Order.php';
+require_once __DIR__ . '/../classes/CartPaymentRetry.php';
 require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../classes/ParticipantGroup.php';
@@ -58,6 +59,11 @@ try {
     $certificates = getCartCertificates();
     $webinarCertificates = getCartWebinarCertificates();
     $olympiadRegistrations = getCartOlympiadRegistrations();
+    // Состав чека и распределение скидок сохраняются при входе с другого устройства.
+    sort($registrations, SORT_NUMERIC);
+    sort($certificates, SORT_NUMERIC);
+    sort($webinarCertificates, SORT_NUMERIC);
+    sort($olympiadRegistrations, SORT_NUMERIC);
 
     // Collect ALL items into one array for unified promotion calculation
     $allItems = [];
@@ -129,7 +135,7 @@ try {
     }
 
     if (empty($allItems)) {
-        throw new Exception('Корзина пуста или содержит недействительные позиции');
+        throw new DomainException('Корзина пуста или содержит недействительные позиции');
     }
 
     // Защита от двойной оплаты: ни одна позиция в корзине не должна быть уже оплачена.
@@ -291,18 +297,9 @@ try {
             $stmtCov = $db->prepare("UPDATE order_items SET covered_by_subscription = 1 WHERE order_id = ?");
             $stmtCov->execute([$subOrderId]);
             // Зарезервировать позиции за заказом — fulfillOrderItems вычистит их из корзины.
-            $subKeys = [];
-            foreach ($allItems as $it) {
-                $ct = match ($it['type']) {
-                    'registration'          => 'registration',
-                    'certificate'           => 'publication_cert',
-                    'webinar_certificate'   => 'webinar_cert',
-                    'olympiad_registration' => 'olympiad_reg',
-                    default                 => null,
-                };
-                if ($ct) { $subKeys[] = ['type' => $ct, 'id' => (int)$it['id']]; }
+            if (!reserveCartItemsForOrder($subUserId, CartPaymentRetry::reservationKeys($allItems), (int)$subOrderId)) {
+                throw new DomainException('В корзине осталась незавершённая оплата.');
             }
-            reserveCartItemsForOrder($subUserId, $subKeys, (int)$subOrderId);
             $db->commit();
         } catch (Throwable $e) {
             if ($db->inTransaction()) { $db->rollBack(); }
@@ -649,11 +646,22 @@ try {
     }
 
     if (!$userId || !$userEmail) {
-        throw new Exception('Пользователь не найден');
+        throw new DomainException('Пользователь не найден');
     }
 
     // BEGIN TRANSACTION
+    $client = new Client();
+    $client->setAuth(YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY);
     $db->beginTransaction();
+    $retry = CartPaymentRetry::resolve(
+        $db, (int)$userId, (int)($_SESSION['user_id'] ?? 0), $allItems, (float)$grandTotal,
+        static fn(string $paymentId) => $client->getPaymentInfo($paymentId)
+    );
+    if (isset($retry['redirect_url'])) {
+        $db->commit();
+        echo json_encode($retry, JSON_UNESCAPED_UNICODE);
+        return;
+    }
 
     // Create order with all items (certificates with promotion info)
     $certificatesWithPromotion = [];
@@ -661,6 +669,7 @@ try {
         if ($item['type'] === 'certificate') {
             $certData = $item['raw_data'];
             $certData['is_free'] = $item['is_free'];
+            $certData['price'] = $item['price'];
             $certificatesWithPromotion[] = $certData;
         }
     }
@@ -670,6 +679,7 @@ try {
         if ($item['type'] === 'webinar_certificate') {
             $wcData = $item['raw_data'];
             $wcData['is_free'] = $item['is_free'];
+            $wcData['price'] = $item['price'];
             $webinarCertsWithPromotion[] = $wcData;
         }
     }
@@ -684,37 +694,21 @@ try {
             $olympiadRegsWithPromotion[] = $oData;
         }
     }
-    $orderId = $orderObj->createFromCart($userId, $cartData, $certificatesWithPromotion, $grandTotal, $webinarCertsWithPromotion, $olympiadRegsWithPromotion);
+    $orderId = $retry['retry_order_id'] ?? $orderObj->createFromCart($userId, $cartData, $certificatesWithPromotion, $grandTotal, $webinarCertsWithPromotion, $olympiadRegsWithPromotion);
 
     if (!$orderId) {
-        throw new Exception('Не удалось создать заказ');
+        throw new DomainException('Не удалось создать заказ');
     }
 
     // A/B-атрибуция: помечаем заказ вариантом модели оплаты (control в этой ветке).
-    PricingMode::stampOrder($db, (int)$orderId);
+    if (!$retry) PricingMode::stampOrder($db, (int)$orderId);
 
     // Зарезервировать позиции корзины за этим заказом. При cancel/failed-вебхуке
     // резерв снимется (releaseCartItemsReservation), при succeeded — удалятся
     // ровно эти строки (removeCartItemsByOrderId). Внутри той же транзакции,
     // что и createFromCart, чтобы не возникло «полу-зарезервированного» состояния.
-    $cartReservationKeys = [];
-    foreach ($allItems as $it) {
-        $cartType = match ($it['type']) {
-            'registration'          => 'registration',
-            'certificate'           => 'publication_cert',
-            'webinar_certificate'   => 'webinar_cert',
-            'olympiad_registration' => 'olympiad_reg',
-            default                 => null,
-        };
-        if ($cartType) {
-            $cartReservationKeys[] = ['type' => $cartType, 'id' => (int)$it['id']];
-        }
-    }
-    if (!reserveCartItemsForOrder((int)$userId, $cartReservationKeys, (int)$orderId)) {
-        // Коллизия: одна из позиций уже зарезервирована за другим заказом
-        // (юзер открыл два окна, нажал «Оплатить» дважды). Откатываемся, чтобы
-        // не создать дубль-заказ, который никогда не очистит cart_items.
-        throw new Exception('Позиция уже находится в другом неоплаченном заказе. Дождитесь окончания первой оплаты или отмените её.');
+    if (!$retry && !reserveCartItemsForOrder((int)$userId, CartPaymentRetry::reservationKeys($allItems), (int)$orderId)) {
+        throw new DomainException('Корзина изменилась. Обновите страницу и повторите оплату.');
     }
 
     // Сохраняем UTM-атрибуцию на заказе (first-click attribution)
@@ -727,7 +721,7 @@ try {
 
     // Fallback: если в сессии нет UTM (пользователь вернулся по триггерной рассылке),
     // берём UTM из регистрации/записи — атрибуция первого клика
-    if (!$utmSource) {
+    if (!$retry && !$utmSource) {
         $dbFallback = new Database($db);
         $fallbackUtm = null;
 
@@ -814,7 +808,7 @@ try {
         }
     }
 
-    if ($utmSource || $utmMedium || $utmCampaign || $utmContent || $utmTerm || $visitId) {
+    if (!$retry && ($utmSource || $utmMedium || $utmCampaign || $utmContent || $utmTerm || $visitId)) {
         $dbObj = new Database($db);
         $dbObj->update('orders', [
             'utm_source' => $utmSource,
@@ -829,17 +823,13 @@ try {
     // Email-атрибуция: если пользователь пришёл по клику из письма —
     // сохраняем message_id, чтобы webhook смог приписать оплату к конкретному письму.
     $emailMid = $_SESSION['email_mid'] ?? ($_COOKIE['email_mid'] ?? null);
-    if ($emailMid && preg_match('~^[a-f0-9]{32}$~', $emailMid)) {
+    if (!$retry && $emailMid && preg_match('~^[a-f0-9]{32}$~', $emailMid)) {
         (new Database($db))->update('orders', ['email_message_id' => $emailMid], 'id = ?', [$orderId]);
     }
 
     // Get order details
     $order = $orderObj->getById($orderId);
     $orderNumber = $order['order_number'];
-
-    // Initialize Yookassa client
-    $client = new Client();
-    $client->setAuth(YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY);
 
     // Prepare receipt items for 54-ФЗ compliance (with unified 2+1 promotion)
     $receiptItems = [];
@@ -889,54 +879,97 @@ try {
         }
     }
 
-    // Prepare payment request
-    $payment = $client->createPayment(
-        [
-            'amount' => [
-                'value' => number_format($grandTotal, 2, '.', ''),
-                'currency' => 'RUB',
-            ],
-            'confirmation' => [
-                'type' => 'redirect',
-                'return_url' => SITE_URL . '/pages/payment-success.php?order_number=' . $orderNumber,
-            ],
-            'capture' => true,
-            'description' => 'Оплата заказа ' . $orderNumber,
-            'receipt' => [
-                'customer' => [
-                    'email' => $userEmail,
-                ],
-                'items' => $receiptItems,
-            ],
-            'metadata' => [
-                'order_id' => $orderId,
-                'order_number' => $orderNumber,
-                'user_id' => $userId,
-                'user_email' => $userEmail,
-                'certificate_ids' => !empty($certificates) ? implode(',', $certificates) : null,
-                'webinar_certificate_ids' => !empty($webinarCertificates) ? implode(',', $webinarCertificates) : null,
-                'olympiad_registration_ids' => !empty($olympiadRegistrations) ? implode(',', $olympiadRegistrations) : null,
-            ],
+    $payload = [
+        'amount' => [
+            'value' => number_format($grandTotal, 2, '.', ''),
+            'currency' => 'RUB',
         ],
-        $orderNumber // Idempotency key
-    );
-
-    // Get payment ID and confirmation URL
-    $paymentId = $payment->getId();
-    $confirmationUrl = $payment->getConfirmation()->getConfirmationUrl();
-
-    // Update order with Yookassa details
-    $orderObj->updateYookassaDetails($orderId, $paymentId, $confirmationUrl);
-
-    // COMMIT TRANSACTION
-    $db->commit();
-
-    // Log success
-    logPayment('CREATE', $orderNumber, $paymentId, 'Payment created successfully', $cartData['total']);
-
-    // Set session user info
+        'confirmation' => [
+            'type' => 'redirect',
+            'return_url' => SITE_URL . '/pages/payment-success.php?order_number=' . $orderNumber,
+        ],
+        'capture' => true,
+        'description' => 'Оплата заказа ' . $orderNumber,
+        'receipt' => [
+            'customer' => [
+                'email' => $userEmail,
+            ],
+            'items' => $receiptItems,
+        ],
+        'metadata' => [
+            'payment_type' => 'cart',
+            'order_id' => (string)$orderId,
+            'order_number' => $orderNumber,
+            'user_id' => (string)$userId,
+            'user_email' => $userEmail,
+            'certificate_ids' => !empty($certificates) ? implode(',', $certificates) : null,
+            'webinar_certificate_ids' => !empty($webinarCertificates) ? implode(',', $webinarCertificates) : null,
+            'olympiad_registration_ids' => !empty($olympiadRegistrations) ? implode(',', $olympiadRegistrations) : null,
+        ],
+    ];
+    // Валидируем чек библиотекой до фиксации резерва, пока откат ещё безопасен.
+    \YooKassa\Request\Payments\CreatePaymentRequest::builder()->build($payload);
+    // Записываем неизменный ключ заказа, резерв и отпечаток исходного запроса до
+    // обращения к ЮKassa. Обрыв соединения больше не порождает второй заказ.
+    CartPaymentRetry::rememberPayload($db, (int)$orderId, $payload, $retry !== null);
     $_SESSION['user_email'] = $userEmail;
     $_SESSION['user_id'] = $userId;
+    if (!session_write_close()) {
+        throw new DomainException('Не удалось сохранить сессию оплаты. Обновите страницу и попробуйте ещё раз.');
+    }
+    $db->commit();
+    $db->beginTransaction();
+    $stmt = $db->prepare('SELECT payment_status, yookassa_payment_id FROM orders WHERE id = ? AND user_id = ? FOR UPDATE');
+    $stmt->execute([$orderId, $userId]);
+    $saved = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$saved || !in_array($saved['payment_status'], ['pending', 'processing'], true)) {
+        throw new DomainException('Предыдущая попытка завершена. Обновите корзину и проверьте заказ в личном кабинете.');
+    }
+    if (!empty($saved['yookassa_payment_id'])) {
+        // Другой запрос уже получил ответ или уведомление пришло до ответа API.
+        $payment = $client->getPaymentInfo($saved['yookassa_payment_id']);
+    } else {
+        try {
+            $payment = $client->createPayment($payload, $orderNumber);
+        } catch (\YooKassa\Common\Exceptions\BadApiRequestException $e) {
+            $error = json_decode((string)$e->getResponseBody(), true);
+            // Освобождаем только после явного отклонения параметра первого запроса.
+            // Ошибка ключа или повтор после обрыва не доказывает отмену платежа.
+            if (!$retry && ($error['code'] ?? '') === 'invalid_request'
+                && preg_match('/^(amount|receipt|confirmation|description|metadata)(?:$|[.\[])/D', $error['parameter'] ?? '')) {
+                $db->prepare("UPDATE orders SET payment_status = 'failed' WHERE id = ?")->execute([$orderId]);
+                $db->prepare('UPDATE cart_items SET reserved_in_order_id = NULL WHERE reserved_in_order_id = ?')->execute([$orderId]);
+                $db->commit();
+                logPayment('ERROR', $orderNumber, null, 'ЮKassa отклонила параметры нового заказа', 0);
+                throw new DomainException('ЮKassa отклонила данные заказа. Проверьте данные в корзине или обратитесь в поддержку.');
+            }
+            throw $e;
+        }
+    }
+
+    $paymentId = $payment->getId();
+    $confirmationUrl = $payment->getConfirmation()?->getConfirmationUrl();
+    $attach = $db->prepare(
+        'UPDATE orders SET yookassa_payment_id = ?, yookassa_confirmation_url = COALESCE(?, yookassa_confirmation_url)
+         WHERE id = ? AND user_id = ? AND (yookassa_payment_id IS NULL OR yookassa_payment_id = ?)'
+    );
+    $attach->execute([$paymentId, $confirmationUrl, $orderId, $userId, $paymentId]);
+    $current = $db->prepare('SELECT payment_status FROM orders WHERE id = ? AND user_id = ? AND yookassa_payment_id = ?');
+    $current->execute([$orderId, $userId, $paymentId]);
+    $currentStatus = $current->fetchColumn();
+    if ($currentStatus === false) throw new DomainException('Не удалось сверить платёж с заказом. Обратитесь в поддержку.');
+    $gatewayStatus = $payment->getStatus();
+    if ($gatewayStatus === 'canceled') $orderObj->cancelYookassaPayment((int)$orderId, $paymentId);
+    $db->commit();
+    if ($gatewayStatus === 'canceled' || $currentStatus === 'failed') {
+        throw new DomainException('Предыдущий платёж отменён. Нажмите «Перейти к оплате» для новой попытки.');
+    }
+    if ($gatewayStatus !== 'pending' || $currentStatus !== 'pending') {
+        $confirmationUrl = '/pages/payment-success.php?order_number=' . rawurlencode($orderNumber);
+    } elseif (!$confirmationUrl) {
+        throw new DomainException('ЮKassa уточняет статус оплаты. Попробуйте через несколько минут.');
+    }
+    logPayment('CREATE', $orderNumber, $paymentId, 'Payment created successfully', $cartData['total']);
 
     // Return success with redirect URL
     echo json_encode([
@@ -947,70 +980,16 @@ try {
         'payment_id' => $paymentId
     ]);
 
-} catch (\YooKassa\Common\Exceptions\ApiException $e) {
-    // Yookassa API error
-    if (isset($db) && $db->inTransaction()) {
-        $db->rollBack();
-    }
-
-    logPayment('ERROR', $orderNumber ?? 'unknown', null, 'Yookassa API error: ' . $e->getMessage(), 0);
-
+} catch (DomainException $e) {
+    if ($db->inTransaction()) $db->rollBack();
+    echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    if ($db->inTransaction()) $db->rollBack();
+    logPayment('ERROR', $orderNumber ?? 'unknown', null, 'Ошибка оформления: ' . get_class($e) . ' (' . $e->getCode() . ')', 0);
     echo json_encode([
         'success' => false,
-        'message' => 'Ошибка при создании платежа. Пожалуйста, попробуйте позже или свяжитесь с поддержкой.'
-    ]);
-
-} catch (\YooKassa\Common\Exceptions\BadApiRequestException $e) {
-    // Bad request error
-    if (isset($db) && $db->inTransaction()) {
-        $db->rollBack();
-    }
-
-    logPayment('ERROR', $orderNumber ?? 'unknown', null, 'Bad API request: ' . $e->getMessage(), 0);
-
-    echo json_encode([
-        'success' => false,
-        'message' => 'Некорректный запрос к платежной системе. Проверьте данные заказа.'
-    ]);
-
-} catch (\YooKassa\Common\Exceptions\ForbiddenException $e) {
-    // Forbidden error
-    if (isset($db) && $db->inTransaction()) {
-        $db->rollBack();
-    }
-
-    logPayment('ERROR', $orderNumber ?? 'unknown', null, 'Forbidden: ' . $e->getMessage(), 0);
-
-    echo json_encode([
-        'success' => false,
-        'message' => 'Доступ к платежной системе запрещен. Обратитесь к администратору.'
-    ]);
-
-} catch (\YooKassa\Common\Exceptions\UnauthorizedException $e) {
-    // Unauthorized error
-    if (isset($db) && $db->inTransaction()) {
-        $db->rollBack();
-    }
-
-    logPayment('ERROR', $orderNumber ?? 'unknown', null, 'Unauthorized: ' . $e->getMessage(), 0);
-
-    echo json_encode([
-        'success' => false,
-        'message' => 'Ошибка авторизации в платежной системе. Обратитесь к администратору.'
-    ]);
-
-} catch (Exception $e) {
-    // General error
-    if (isset($db) && $db->inTransaction()) {
-        $db->rollBack();
-    }
-
-    logPayment('ERROR', $orderNumber ?? 'unknown', null, 'General error: ' . $e->getMessage(), 0);
-
-    echo json_encode([
-        'success' => false,
-        'message' => 'Ошибка при обработке заказа: ' . $e->getMessage()
-    ]);
+        'message' => 'Не удалось подтвердить статус оплаты. Через несколько минут откройте корзину в своём аккаунте и нажмите «Перейти к оплате».',
+    ], JSON_UNESCAPED_UNICODE);
 }
 
 /**

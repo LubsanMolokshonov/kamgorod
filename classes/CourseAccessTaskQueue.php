@@ -26,7 +26,7 @@ class CourseAccessTaskQueue
 
     public static function isEligibleSource(string $source): bool
     {
-        return $source === 'webhook';
+        return in_array($source, ['webhook', 'reconcile_course_payment'], true);
     }
 
     public static function isYookassaPaymentId(?string $paymentId): bool
@@ -158,12 +158,8 @@ class CourseAccessTaskQueue
             $stmt = $this->pdo->prepare(
                 "SELECT o.payment_status, o.yookassa_payment_id, o.order_number,
                         oi.price AS paid_amount,
-                        ce.id AS enrollment_id, ce.bitrix_lead_id, ce.user_id,
-                        ce.full_name, ce.email, ce.phone,
-                        ce.utm_source, ce.utm_medium, ce.utm_campaign,
-                        ce.utm_content, ce.utm_term, ce.ym_uid, ce.source_page,
-                        c.id AS course_id, COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS course_title, c.price AS course_price,
-                        c.program_type, c.hours, c.learning_format
+                        ce.bitrix_lead_id, ce.full_name,
+                        COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS course_title
                  FROM course_access_task_jobs j
                  JOIN orders o ON o.id=j.order_id
                  JOIN order_items oi
@@ -188,70 +184,16 @@ class CourseAccessTaskQueue
                 throw new RuntimeException('Bitrix24 deal is not ready');
             }
 
-            $paidAmount = isset($context['paid_amount']) ? (float)$context['paid_amount'] : null;
-            $paidStage = defined('BITRIX24_COURSE_STAGE_PAID')
-                ? (string)BITRIX24_COURSE_STAGE_PAID
-                : 'C108:WON';
+            $paidAmount = (float)$context['paid_amount'];
             $responsibleId = Bitrix24Integration::coursePaidResponsibleId();
             $deal = $this->bitrix->getDeal($dealId);
             if (!$deal) {
                 throw new RuntimeException("Bitrix24 deal {$dealId} lookup failed");
             }
 
-            $coursePipelineId = defined('BITRIX24_COURSE_PIPELINE_ID')
-                ? (int)BITRIX24_COURSE_PIPELINE_ID
-                : 108;
-            if ((int)($deal['CATEGORY_ID'] ?? -1) !== $coursePipelineId) {
-                // Менеджер успел перенести заявку в ЦДО: оплату отражаем
-                // новой сделкой в воронке курсов, не ломая работу чужой воронки.
-                $newDealId = $this->bitrix->createCourseDeal([
-                    'user_id' => $context['user_id'] ?? null,
-                    'full_name' => (string)$context['full_name'],
-                    'email' => (string)$context['email'],
-                    'phone' => (string)($context['phone'] ?? ''),
-                    'utm_source' => (string)($context['utm_source'] ?? ''),
-                    'utm_medium' => (string)($context['utm_medium'] ?? ''),
-                    'utm_campaign' => (string)($context['utm_campaign'] ?? ''),
-                    'utm_content' => (string)($context['utm_content'] ?? ''),
-                    'utm_term' => (string)($context['utm_term'] ?? ''),
-                    'ym_uid' => (string)($context['ym_uid'] ?? ''),
-                    'source_page' => (string)($context['source_page'] ?? ''),
-                ], [
-                    'id' => (int)$context['course_id'],
-                    'title' => (string)$context['course_title'],
-                    'price' => (float)$context['course_price'],
-                    'program_type' => (string)($context['program_type'] ?? ''),
-                    'hours' => (int)($context['hours'] ?? 0),
-                    'learning_format' => (string)($context['learning_format'] ?? ''),
-                ], $paidStage, $paidAmount);
-                if (!$newDealId) {
-                    throw new RuntimeException("Failed to replace foreign-pipeline deal {$dealId}");
-                }
-
-                $updateEnrollment = $this->pdo->prepare(
-                    "UPDATE course_enrollments
-                     SET bitrix_lead_id=?, bitrix_stage=?
-                     WHERE id=?"
-                );
-                $updateEnrollment->execute([
-                    (int)$newDealId,
-                    $paidStage,
-                    (int)$context['enrollment_id'],
-                ]);
-                $this->bitrix->addDealComment(
-                    $dealId,
-                    "Клиент оплатил курс онлайн. Оплата отражена новой сделкой #{$newDealId} "
-                    . "в воронке «ФГОС-Практикум (Курсы)» → «Сделка успешна»."
-                );
-                $dealId = (int)$newDealId;
-            } else {
-                $needsUpdate = Bitrix24Integration::paidCourseDealNeedsUpdate($deal, $paidAmount);
-                if ($needsUpdate) {
-                    $dealFields = Bitrix24Integration::buildPaidCourseDealFields($paidAmount);
-                    if (!$this->bitrix->updateDeal($dealId, $dealFields)) {
-                        throw new RuntimeException("Bitrix24 deal {$dealId} auto-payment update failed");
-                    }
-                }
+            $fields = Bitrix24Integration::coursePaidDealChanges($deal, $paidAmount);
+            if ($fields && !$this->bitrix->updateDeal($dealId, $fields)) {
+                throw new RuntimeException("Bitrix24 deal {$dealId} auto-payment update failed");
             }
 
             $taskId = $this->bitrix->findCourseAccessTask($dealId);

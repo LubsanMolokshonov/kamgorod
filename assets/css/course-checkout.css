@@ -1,0 +1,61 @@
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    padding: 24px;
+    background: #f6f5fb;
+    color: #201a36;
+    font: 16px/1.5 system-ui, sans-serif;
+}
+
+.checkout-card {
+    width: 100%;
+    max-width: 520px;
+    box-sizing: border-box;
+    padding: clamp(20px, 6vw, 40px);
+    background: #fff;
+    border: 1px solid #e3deef;
+    border-radius: 18px;
+}
+
+.checkout-card h1 {
+    margin: 0 0 16px;
+    font-size: clamp(24px, 5vw, 32px);
+    line-height: 1.2;
+}
+
+.checkout-brand {
+    margin: 0 0 8px;
+    color: #594687;
+    font-weight: 600;
+}
+
+.checkout-course,
+.checkout-amount {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.checkout-amount {
+    font-size: 24px;
+}
+
+.checkout-button {
+    display: inline-block;
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 8px;
+    background: #58358f;
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.checkout-button:focus-visible {
+    outline: 3px solid #58358f;
+    outline-offset: 3px;
+}

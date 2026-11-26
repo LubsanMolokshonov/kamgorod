@@ -4,20 +4,36 @@
  * Displays payment failure message and allows retry
  */
 
-session_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Order.php';
+require_once __DIR__ . '/../includes/course-payment-link.php';
 
 // Get order number from URL
 $orderNumber = $_GET['order_number'] ?? null;
 
 $order = null;
-if ($orderNumber) {
+if (is_string($orderNumber) && $orderNumber !== '') {
     $orderObj = new Order($db);
     $order = $orderObj->getByOrderNumber($orderNumber);
+    $courseEnrollmentId = courseCheckoutEnrollmentId($order ?? []);
+    if ($courseEnrollmentId !== null) {
+        header('Cache-Control: private, no-store');
+        header('Referrer-Policy: no-referrer');
+        header('Location: ' . courseCheckoutPath($courseEnrollmentId) . '?return=1', true, 303);
+        exit;
+    }
 }
 
+session_start();
+header('Cache-Control: private, no-store');
+if ($order && getCourseCheckoutAccountId($db) !== (int)$order['user_id']) {
+    $order = null;
+}
+if ($order && in_array($order['payment_status'], ['pending', 'processing', 'succeeded'], true)) {
+    header('Location: /pages/payment-success.php?order_number=' . rawurlencode($order['order_number']), true, 303);
+    exit;
+}
 $pageTitle = 'Ошибка оплаты | ' . SITE_NAME;
 $noindex = true;
 include __DIR__ . '/../includes/header.php';
@@ -44,15 +60,6 @@ include __DIR__ . '/../includes/header.php';
     0%, 100% { transform: translateX(0); }
     10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
     20%, 40%, 60%, 80% { transform: translateX(10px); }
-}
-
-.error-box {
-    background: #fff1f0;
-    border-left: 4px solid #ff4d4f;
-    padding: 20px;
-    border-radius: 12px;
-    margin: 24px 0;
-    text-align: left;
 }
 
 .order-info {
@@ -129,13 +136,6 @@ include __DIR__ . '/../includes/header.php';
     margin-bottom: 12px;
 }
 
-.help-section ul {
-    text-align: left;
-    max-width: 500px;
-    margin: 0 auto;
-    color: var(--text-medium);
-}
-
 .support-contact {
     background: #f0f5ff;
     padding: 16px;
@@ -148,19 +148,6 @@ include __DIR__ . '/../includes/header.php';
     <div class="failure-container">
         <div class="failure-icon">❌</div>
         <h1>Оплата не завершена</h1>
-        <p style="font-size: 18px; color: var(--text-medium);">
-            К сожалению, платеж не был успешно завершен.
-        </p>
-
-        <div class="error-box">
-            <strong>💳 Возможные причины:</strong>
-            <ul style="margin: 12px 0 0 20px;">
-                <li>Недостаточно средств на карте</li>
-                <li>Банк отклонил транзакцию</li>
-                <li>Превышено время ожидания оплаты</li>
-                <li>Операция была отменена</li>
-            </ul>
-        </div>
 
         <?php if ($order && !empty($order['items'])): ?>
         <div class="order-info">
@@ -172,23 +159,21 @@ include __DIR__ . '/../includes/header.php';
             <ul class="items-list">
                 <?php foreach ($order['items'] as $item): ?>
                     <li>
-                        <strong><?php echo htmlspecialchars($item['competition_title']); ?></strong><br>
-                        <small style="color: var(--text-medium);">
-                            Номинация: <?php echo htmlspecialchars($item['nomination']); ?>
-                        </small>
+                        <strong><?php echo htmlspecialchars($item['competition_title'] ?? $item['publication_title']
+                            ?? $item['webinar_title'] ?? $item['olympiad_title'] ?? 'Документ', ENT_QUOTES, 'UTF-8'); ?></strong>
+                        <?php if (!empty($item['nomination'])): ?>
+                            <br><small>Номинация: <?= htmlspecialchars($item['nomination'], ENT_QUOTES, 'UTF-8') ?></small>
+                        <?php endif; ?>
                     </li>
                 <?php endforeach; ?>
             </ul>
         </div>
         <?php endif; ?>
 
-        <p style="margin-top: 24px;">
-            <strong>Что делать дальше?</strong>
-        </p>
-        <p>Вы можете попробовать оплатить заказ снова или вернуться в корзину для изменения заказа.</p>
+        <p>Откройте корзину, проверьте документы и сумму, затем нажмите «Перейти к оплате».</p>
 
         <div class="action-buttons">
-            <a href="/pages/cart.php" class="btn-retry">Попробовать снова</a>
+            <a href="/korzina/" class="btn-retry">Вернуться к оплате</a>
             <a href="/index.php" class="btn-back">Вернуться на главную</a>
         </div>
 
@@ -197,20 +182,14 @@ include __DIR__ . '/../includes/header.php';
             <div class="support-contact">
                 <p style="margin: 0;">
                     <strong>📧 Служба поддержки</strong><br>
-                    Если проблема повторяется, пожалуйста, свяжитесь с нами:<br>
-                    Email: support@yourdomain.ru<br>
+                    Если банк показывает списание или ошибка повторяется, напишите
+                    на <a href="mailto:info@fgos.pro">info@fgos.pro</a>.<br>
                     <?php if ($order): ?>
                     Укажите номер заказа: <strong><?php echo htmlspecialchars($order['order_number']); ?></strong>
                     <?php endif; ?>
                 </p>
             </div>
 
-            <h4 style="margin-top: 24px;">Частые вопросы:</h4>
-            <ul>
-                <li><strong>Деньги были списаны?</strong> Если платеж не прошел, деньги не были списаны. При возникновении временной блокировки средств, они вернутся на счет в течение 1-3 рабочих дней.</li>
-                <li><strong>Регистрация сохранена?</strong> Да, ваша регистрация сохранена и ожидает оплаты. Вы можете оплатить ее в любое время.</li>
-                <li><strong>Как оплатить другой картой?</strong> Просто вернитесь в корзину и попробуйте оплатить снова - система предложит вам ввести данные карты.</li>
-            </ul>
         </div>
     </div>
 </div>

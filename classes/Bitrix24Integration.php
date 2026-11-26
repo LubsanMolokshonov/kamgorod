@@ -7,6 +7,7 @@
 class Bitrix24Integration {
     /** ID ответственного менеджера за курсы (контакт + сделка) */
     const COURSE_RESPONSIBLE_USER_ID = 52226;
+    private const COURSE_ENROLLMENT_ORIGIN = 'fgos-course-enrollment';
 
     /** Ответственный за оплаченную онлайн курсовую сделку и задачу на допуск. */
     public static function coursePaidResponsibleId() {
@@ -59,6 +60,21 @@ class Bitrix24Integration {
 
         return $amount !== null
             && abs((float)($deal['OPPORTUNITY'] ?? 0) - (float)$amount) > 0.009;
+    }
+
+    /** В чужой воронке фиксируем сумму, сохраняя этап и ответственного сделки. */
+    public static function coursePaidDealChanges(array $deal, float $amount): array {
+        $categoryId = (int)($deal['CATEGORY_ID'] ?? -1);
+        $coursePipelineId = defined('BITRIX24_COURSE_PIPELINE_ID') ? (int)BITRIX24_COURSE_PIPELINE_ID : 108;
+        $amountChanged = abs((float)($deal['OPPORTUNITY'] ?? 0) - $amount) > 0.009
+            || ($deal['CURRENCY_ID'] ?? '') !== 'RUB';
+        if ($categoryId === $coursePipelineId) {
+            return $amountChanged || self::paidCourseDealNeedsUpdate($deal, $amount)
+                ? self::buildPaidCourseDealFields($amount)
+                : [];
+        }
+
+        return $amountChanged ? ['OPPORTUNITY' => $amount, 'CURRENCY_ID' => 'RUB'] : [];
     }
 
     private $webhookUrl;
@@ -696,6 +712,14 @@ class Bitrix24Integration {
             && $semantic === 'F';
     }
 
+    public static function isCourseDealOpenForPayment(array $deal): bool {
+        return ($deal['STAGE_SEMANTIC_ID'] ?? '') === 'P'
+            && ($deal['CLOSED'] ?? 'N') === 'N'
+            && !empty($deal['STAGE_ID'])
+            && isset($deal['CATEGORY_ID'])
+            && !self::isFgosPaidDeal($deal);
+    }
+
     /**
      * Переместить сделку на следующую стадию
      *
@@ -886,6 +910,27 @@ class Bitrix24Integration {
      * @return string|null ID сделки или null
      */
     public function createCourseDeal($enrollment, $course, $stageId = null, $adjustedPrice = null, array $paymentInfo = []) {
+        $enrollmentId = (int)($enrollment['enrollment_id'] ?? 0);
+        if ($enrollmentId > 0) {
+            // После тайм-аута создания сначала ищем сделку по стабильному ключу заявки.
+            $existing = $this->listDeals([
+                '=ORIGINATOR_ID' => self::COURSE_ENROLLMENT_ORIGIN,
+                '=ORIGIN_ID' => (string)$enrollmentId,
+            ], ['ID', 'ORIGINATOR_ID', 'ORIGIN_ID'], 2);
+            if ($existing === null) {
+                return null;
+            }
+            if ($existing) {
+                $deal = $existing[0];
+                if (count($existing) === 1 && !empty($deal['ID'])
+                    && ($deal['ORIGINATOR_ID'] ?? null) === self::COURSE_ENROLLMENT_ORIGIN
+                    && (string)($deal['ORIGIN_ID'] ?? '') === (string)$enrollmentId) {
+                    return (string)$deal['ID'];
+                }
+                $this->log("Неоднозначная привязка сделки для заявки #{$enrollmentId}", 'error');
+                return null;
+            }
+        }
         $contactId = $this->findOrCreateContact($enrollment, self::COURSE_RESPONSIBLE_USER_ID);
 
         $categoryId = defined('BITRIX24_COURSE_PIPELINE_ID') ? BITRIX24_COURSE_PIPELINE_ID : 108;
@@ -915,6 +960,11 @@ class Bitrix24Integration {
             'CURRENCY_ID' => 'RUB',
             'ASSIGNED_BY_ID' => self::courseDealResponsibleId($stageId),
         ];
+
+        if ($enrollmentId > 0) {
+            $data['ORIGINATOR_ID'] = self::COURSE_ENROLLMENT_ORIGIN;
+            $data['ORIGIN_ID'] = (string)$enrollmentId;
+        }
 
         // UTM-метки (стандартные поля Bitrix24)
         if (!empty($enrollment['utm_source'])) $data['UTM_SOURCE'] = $enrollment['utm_source'];

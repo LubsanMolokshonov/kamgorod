@@ -444,12 +444,13 @@ include __DIR__ . '/../includes/header.php';
         <main class="cab-main">
 
         <?php if ($activeTab === 'courses'): ?>
+            <?php $closedPayments = $courseObj->getClosedPaymentAttempts((int)$_SESSION['user_id']); ?>
             <!-- Courses Tab -->
             <?php if (empty($userCourseEnrollments)): ?>
                 <div class="empty-cabinet">
                     <div class="empty-icon">📚</div>
-                    <h2>У вас пока нет заявок на курсы</h2>
-                    <p>Запишитесь на курс повышения квалификации или профессиональной переподготовки</p>
+                    <h2><?= $closedPayments ? 'У вас нет активных заявок на курсы' : 'У вас пока нет заявок на курсы' ?></h2>
+                    <?php if (!$closedPayments): ?><p>Запишитесь на курс повышения квалификации или профессиональной переподготовки</p><?php endif; ?>
                     <a href="/kursy/" class="btn btn-primary">
                         Перейти к курсам
                     </a>
@@ -612,7 +613,8 @@ include __DIR__ . '/../includes/header.php';
                                 <?php else: ?>
                                     <button type="button"
                                             class="btn-pay-online"
-                                            data-enrollment-id="<?php echo $e['enrollment_id']; ?>">
+                                            data-enrollment-id="<?php echo $e['enrollment_id']; ?>"
+                                            data-expected-amount-kopecks="<?php echo (int)round($payAmountRow * 100); ?>">
                                         Оплатить онлайн — <?php echo formatRub($payAmountRow); ?>
                                     </button>
                                     <?php if ($installmentRow['available']): ?>
@@ -706,6 +708,20 @@ include __DIR__ . '/../includes/header.php';
                         Смотреть другие курсы
                     </a>
                 </div>
+            <?php endif; ?>
+
+            <?php if ($closedPayments): ?>
+                <details class="course-info-block" <?= empty($userCourseEnrollments) ? 'open' : '' ?>>
+                    <summary>Попытки оплаты по закрытым заявкам</summary>
+                    <ul>
+                        <?php foreach ($closedPayments as $payment): ?>
+                            <li><?= htmlspecialchars($payment['title'], ENT_QUOTES, 'UTF-8') ?>
+                                · заказ <?= htmlspecialchars($payment['order_number'], ENT_QUOTES, 'UTF-8') ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <p>Если хотите продолжить обучение или проверить списание, укажите номер заказа в письме
+                        на <a href="mailto:info@fgos.pro">info@fgos.pro</a>. Менеджер проверит заявку и оплату.</p>
+                </details>
             <?php endif; ?>
 
         <?php elseif ($activeTab === 'events'): ?>

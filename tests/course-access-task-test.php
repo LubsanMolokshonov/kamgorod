@@ -136,6 +136,21 @@ assertCourseAccess($paidFields['STAGE_ID'] === 'C108:WON', 'автоплата �
 assertCourseAccess($paidFields['ASSIGNED_BY_ID'] === 47640, 'автоплата переназначает существующую сделку Юлии Стефанович');
 assertCourseAccess($paidFields['OPPORTUNITY'] === 2916.0, 'автоплата передаёт фактически уплаченную сумму');
 assertCourseAccess($paidFields['CURRENCY_ID'] === 'RUB', 'автоплата сохраняет валюту сделки');
+$transferred = [
+    'CATEGORY_ID' => 4,
+    'STAGE_ID' => 'C4:PREPARATION',
+    'ASSIGNED_BY_ID' => 52226,
+    'OPPORTUNITY' => 3000,
+    'CURRENCY_ID' => 'RUB',
+];
+assertCourseAccess(
+    Bitrix24Integration::coursePaidDealChanges($transferred, 2916.0) === ['OPPORTUNITY' => 2916.0, 'CURRENCY_ID' => 'RUB'],
+    'в перенесённой сделке обновляется сумма с сохранением этапа и ответственного'
+);
+assertCourseAccess(
+    Bitrix24Integration::coursePaidDealChanges($transferred, 3000.0) === [],
+    'повтор синхронизации перенесённой сделки не вызывает лишнее обновление'
+);
 assertCourseAccess(
     Bitrix24Integration::paidCourseDealNeedsUpdate([
         'STAGE_ID' => 'C108:WON',
@@ -170,6 +185,10 @@ assertCourseAccess(CourseAccessTaskQueue::isEligibleSource('webhook'), 'YooKassa
 assertCourseAccess(!CourseAccessTaskQueue::isEligibleSource('subscription'), 'подписка не ставит задачу Юлии');
 assertCourseAccess(!CourseAccessTaskQueue::isEligibleSource('local'), 'local bypass не ставит production-задачу');
 assertCourseAccess(!CourseAccessTaskQueue::isEligibleSource('reconcile'), 'сверка не выдаётся за webhook YooKassa');
+assertCourseAccess(
+    CourseAccessTaskQueue::isEligibleSource('reconcile_course_payment'),
+    'подтверждённая ЮKassa оплата курса ставит задачу, даже если вебхук пропущен'
+);
 assertCourseAccess(!CourseAccessTaskQueue::isEligibleSource('bitrix'), 'ручная Bitrix-оплата не ставит задачу Юлии');
 assertCourseAccess(CourseAccessTaskQueue::isYookassaPaymentId('2f30c650-000f-5000-9000-123456789abc'), 'ID ЮKassa разрешён');
 assertCourseAccess(!CourseAccessTaskQueue::isYookassaPaymentId('bitrix:1533066'), 'синтетическая Bitrix-оплата исключена');

@@ -11,6 +11,11 @@
     document.addEventListener('DOMContentLoaded', function() {
         var csrfToken = window.csrfToken || '';
 
+        // После возврата из ЮKassa перечитать статус заявки и доступные действия.
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) window.location.reload();
+        });
+
         document.querySelectorAll('.btn-pay-online').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 var enrollmentId = btn.dataset.enrollmentId;
@@ -18,18 +23,32 @@
                 var origText = btn.textContent;
                 btn.disabled = true;
                 btn.textContent = 'Создание платежа...';
+                var body = 'csrf_token=' + encodeURIComponent(csrfToken)
+                    + '&enrollment_id=' + encodeURIComponent(enrollmentId);
+                if (btn.dataset.expectedAmountKopecks) {
+                    body += '&expected_amount_kopecks=' + encodeURIComponent(btn.dataset.expectedAmountKopecks);
+                }
                 fetch('/ajax/create-course-payment.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'csrf_token=' + encodeURIComponent(csrfToken)
-                        + '&enrollment_id=' + encodeURIComponent(enrollmentId)
+                    body: body
                 })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data && data.success && data.redirect_url) {
                         window.location.href = data.redirect_url;
+                    } else if (data && data.state === 'price_changed' && Number.isInteger(data.amount_kopecks)) {
+                        btn.dataset.expectedAmountKopecks = String(data.amount_kopecks);
+                        var price = new Intl.NumberFormat('ru-RU', {
+                            style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 2
+                        }).format(data.amount_kopecks / 100);
+                        var item = btn.closest('.course-checkout-item');
+                        var amount = item && item.querySelector('.price-discounted, .price-current');
+                        if (amount) amount.textContent = price;
+                        btn.textContent = 'Подтвердить оплату — ' + price;
+                        btn.disabled = false;
                     } else {
-                        alert((data && data.error) || 'Ошибка создания платежа');
+                        alert((data && (data.message || data.error)) || 'Ошибка создания платежа');
                         btn.disabled = false;
                         btn.textContent = origText;
                     }

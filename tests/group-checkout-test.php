@@ -20,6 +20,7 @@ class GroupTestPaymentClient {
         if ($sum !== (int)round((float)$payload['amount']['value']*100)) throw new RuntimeException('Сумма чека не равна платежу');
         return new class {
             public function getId(): string { return 'qa-group-' . bin2hex(random_bytes(8)); }
+            public function getStatus(): string { return 'pending'; }
             public function getConfirmation(): object { return new class { public function getConfirmationUrl(): string { return 'https://example.invalid/qa-payment'; } }; }
         };
     }

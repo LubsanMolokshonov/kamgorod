@@ -9,9 +9,10 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Order.php';
+require_once __DIR__ . '/../includes/course-payment-link.php';
 
 // Get order number from query string
-if (!isset($_GET['order_number'])) {
+if (!is_string($_GET['order_number'] ?? null)) {
     http_response_code(400);
     echo json_encode([
         'success' => false,
@@ -27,7 +28,12 @@ try {
     $orderObj = new Order($db);
     $order = $orderObj->getByOrderNumber($orderNumber);
 
-    if (!$order) {
+    $courseEnrollmentId = $order ? courseCheckoutEnrollmentId($order) : null;
+    if ($courseEnrollmentId !== null) {
+        header('Cache-Control: private, no-store');
+        header('Referrer-Policy: no-referrer');
+    }
+    if (!$order || ($courseEnrollmentId !== null && getCourseCheckoutAccountId($db) !== (int)$order['user_id'])) {
         http_response_code(404);
         echo json_encode([
             'success' => false,

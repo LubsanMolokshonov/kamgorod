@@ -134,6 +134,7 @@ $routes = [
     ["#^kursy/($auds)/?$#", 'courses.php', ['ac']],
     ["#^kursy/($levels)/([a-z0-9-]+)/?$#", 'courses.php', ['at', 'as']],
     ["#^kursy/($levels)/?$#", 'courses.php', ['at']],
+    ["#^oplata-kursa(?:/[1-9][0-9]{0,9})?/?$#", 'pages/course-checkout.php', []],
     ["#^kursy/?$#", 'courses.php', []],
     ["#^kursy/([a-z0-9-]+)/?$#", 'pages/course-detail.php', ['slug']],
 

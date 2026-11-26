@@ -4,15 +4,15 @@
  * Displays successful payment confirmation and handles auto-login
  */
 
-session_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/course-payment-link.php';
 
 // Get order number from URL
-if (!isset($_GET['order_number'])) {
+if (!is_string($_GET['order_number'] ?? null)) {
     header('Location: /');
     exit;
 }
@@ -28,6 +28,15 @@ if (!$order) {
     exit;
 }
 
+$courseEnrollmentId = courseCheckoutEnrollmentId($order);
+if ($courseEnrollmentId !== null) {
+    header('Cache-Control: private, no-store');
+    header('Referrer-Policy: no-referrer');
+    header('Location: ' . courseCheckoutPath($courseEnrollmentId) . '?return=1', true, 303);
+    exit;
+}
+
+session_start();
 $paymentStatus = $order['payment_status'];
 $userId = $order['user_id'];
 
@@ -62,18 +71,7 @@ if ($paymentStatus === 'succeeded') {
     clearCart();
 }
 
-// Определяем вкладку ЛК по типу товаров в заказе
-$hasCourseItem = false;
-if (!empty($order['items'])) {
-    foreach ($order['items'] as $item) {
-        if (!empty($item['course_enrollment_id'])) {
-            $hasCourseItem = true;
-            break;
-        }
-    }
-}
-$cabinetTab = $hasCourseItem ? 'courses' : 'events';
-$cabinetUrl = '/pages/cabinet.php?tab=' . $cabinetTab;
+$cabinetUrl = '/pages/cabinet.php?tab=events';
 
 // Redirect to failure page if payment failed
 if ($paymentStatus === 'failed' || $paymentStatus === 'canceled') {

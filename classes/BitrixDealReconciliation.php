@@ -145,28 +145,19 @@ class BitrixDealReconciliation
             if (empty($item['can_materialize'])) {
                 continue;
             }
-            $deal = [
-                'ID'          => $item['deal_id'],
-                'OPPORTUNITY' => $item['amount'],
-                'CLOSEDATE'   => $item['closedate'],
-            ];
+            $deal = $this->bitrix->getDeal($item['deal_id']);
+            if (!$deal) {
+                continue;
+            }
             $orderId = materializeOfflineCourseOrder($this->db, (int)$item['entity_id'], $deal);
             if (!$orderId) {
                 continue;
-            }
-            if (($item['status'] ?? null) !== 'paid') {
-                $this->db->update(
-                    'course_enrollments',
-                    ['status' => 'paid', 'bitrix_stage_updated_at' => date('Y-m-d H:i:s')],
-                    'id = ?',
-                    [(int)$item['entity_id']]
-                );
             }
             $created[] = [
                 'deal_id'       => (int)$item['deal_id'],
                 'enrollment_id' => (int)$item['entity_id'],
                 'order_id'      => (int)$orderId,
-                'amount'        => (float)$item['amount'],
+                'amount'        => (float)$deal['OPPORTUNITY'],
             ];
         }
         return $created;
@@ -276,8 +267,8 @@ class BitrixDealReconciliation
                 $changed = $this->db->update(
                     'orders',
                     ['payment_status' => 'failed', 'paid_at' => null],
-                    "id = ? AND payment_status = 'succeeded'",
-                    [$orderId]
+                    "id = ? AND yookassa_payment_id = ? AND payment_status = 'succeeded'",
+                    [$orderId, $marker]
                 );
 
                 if ($changed > 0 && $enrollmentId > 0) {

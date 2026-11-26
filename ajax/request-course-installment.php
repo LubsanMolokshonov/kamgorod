@@ -20,6 +20,7 @@ session_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Course.php';
+require_once __DIR__ . '/../classes/CourseCheckout.php';
 require_once __DIR__ . '/../classes/CoursePriceAB.php';
 require_once __DIR__ . '/../classes/Bitrix24Integration.php';
 require_once __DIR__ . '/../classes/CourseEmailChain.php';
@@ -28,98 +29,72 @@ require_once __DIR__ . '/../includes/installment-helper.php';
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        throw new Exception('Метод не поддерживается');
+        throw new DomainException('Метод не поддерживается');
     }
 
-    if (empty($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
-        throw new Exception('Ошибка безопасности. Обновите страницу.');
+    $csrf = $_POST['csrf_token'] ?? null;
+    if (!is_string($csrf) || $csrf === '' || !validateCSRFToken($csrf)) {
+        throw new DomainException('Ошибка безопасности. Обновите страницу.');
     }
 
     $userEmail = $_SESSION['user_email'] ?? null;
-    $userId    = getUserId();
+    $userId    = (int)getUserId();
     if (!$userEmail || !$userId) {
-        throw new Exception('Необходимо авторизоваться');
+        throw new DomainException('Необходимо авторизоваться');
     }
 
-    $enrollmentId = (int)($_POST['enrollment_id'] ?? 0);
+    $enrollmentId = filter_var($_POST['enrollment_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     if (!$enrollmentId) {
-        throw new Exception('Заявка не указана');
+        throw new DomainException('Заявка не указана');
     }
 
     $courseObj = new Course($db);
     $dbObj = new Database($db);
 
-    $enrollment = $courseObj->getEnrollmentById($enrollmentId);
-    if (!$enrollment) {
-        throw new Exception('Заявка не найдена');
-    }
-    if ($enrollment['email'] !== $userEmail) {
-        throw new Exception('Нет доступа к этой заявке');
-    }
-    if ($enrollment['enrollment_status'] === 'paid') {
-        throw new Exception('Этот курс уже оплачен');
-    }
-    if ($enrollment['enrollment_status'] === 'cancelled') {
-        throw new Exception('Эта заявка отменена');
-    }
-    if (($enrollment['payment_method'] ?? null) === 'installment') {
-        throw new Exception('Заявка на рассрочку уже отправлена');
-    }
+    [$enrollment, $finalPrice, $installment] = CourseCheckout::withEnrollmentLock(
+        $db, $enrollmentId, function () use ($db, $enrollmentId, $userId, $userEmail, $courseObj): array {
+            (new CourseCheckout($db))->assertEnrollmentCanChange($enrollmentId, $userId);
+            $enrollment = $courseObj->getEnrollmentById($enrollmentId);
+            if (!$enrollment || $enrollment['email'] !== $userEmail) {
+                throw new DomainException('Нет доступа к этой заявке');
+            }
 
-    // Финальная цена с учётом A/B (без 10% «быстрой оплаты» — рассрочка от полной цены)
-    $abVariant  = CoursePriceAB::getVariant();
-    $finalPrice = CoursePriceAB::getAdjustedPrice(
-        (float)$enrollment['price'],
-        $abVariant,
-        $enrollment['program_type'] ?? null
+            // Рассрочка рассчитывается от полной цены с учётом варианта.
+            $finalPrice = CoursePriceAB::getAdjustedPrice(
+                (float)$enrollment['price'], CoursePriceAB::getVariant(), $enrollment['program_type'] ?? null
+            );
+            $installment = calculateInstallment($finalPrice);
+            if (!$installment['available']) {
+                throw new DomainException(
+                    'Рассрочка недоступна для этого курса (минимальная цена '
+                    . number_format(COURSE_INSTALLMENT_MIN_PRICE, 0, ',', ' ') . ' ₽)'
+                );
+            }
+
+            if (!$courseObj->markInstallmentRequested($enrollmentId, (int)$installment['monthly'], null)) {
+                throw new RuntimeException('Не удалось сохранить заявку на рассрочку');
+            }
+
+            return [$enrollment, $finalPrice, $installment];
+        }
     );
-
-    $installment = calculateInstallment((float)$finalPrice);
-    if (!$installment['available']) {
-        throw new Exception(
-            'Рассрочка недоступна для этого курса (минимальная цена '
-            . number_format(COURSE_INSTALLMENT_MIN_PRICE, 0, ',', ' ') . ' ₽)'
-        );
-    }
-
-    // Полная строка enrollment с UTM/source_page для CRM-комментария
-    $fullEnrollment = $dbObj->queryOne(
-        "SELECT * FROM course_enrollments WHERE id = ?",
-        [$enrollmentId]
-    );
-    if (!$fullEnrollment) {
-        throw new Exception('Заявка не найдена');
-    }
-
-    $course = $courseObj->getById($fullEnrollment['course_id']);
-    if ($course && !empty($fullEnrollment['course_title_snapshot'])) $course['title'] = $fullEnrollment['course_title_snapshot'];
-    if (!$course) {
-        throw new Exception('Курс не найден');
-    }
 
     // Переименовываем исходную сделку курса: TITLE → «РАССРОЧКА <название курса>»,
     // одновременно проставляем корректную сумму (OPPORTUNITY) — ту же, что показана на сайте.
     // Стадию не меняем; новой сделки рассрочки не создаём.
-    $bitrix = new Bitrix24Integration();
-    $bitrixLeadId = $fullEnrollment['bitrix_lead_id'] ?? null;
-    if ($bitrix->isConfigured() && $bitrixLeadId) {
-        $newTitle = mb_substr('РАССРОЧКА ' . $course['title'], 0, 100);
-        $bitrix->updateDeal((string)$bitrixLeadId, [
-            'TITLE'       => $newTitle,
-            'OPPORTUNITY' => (float)$finalPrice,
-            'CURRENCY_ID' => 'RUB',
-        ]);
-    } elseif (!$bitrixLeadId) {
-        error_log('request-course-installment: enrollment #' . $enrollmentId . ' has no bitrix_lead_id, skipping rename');
-    } else {
-        error_log('request-course-installment: Bitrix24 not configured, skipping deal rename');
+    try {
+        $fresh = $dbObj->queryOne('SELECT status, bitrix_lead_id FROM course_enrollments WHERE id = ?', [$enrollmentId]);
+        $bitrix = new Bitrix24Integration();
+        if (($fresh['status'] ?? null) === 'installment_requested' && !empty($fresh['bitrix_lead_id']) && $bitrix->isConfigured()) {
+            $bitrix->updateDeal((string)$fresh['bitrix_lead_id'], [
+                'TITLE'       => mb_substr('РАССРОЧКА ' . $enrollment['title'], 0, 100),
+                'OPPORTUNITY' => $finalPrice,
+                'CURRENCY_ID' => 'RUB',
+            ]);
+        }
+    } catch (Throwable $e) {
+        error_log('Не удалось обновить сделку для рассрочки по заявке #' . $enrollmentId . ' (' . get_class($e) . ')');
     }
-
-    $courseObj->markInstallmentRequested(
-        $enrollmentId,
-        (int)$installment['monthly'],
-        null
-    );
 
     // Письмо-подтверждение с CTA «Написать в Max» — ускоряет согласование рассрочки.
     // Ошибка отправки не должна ломать заявку: ловим и логируем.
@@ -141,10 +116,13 @@ try {
         'months'  => (int)$installment['months'],
     ], JSON_UNESCAPED_UNICODE);
 
-} catch (Exception $e) {
+} catch (DomainException $e) {
     http_response_code(200);
     echo json_encode([
         'success' => false,
         'error'   => $e->getMessage(),
     ], JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    error_log('Не удалось оформить заявку на рассрочку (' . get_class($e) . ')');
+    echo json_encode(['success' => false, 'error' => 'Не удалось оформить заявку на рассрочку. Попробуйте позже.'], JSON_UNESCAPED_UNICODE);
 }

@@ -23,127 +23,107 @@
  * генерация PDF тоже не запускается.
  */
 
+require_once __DIR__ . '/../classes/CourseCheckout.php';
+require_once __DIR__ . '/../classes/Bitrix24Integration.php';
+
 if (!function_exists('materializeOfflineCourseOrder')) {
 
-    /**
-     * Создать синтетический заказ за выигранную в CRM оффлайн-сделку по курсу.
-     *
-     * @param Database $db          Обёртка PDO
-     * @param int      $enrollmentId ID записи в course_enrollments
-     * @param array    $deal        Сделка из Bitrix (crm.deal.get): ID, OPPORTUNITY, CLOSEDATE
-     * @return int|null ID заказа (новый или уже существующий), либо null если не создан
-     */
+    /** Применить подтверждённую офлайн-оплату под той же блокировкой, что и онлайн. */
     function materializeOfflineCourseOrder(Database $db, int $enrollmentId, array $deal): ?int {
         $dealId = (int)($deal['ID'] ?? 0);
-        if ($dealId <= 0) {
+        $amount = (float)($deal['OPPORTUNITY'] ?? 0);
+        if ($dealId <= 0 || $amount <= 0 || !Bitrix24Integration::isFgosPaidDeal($deal)) {
             return null;
         }
 
-        $marker = 'bitrix:' . $dealId;
+        return CourseCheckout::withEnrollmentLock($db->getPDO(), $enrollmentId, static function () use (
+            $db, $enrollmentId, $deal, $dealId, $amount
+        ): ?int {
+            $enrollment = $db->queryOne('SELECT * FROM course_enrollments WHERE id = ?', [$enrollmentId]);
+            if (!$enrollment || (int)$enrollment['bitrix_lead_id'] !== $dealId || empty($enrollment['user_id'])) {
+                return null;
+            }
 
-        // Идемпотентность: заказ за эту сделку уже материализован?
-        $existing = $db->queryOne(
-            "SELECT id, payment_status FROM orders WHERE yookassa_payment_id = ? LIMIT 1",
-            [$marker]
-        );
-        if ($existing) {
-            // Обратная сверка могла снять синтетическую оплату после провала сделки.
-            // Если менеджер затем вернул её в действительно оплаченный этап,
-            // восстанавливаем тот же заказ вместо создания дубля.
-            if (($existing['payment_status'] ?? '') !== 'succeeded'
-                && Bitrix24Integration::isFgosPaidDeal($deal)) {
-                $amount = (float)($deal['OPPORTUNITY'] ?? 0);
-                if ($amount <= 0) {
+            $marker = 'bitrix:' . $dealId;
+            $orders = $db->query(
+                "SELECT o.id, o.user_id, o.payment_status, o.yookassa_payment_id, a.attempt_payload,
+                        (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) AS item_count
+                 FROM orders o
+                 JOIN order_items oi ON oi.order_id = o.id
+                 LEFT JOIN course_checkout_payments a ON a.order_id = o.id
+                 WHERE oi.course_enrollment_id = ?
+                 LIMIT 2",
+                [$enrollmentId]
+            );
+            if (count($orders) > 1) {
+                error_log("[offline-order] неоднозначная история заказов заявки #{$enrollmentId}");
+                return null;
+            }
+
+            $order = $orders[0] ?? null;
+            if ($order && ((int)$order['user_id'] !== (int)$enrollment['user_id'] || (int)$order['item_count'] !== 1)) {
+                return null;
+            }
+            if ($order && $order['payment_status'] === 'succeeded' && $order['yookassa_payment_id'] === $marker) {
+                $db->update('course_enrollments', ['status' => 'paid'], 'id = ?', [$enrollmentId]);
+                return (int)$order['id'];
+            }
+            if ($order) {
+                // Отложить сверку, пока есть активный платёж или результат запроса неизвестен.
+                // Отменённый ЮKassa-заказ или прежний синтетический заказ можно использовать повторно.
+                $paymentId = (string)$order['yookassa_payment_id'];
+                if ($order['payment_status'] !== 'failed' || $order['attempt_payload'] !== null
+                    || $paymentId === '' || (str_starts_with($paymentId, 'bitrix:') && $paymentId !== $marker)) {
                     return null;
                 }
-                $closeRaw = (string)($deal['CLOSEDATE'] ?? '');
-                $ts = $closeRaw !== '' ? strtotime($closeRaw) : false;
-                $paidAt = $ts ? date('Y-m-d H:i:s', $ts) : date('Y-m-d H:i:s');
-                $db->update(
-                    'orders',
-                    [
-                        'total_amount'   => $amount,
-                        'final_amount'   => $amount,
-                        'payment_status' => 'succeeded',
-                        'paid_at'        => $paidAt,
-                    ],
-                    'id = ?',
-                    [(int)$existing['id']]
-                );
-                $db->execute(
-                    'UPDATE order_items SET price = ? WHERE order_id = ? AND course_enrollment_id IS NOT NULL',
-                    [$amount, (int)$existing['id']]
-                );
             }
-            return (int)$existing['id'];
-        }
 
-        $enr = $db->queryOne(
-            "SELECT id, user_id, visit_id, utm_source, utm_medium, utm_campaign, utm_content, utm_term
-             FROM course_enrollments WHERE id = ?",
-            [$enrollmentId]
-        );
-        if (!$enr) {
-            return null;
-        }
-
-        // orders.user_id NOT NULL — без пользователя заказ не создать.
-        if (empty($enr['user_id'])) {
-            error_log("[offline-order] enrollment #{$enrollmentId} без user_id — пропуск сделки {$dealId}");
-            return null;
-        }
-
-        // Уже есть реальная (Yookassa) оплата по этой заявке — не дублируем выручку.
-        $hasOrder = $db->queryOne(
-            "SELECT 1 FROM order_items oi
-             JOIN orders o ON o.id = oi.order_id
-             WHERE oi.course_enrollment_id = ? AND o.payment_status = 'succeeded'
-             LIMIT 1",
-            [$enrollmentId]
-        );
-        if ($hasOrder) {
-            return null;
-        }
-
-        $amount = (float)($deal['OPPORTUNITY'] ?? 0);
-        if ($amount <= 0) {
-            error_log("[offline-order] сделка {$dealId} с нулевой суммой — пропуск (enrollment #{$enrollmentId})");
-            return null;
-        }
-
-        $closeRaw = (string)($deal['CLOSEDATE'] ?? '');
-        $ts       = $closeRaw !== '' ? strtotime($closeRaw) : false;
-        $paidAt   = $ts ? date('Y-m-d H:i:s', $ts) : date('Y-m-d H:i:s');
-        $now      = date('Y-m-d H:i:s');
-
-        $orderId = $db->insert('orders', [
-            'user_id'             => (int)$enr['user_id'],
-            'order_number'        => 'BX-' . $dealId,
-            'total_amount'        => $amount,
-            'final_amount'        => $amount,
-            'payment_status'      => 'succeeded',
-            'paid_at'             => $paidAt,
-            'metrika_sent_at'     => $now,
-            'yookassa_payment_id' => $marker,
-            'utm_source'          => $enr['utm_source'] ?: null,
-            'utm_medium'          => $enr['utm_medium'] ?: null,
-            'utm_campaign'        => $enr['utm_campaign'] ?: null,
-            'utm_content'         => $enr['utm_content'] ?: null,
-            'utm_term'            => $enr['utm_term'] ?: null,
-            'visit_id'            => $enr['visit_id'] ?: null,
-        ]);
-        if (!$orderId) {
-            return null;
-        }
-
-        $db->insert('order_items', [
-            'order_id'                => (int)$orderId,
-            'course_enrollment_id'    => (int)$enr['id'],
-            'price'                   => $amount,
-            'covered_by_subscription' => 0,
-        ]);
-
-        return (int)$orderId;
+            $paidAt = strtotime((string)($deal['CLOSEDATE'] ?? '')) ?: time();
+            $orderData = [
+                'total_amount'        => $amount,
+                'final_amount'        => $amount,
+                'payment_status'      => 'succeeded',
+                'paid_at'             => date('Y-m-d H:i:s', $paidAt),
+                'metrika_sent_at'     => date('Y-m-d H:i:s'),
+                'yookassa_payment_id' => $marker,
+            ];
+            $db->beginTransaction();
+            try {
+                if ($order) {
+                    $orderId = (int)$order['id'];
+                    $db->update('orders', $orderData + [
+                        'discount_amount'          => 0,
+                        'loyalty_discount_amount'  => 0,
+                        'promotion_applied'        => 0,
+                        'yookassa_confirmation_url' => null,
+                    ], 'id = ?', [$orderId]);
+                    $db->update('order_items', ['price' => $amount], 'order_id = ?', [$orderId]);
+                } else {
+                    $orderId = (int)$db->insert('orders', $orderData + [
+                        'user_id'       => (int)$enrollment['user_id'],
+                        'order_number'  => 'BX-' . $dealId,
+                        'utm_source'    => $enrollment['utm_source'] ?: null,
+                        'utm_medium'    => $enrollment['utm_medium'] ?: null,
+                        'utm_campaign'  => $enrollment['utm_campaign'] ?: null,
+                        'utm_content'   => $enrollment['utm_content'] ?: null,
+                        'utm_term'      => $enrollment['utm_term'] ?: null,
+                        'visit_id'      => $enrollment['visit_id'] ?: null,
+                    ]);
+                    $db->insert('order_items', [
+                        'order_id'              => $orderId,
+                        'course_enrollment_id'  => $enrollmentId,
+                        'price'                 => $amount,
+                        'covered_by_subscription' => 0,
+                    ]);
+                }
+                $db->update('course_enrollments', ['status' => 'paid'], 'id = ?', [$enrollmentId]);
+                $db->commit();
+                return $orderId;
+            } catch (Throwable $e) {
+                $db->rollback();
+                throw $e;
+            }
+        });
     }
 }
 

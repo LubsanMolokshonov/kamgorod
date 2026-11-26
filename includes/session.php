@@ -28,7 +28,7 @@ const CART_PAID_STATUSES = [
 /**
  * Отфильтровать из списка id позиции, которые уже оплачены (см. CART_PAID_STATUSES).
  */
-function filterUnpaidCartIds(string $itemType, array $ids): array {
+function filterUnpaidCartIds(string $itemType, array $ids, int $userId): array {
     global $db;
     if (empty($ids) || !isset($db) || !isset(CART_PAID_STATUSES[$itemType])) {
         return $ids;
@@ -38,14 +38,13 @@ function filterUnpaidCartIds(string $itemType, array $ids): array {
         $idPh     = implode(',', array_fill(0, count($ids), '?'));
         $statusPh = implode(',', array_fill(0, count($cfg['statuses']), '?'));
         $stmt = $db->prepare(
-            "SELECT id FROM {$cfg['table']} WHERE id IN ({$idPh}) AND status IN ({$statusPh})"
+            "SELECT id FROM {$cfg['table']} WHERE user_id = ? AND id IN ({$idPh}) AND status NOT IN ({$statusPh})"
         );
-        $stmt->execute(array_merge(array_map('intval', $ids), $cfg['statuses']));
-        $paid = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
-        return array_values(array_diff($ids, $paid));
+        $stmt->execute(array_merge([$userId], array_map('intval', $ids), $cfg['statuses']));
+        return array_values(array_intersect($ids, array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN))));
     } catch (Exception $e) {
         error_log("filterUnpaidCartIds({$itemType}) error: " . $e->getMessage());
-        return $ids;
+        throw $e;
     }
 }
 
@@ -80,7 +79,7 @@ function cartEnsureLoadedFromDb() {
 /**
  * 1) Поднять текущие сессионные позиции в cart_items (INSERT IGNORE — не трогает
  *    зарезервированные строки и не плодит дубли).
- * 2) Подтянуть в сессию незарезервированные позиции из cart_items (с других устройств).
+ * 2) Подтянуть позиции из cart_items, в том числе с незавершённой оплатой на другом устройстве.
  */
 function syncSessionCartWithDb(int $userId): void {
     global $db;
@@ -108,7 +107,7 @@ function syncSessionCartWithDb(int $userId): void {
             }
             // Оплаченные позиции в корзину не пушим (и выкидываем из сессии):
             // гостевая сессия может пережить оплату и «воскресить» товар.
-            $normalized = filterUnpaidCartIds($type, $normalized);
+            $normalized = filterUnpaidCartIds($type, $normalized, $userId);
             foreach ($normalized as $id) {
                 $insertStmt->execute([$userId, $type, $id]);
             }
@@ -117,24 +116,20 @@ function syncSessionCartWithDb(int $userId): void {
 
         // Шаг 2: pull DB → session
         $selectStmt = $db->prepare(
-            "SELECT item_type, item_id FROM cart_items
-             WHERE user_id = ? AND reserved_in_order_id IS NULL"
+            "SELECT ci.item_type, ci.item_id FROM cart_items ci
+             LEFT JOIN orders o ON o.id = ci.reserved_in_order_id AND o.user_id = ci.user_id
+             WHERE ci.user_id = ? AND (ci.reserved_in_order_id IS NULL OR o.payment_status IN ('pending','processing','failed'))"
         );
         $selectStmt->execute([$userId]);
         $rows = $selectStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        foreach (CART_TYPES as $type => $sessKey) {
-            if (!isset($_SESSION[$sessKey]) || !is_array($_SESSION[$sessKey])) {
-                $_SESSION[$sessKey] = [];
-            }
+        $byType = [];
+        foreach ($rows as $row) {
+            $byType[$row['item_type']][] = (int)$row['item_id'];
         }
-        foreach ($rows as $r) {
-            $sessKey = CART_TYPES[$r['item_type']] ?? null;
-            if (!$sessKey) continue;
-            $itemId = (int)$r['item_id'];
-            if (!in_array($itemId, $_SESSION[$sessKey], true)) {
-                $_SESSION[$sessKey][] = $itemId;
-            }
+        foreach (CART_TYPES as $type => $sessKey) {
+            $fromDb = filterUnpaidCartIds($type, $byType[$type] ?? [], $userId);
+            $_SESSION[$sessKey] = array_values(array_unique(array_merge($_SESSION[$sessKey], $fromDb)));
         }
     } catch (Exception $e) {
         error_log('syncSessionCartWithDb error: ' . $e->getMessage());
@@ -189,53 +184,35 @@ function mergeSessionCartToDb(int $userId): void {
  * $items: [['type' => 'registration', 'id' => 42], ...]
  * Вызывать внутри той же транзакции, где создаётся заказ.
  *
- * Возвращает true, если зарезервированы ВСЕ позиции (или их не оказалось в cart_items —
- * редко, но допустимо, если пользователь начал оплату до того как успел отработать
- * write-through). Возвращает false, если хотя бы одна позиция уже зарезервирована
- * за другим заказом (например, юзер открыл два окна и пытается оплатить дважды).
- * Caller должен бросить исключение/откатить транзакцию.
+ * Создаёт строку для гостевой корзины, которую ещё не успели перенести из сессии.
+ * При коллизии или ошибке caller обязан откатить транзакцию до обращения к ЮKassa.
  */
 function reserveCartItemsForOrder(int $userId, array $items, int $orderId): bool {
     global $db;
-    if (!isset($db) || !$userId || empty($items)) return true;
+    if (!isset($db) || !$db->inTransaction() || !$userId || empty($items)) return false;
 
     try {
-        // Сначала пробуем зарезервировать только незарезервированные строки.
+        $insertStmt = $db->prepare(
+            "INSERT IGNORE INTO cart_items (user_id, item_type, item_id) VALUES (?, ?, ?)"
+        );
         $reserveStmt = $db->prepare(
             "UPDATE cart_items SET reserved_in_order_id = ?
              WHERE user_id = ? AND item_type = ? AND item_id = ?
                AND reserved_in_order_id IS NULL"
         );
-        // Отдельный SELECT проверяет, не зарезервирована ли позиция за ДРУГИМ заказом.
-        $checkStmt = $db->prepare(
-            "SELECT reserved_in_order_id FROM cart_items
-             WHERE user_id = ? AND item_type = ? AND item_id = ?"
-        );
-
         foreach ($items as $it) {
             $type = $it['type'] ?? null;
             $id = isset($it['id']) ? (int)$it['id'] : 0;
-            if (!$type || $id <= 0 || !isset(CART_TYPES[$type])) continue;
+            if (!$type || $id <= 0 || !isset(CART_TYPES[$type])) return false;
 
+            $insertStmt->execute([$userId, $type, $id]);
             $reserveStmt->execute([$orderId, $userId, $type, $id]);
-            if ($reserveStmt->rowCount() > 0) continue;
-
-            // Не обновили: либо строки нет (юзер собрал корзину до миграции/без логина —
-            // не считаем коллизией), либо она занята другим заказом → коллизия.
-            $checkStmt->execute([$userId, $type, $id]);
-            $existing = $checkStmt->fetchColumn();
-            if ($existing !== false && $existing !== null && (int)$existing !== $orderId) {
-                error_log(sprintf(
-                    'reserveCartItemsForOrder: collision user=%d %s:%d already reserved by order=%d (this order=%d)',
-                    $userId, $type, $id, (int)$existing, $orderId
-                ));
-                return false;
-            }
+            if ($reserveStmt->rowCount() !== 1) return false;
         }
         return true;
     } catch (Exception $e) {
         error_log("reserveCartItemsForOrder(order={$orderId}) error: " . $e->getMessage());
-        return true; // БД-сбой — не блокируем заказ, корзина починится позже.
+        return false;
     }
 }
 
