@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/document-file.php';
 /**
  * Diploma Class
  * Generates PDF diplomas using mPDF with Cyrillic support
@@ -222,7 +223,8 @@ class Diploma {
 
             // Check if diploma already exists
             $existingDiploma = $this->findExistingDiploma($registrationId, $recipientType);
-            if ($existingDiploma && file_exists($this->uploadsDir . $existingDiploma['pdf_filename'])) {
+            if ($existingDiploma && isIssuedDocumentPdf($this->uploadsDir . $existingDiploma['pdf_filename'])) {
+                $this->updateRegistrationStatus($registrationId, 'diploma_ready');
                 return [
                     'success' => true,
                     'pdf_path' => '/uploads/diplomas/' . $existingDiploma['pdf_filename'],
@@ -244,7 +246,7 @@ class Diploma {
             }
 
             // Save diploma record to database
-            $this->saveDiplomaRecord($registrationId, $template['id'], $pdfFilename, $recipientType);
+            $this->saveDiplomaRecord($registrationId, $template['id'], $pdfFilename, $recipientType, (bool)$existingDiploma);
 
             // Update registration status
             $this->updateRegistrationStatus($registrationId, 'diploma_ready');
@@ -274,8 +276,8 @@ class Diploma {
                 u.full_name as user_full_name,
                 u.email as user_email,
                 u.phone,
-                u.city,
-                u.organization,
+                COALESCE(r.participant_city, u.city) AS city,
+                COALESCE(r.participant_organization, u.organization) AS organization,
                 c.title as competition_name,
                 c.academic_year,
                 c.category
@@ -609,7 +611,14 @@ HTML;
     /**
      * Save diploma record to database
      */
-    private function saveDiplomaRecord($registrationId, $templateId, $pdfFilename, $recipientType) {
+    private function saveDiplomaRecord($registrationId, $templateId, $pdfFilename, $recipientType, bool $replacing) {
+        if ($replacing) {
+            // В старых схемах отсутствует уникальность пары заявка/получатель.
+            $stmt = $this->db->prepare("UPDATE diplomas SET template_id=?, pdf_path=?, generated_at=NOW()
+                                       WHERE registration_id=? AND recipient_type=?");
+            $stmt->execute([$templateId, $pdfFilename, $registrationId, $recipientType]);
+            return;
+        }
         $stmt = $this->db->prepare("
             INSERT INTO diplomas (registration_id, template_id, pdf_path, recipient_type, generated_at)
             VALUES (?, ?, ?, ?, NOW())

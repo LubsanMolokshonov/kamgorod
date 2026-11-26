@@ -16,6 +16,7 @@ $order = null;
 if (is_string($orderNumber) && $orderNumber !== '') {
     $orderObj = new Order($db);
     $order = $orderObj->getByOrderNumber($orderNumber);
+    if ($order && !canAccessPurchaseResource($db, 'order', (int)$order['id'], (int)$order['user_id'])) $order = null;
     $courseEnrollmentId = courseCheckoutEnrollmentId($order ?? []);
     if ($courseEnrollmentId !== null) {
         header('Cache-Control: private, no-store');
@@ -25,11 +26,8 @@ if (is_string($orderNumber) && $orderNumber !== '') {
     }
 }
 
-session_start();
 header('Cache-Control: private, no-store');
-if ($order && getCourseCheckoutAccountId($db) !== (int)$order['user_id']) {
-    $order = null;
-}
+header('Referrer-Policy: no-referrer');
 if ($order && in_array($order['payment_status'], ['pending', 'processing', 'succeeded'], true)) {
     header('Location: /pages/payment-success.php?order_number=' . rawurlencode($order['order_number']), true, 303);
     exit;

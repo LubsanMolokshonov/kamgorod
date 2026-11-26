@@ -8,6 +8,7 @@ header('Content-Type: application/json; charset=UTF-8');
 
 session_start();
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/account-auth.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Webinar.php';
 require_once __DIR__ . '/../classes/WebinarRegistration.php';
@@ -86,14 +87,16 @@ try {
     $registrationObj = new WebinarRegistration($db);
 
     // Check if already registered
-    if ($registrationObj->isRegistered($webinarId, $email)) {
+    if ($previous = $registrationObj->getByWebinarAndEmail($webinarId, $email)) {
+        $canOpen = canAccessPurchaseResource($db, 'webinar_registration', (int)$previous['id'], (int)$previous['user_id']);
         echo json_encode([
             'success' => true,
             'message' => 'Вы уже зарегистрированы на этот вебинар',
             'already_registered' => true,
             'email' => $email,
             'webinar_title' => $webinar['title'],
-            'broadcast_url' => $webinar['broadcast_url'] ?? ''
+            'broadcast_url' => $canOpen ? ($webinar['broadcast_url'] ?? '') : '',
+            'cabinet_url' => $canOpen && $webinar['status'] === 'videolecture' ? '/kabinet/videolektsiya/' . (int)$previous['id'] : '/kabinet/'
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -107,7 +110,7 @@ try {
     if ($user) {
         $userId = $user['id'];
         // Update user's institution type if provided and different
-        if ($institutionTypeId && $user['institution_type_id'] != $institutionTypeId) {
+        if (verifiedAccountId($db) === (int)$userId && $institutionTypeId && $user['institution_type_id'] != $institutionTypeId) {
             $userObj->update($userId, ['institution_type_id' => $institutionTypeId]);
         }
     } else {
@@ -121,18 +124,6 @@ try {
             'institution_type_id' => $institutionTypeId ?: null
         ]);
     }
-
-    // Generate session_token for auto-login (like competitions)
-    $sessionToken = $userObj->generateSessionToken($userId);
-
-    // Set cookie for auto-login (30 days)
-    setcookie('session_token', $sessionToken, [
-        'expires' => time() + (30 * 24 * 60 * 60),
-        'path' => '/',
-        'secure' => isset($_SERVER['HTTPS']),
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
 
     // Determine if autowebinar before creating registration
     $isAutowebinar = $webinar['status'] === 'videolecture';
@@ -183,11 +174,7 @@ try {
         }
     }
 
-    // Set session user if not logged in
-    if (!getUserId()) {
-        setUserId($userId);
-        $_SESSION['user_email'] = $email;
-    }
+    grantGuestResource('webinar_registration', (int)$registrationId, (int)$userId);
     $cabinetUrl = $isAutowebinar
         ? '/kabinet/videolektsiya/' . $registrationId
         : '/pages/cabinet.php?tab=events';

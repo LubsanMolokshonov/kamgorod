@@ -8,6 +8,7 @@ header('Content-Type: application/json; charset=UTF-8');
 
 session_start();
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/account-auth.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/WebinarQuiz.php';
 require_once __DIR__ . '/../classes/WebinarRegistration.php';
@@ -19,12 +20,9 @@ try {
         throw new Exception('Метод не поддерживается');
     }
 
-    // Auth check
-    if (!isset($_SESSION['user_id'])) {
-        throw new Exception('Необходимо авторизоваться');
+    if (!is_string($_POST['csrf_token'] ?? null) || !validateCSRFToken($_POST['csrf_token'])) {
+        throw new Exception('Обновите страницу и повторите отправку теста');
     }
-
-    $userId = $_SESSION['user_id'];
 
     // Get and validate input
     $webinarId = intval($_POST['webinar_id'] ?? 0);
@@ -53,7 +51,8 @@ try {
         throw new Exception('Регистрация не найдена');
     }
 
-    if ($registration['user_id'] != $userId) {
+    $userId = (int)$registration['user_id'];
+    if (!canAccessPurchaseResource($db, 'webinar_registration', $registrationId, $userId)) {
         throw new Exception('Доступ запрещён');
     }
 

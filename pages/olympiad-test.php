@@ -40,8 +40,7 @@ if (empty($questions)) {
 }
 
 // Check if user is logged in
-$isLoggedIn = !empty($_SESSION['user_id']);
-$userId = $_SESSION['user_id'] ?? null;
+$isLoggedIn = verifiedAccountId($db) !== null || !empty($_SESSION['guest_quiz'][$olympiadId]);
 
 // Generate CSRF token
 $csrfToken = generateCSRFToken();

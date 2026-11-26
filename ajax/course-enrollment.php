@@ -67,6 +67,11 @@ try {
         throw new Exception('Курс не найден или недоступен');
     }
 
+    $accountId = verifiedAccountId($db);
+    if ($accountId !== null && strcasecmp((string)$_SESSION['user_email'], $email) !== 0) {
+        throw new DomainException('Используйте почту текущего кабинета или выйдите, чтобы подать заявку на другой адрес.');
+    }
+
     // Find or create user
     $userObj = new User($db);
     $user = $userObj->findByEmail($email);
@@ -74,7 +79,7 @@ try {
 
     if ($user) {
         $userId = $user['id'];
-        $userObj->update($userId, [
+        if (verifiedAccountId($db) === (int)$userId) $userObj->update($userId, [
             'full_name' => $fullName,
             'phone' => $phone
         ]);
@@ -92,7 +97,9 @@ try {
     // Лок снимается явно ниже, а также автоматически при закрытии соединения
     // в конце запроса — поэтому ветка catch его не держит.
     $enrollLock = 'course_enroll:' . $courseId . ':' . md5(mb_strtolower($email));
-    $db->prepare("SELECT GET_LOCK(?, 10)")->execute([$enrollLock]);
+    $lock = $db->prepare("SELECT GET_LOCK(?, 10)");
+    $lock->execute([$enrollLock]);
+    if ((int)$lock->fetchColumn() !== 1) throw new RuntimeException('Заявка обрабатывается. Повторите через несколько секунд.');
 
     // Check for duplicate enrollment ($dbObj создан выше при резолве UTM)
     $existing = $dbObj->queryOne(
@@ -103,27 +110,12 @@ try {
     if ($existing) {
         $db->prepare("SELECT RELEASE_LOCK(?)")->execute([$enrollLock]);
 
-        // Set session for auto-login
-        if (!getUserId()) {
-            setUserId($userId);
-            $_SESSION['user_email'] = $email;
-        }
-
-        // Generate session_token for persistent login
-        $sessionToken = $userObj->generateSessionToken($userId);
-        setcookie('session_token', $sessionToken, [
-            'expires' => time() + (30 * 24 * 60 * 60),
-            'path' => '/',
-            'secure' => isset($_SERVER['HTTPS']),
-            'httponly' => true,
-            'samesite' => 'Lax'
-        ]);
-
         echo json_encode([
             'success' => true,
             'message' => 'Вы уже подали заявку на этот курс. Мы свяжемся с вами в ближайшее время.',
             'already_enrolled' => true,
-            'cabinet_url' => '/kabinet/?tab=courses'
+            'cabinet_url' => $accountId === null && guestOwnsCartItem('course_enrollment', (int)$existing['id'], (int)$userId)
+                ? '/oplata-kursa/' . (int)$existing['id'] . '/' : '/kabinet/?tab=courses'
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -153,24 +145,9 @@ try {
     $enrollmentData['ab_variant'] = $abVariant;
 
     $enrollmentId = $dbObj->insert('course_enrollments', $enrollmentData);
+    grantGuestResource('course_enrollment', (int)$enrollmentId, (int)$userId);
 
     $db->prepare("SELECT RELEASE_LOCK(?)")->execute([$enrollLock]);
-
-    // Set session
-    if (!getUserId()) {
-        setUserId($userId);
-        $_SESSION['user_email'] = $email;
-    }
-
-    // Generate session_token for persistent login (like webinars)
-    $sessionToken = $userObj->generateSessionToken($userId);
-    setcookie('session_token', $sessionToken, [
-        'expires' => time() + (30 * 24 * 60 * 60),
-        'path' => '/',
-        'secure' => isset($_SERVER['HTTPS']),
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
 
     // Email-цепочка + Bitrix24 — в фоновом процессе, не блокирует ответ.
     // stderr/stdout пишем в лог (НЕ /dev/null): иначе фаталы фонового скрипта
@@ -186,7 +163,7 @@ try {
         'message' => 'Заявка успешно отправлена! Мы свяжемся с вами в ближайшее время.',
         'enrollment_id' => $enrollmentId,
         'course_title' => $course['title'],
-        'cabinet_url' => '/kabinet/?tab=courses&enrolled=success',
+        'cabinet_url' => $accountId === null ? '/oplata-kursa/' . (int)$enrollmentId . '/' : '/kabinet/?tab=courses&enrolled=success',
         'ecommerce' => [
             'id'       => 'course-' . $course['id'],
             'name'     => $course['title'],

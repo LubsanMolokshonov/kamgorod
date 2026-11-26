@@ -44,24 +44,24 @@ function rateLimitTooMany(string $key, int $maxAttempts = 5, int $windowSeconds 
  * Зарегистрировать неудачную попытку (атомарно, под flock).
  */
 function rateLimitRegisterFailure(string $key, int $windowSeconds = 900): void {
-    $file = rateLimitFile($key);
-    $fp = @fopen($file, 'c+');
-    if (!$fp) {
-        return;
-    }
+    rateLimitConsume($key, PHP_INT_MAX, $windowSeconds);
+}
+
+/** Проверить и занять место в окне под одной блокировкой. */
+function rateLimitConsume(string $key, int $limit, int $windowSeconds): bool {
+    $fp = @fopen(rateLimitFile($key), 'c+');
+    if (!$fp) return false;
     try {
-        if (flock($fp, LOCK_EX)) {
-            $raw = stream_get_contents($fp);
-            $now = time();
-            $attempts = $raw ? array_map('intval', explode(',', $raw)) : [];
-            $attempts = array_filter($attempts, static fn($t) => $t > $now - $windowSeconds);
-            $attempts[] = $now;
-            ftruncate($fp, 0);
-            rewind($fp);
-            fwrite($fp, implode(',', $attempts));
-            fflush($fp);
-            flock($fp, LOCK_UN);
-        }
+        if (!flock($fp, LOCK_EX)) return false;
+        $raw = stream_get_contents($fp);
+        $now = time();
+        $attempts = $raw ? array_map('intval', explode(',', $raw)) : [];
+        $attempts = array_filter($attempts, static fn($t) => $t > $now - $windowSeconds);
+        if (count($attempts) >= $limit) return false;
+        $attempts[] = $now;
+        rewind($fp);
+        $data = implode(',', $attempts);
+        return ftruncate($fp, 0) && fwrite($fp, $data) === strlen($data) && fflush($fp);
     } finally {
         fclose($fp);
     }

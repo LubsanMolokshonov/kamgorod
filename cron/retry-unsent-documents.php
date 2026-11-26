@@ -70,6 +70,8 @@ try {
         LEFT JOIN publication_certificates pc ON pc.id = oi.certificate_id
         LEFT JOIN diplomas d ON d.registration_id = oi.registration_id AND d.recipient_type = 'participant'
         WHERE o.payment_status = 'succeeded'
+        AND NOT EXISTS (SELECT 1 FROM pending_delayed_emails delivery
+                        WHERE delivery.order_id=o.id AND delivery.email_type='payment_success')
         AND o.paid_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
         AND (
             (oi.webinar_certificate_id IS NOT NULL AND (wc.status != 'ready' OR wr.certificate_email_sent = 0))

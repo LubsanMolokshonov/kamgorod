@@ -11,7 +11,8 @@
  */
 
 if (php_sapi_name() !== 'cli') {
-    exit('CLI only');
+    http_response_code(403);
+    die('CLI only');
 }
 
 if (!isset($argv[1]) || !is_numeric($argv[1])) {
@@ -70,38 +71,35 @@ $crmStatus = '—';
 try {
     $bitrix = new Bitrix24Integration();
     if ($bitrix->isConfigured()) {
-        $stageNew = defined('BITRIX24_COURSE_STAGE_NEW') ? BITRIX24_COURSE_STAGE_NEW : 'C108:NEW';
-        $abVariant = $enrollment['ab_variant'] ?? 'A';
-        $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null);
-
-        $dealId = $bitrix->createCourseDeal([
-            'user_id' => $enrollment['user_id'] ?? null,
-            'full_name' => $fullName,
-            'email' => $email,
-            'phone' => $phone,
-            'utm_source' => $enrollment['utm_source'] ?? '',
-            'utm_medium' => $enrollment['utm_medium'] ?? '',
-            'utm_campaign' => $enrollment['utm_campaign'] ?? '',
-            'utm_content' => $enrollment['utm_content'] ?? '',
-            'utm_term' => $enrollment['utm_term'] ?? '',
-            'ym_uid' => $enrollment['ym_uid'] ?? '',
-            'source_page' => $enrollment['source_page'] ?? '',
-        ], $course, $stageNew, $abPrice);
-
-        if ($dealId) {
-            $dbObj->update('course_enrollments', [
-                'bitrix_lead_id' => $dealId,
-                'bitrix_stage' => $stageNew,
-            ], 'id = ?', [$enrollmentId]);
-            $crmStatus = "Сделка #{$dealId}";
-        } else {
-            $crmStatus = 'Ошибка API (retry через cron)';
-            error_log("process-course-enrollment: Bitrix24 API returned null for enrollment #{$enrollmentId}");
+        // Та же блокировка строки, которую используют cron и обработчик оплаты.
+        $db->beginTransaction();
+        $fresh = $dbObj->queryOne('SELECT * FROM course_enrollments WHERE id = ? FOR UPDATE', [$enrollmentId]);
+        if ($fresh && !empty($fresh['bitrix_lead_id'])) {
+            $crmStatus = "Сделка #{$fresh['bitrix_lead_id']}";
+        } elseif ($fresh) {
+            $stage = $fresh['status'] === 'paid' ? BITRIX24_COURSE_STAGE_PAID : BITRIX24_COURSE_STAGE_NEW;
+            require_once BASE_PATH . '/includes/installment-helper.php';
+            $terms = courseDealTerms($db, $fresh, $course);
+            $dealId = $bitrix->createCourseDeal($fresh + ['enrollment_id' => $enrollmentId], $course, $stage, $terms['amount'], $terms['payment']);
+            if ($dealId) {
+                $dbObj->update('course_enrollments', [
+                    'bitrix_lead_id' => $dealId,
+                    'bitrix_stage' => $stage,
+                ], 'id = ?', [$enrollmentId]);
+                $crmStatus = "Сделка #{$dealId}";
+            } else {
+                $crmStatus = 'Ошибка API (retry через cron)';
+                error_log("process-course-enrollment: Bitrix24 API returned null for enrollment #{$enrollmentId}");
+            }
         }
+        $db->commit();
     } else {
         $crmStatus = 'Bitrix24 не настроен';
     }
 } catch (\Throwable $e) {
+    if ($db->inTransaction()) {
+        $db->rollBack();
+    }
     $crmStatus = 'Ошибка (retry через cron)';
     error_log("process-course-enrollment: Bitrix24 error for enrollment #{$enrollmentId}: " . $e->getMessage());
 }

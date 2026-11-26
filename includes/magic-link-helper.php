@@ -40,7 +40,11 @@ function validateMagicToken($token) {
 
     // Проверяем HMAC-подпись
     $payload = $userId . ':' . $expiry;
-    $expectedHmac = hash_hmac('sha256', $payload, getMagicLinkSecret());
+    try {
+        $expectedHmac = hash_hmac('sha256', $payload, getMagicLinkSecret());
+    } catch (RuntimeException $e) {
+        return false;
+    }
 
     if (!hash_equals($expectedHmac, $hmac)) {
         return false;
@@ -52,6 +56,40 @@ function validateMagicToken($token) {
     }
 
     return (int)$userId;
+}
+
+/**
+ * Новый формат сохраняет URL писем и не пишет в БД при предварительном просмотре рассылки.
+ * Случайный nonce делает каждое письмо независимым; расход фиксируется только подтверждением.
+ */
+function issueEmailMagicToken(int $userId, int $expiryDays): string {
+    $payload = $userId . ':' . (time() + $expiryDays * 86400) . ':' . bin2hex(random_bytes(16));
+    return 'v2_' . base64url_encode($payload . ':' . hash_hmac('sha256', 'email-login-v2:' . $payload, getMagicLinkSecret()));
+}
+
+function emailMagicClaims(string $token): ?array {
+    if (!str_starts_with($token, 'v2_') || strlen($token) > 240) return null;
+    $data = base64url_decode(substr($token, 3));
+    if (!is_string($data) || !preg_match('/^([1-9][0-9]*):([0-9]+):([a-f0-9]{32}):([a-f0-9]{64})$/D', $data, $m)) return null;
+    if ((int)$m[2] < time()) return null;
+    try {
+        $mac = hash_hmac('sha256', 'email-login-v2:' . $m[1] . ':' . $m[2] . ':' . $m[3], getMagicLinkSecret());
+    } catch (RuntimeException $e) {
+        return null;
+    }
+    return hash_equals($mac, $m[4]) ? ['user_id' => (int)$m[1], 'expiry' => (int)$m[2]] : null;
+}
+
+function redeemEmailMagicToken(PDO $db, string $token): bool {
+    $claims = emailMagicClaims($token);
+    if (!$claims) return false;
+    try {
+        return $db->prepare('INSERT INTO account_used_magic_links (token_hash,expires_at) VALUES (?,?)')
+            ->execute([hash('sha256',$token), gmdate('Y-m-d H:i:s',$claims['expiry'])]);
+    } catch (PDOException $e) {
+        if ($e->getCode() === '23000') return false;
+        throw $e;
+    }
 }
 
 /**
@@ -71,7 +109,7 @@ function generateMagicUrl($userId, $targetPath, $expiryDays = 7, $utm = []) {
     if (!$userId) {
         $url = SITE_URL . $targetPath;
     } else {
-        $token = generateMagicToken($userId, $expiryDays);
+        $token = issueEmailMagicToken((int)$userId, (int)$expiryDays);
         $url = SITE_URL . '/m/' . $token;
         if ($targetPath !== '' && $targetPath !== '/kabinet/') {
             $url .= '/' . base64url_encode($targetPath);
@@ -98,12 +136,15 @@ function generateMagicUrl($userId, $targetPath, $expiryDays = 7, $utm = []) {
  * Получает секрет для HMAC
  */
 function getMagicLinkSecret() {
-    if (defined('MAGIC_LINK_SECRET') && MAGIC_LINK_SECRET !== 'default-change-me') {
+    if (defined('MAGIC_LINK_SECRET') && !in_array(trim(MAGIC_LINK_SECRET), ['', 'default-change-me', 'your_secret_key'], true)) {
         return MAGIC_LINK_SECRET;
     }
 
     // Фоллбэк: используем комбинацию существующих секретов
-    return hash('sha256', (defined('YOOKASSA_SECRET_KEY') ? YOOKASSA_SECRET_KEY : '') . ':magic-link-salt');
+    if (defined('YOOKASSA_SECRET_KEY') && !in_array(trim(YOOKASSA_SECRET_KEY), ['', 'default-change-me', 'your_secret_key'], true)) {
+        return hash('sha256', YOOKASSA_SECRET_KEY . ':magic-link-salt');
+    }
+    throw new RuntimeException('Не настроен секрет ссылок из писем');
 }
 
 /**

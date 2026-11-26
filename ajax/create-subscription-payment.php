@@ -26,7 +26,7 @@ require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use YooKassa\Client;
-use YooKassa\Common\Exceptions\ForbiddenException;
+
 
 function respond(array $data, int $code = 200): void
 {
@@ -79,114 +79,20 @@ if ($priceRub <= 0) {
     respond(['success' => false, 'error' => 'Некорректная цена тарифа', 'code' => 'invalid_price'], 400);
 }
 
-$userRow = $dbHelper->queryOne("SELECT email FROM users WHERE id = ?", [$userId]);
-$userEmail = $userRow['email'] ?? '';
-
-$periodLabel = $period === 'yearly' ? 'год' : 'месяц';
-$description = "Подписка «{$plan['name']}» на fgos.pro ({$periodLabel})";
-
-// Создаём заказ-подписку (без order_items). final_amount = цена тарифа, статус pending.
-$orderNumber = Order::generateOrderNumber();
-$orderId = $dbHelper->insert('orders', [
-    'user_id'              => (int)$userId,
-    'order_number'         => $orderNumber,
-    'total_amount'         => $priceRub,
-    'discount_amount'      => 0,
-    'final_amount'         => $priceRub,
-    'payment_status'       => 'pending',
-    'subscription_plan_id' => (int)$plan['id'],
-    'subscription_period'  => $period,
-]);
-if (!$orderId) {
-    respond(['success' => false, 'error' => 'Не удалось создать заказ', 'code' => 'order_error'], 500);
+$requestKey = $_POST['request_key'] ?? null;
+if ($requestKey !== null && (!is_string($requestKey) || !preg_match('/^[a-f0-9]{32}$/D', $requestKey))) {
+    respond(['success' => false, 'error' => 'Обновите форму оплаты.', 'code' => 'request_key'], 400);
 }
 
-// A/B-атрибуция: помечаем заказ-подписку вариантом модели оплаты.
-PricingMode::stampOrder($db, (int)$orderId);
-
-$idempotencyKey = 'sub_' . $userId . '_' . $plan['id'] . '_' . $period . '_' . substr(uniqid('', true), -10);
-
-// Сборка payload платежа. $saveCard=true просит YooKassa сохранить карту (рекуррент);
-// metadata.auto_renew синхронизируется с этим флагом, чтобы вебхук активировал подписку
-// ровно с тем автопродлением, которое мы реально способны обеспечить.
-$buildPayment = static function (bool $saveCard) use ($priceRub, $description, $userEmail, $userId, $orderId, $plan, $planSlug, $period): array {
-    return [
-        'amount' => [
-            'value' => number_format($priceRub, 2, '.', ''),
-            'currency' => 'RUB',
-        ],
-        'confirmation' => [
-            'type' => 'redirect',
-            'return_url' => SITE_URL . '/pages/cabinet.php?subscription=success',
-        ],
-        'capture' => true,
-        'description' => $description,
-        'receipt' => $userEmail ? [
-            'customer' => ['email' => $userEmail],
-            'items' => [[
-                'description' => $description,
-                'quantity' => 1,
-                'amount' => [
-                    'value' => number_format($priceRub, 2, '.', ''),
-                    'currency' => 'RUB',
-                ],
-                'vat_code' => 1,
-                'payment_mode' => 'full_payment',
-                'payment_subject' => 'service',
-            ]],
-        ] : null,
-        'metadata' => [
-            'payment_type' => 'subscription',
-            'user_id' => (int)$userId,
-            'order_id' => (int)$orderId,
-            'plan_id' => (int)$plan['id'],
-            'plan_slug' => $planSlug,
-            'period' => $period,
-            'auto_renew' => $saveCard ? '1' : '0',
-        ],
-        // Автопродление: сохраняем карту (вебхук достанет payment_method.id → активация
-        // с auto_renew=1). Если карта не сохраняется — подписка без автопродления.
-        'save_payment_method' => $saveCard,
-    ];
-};
-
 try {
+    require_once __DIR__ . '/../classes/SubscriptionPayments.php';
     $client = new Client();
     $client->setAuth(YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY);
-
-    try {
-        $payment = $client->createPayment($buildPayment($autoRenew), $idempotencyKey);
-    } catch (ForbiddenException $fe) {
-        // Магазин в YooKassa не подключён к рекуррентным платежам (code: forbidden,
-        // "This store can't make recurring payments"). Не ломаем оплату: пересоздаём
-        // платёж как разовый, без сохранения карты. Подписка активируется, но без
-        // автопродления — пока YooKassa не включит рекуррент магазину (тогда галка
-        // заработает сама, без правок кода).
-        if (!$autoRenew) {
-            throw $fe; // карту и не просили — это другая ошибка, пробрасываем
-        }
-        error_log('create-subscription-payment: recurring disabled for shop, fallback to one-time. ' . $fe->getMessage());
-        // Новый ключ идемпотентности: тело запроса изменилось.
-        $payment = $client->createPayment($buildPayment(false), $idempotencyKey . '_nr');
-    }
-
-    (new Order($db))->updateYookassaDetails(
-        $orderId,
-        $payment->getId(),
-        $payment->getConfirmation()->getConfirmationUrl()
-    );
-
-    respond([
-        'success' => true,
-        'confirmation_url' => $payment->getConfirmation()->getConfirmationUrl(),
-        'payment_id' => $payment->getId(),
-    ]);
+    $result = (new SubscriptionPayments($db, $client))->manual((int)$userId, $plan, $period, $autoRenew, $requestKey);
+    respond(['success' => true, 'confirmation_url' => $result['confirmation_url'], 'payment_id' => $result['payment_id'] ?? null]);
+} catch (DomainException $e) {
+    respond(['success' => false, 'error' => $e->getMessage(), 'code' => 'payment_state'], 409);
 } catch (Throwable $e) {
-    error_log('create-subscription-payment Yookassa error: ' . $e->getMessage());
-    // Заказ остаётся pending — повторная попытка создаст новый.
-    respond([
-        'success' => false,
-        'error' => 'Не удалось создать платёж. Попробуйте ещё раз.',
-        'code' => 'yookassa_error',
-    ], 502);
+    error_log('Создание платежа подписки: ' . get_class($e));
+    respond(['success' => false, 'error' => 'Проверяем платёж. Попробуйте ещё раз.', 'code' => 'yookassa_error'], 502);
 }

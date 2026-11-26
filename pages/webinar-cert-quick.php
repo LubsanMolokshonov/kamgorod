@@ -28,15 +28,7 @@ if (!in_array($webinarId, $ALLOWED_WEBINAR_IDS, true)) {
     exit;
 }
 
-// Auto-login по cookie, если сессии нет
-if (!isset($_SESSION['user_id']) && isset($_COOKIE['session_token'])) {
-    $userObj = new User($db);
-    $user = $userObj->findBySessionToken($_COOKIE['session_token']);
-    if ($user) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['user_email'] = $user['email'];
-    }
-}
+verifiedAccountId($db);
 
 if (!isset($_SESSION['user_id'])) {
     $redirectUrl = '/pages/webinar-cert-quick.php?webinar_id=' . $webinarId;

@@ -55,14 +55,24 @@ try {
         exit;
     }
 
+    if (!canAccessPurchaseResource($db, 'publication', (int)$publicationId, (int)$publication['user_id'])) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Подтвердите вход по почте владельца документа.']);
+        exit;
+    }
+
     // Get or create certificate
     $certificate = $certObj->getByPublicationId($publicationId);
+    if ($certificate && $certificate['status'] !== 'pending') {
+        echo json_encode(['success' => false, 'message' => 'Проверьте уже оформленный документ в кабинете.']);
+        exit;
+    }
     if (!$certificate) {
         // Create certificate with provided data
         $certificateId = $certObj->create([
             'publication_id' => $publicationId,
             'user_id' => $publication['user_id'],
-            'author_name' => $_POST['author_name'] ?? $publication['author_name'],
+            'author_name' => $_POST['author_name'] ?? (verifiedAccountId($db) ? $publication['author_name'] : ''),
             'organization' => $_POST['organization'] ?? '',
             'position' => $_POST['position'] ?? '',
             'city' => $_POST['city'] ?? '',
@@ -94,18 +104,12 @@ try {
         $certificate = $certObj->getById($certificate['id']);
     }
 
-    // Add certificate to cart
+    grantGuestResource('publication_cert', (int)$certificate['id'], (int)$publication['user_id']);
+    // Добавляем позицию в текущую корзину
     addCertificateToCart($certificate['id']);
 
     // Sync specializations to user profile for recommendations
     syncUserSpecializations($db, $publication['user_id'], 'publication_specializations', 'publication_id', $publicationId);
-
-    // Set user session
-    $_SESSION['user_id'] = $publication['user_id'];
-    $user = $userObj->getById($publication['user_id']);
-    if ($user) {
-        $_SESSION['user_email'] = $user['email'];
-    }
 
     echo json_encode([
         'success' => true,

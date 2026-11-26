@@ -23,7 +23,7 @@ register_shutdown_function(function() {
         $logFile = __DIR__ . '/../../logs/webhook.log';
         $message = "[" . date('Y-m-d H:i:s') . "] FATAL_ERROR | {$error['message']} in {$error['file']}:{$error['line']}\n";
         error_log($message, 3, $logFile);
-        $retryEvent = in_array($GLOBALS['eventType'] ?? '', ['refund.succeeded', 'payment.canceled'], true)
+        $retryEvent = in_array($GLOBALS['eventType'] ?? '', ['refund.succeeded', 'payment.succeeded', 'payment.waiting_for_capture', 'payment.canceled'], true)
             || !empty($GLOBALS['coursePaymentEvent']) || !empty($GLOBALS['cartPaymentEvent']);
         http_response_code($retryEvent ? 503 : 200);
         echo json_encode(['status' => 'error', 'message' => 'Internal error']);
@@ -35,21 +35,9 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../classes/Database.php';
 require_once __DIR__ . '/../../classes/Order.php';
 require_once __DIR__ . '/../../classes/CoursePaymentEvent.php';
-require_once __DIR__ . '/../../classes/Registration.php';
-require_once __DIR__ . '/../../classes/PublicationCertificate.php';
-require_once __DIR__ . '/../../classes/WebinarCertificate.php';
-require_once __DIR__ . '/../../classes/WebinarRegistration.php';
-require_once __DIR__ . '/../../classes/Diploma.php';
-require_once __DIR__ . '/../../classes/OlympiadRegistration.php';
-require_once __DIR__ . '/../../classes/OlympiadDiploma.php';
-require_once __DIR__ . '/../../classes/EmailJourney.php';
-require_once __DIR__ . '/../../classes/PublicationEmailChain.php';
-require_once __DIR__ . '/../../classes/User.php';
-require_once __DIR__ . '/../../classes/LoyaltyDiscount.php';
-require_once __DIR__ . '/../../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../../includes/email-helper.php';
 require_once __DIR__ . '/../../includes/session.php';
-require_once __DIR__ . '/../../includes/order-fulfillment.php';
+require_once __DIR__ . '/../../includes/paid-order.php';
 require_once __DIR__ . '/../../classes/TelegramNotifier.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -66,7 +54,7 @@ TelegramNotifier::registerFatalHandler('yookassa-webhook');
 $requestBody = file_get_contents('php://input');
 
 // Log webhook received
-logWebhook('INFO', 'N/A', 'Webhook received', $requestBody);
+logWebhook('INFO', 'N/A', 'Webhook received', '');
 
 try {
     // Initialize Yookassa client for IP verification
@@ -118,6 +106,11 @@ try {
                 $verified = $client->getPaymentInfo($originalPaymentId);
                 if ($verified->getId() === $originalPaymentId) {
                     $enrollmentId = CoursePaymentEvent::enrollmentForAttempt($GLOBALS['db'], CoursePaymentEvent::attemptKey($verified));
+                    if (($verified->getMetadata()['payment_type'] ?? '') === 'subscription') {
+                        require_once __DIR__ . '/../../classes/SubscriptionPayments.php';
+                        (new SubscriptionPayments($GLOBALS['db'], $client))->accept($verified);
+                        $order = $orderObj->getByPaymentId($originalPaymentId) ?: null;
+                    }
                     if (!$enrollmentId && ($verified->getMetadata()['payment_type'] ?? '') === 'cart') {
                         $orderObj->attachVerifiedCartPayment($verified);
                         $order = $orderObj->getByPaymentId($originalPaymentId) ?: null;
@@ -147,6 +140,13 @@ try {
         exit;
     }
 
+    $payment = $client->getPaymentInfo($paymentId);
+    if (!$payment || $payment->getId() !== $paymentId) {
+        throw new RuntimeException('Не удалось подтвердить идентификатор платежа');
+    }
+    $paymentStatus = $payment->getStatus();
+    $eventType = 'payment.' . $paymentStatus;
+
     // ============================================================
     // Покупка токенов для генератора материалов ФОП
     // metadata.payment_type='tokens' — обрабатываем отдельной веткой,
@@ -166,6 +166,11 @@ try {
             exit;
         }
 
+        if (PaymentRefundAccounting::isFullyRefunded($payment)) {
+            http_response_code(200);
+            echo json_encode(['status' => 'tokens_refunded']);
+            exit;
+        }
         $tokensUserId  = (int)($metaArray['user_id']   ?? 0);
         $tokensPackage = (int)($metaArray['package_id'] ?? 0);
         if ($tokensUserId <= 0 || $tokensPackage <= 0) {
@@ -270,106 +275,25 @@ try {
     // subscription_plan_id, без order_items. Идемпотентность — Order::isProcessed.
     // ============================================================
     if (($metaArray['payment_type'] ?? null) === 'subscription') {
-        require_once __DIR__ . '/../../classes/SubscriptionService.php';
-
-        if ($paymentStatus !== \YooKassa\Model\PaymentStatus::SUCCEEDED) {
-            logWebhook('INFO', $paymentId, "Subscription payment status={$paymentStatus} — wait for SUCCEEDED", '');
-            http_response_code(200);
-            echo json_encode(['status' => 'subscription_waiting']);
-            exit;
-        }
-
-        $orderObjSub = new Order($GLOBALS['db']);
-        $order = $orderObjSub->getByPaymentId($paymentId);
-        if (!$order) {
-            logWebhook('WARNING', $paymentId, 'Subscription order not found', '');
-            http_response_code(200);
-            echo json_encode(['status' => 'order_not_found']);
-            exit;
-        }
-        if ($orderObjSub->isProcessed($paymentId)) {
-            logWebhook('INFO', $paymentId, "Subscription order {$order['order_number']} already processed", '');
-            http_response_code(200);
-            echo json_encode(['status' => 'already_processed']);
-            exit;
-        }
-
-        $subUserId = (int)($metaArray['user_id'] ?? $order['user_id']);
-        $planId    = (int)($metaArray['plan_id'] ?? $order['subscription_plan_id'] ?? 0);
-        $period    = (string)($metaArray['period'] ?? $order['subscription_period'] ?? 'monthly');
-
-        // Сохранённый метод оплаты + карта (Этап 2: автопродление). Если карта не сохранена
-        // (галочка снята) — всё остаётся null, activate() поставит auto_renew=0.
-        $savedPm = SubscriptionService::extractSavedPaymentMethod($payment);
-        $pmId    = $savedPm['id'];
-
-        try {
-            // ⚠️ Без внешней транзакции: SubscriptionService::activate() управляет СВОЕЙ
-            // транзакцией. Раньше здесь была beginTransaction(), из-за которой внутренний
-            // beginTransaction() в activate() падал «There is already an active transaction» —
-            // вебхук НЕ активировал НИ одной подписки, спасал только reconcile-cron.
-            // Порядок: сначала activate() (идемпотентна по order_id), потом помечаем заказ
-            // succeeded. Если activate() упадёт — заказ остаётся pending, и reconcile-cron
-            // (а равно повтор вебхука) дожмёт; isProcessed по succeeded не «съест» заявку.
-            $subService = new SubscriptionService($GLOBALS['db']);
-            $subId = $subService->activate($subUserId, $planId, $period, (int)$order['id'], $pmId, $savedPm['last4'], $savedPm['type']);
-            $orderObjSub->updatePaymentStatus($order['id'], 'succeeded', date('Y-m-d H:i:s'));
-            logWebhook('SUCCESS', $paymentId, "Subscription activated: user={$subUserId} plan={$planId} period={$period} sub={$subId}", '');
-        } catch (Throwable $e) {
-            logWebhook('ERROR', $paymentId, 'Subscription activate failed: ' . $e->getMessage(), '');
-            http_response_code(200);
-            echo json_encode(['status' => 'subscription_error']);
-            exit;
-        }
-
-        // Письмо «подписка активна» (best-effort)
-        try {
-            if (function_exists('sendSubscriptionActivatedEmail')) {
-                sendSubscriptionActivatedEmail($subUserId, $subId);
-            }
-        } catch (Throwable $e) {
-            logWebhook('WARNING', $paymentId, 'Subscription activation email failed (non-fatal): ' . $e->getMessage(), '');
-        }
-
-        // MAX-уведомление подписчикам отключено (решение от 2026-06-24): в мессенджер «Макс»
-        // пишем только тем, кто купил мероприятие лично, не покупателям подписки.
-        // Ранее здесь вызывался sendSubscriptionMaxNotification() — намеренно убрано.
-
-        // Пожизненная скидка лояльности — оплата подписки тоже первый успешный платёж.
-        try {
-            if (LoyaltyDiscount::isFirstSuccessfulOrder($GLOBALS['db'], $subUserId, (int)$order['id'])) {
-                $userObjLocal = new User($GLOBALS['db']);
-                if ($userObjLocal->grantLifetimeDiscount($subUserId)) {
-                    scheduleDelayedEmail('lifetime_discount_granted', $subUserId, (int)$order['id'], 10);
-                }
-            }
-        } catch (Throwable $e) {
-            logWebhook('WARNING', $paymentId, 'Subscription loyalty grant failed (non-fatal): ' . $e->getMessage(), '');
-        }
-
+        require_once __DIR__ . '/../../classes/SubscriptionPayments.php';
+        $subscriptionEvent = true;
+        $result = (new SubscriptionPayments($GLOBALS['db'], $client))->accept($payment);
         http_response_code(200);
-        echo json_encode(['status' => 'subscription_activated', 'subscription_id' => $subId]);
+        echo json_encode(['status' => $result['status'], 'subscription_id' => $result['id']]);
         exit;
     }
 
     // Initialize classes
     $orderObj = new Order($GLOBALS['db']);
-    $registrationObj = new Registration($GLOBALS['db']);
 
     $order = $orderObj->getByPaymentId($paymentId) ?: null;
     $cartPaymentEvent = ($metaArray['payment_type'] ?? '') === 'cart';
     if (!$order && $cartPaymentEvent) {
-        $verified = $client->getPaymentInfo($paymentId);
-        if ($verified->getId() !== $paymentId || ($verified->getMetadata()['payment_type'] ?? '') !== 'cart') {
-            throw new RuntimeException('ЮKassa не подтвердила платёж корзины');
-        }
-        $orderObj->attachVerifiedCartPayment($verified);
+        $orderObj->attachVerifiedCartPayment($payment);
         $order = $orderObj->getByPaymentId($paymentId) ?: null;
         if (!$order) {
             throw new RuntimeException('Не удалось связать платёж с заказом корзины');
         }
-        $payment = $verified;
-        $eventType = 'payment.' . $payment->getStatus();
     }
     $courseEnrollmentId = CoursePaymentEvent::enrollmentForOrder($order);
     $attemptKey = CoursePaymentEvent::attemptKey($payment);
@@ -378,7 +302,7 @@ try {
         $courseEnrollmentId = CoursePaymentEvent::enrollmentForAttempt($GLOBALS['db'], $attemptKey);
     }
 
-    $processEvent = static function (?array $currentOrder) use ($orderObj, $registrationObj, $payment, $paymentId, $eventType): string {
+    $processEvent = static function (?array $currentOrder) use ($orderObj, $payment, $paymentId, $eventType): string {
         if (!$currentOrder) {
             logWebhook('WARNING', $paymentId, 'Order not found for current payment', '');
             return 'order_not_found';
@@ -388,7 +312,8 @@ try {
         }
         switch ($eventType) {
             case 'payment.succeeded':
-                handlePaymentSucceeded($orderObj, $registrationObj, $currentOrder, $payment);
+                settlePaidOrder($GLOBALS['db'], $currentOrder, $payment, 'webhook',
+                    static fn(string $level, string $msg) => logWebhook($level, $paymentId, $msg, ''));
                 break;
 
             case 'payment.canceled':
@@ -408,13 +333,12 @@ try {
     if ($courseEnrollmentId > 0) {
         require_once BASE_PATH . '/classes/CourseCheckout.php';
         $status = CourseCheckout::withEnrollmentLock($GLOBALS['db'], $courseEnrollmentId, static function () use (
-            $orderObj, $client, $courseEnrollmentId, $payment, $paymentId, $attemptKey, $processEvent
+            $orderObj, $courseEnrollmentId, $payment, $paymentId, $attemptKey, $processEvent
         ): string {
             $currentOrder = $orderObj->getByPaymentId($paymentId) ?: null;
             if (!$currentOrder && CoursePaymentEvent::enrollmentForAttempt($GLOBALS['db'], $attemptKey) === $courseEnrollmentId) {
                 // API, а не metadata входящего уведомления, подтверждает новый ID платежа.
-                $verified = $client->getPaymentInfo($paymentId);
-                if ($verified->getId() === $paymentId && CoursePaymentEvent::attachVerified($GLOBALS['db'], $courseEnrollmentId, $verified)) {
+                if (CoursePaymentEvent::attachVerified($GLOBALS['db'], $courseEnrollmentId, $payment)) {
                     $currentOrder = $orderObj->getByPaymentId($paymentId) ?: null;
                 }
             }
@@ -437,292 +361,10 @@ try {
     // Ошибки возвратов требуют повтора: иначе финансовая корректировка потеряется.
     logWebhook('ERROR', $paymentId ?? 'unknown', 'Exception: ' . $e->getMessage(), $e->getTraceAsString());
 
-    $retryEvent = in_array($eventType ?? '', ['refund.succeeded', 'payment.canceled'], true)
-        || !empty($coursePaymentEvent) || !empty($cartPaymentEvent);
+    $retryEvent = in_array($eventType ?? '', ['refund.succeeded', 'payment.succeeded', 'payment.waiting_for_capture', 'payment.canceled'], true)
+        || !empty($coursePaymentEvent) || !empty($cartPaymentEvent) || !empty($subscriptionEvent);
     http_response_code($retryEvent ? 503 : 200);
     echo json_encode(['status' => 'error']);
-}
-
-/**
- * Handle successful payment
- */
-function handlePaymentSucceeded($orderObj, $registrationObj, $order, $payment) {
-    $paymentId = $payment->getId();
-    $orderNumber = $order['order_number'];
-    $orderId = $order['id'];
-    $userId = $order['user_id'];
-
-    try {
-        // Единый «движок выдачи»: статусы → PDF → отмена email-цепочек → проверка готовности.
-        // Та же функция используется при оформлении подписчиком за 0 ₽ (create-payment.php),
-        // что исключает расхождение логики выдачи документов.
-        $fulfillResult = fulfillOrderItems(
-            $GLOBALS['db'],
-            (int)$orderId,
-            'webhook',
-            function (string $level, string $message) use ($paymentId): void {
-                logWebhook($level, $paymentId, $message, '');
-            }
-        );
-        $orderItems = $fulfillResult['order_items'];
-        $allDocsReady = $fulfillResult['all_docs_ready'];
-
-        // Один строго релевантный курс в MAX через 24 часа. Сам webhook
-        // ничего не подбирает и не отправляет: только ставит оплаченный заказ в очередь.
-        try {
-            require_once BASE_PATH . '/classes/MaxCourseRecommendationChain.php';
-            $scheduled = (new MaxCourseRecommendationChain($GLOBALS['db']))
-                ->schedule((int)$orderId);
-            logWebhook('INFO', $paymentId, 'MAX course recommendation: ' . ($scheduled ? 'scheduled' : 'disabled or already scheduled'), '');
-        } catch (\Throwable $e) {
-            logWebhook('WARNING', $paymentId, 'MAX course recommendation schedule failed: ' . $e->getMessage(), '');
-        }
-
-        // Email-атрибуция: связать оплату с конкретным письмом.
-        // 1) Прямая привязка по orders.email_message_id (установлен на клике из письма).
-        // 2) Fallback: если orders.utm_source='email', ищем последнее письмо этому user_id
-        //    с таким же utm_campaign в окне EMAIL_ATTRIBUTION_WINDOW_DAYS.
-        try {
-            require_once BASE_PATH . '/classes/EmailTracker.php';
-            $dbHelper = new Database($GLOBALS['db']);
-            $orderRow = $dbHelper->queryOne(
-                "SELECT id, user_id, final_amount, email_message_id, utm_source, utm_campaign
-                   FROM orders WHERE id = ?",
-                [$orderId]
-            );
-            if ($orderRow) {
-                $mid = $orderRow['email_message_id'] ?? null;
-                if (!$mid && strtolower((string)($orderRow['utm_source'] ?? '')) === 'email') {
-                    $window = defined('EMAIL_ATTRIBUTION_WINDOW_DAYS') ? (int)EMAIL_ATTRIBUTION_WINDOW_DAYS : 7;
-                    $mid = EmailTracker::findAttributionFallback(
-                        (int)$orderRow['user_id'],
-                        $orderRow['utm_campaign'] ?? null,
-                        $window
-                    );
-                }
-                if ($mid) {
-                    EmailTracker::attributeConversion($mid, (int)$orderId, (float)$orderRow['final_amount']);
-                    // Заказ пришёл по письму, но UTM не проставлены (клик из почтового
-                    // клиента без UTM в ссылке, либо session/cookie не дожили до оплаты).
-                    // Помечаем источник синтетически, иначе email-конверсия попадёт в
-                    // отчёте в «(без UTM)». Делаем тем же UPDATE, что и email_message_id.
-                    $attrUpdate = [];
-                    if (empty($orderRow['email_message_id'])) {
-                        $attrUpdate['email_message_id'] = $mid;
-                    }
-                    if (empty($orderRow['utm_source'])) {
-                        $attrUpdate['utm_source'] = 'email';
-                        $attrUpdate['utm_medium'] = 'trigger';
-                    }
-                    if (!empty($attrUpdate)) {
-                        $dbHelper->update('orders', $attrUpdate, 'id = ?', [$orderId]);
-                    }
-                    logWebhook('INFO', $paymentId, "Email conversion attributed: order {$orderNumber} → mid {$mid}", '');
-                }
-            }
-        } catch (\Throwable $e) {
-            logWebhook('WARNING', $paymentId, "Email attribution failed: " . $e->getMessage(), '');
-        }
-
-        // Sync user specializations from purchased events (additive)
-        try {
-            $specIds = $orderObj->getSpecializationIdsForOrder($orderId);
-            if (!empty($specIds)) {
-                $userObj = new User($GLOBALS['db']);
-                $added = $userObj->addSpecializations($userId, $specIds);
-                if ($added > 0) {
-                    logWebhook('INFO', $paymentId, "Added {$added} specializations to user {$userId} from order {$orderNumber}", '');
-                }
-            }
-        } catch (Exception $e) {
-            logWebhook('WARNING', $paymentId, "Specialization sync failed: " . $e->getMessage(), '');
-        }
-
-        // Bitrix24: создать/переместить сделку для оплаченных курсов
-        try {
-            require_once BASE_PATH . '/classes/Bitrix24Integration.php';
-            require_once BASE_PATH . '/classes/Course.php';
-
-            $bitrix = new Bitrix24Integration();
-            if ($bitrix->isConfigured()) {
-                $dbHelper = new Database($GLOBALS['db']);
-                $courseObj = new Course($GLOBALS['db']);
-
-                foreach ($orderItems as $item) {
-                    if (empty($item['course_enrollment_id'])) continue;
-
-                    try {
-                        $GLOBALS['db']->beginTransaction();
-                        $enrollment = $dbHelper->queryOne(
-                            "SELECT * FROM course_enrollments WHERE id = ? FOR UPDATE",
-                            [$item['course_enrollment_id']]
-                        );
-
-                        if (!$enrollment) {
-                            $GLOBALS['db']->commit();
-                            continue;
-                        }
-
-                        $paidStage = defined('BITRIX24_COURSE_STAGE_PAID') ? BITRIX24_COURSE_STAGE_PAID : 'C108:WON';
-
-                        $dealId = (int)($enrollment['bitrix_lead_id'] ?? 0);
-                        $paidAmount = (float)$item['price'];
-                        if (!$dealId) {
-                            $course = $courseObj->getById($enrollment['course_id']);
-                            if ($course && !empty($enrollment['course_title_snapshot'])) {
-                                $course['title'] = $enrollment['course_title_snapshot'];
-                            }
-                            if ($course) {
-                                $dealId = (int)$bitrix->createCourseDeal(
-                                    $enrollment + ['enrollment_id' => (int)$enrollment['id']],
-                                    $course,
-                                    $paidStage,
-                                    $paidAmount
-                                );
-                                if ($dealId) {
-                                    $dbHelper->update('course_enrollments', [
-                                        'bitrix_lead_id' => $dealId,
-                                    ], 'id = ?', [$enrollment['id']]);
-                                }
-                            }
-                        }
-
-                        if ($dealId) {
-                            $deal = $bitrix->getDeal($dealId);
-                            if ($deal) {
-                                $fields = Bitrix24Integration::coursePaidDealChanges($deal, $paidAmount);
-                                if (!$fields || $bitrix->updateDeal($dealId, $fields)) {
-                                    $dbHelper->update('course_enrollments', [
-                                        'bitrix_stage' => $fields['STAGE_ID'] ?? $deal['STAGE_ID'] ?? null,
-                                    ], 'id = ?', [$enrollment['id']]);
-                                } else {
-                                    logWebhook('WARNING', $paymentId, "Bitrix24 paid update failed for deal {$dealId}", '');
-                                }
-                            } else {
-                                logWebhook('WARNING', $paymentId, "Bitrix24 deal {$dealId} lookup failed", '');
-                            }
-                        }
-                        $GLOBALS['db']->commit();
-                    } catch (Exception $e) {
-                        if ($GLOBALS['db']->inTransaction()) {
-                            $GLOBALS['db']->rollBack();
-                        }
-                        logWebhook('WARNING', $paymentId, "Bitrix24 course deal error for enrollment {$item['course_enrollment_id']}: " . $e->getMessage(), '');
-                    }
-                }
-            }
-        } catch (Exception $e) {
-            logWebhook('WARNING', $paymentId, "Bitrix24 course integration error: " . $e->getMessage(), '');
-        }
-
-        // Если сделка уже создана/обновлена, сразу поставить Юлии задачу на допуск.
-        // При временной ошибке запись останется pending и будет повторена курсовым cron.
-        try {
-            require_once BASE_PATH . '/classes/CourseAccessTaskQueue.php';
-            $taskResult = (new CourseAccessTaskQueue($GLOBALS['db']))
-                ->processPending(50, (int)$orderId);
-            logWebhook(
-                'INFO',
-                $paymentId,
-                'Course access tasks: ' . json_encode($taskResult, JSON_UNESCAPED_UNICODE),
-                ''
-            );
-        } catch (\Throwable $e) {
-            logWebhook('WARNING', $paymentId, 'Course access task processing failed: ' . $e->getMessage(), '');
-        }
-
-        // Письмо-подтверждение оплаты курса (отмену email-цепочек уже сделал fulfillOrderItems).
-        try {
-            require_once BASE_PATH . '/classes/CourseEmailChain.php';
-            $courseEmailChain = new CourseEmailChain($GLOBALS['db']);
-            foreach ($orderItems as $item) {
-                if (!empty($item['course_enrollment_id'])) {
-                    $courseEmailChain->sendPaymentConfirmation($item['course_enrollment_id'], $orderNumber);
-                    logWebhook('INFO', $paymentId, "Course payment confirmation sent for enrollment {$item['course_enrollment_id']}", '');
-                }
-            }
-        } catch (Exception $e) {
-            logWebhook('WARNING', $paymentId, "Course payment confirmation error: " . $e->getMessage(), '');
-        }
-
-        if ($allDocsReady) {
-            // Send success email with all attachments
-            try {
-                try {
-                    sendPaymentSuccessEmail($userId, $orderId);
-                } catch (Exception $sendErr) {
-                    // Временный SMTP-сбой — переносим в очередь, cron повторит
-                    // через 10 минут с экспоненциальным backoff'ом.
-                    logWebhook('WARNING', $paymentId, "payment_success send failed, queued for retry: " . $sendErr->getMessage(), '');
-                    scheduleDelayedEmail('payment_success', (int)$userId, (int)$orderId, 10);
-                }
-
-                // Уведомление в мессенджер «Макс» (ChatPush) об оплате мероприятия.
-                // Только конкурс/олимпиада/публикация/вебинар; телефон берётся из users.phone.
-                // Доставка в Макс не должна ломать webhook — ошибки глотаются внутри.
-                try {
-                    require_once BASE_PATH . '/includes/max-helper.php';
-                    $maxStatus = sendPaymentMaxNotification((int)$userId, $order, $orderItems);
-                    logWebhook('INFO', $paymentId, "MAX notification: {$maxStatus} for order {$orderNumber}", '');
-                } catch (\Throwable $e) {
-                    logWebhook('WARNING', $paymentId, "MAX notification failed: " . $e->getMessage(), '');
-                }
-
-                // Погасить скидку email-кампании (если применялась) — чтобы
-                // ей нельзя было воспользоваться повторно.
-                try {
-                    EmailCampaignDiscount::markUsed($GLOBALS['db'], (int)$userId, (int)$orderId);
-                } catch (Exception $e) {
-                    logWebhook('WARNING', $paymentId, "Campaign discount mark-used failed: " . $e->getMessage(), '');
-                }
-
-                // Пожизненная скидка лояльности: выдать статус и отправить
-                // приветственное письмо после первого успешного платежа.
-                try {
-                    if (LoyaltyDiscount::isFirstSuccessfulOrder($GLOBALS['db'], (int)$userId, (int)$orderId)) {
-                        $userObjLocal = new User($GLOBALS['db']);
-                        if ($userObjLocal->grantLifetimeDiscount((int)$userId)) {
-                            // Откладываем приветственное письмо: payment_success
-                            // только что улетел тому же получателю, и Яндекс 360
-                            // классифицирует back-to-back пары как outbound-spam.
-                            scheduleDelayedEmail('lifetime_discount_granted', (int)$userId, (int)$orderId, 10);
-                            logWebhook('SUCCESS', $paymentId, "Lifetime discount granted for user {$userId} (email scheduled +10m)", '');
-                        }
-                    }
-                } catch (Exception $e) {
-                    logWebhook('WARNING', $paymentId, "Lifetime discount grant failed: " . $e->getMessage(), '');
-                }
-
-                // Mark certificate_email_sent for webinar registrations
-                $webRegObj = new WebinarRegistration($GLOBALS['db']);
-                $webCertObj = new WebinarCertificate($GLOBALS['db']);
-                foreach ($orderItems as $item) {
-                    if (!empty($item['webinar_certificate_id'])) {
-                        $wcData = $webCertObj->getById($item['webinar_certificate_id']);
-                        if ($wcData && !empty($wcData['registration_id'])) {
-                            $webRegObj->markCertificateEmailSent($wcData['registration_id']);
-                            logWebhook('INFO', $paymentId, "certificate_email_sent marked for registration {$wcData['registration_id']}", '');
-                        }
-                    }
-                }
-                logWebhook('SUCCESS', $paymentId, "Payment success email sent for order {$orderNumber}", '');
-            } catch (Exception $e) {
-                logWebhook('WARNING', $paymentId, "Email failed for order {$orderNumber}: " . $e->getMessage(), '');
-            }
-        } else {
-            $missing = implode(', ', $fulfillResult['missing']);
-            logWebhook('ERROR', $paymentId, "EMAIL NOT SENT for order {$orderNumber} - documents not ready: {$missing}", '');
-
-        }
-
-    } catch (Exception $e) {
-        if ($GLOBALS['db']->inTransaction()) {
-            $GLOBALS['db']->rollBack();
-        }
-
-        logWebhook('ERROR', $paymentId, "Failed to process succeeded payment: " . $e->getMessage(), '');
-        throw $e;
-    }
 }
 
 /**
@@ -779,56 +421,13 @@ function handleRefundSucceeded($orderObj, $order, $payment) {
     $orderId = $order['id'];
     $userId = $order['user_id'];
 
-    try {
-        // BEGIN TRANSACTION
-        $GLOBALS['db']->beginTransaction();
-
-        // Update order status to refunded
-        $orderObj->updatePaymentStatus($orderId, 'refunded');
-
-        // Mark registrations back to pending
-        $stmt = $GLOBALS['db']->prepare("
-            UPDATE registrations r
-            INNER JOIN order_items oi ON r.id = oi.registration_id
-            SET r.status = 'pending'
-            WHERE oi.order_id = ?
-        ");
-        $stmt->execute([$orderId]);
-
-        // Reset course enrollments back to 'new'
-        $stmt = $GLOBALS['db']->prepare("
-            UPDATE course_enrollments ce
-            INNER JOIN order_items oi ON ce.id = oi.course_enrollment_id
-            SET ce.status = 'new'
-            WHERE oi.order_id = ?
-        ");
-        $stmt->execute([$orderId]);
-
-        // Возврат подписки: если этот заказ активировал подписку — отзываем её.
-        // Токены уже выданного слота не отзываем (они потрачены/учтены).
-        if (!empty($order['subscription_plan_id'])) {
-            $stmt = $GLOBALS['db']->prepare(
-                "UPDATE user_subscriptions
-                    SET status = 'cancelled', cancelled_at = NOW(), auto_renew = 0, expires_at = NOW()
-                  WHERE order_id = ?"
-            );
-            $stmt->execute([$orderId]);
-            logWebhook('INFO', $paymentId, "Subscription cancelled due to refund of order {$orderNumber}", '');
-        }
-
-        // COMMIT TRANSACTION
-        $GLOBALS['db']->commit();
-
-        logWebhook('INFO', $paymentId, "Order {$orderNumber} refunded, registrations reset to pending", '');
-
-    } catch (Exception $e) {
-        if ($GLOBALS['db']->inTransaction()) {
-            $GLOBALS['db']->rollBack();
-        }
-
-        logWebhook('ERROR', $paymentId, "Failed to process refund: " . $e->getMessage(), '');
-        throw $e;
+    if (!empty($order['subscription_plan_id'])) {
+        require_once __DIR__ . '/../../classes/SubscriptionPeriods.php';
+        (new SubscriptionPeriods($GLOBALS['db']))->refund((int)$orderId, (int)$userId);
+        return;
     }
+
+    refundPurchaseOrder($GLOBALS['db'], (int)$orderId, (string)$order['yookassa_payment_id']);
 }
 
 /**

@@ -2,7 +2,7 @@
 /**
  * Cart Restore Page
  * Восстанавливает $_SESSION['cart_*'] из failed-заказа по HMAC-токену
- * из recovery-письма. При необходимости авто-логинит пользователя.
+ * из recovery-письма и даёт доступ к указанному в письме заказу.
  *
  * Входная точка: /r/<token> (см. .htaccess).
  */
@@ -13,6 +13,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../includes/recovery-link-helper.php';
+require_once __DIR__ . '/../includes/course-payment-link.php';
 require_once __DIR__ . '/../includes/session.php';
 
 $token = isset($_GET['token']) ? trim((string)$_GET['token']) : '';
@@ -49,23 +50,30 @@ if (!$createdTs || $createdTs < strtotime('-7 days')) {
     exit;
 }
 
-// Auto-login (паттерн из payment-success.php:34-49).
-$userObj = new User($db);
-$sessionToken = $userObj->generateSessionToken($userId);
-setcookie(
-    'session_token',
-    $sessionToken,
-    time() + (30 * 24 * 60 * 60),
-    '/',
-    '',
-    isset($_SERVER['HTTPS']),
-    true
-);
-$_SESSION['user_id'] = $userId;
-$_SESSION['user_email'] = $order['email'] ?? null;
+$accountId = verifiedAccountId($db);
+if ($accountId !== null && $accountId !== $userId) {
+    http_response_code(403);
+    exit('Ссылка принадлежит другому аккаунту. Откройте её после выхода из кабинета.');
+}
+header('Cache-Control: private, no-store');
+header('Referrer-Policy: no-referrer');
+grantGuestOrder($orderId, $userId);
 
-// Очищаем cart перед восстановлением, чтобы избежать смешения с предыдущим состоянием.
-clearCart();
+$courseId = courseCheckoutEnrollmentId($order);
+if ($courseId !== null) {
+    $stmt = $db->prepare("SELECT id FROM course_enrollments WHERE id=? AND user_id=?");
+    $stmt->execute([$courseId, $userId]);
+    if ($stmt->fetchColumn()) {
+        grantGuestResource('course_enrollment', $courseId, $userId);
+        header('Location: ' . courseCheckoutPath($courseId), true, 303);
+        exit;
+    }
+}
+if (in_array($order['payment_status'], ['succeeded','refunded'], true)) {
+    header('Location: /pages/payment-success.php?order_number=' . rawurlencode($order['order_number']), true, 303);
+    exit;
+}
+// Новые добавления покупателя сохраняются. add*ToCart уже отсекают повторные позиции.
 
 $restored = 0;
 $skipped = 0;
@@ -76,15 +84,16 @@ foreach ($order['items'] as $item) {
         // Позиция жива: регистрация ещё в pending и не оплачена в другом succeeded-заказе.
         $row = (new Database($db))->queryOne(
             "SELECT r.id FROM registrations r
-             WHERE r.id = ? AND r.status = 'pending'
+             WHERE r.id = ? AND r.user_id = ? AND r.status = 'pending'
                AND NOT EXISTS (
                    SELECT 1 FROM order_items oi2
                    JOIN orders o2 ON oi2.order_id = o2.id
                    WHERE oi2.registration_id = r.id AND o2.payment_status = 'succeeded'
                )",
-            [$regId]
+            [$regId, $userId]
         );
         if ($row) {
+            grantGuestResource('registration', $regId, $userId);
             addToCart($regId);
             $restored++;
         } else {
@@ -94,15 +103,16 @@ foreach ($order['items'] as $item) {
         $certId = (int)$item['certificate_id'];
         $row = (new Database($db))->queryOne(
             "SELECT pc.id FROM publication_certificates pc
-             WHERE pc.id = ?
+             WHERE pc.id = ? AND pc.user_id = ? AND pc.status = 'pending'
                AND NOT EXISTS (
                    SELECT 1 FROM order_items oi2
                    JOIN orders o2 ON oi2.order_id = o2.id
                    WHERE oi2.certificate_id = pc.id AND o2.payment_status = 'succeeded'
                )",
-            [$certId]
+            [$certId, $userId]
         );
         if ($row) {
+            grantGuestResource('publication_cert', $certId, $userId);
             addCertificateToCart($certId);
             $restored++;
         } else {
@@ -112,15 +122,16 @@ foreach ($order['items'] as $item) {
         $wcId = (int)$item['webinar_certificate_id'];
         $row = (new Database($db))->queryOne(
             "SELECT wc.id FROM webinar_certificates wc
-             WHERE wc.id = ?
+             WHERE wc.id = ? AND wc.user_id = ? AND wc.status = 'pending'
                AND NOT EXISTS (
                    SELECT 1 FROM order_items oi2
                    JOIN orders o2 ON oi2.order_id = o2.id
                    WHERE oi2.webinar_certificate_id = wc.id AND o2.payment_status = 'succeeded'
                )",
-            [$wcId]
+            [$wcId, $userId]
         );
         if ($row) {
+            grantGuestResource('webinar_cert', $wcId, $userId);
             addWebinarCertificateToCart($wcId);
             $restored++;
         } else {
@@ -130,15 +141,16 @@ foreach ($order['items'] as $item) {
         $orId = (int)$item['olympiad_registration_id'];
         $row = (new Database($db))->queryOne(
             "SELECT olr.id FROM olympiad_registrations olr
-             WHERE olr.id = ?
+             WHERE olr.id = ? AND olr.user_id = ? AND olr.status = 'pending'
                AND NOT EXISTS (
                    SELECT 1 FROM order_items oi2
                    JOIN orders o2 ON oi2.order_id = o2.id
                    WHERE oi2.olympiad_registration_id = olr.id AND o2.payment_status = 'succeeded'
                )",
-            [$orId]
+            [$orId, $userId]
         );
         if ($row) {
+            grantGuestResource('olympiad_reg', $orId, $userId);
             addOlympiadRegistrationToCart($orId);
             $restored++;
         } else {

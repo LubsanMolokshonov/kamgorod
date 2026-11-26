@@ -27,6 +27,8 @@ class OlympiadRegistration {
             'score' => $data['score'],
             'organization' => $data['organization'] ?? '',
             'city' => $data['city'] ?? '',
+            'city_from_form' => array_key_exists('city', $data) ? 1 : 0,
+            'supervisor_city' => $data['supervisor_city'] ?? null,
             'competition_type' => $data['competition_type'] ?? 'всероссийская',
             'participation_date' => $data['participation_date'] ?? date('Y-m-d'),
             'has_supervisor' => $data['has_supervisor'] ?? false,

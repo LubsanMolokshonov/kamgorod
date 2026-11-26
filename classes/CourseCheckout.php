@@ -25,7 +25,8 @@ final class CourseCheckout
     public function __construct(
         private PDO $pdo,
         private ?object $client = null,
-        private ?Bitrix24Integration $bitrix = null
+        private ?Bitrix24Integration $bitrix = null,
+        private bool $useAccountDiscounts = true
     )
     {
         $this->db = new Database($pdo);
@@ -313,25 +314,25 @@ final class CourseCheckout
         $discount = 0.0;
         $loyalty = 0.0;
 
-        $subscription = (new SubscriptionService($this->pdo))->getCourseDiscountPercent($userId);
+        $subscription = $this->useAccountDiscounts ? (new SubscriptionService($this->pdo))->getCourseDiscountPercent($userId) : 0;
         if ($subscription > 0) {
             $discount = round($price * $subscription / 100, 2);
         } elseif ($this->courses->isDiscountEligible($enrollment)) {
             $discount = round($price * 0.10, 2);
         }
 
-        $discountToken = $linked ? null : ($_SESSION['email_discount_token'] ?? null);
+        $discountToken = ($linked || !$this->useAccountDiscounts) ? null : ($_SESSION['email_discount_token'] ?? null);
         if (!$discount && is_string($discountToken) && $discountToken !== '') {
             require_once __DIR__ . '/CourseEmailChain.php';
             if (CourseEmailChain::validateDiscountToken($discountToken) === (int)$enrollment['id']) {
                 $discount = round($price * 0.10, 2);
             }
         }
-        if (!$discount && LoyaltyDiscount::isEligible($this->pdo, $userId)) {
+        if ($this->useAccountDiscounts && !$discount && LoyaltyDiscount::isEligible($this->pdo, $userId)) {
             $rates = LoyaltyDiscount::getEffectiveRates($this->pdo, $userId);
             $discount = $loyalty = LoyaltyDiscount::calculateCourseDiscount($price, $rates['course'])['amount'];
         }
-        if (!$discount) {
+        if ($this->useAccountDiscounts && !$discount) {
             $rate = EmailCampaignDiscount::getActiveRate($this->pdo, $userId);
             if ($rate > 0) {
                 $discount = $loyalty = EmailCampaignDiscount::calculate($price, $rate)['amount'];

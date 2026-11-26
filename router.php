@@ -11,6 +11,11 @@ $path = ltrim(rawurldecode($uri), '/');
 
 // Serve existing files/directories as-is (assets, direct .php access, etc.)
 $file = __DIR__ . '/' . $path;
+$resolvedFile = realpath($file);
+if ($resolvedFile && preg_match('~^' . preg_quote(__DIR__, '~') . '/uploads/(?:diplomas|(?:publications|webinars)/certificates)(?:/|$)~i', $resolvedFile)) {
+    http_response_code(403);
+    exit;
+}
 if ($path !== '' && (is_file($file) || is_dir($file))) {
     return false;
 }

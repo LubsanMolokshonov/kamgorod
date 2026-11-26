@@ -10,11 +10,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/OlympiadDiploma.php';
 require_once __DIR__ . '/../includes/session.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    die('Unauthorized');
-}
+header('Cache-Control: private, no-store');
 
 // Get parameters
 $registrationId = $_GET['id'] ?? null;
@@ -31,14 +27,11 @@ if (!in_array($recipientType, ['participant', 'supervisor'])) {
 }
 
 try {
-    // Verify ownership
-    $stmt = $db->prepare("SELECT user_id FROM olympiad_registrations WHERE id = ?");
-    $stmt->execute([$registrationId]);
-    $reg = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$reg || $reg['user_id'] != $_SESSION['user_id']) {
+    $owner = $db->prepare("SELECT user_id FROM olympiad_registrations WHERE id=? AND status IN ('paid','diploma_ready')");
+    $owner->execute([(int)$registrationId]);
+    if (!canAccessPurchaseResource($db, 'olympiad_reg', (int)$registrationId, (int)$owner->fetchColumn())) {
         http_response_code(403);
-        die('Access denied');
+        exit('Нет доступа к документу');
     }
 
     $diploma = new OlympiadDiploma($db);

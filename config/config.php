@@ -30,7 +30,14 @@ if (file_exists($envFile)) {
             // Этап оплаченного курса вычисляется ниже: устаревший .env не должен
             // возвращать оплаты на промежуточный этап «Оплаченная сделка».
             // Флаг классификации ниже преобразуется из строки в настоящий bool.
-            if (!in_array($key, ['BITRIX24_COURSE_STAGE_PAID', 'COMPETITION_CATALOG_FACTS_ENABLED'], true) && !defined($key)) {
+            if (!in_array($key, [
+                'EMAIL_SENDING_ENABLED',
+                'SUBSCRIPTION_AUTORENEW_ENABLED',
+                'BITRIX24_COURSE_STAGE_PAID',
+                'BITRIX24_COURSE_PAYMENT_LINKS_ENABLED',
+                'BITRIX24_COURSE_PAYMENT_LINKS_PILOT_DEAL_ID',
+                'COMPETITION_CATALOG_FACTS_ENABLED',
+            ], true) && !defined($key)) {
                 define($key, $value);
             }
         }
@@ -93,6 +100,17 @@ if (!defined('MAX_COURSE_RECOMMENDATION_HOURLY_CAP')) define('MAX_COURSE_RECOMME
 if (!defined('BITRIX24_WEBHOOK_URL')) define('BITRIX24_WEBHOOK_URL', $_ENV['BITRIX24_WEBHOOK_URL'] ?? '');
 if (!defined('BITRIX24_WEBINAR_PIPELINE_ID')) define('BITRIX24_WEBINAR_PIPELINE_ID', $_ENV['BITRIX24_WEBINAR_PIPELINE_ID'] ?? 102);
 if (!defined('BITRIX24_COURSE_PIPELINE_ID')) define('BITRIX24_COURSE_PIPELINE_ID', $_ENV['BITRIX24_COURSE_PIPELINE_ID'] ?? 108);
+if (!defined('BITRIX24_COURSE_PAYMENT_LINKS_ENABLED')) {
+    define('BITRIX24_COURSE_PAYMENT_LINKS_ENABLED', filter_var($_ENV['BITRIX24_COURSE_PAYMENT_LINKS_ENABLED'] ?? false, FILTER_VALIDATE_BOOLEAN));
+}
+if (!defined('BITRIX24_COURSE_PAYMENT_LINKS_PILOT_DEAL_ID')) {
+    $pilotDealId = filter_var($_ENV['BITRIX24_COURSE_PAYMENT_LINKS_PILOT_DEAL_ID'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+    define('BITRIX24_COURSE_PAYMENT_LINKS_PILOT_DEAL_ID', $pilotDealId === false ? -1 : $pilotDealId);
+    unset($pilotDealId);
+}
+if (!defined('CRM_COURSE_PAYMENT_LINK_SECRET')) {
+    define('CRM_COURSE_PAYMENT_LINK_SECRET', $_ENV['CRM_COURSE_PAYMENT_LINK_SECRET'] ?? '');
+}
 // Исполнитель задачи на допуск к курсу после автоплаты (Стефанович Юлия).
 // Ответственный самой сделки при этом не меняется.
 if (!defined('BITRIX24_COURSE_ACCESS_RESPONSIBLE_ID')) {

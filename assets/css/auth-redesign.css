@@ -11,6 +11,8 @@
   padding: 48px 24px 80px;
 }
 
+.auth-shell.auth-confirmation { max-width: 560px; }
+
 /* Один или два столбца (карточка + side-info) */
 .auth-shell.has-info {
   display: grid;

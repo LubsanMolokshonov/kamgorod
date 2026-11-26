@@ -379,23 +379,76 @@ class Bitrix24Integration {
      * @return bool Успешность операции
      */
     public function addDealComment($dealId, $comment) {
-        $params = [
+        return $this->createDealTimelineComment((int)$dealId, (string)$comment) !== null;
+    }
+
+    public function createDealTimelineComment(int $dealId, string $comment): ?int {
+        $result = $this->call('crm.timeline.comment.add', [
             'fields' => [
                 'ENTITY_ID' => $dealId,
                 'ENTITY_TYPE' => 'deal',
                 'COMMENT' => $comment,
             ],
-        ];
+        ]);
 
-        $result = $this->call('crm.timeline.comment.add', $params);
-
-        if ($result && isset($result['result'])) {
+        $id = filter_var($result['result'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($id !== false) {
             $this->log("Deal comment added to {$dealId}");
-            return true;
+            return $id;
         }
 
-        $this->log("Failed to add comment to deal {$dealId}: " . json_encode($result), 'error');
-        return false;
+        $this->log("Failed to add comment to deal {$dealId}", 'error');
+        return null;
+    }
+
+    /** null означает неполный или недоступный таймлайн. */
+    public function findDealTimelineCommentIds(int $dealId, string $marker, ?int $knownId = null): ?array {
+        $ids = [];
+        $start = 0;
+        for ($page = 0; $page < 10; $page++) {
+            $result = $this->call('crm.timeline.comment.list', [
+                'filter' => ['ENTITY_ID' => $dealId, 'ENTITY_TYPE' => 'deal'],
+                'select' => ['ID', 'COMMENT'],
+                'order' => ['ID' => 'DESC'],
+                'start' => $start,
+            ]);
+            $comments = $result['result'] ?? null;
+            if (!is_array($comments) || !array_is_list($comments)) {
+                return null;
+            }
+            foreach ($comments as $comment) {
+                if (!is_array($comment) || !is_string($comment['COMMENT'] ?? null)) {
+                    return null;
+                }
+                $id = filter_var($comment['ID'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                if ($id === false) {
+                    return null;
+                }
+                if ($id === $knownId || str_contains($comment['COMMENT'], $marker)) {
+                    $ids[$id] = $id;
+                }
+            }
+            $next = (int)($result['next'] ?? ($start + count($comments)));
+            if (!isset($result['next'])) {
+                $complete = isset($result['total']) ? $next >= (int)$result['total'] : count($comments) < 50;
+                if ($complete) {
+                    return array_values($ids);
+                }
+            }
+            if ($next <= $start) {
+                return null;
+            }
+            $start = $next;
+        }
+        return null;
+    }
+
+    public function updateDealTimelineComment(int $commentId, string $comment): bool {
+        $result = $this->call('crm.timeline.comment.update', [
+            'id' => $commentId,
+            'fields' => ['COMMENT' => $comment],
+        ]);
+        return (int)($result['result'] ?? 0) === $commentId;
     }
 
     // ==================== Вспомогательные методы для вебинаров ====================
@@ -1194,7 +1247,11 @@ class Bitrix24Integration {
 
         // Проверить на ошибки Bitrix24
         if (isset($result['error'])) {
-            $this->log("Bitrix24 API Error: " . $result['error'] . ' - ' . ($result['error_description'] ?? ''), 'error');
+            // Ответ методов таймлайна может содержать текст комментария со ссылкой на оплату.
+            $errorDetails = str_starts_with($method, 'crm.timeline.comment.')
+                ? $method
+                : $result['error'] . ' - ' . ($result['error_description'] ?? '');
+            $this->log("Bitrix24 API Error: " . $errorDetails, 'error');
             return null;
         }
 

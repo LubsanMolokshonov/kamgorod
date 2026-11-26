@@ -21,7 +21,9 @@ require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../includes/magic-link-helper.php';
 require_once __DIR__ . '/../includes/session.php';
 
-$token = $_GET['token'] ?? '';
+$token = is_string($_GET['token'] ?? null) ? $_GET['token'] : '';
+header('Cache-Control: private, no-store');
+header('Referrer-Policy: no-referrer');
 
 // Redirect: новый параметр r= (base64url) приоритетнее legacy redirect=.
 $redirect = '/kabinet/';
@@ -35,9 +37,7 @@ if (!empty($_GET['r'])) {
 }
 
 // Защита от open-redirect: только относительные пути, без protocol-relative.
-if (!$redirect || $redirect[0] !== '/' || strpos($redirect, '//') === 0) {
-    $redirect = '/kabinet/';
-}
+$redirect = safeAccountReturnPath($redirect);
 
 // Пробрасываем UTM-параметры в redirect URL и сохраняем в cookie на 90 дней.
 // Cookie переживает закрытие браузера и переход из почтового клиента — это то,
@@ -66,7 +66,7 @@ if (!empty($utmParams)) {
 // Email message_id для атрибуции (опционально). Magic-ссылки не оборачиваются в click.php,
 // поэтому email_mid выставляем здесь — иначе атрибуция письмо→оплата потеряется.
 $mid = $_GET['mid'] ?? '';
-if ($mid && preg_match('~^[a-f0-9]{32}$~', $mid)) {
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && is_string($mid) && preg_match('~^[a-f0-9]{32}$~', $mid)) {
     // Регистрируем клик (зеркало api/email-track/click.php): magic-ссылки не
     // оборачиваются в click-tracker, иначе клики по ним невидимы в email_events.
     try {
@@ -97,12 +97,6 @@ if ($mid && preg_match('~^[a-f0-9]{32}$~', $mid)) {
     ]);
 }
 
-// Если пользователь уже авторизован — просто редиректим
-if (isset($_SESSION['user_id'])) {
-    header('Location: ' . $redirect);
-    exit;
-}
-
 // Diagnostic log: логируем неудачи (не сам токен — он содержит HMAC-подпись).
 $logFail = function (string $reason) use ($token, $mid): void {
     $ip = $_SERVER['REMOTE_ADDR'] ?? '-';
@@ -114,10 +108,11 @@ $logFail = function (string $reason) use ($token, $mid): void {
 };
 
 // Валидируем токен
-$userId = $token !== '' ? validateMagicToken($token) : false;
+$oneTime = str_starts_with($token, 'v2_');
+$userId = $oneTime ? (emailMagicClaims($token)['user_id'] ?? false) : ($token !== '' ? validateMagicToken($token) : false);
 if (!$userId) {
     $logFail($token === '' ? 'no_token' : 'invalid_token');
-    header('Location: /pages/login.php?redirect=' . urlencode($redirect));
+    header('Location: /vhod/?return=' . urlencode($redirect));
     exit;
 }
 
@@ -127,30 +122,24 @@ $user = $userObj->getById($userId);
 
 if (!$user) {
     $logFail('user_not_found');
-    header('Location: /pages/login.php?redirect=' . urlencode($redirect));
+    header('Location: /vhod/?return=' . urlencode($redirect));
     exit;
 }
 
-// Создаём сессию
-$_SESSION['user_id'] = $user['id'];
-$_SESSION['user_email'] = $user['email'];
-
-// Устанавливаем cookie session_token для дальнейшего автовхода (30 дней)
-$sessionToken = $userObj->generateSessionToken($user['id']);
-setcookie(
-    'session_token',
-    $sessionToken,
-    time() + (30 * 24 * 60 * 60),
-    '/',
-    '',
-    isset($_SERVER['HTTPS']),
-    true
-);
-
-// Server-side cart: смержить гостевую сессионную корзину в cart_items и подтянуть
-// записи с других устройств. Источник истины для залогиненных — таблица cart_items.
-mergeSessionCartToDb((int)$user['id']);
-
-// Редирект на целевую страницу
-header('Location: ' . $redirect);
+$current = verifiedAccountId($db);
+$switching = $current !== null && $current !== (int)$userId;
+if ($current !== (int)$userId) {
+    $csrf = $_POST['csrf_token'] ?? null;
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !is_string($csrf) || !validateCSRFToken($csrf)) {
+        require_once __DIR__ . '/../includes/account-confirmation.php';
+        renderAccountConfirmation(null, false, $switching, $redirect);
+        exit;
+    }
+}
+if ($oneTime && $current !== (int)$userId && !redeemEmailMagicToken($db, $token)) {
+    header('Location: /vhod/?return=' . rawurlencode($redirect), true, 303);
+    exit;
+}
+if ($current !== (int)$userId) establishVerifiedAccount($db, (int)$userId);
+header('Location: ' . $redirect, true, 303);
 exit;

@@ -29,22 +29,12 @@ require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/installment-helper.php';
 require_once __DIR__ . '/../includes/text-helper.php';
 
-// Auto-login via cookie if session doesn't exist
-if (!isset($_SESSION['user_email']) && isset($_COOKIE['session_token'])) {
-    $userObj = new User($db);
-    $user = $userObj->findBySessionToken($_COOKIE['session_token']);
-
-    if ($user) {
-        // Valid token, log user in
-        $_SESSION['user_email'] = $user['email'];
-        $_SESSION['user_id'] = $user['id'];
-    }
-}
+verifiedAccountId($db);
 
 // Check if user is logged in
 if (!isset($_SESSION['user_email'])) {
     // User is not logged in, redirect to login page
-    header('Location: /pages/login.php');
+    header('Location: /vhod/?return=' . rawurlencode(safeAccountReturnPath($_SERVER['REQUEST_URI'] ?? '/kabinet/')));
     exit;
 }
 
@@ -480,6 +470,7 @@ include __DIR__ . '/../includes/header.php';
                 $abVariant = CoursePriceAB::getVariant();
 
                 foreach ($unpaidEnrollments as $enrollment) {
+                    $abVariant = ($enrollment['ab_variant'] ?? null) ?: CoursePriceAB::getVariant();
                     $programType = $enrollment['program_type'] ?? null;
                     $itemDiscountPercent = CoursePriceAB::getDiscountPercent($abVariant, $programType);
                     $itemHasDiscount = $abVariant !== 'A' && $itemDiscountPercent > 0;
@@ -487,9 +478,9 @@ include __DIR__ . '/../includes/header.php';
                     $enrolledAtUtc = new DateTime($enrollment['enrolled_at'], new DateTimeZone('UTC'));
                     $enrolledAtUtc->setTimezone(new DateTimeZone(date_default_timezone_get()));
                     $discountDeadline = $enrolledAtUtc->getTimestamp() + 600;
-                    $isDiscountActive = time() < $discountDeadline;
+                    $isDiscountActive = time() < $discountDeadline && empty($enrollment['installment_requested_at']);
                     $remainingSeconds = max(0, $discountDeadline - time());
-                    $discountedPrice = round($priceRaw * 0.9);
+                    $discountedPrice = round($priceRaw * 0.9, 2);
 
                     if ($isDiscountActive) {
                         $hasAnyDiscount = true;
@@ -499,6 +490,9 @@ include __DIR__ . '/../includes/header.php';
                         }
                     }
 
+                    if ($enrollment['installment_total'] !== null) {
+                        $priceRaw = (float)$enrollment['installment_total'];
+                    }
                     $totalPrice += $priceRaw;
                     $totalDiscountedPrice += $isDiscountActive ? $discountedPrice : $priceRaw;
 
@@ -511,7 +505,7 @@ include __DIR__ . '/../includes/header.php';
                         'discountDeadline' => $discountDeadline,
                         'isDiscountActive' => $isDiscountActive,
                         'discountedPrice' => $discountedPrice,
-                        'discountedPriceFormatted' => number_format($discountedPrice, 0, ',', ' '),
+                        'discountedPriceFormatted' => number_format($discountedPrice, fmod($discountedPrice, 1.0) == 0.0 ? 0 : 2, ',', ' '),
                         'programLabel' => Course::getProgramTypeLabel($enrollment['program_type']),
                         'hasFixedDiscount' => $itemHasDiscount,
                         'discountPercent' => $itemDiscountPercent,
@@ -559,7 +553,7 @@ include __DIR__ . '/../includes/header.php';
                         <?php foreach ($unpaidData as $item):
                             $e = $item['enrollment'];
                             $payAmountRow = $item['isDiscountActive'] ? $item['discountedPrice'] : (int)round($item['priceRaw']);
-                            $installmentRow = calculateInstallment((float)$payAmountRow);
+                            $installmentRow = courseInstallmentQuote($e);
                             $isInstallmentRequested = ($e['payment_method'] ?? null) === 'installment'
                                                    && ($e['enrollment_status'] ?? '') === 'installment_requested';
                         ?>
@@ -604,7 +598,9 @@ include __DIR__ . '/../includes/header.php';
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
                                         </svg>
-                                        Заявка на рассрочку отправлена. Менеджер свяжется в рабочее время.
+                                        Заявка на рассрочку отправлена. <?php if ($e['installment_total'] !== null): ?>
+                                        <?= number_format((float)$e['installment_total'], 2, ',', ' ') ?> ₽, около <?= formatRub((int)$e['installment_monthly_amount']) ?>/мес. на <?= (int)$e['installment_months'] ?> мес.
+                                        <?php endif; ?>Менеджер свяжется в рабочее время.
                                     </div>
                                     <?php
                                         $maxCtaContext = 'installment';
@@ -620,6 +616,8 @@ include __DIR__ . '/../includes/header.php';
                                     <?php if ($installmentRow['available']): ?>
                                         <button type="button"
                                                 class="btn-request-installment"
+                                                data-expected-amount-kopecks="<?= $installmentRow['amount_kopecks'] ?>"
+                                                data-expected-months="<?= $installmentRow['months'] ?>"
                                                 data-enrollment-id="<?php echo $e['enrollment_id']; ?>">
                                             <span>Оформить рассрочку</span>
                                             <span class="installment-monthly-hint">~<?php echo formatRub($installmentRow['monthly']); ?>/мес × <?php echo $installmentRow['months']; ?></span>

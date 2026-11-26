@@ -13,6 +13,7 @@
  *
  * Портальная доля смешанных заказов считается пропорционально price позиций;
  * курсовая сумма берётся из OPPORTUNITY сделки Bitrix24 за вычетом возвратов ЮKassa.
+ * Для подтверждённой онлайн-оплаты по сделке вне WON берём сумму оформления курса.
  *
  * Режимы атрибуции выручки/оплат ($basis):
  *   - 'paid'    (дефолт): курсы — по CLOSEDATE выигранной сделки Bitrix24,
@@ -527,8 +528,8 @@ class RNPAnalytics
 
     /**
      * Полная курсовая выручка из текущего набора выигранных сделок Bitrix24.
-     * Локальные orders используются только для определения канала и признака
-     * «оффлайн»: их суммы и paid_at в расчёт курсовой выручки не входят.
+     * Сумма и даты берутся из выигранных сделок. Подтверждённая ЮKassa-оплата
+     * оформления курса дополняет список, если исходная сделка отсутствует в WON.
      *
      * @return array{
      *   periods: array,
@@ -552,6 +553,13 @@ class RNPAnalytics
         }
 
         $context = $this->loadCourseDealContext();
+        $crmIds = array_fill_keys(array_column($deals, 'id'), true);
+        foreach ($this->loadCourseCheckoutRevenue($dateFrom, $dateTo, $basis) as $payment) {
+            if (!isset($crmIds[$payment['id']])) {
+                $deals[] = $payment;
+                $crmIds[$payment['id']] = true;
+            }
+        }
         $periods = [];
         $offlinePeriods = [];
         $count = 0;
@@ -627,6 +635,24 @@ class RNPAnalytics
                 'deals' => $offlineDeals,
             ],
         ];
+    }
+
+    private function loadCourseCheckoutRevenue(string $dateFrom, string $dateTo, string $basis): array
+    {
+        $dateField = $basis === 'created' ? 'ce.created_at' : 'o.paid_at';
+        return $this->db->query(
+            "SELECT ce.bitrix_lead_id AS id, o.final_amount AS revenue,
+                    SUBSTR(o.paid_at, 1, 10) AS closedate, SUBSTR(ce.created_at, 1, 10) AS created
+             FROM course_checkout_payments a
+             JOIN course_enrollments ce ON ce.id = a.enrollment_id
+             JOIN orders o ON o.id = a.order_id
+             WHERE ce.bitrix_lead_id > 0
+               AND o.payment_status IN ('succeeded', 'refunded')
+               AND o.yookassa_payment_id <> '' AND o.yookassa_payment_id NOT LIKE 'bitrix:%'
+               AND {$dateField} >= ? AND {$dateField} < ?
+             ORDER BY o.paid_at DESC, o.id DESC",
+            [$dateFrom, date('Y-m-d', strtotime($dateTo . ' +1 day'))]
+        );
     }
 
     /** @return array<int,array>|null null означает недоступность Bitrix24. */

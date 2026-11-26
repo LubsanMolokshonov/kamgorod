@@ -405,10 +405,12 @@ class Course {
     public function getEnrollmentsByEmail($email) {
         return $this->db->query(
             "SELECT ce.id as enrollment_id, ce.status as enrollment_status, ce.created_at as enrolled_at,
-                    ce.payment_method, ce.installment_requested_at, ce.installment_monthly_amount,
+                    ce.payment_method, ce.installment_requested_at, ce.installment_monthly_amount, ce.ab_variant,
+                    q.total_amount AS installment_total, q.months AS installment_months,
                     c.id as course_id, COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS title, c.slug, c.hours, c.price, c.program_type
              FROM course_enrollments ce
              JOIN courses c ON ce.course_id = c.id
+             LEFT JOIN course_installment_quotes q ON q.enrollment_id=ce.id
              WHERE ce.email = ? AND ce.status != 'cancelled'
              ORDER BY ce.created_at DESC",
             [$email]
@@ -437,10 +439,12 @@ class Course {
         return $this->db->queryOne(
             "SELECT ce.id as enrollment_id, ce.user_id, ce.status as enrollment_status,
                     ce.created_at as enrolled_at, ce.email, ce.full_name, ce.phone,
-                    ce.payment_method, ce.installment_requested_at, ce.installment_monthly_amount,
+                    ce.payment_method, ce.installment_requested_at, ce.installment_monthly_amount, ce.ab_variant,
+                    q.total_amount AS installment_total, q.months AS installment_months,
                     c.id as course_id, COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS title, c.slug, c.hours, c.price, c.program_type
              FROM course_enrollments ce
              JOIN courses c ON ce.course_id = c.id
+             LEFT JOIN course_installment_quotes q ON q.enrollment_id=ce.id
              WHERE ce.id = ?",
             [$enrollmentId]
         );

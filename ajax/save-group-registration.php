@@ -46,6 +46,9 @@ if (!is_string($_POST['supervisor_name'] ?? '') || trim($_POST['supervisor_name'
 $validator->required($required)
           ->email('email')
           ->maxLength('supervisor_name', 55)
+          ->maxLength('organization', 255)
+          ->maxLength('city', 100)
+          ->maxLength('supervisor_organization', 255)
           ->date('participation_date');
 
 if ($validator->fails() || $productId <= 0) {
@@ -107,6 +110,10 @@ try {
 
     // Найти или создать аккаунт заявителя; текущий простой вход сохранен.
     $userObj = new User($db);
+    if (verifiedAccountId($db) !== null && strcasecmp($_SESSION['user_email'], $data['email']) !== 0) {
+        echo json_encode(['success' => false, 'message' => 'Укажите почту текущего кабинета или выйдите из него.']);
+        exit;
+    }
     $user = $userObj->findByEmail($data['email']);
     if (!$user) {
         $userId = $userObj->create([
@@ -128,7 +135,7 @@ try {
         if (empty($user['organization']) && !empty($accountOwnerOrg)) {
             $updateFields['organization'] = $accountOwnerOrg;
         }
-        if (!empty($updateFields)) {
+        if (verifiedAccountId($db) === (int)$userId && !empty($updateFields)) {
             $userObj->update($userId, $updateFields);
         }
     }
@@ -139,7 +146,7 @@ try {
     // Dedup-гард: повторный сабмит той же группы за 30 мин → вернуть существующую.
     $groupObj = new ParticipantGroup($db);
     $duplicate = $groupObj->findRecentDuplicate((int)$userId, $productType, $productId, $size, 30);
-    if ($duplicate) {
+    if ($duplicate && (verifiedAccountId($db) === (int)$userId || isset($_SESSION['guest_group_batches'][$duplicate['id']]))) {
         echo json_encode([
             'success'          => true,
             'batch_id'         => $duplicate['id'],
@@ -193,6 +200,8 @@ try {
                 'group_batch_id'          => $batchId,
                 'participant_name'        => $p['fio'],
                 'competition_id'          => $productId,
+                'organization'            => $data['organization'],
+                'city'                    => $data['city'] ?? '',
                 'nomination'              => $data['nomination'],
                 'work_title'              => $p['work_title'],
                 'competition_type'        => $competitionType,
@@ -202,10 +211,10 @@ try {
                 'has_supervisor'          => $hasSupervisor,
                 'supervisor_name'         => $supervisorName,
                 'supervisor_email'        => $supervisorEmail,
-                'supervisor_organization' => $supervisorOrg,
+                'supervisor_organization' => $supervisorOrg ?? $data['organization'],
             ], $utm));
             $id = (int)$id;
-            addToCart($id);
+
         } else {
             $id = $olympRegObj->create(array_merge([
                 'user_id'                 => $userId,
@@ -224,15 +233,25 @@ try {
                 'has_supervisor'          => $hasSupervisor,
                 'supervisor_name'         => $supervisorName,
                 'supervisor_email'        => $supervisorEmail,
-                'supervisor_organization' => $supervisorOrg,
+                'supervisor_organization' => $supervisorOrg ?? $data['organization'],
             ], $utm));
             $id = (int)$id;
-            addOlympiadRegistrationToCart($id);
+
         }
         $createdIds[] = $id;
     }
 
     $db->commit();
+    $_SESSION['guest_group_batches'][$batchId] = true;
+    foreach ($createdIds as $id) {
+        if ($productType === 'competition') {
+            grantGuestResource('registration', $id, (int)$userId);
+            addToCart($id);
+        } else {
+            grantGuestResource('olympiad_reg', $id, (int)$userId);
+            addOlympiadRegistrationToCart($id);
+        }
+    }
 
     // Привязка визита к пользователю (после commit — некритично)
     $visitId = intval($_POST['visit_id'] ?? 0);
@@ -244,9 +263,6 @@ try {
             error_log('Group registration visit bind error: ' . $e->getMessage());
         }
     }
-
-    $_SESSION['user_id'] = $userId;
-    $_SESSION['user_email'] = $data['email'];
 
     echo json_encode([
         'success'          => true,

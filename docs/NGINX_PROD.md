@@ -67,3 +67,15 @@ nginx требует его после `proxy_pass`, то есть только 
 curl -sI https://fgos.pro/olimpiady/pedagogi/nachalnaya-shkola/ | grep -i '^location:'
 # ожидаем https://fgos.pro/olimpiady/pedagogi/
 ```
+
+## Скачивание платных документов
+
+PHP проверяет владельца или право браузера на покупку и статус выдачи. Если фронт отдаёт загрузки напрямую, в HTTPS-блоке vhost нужны более приоритетные правила для каталогов готовых документов. Apache и локальный PHP-роутер уже закрывают эти пути.
+
+```nginx
+location ^~ /uploads/diplomas/ { return 403; }
+location ^~ /uploads/publications/certificates/ { return 403; }
+location ^~ /uploads/webinars/certificates/ { return 403; }
+```
+
+При выпуске проверить по адресу синтетического тестового файла ответ 403 на прямой запрос, затем скачать тот же PDF обычной кнопкой оплаченного заказа. Публичные превью шаблонов используют свои адреса.

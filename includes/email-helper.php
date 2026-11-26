@@ -71,6 +71,29 @@ function scheduleDelayedEmail(string $emailType, int $userId, int $orderId, int 
     }
 }
 
+/** Веб-запрос и cron могут выбрать одно письмо одновременно. Блокировка действует до записи результата. */
+function deliverQueuedPurchaseEmail(PDO $pdo, int $id, ?callable $send = null): void {
+    $key = 'payment_email:' . $id;
+    $lock = $pdo->prepare('SELECT GET_LOCK(?, 0)');
+    $lock->execute([$key]);
+    if ((int)$lock->fetchColumn() !== 1) return;
+    try {
+        $stmt = $pdo->prepare("SELECT d.user_id, d.order_id FROM pending_delayed_emails d JOIN orders o ON o.id=d.order_id
+            WHERE d.id=? AND d.email_type='payment_success' AND d.sent_at IS NULL AND d.failed_at IS NULL
+              AND d.send_after<=NOW() AND o.payment_status='succeeded' AND o.user_id=d.user_id");
+        $stmt->execute([$id]);
+        $job = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$job) return;
+        $send ??= 'sendPaymentSuccessEmail';
+        if (!$send((int)$job['user_id'], (int)$job['order_id'])) {
+            throw new RuntimeException('Почтовый сервис не подтвердил отправку');
+        }
+        $pdo->prepare('UPDATE pending_delayed_emails SET sent_at=NOW(), attempts=attempts+1 WHERE id=?')->execute([$id]);
+    } finally {
+        $pdo->prepare('SELECT RELEASE_LOCK(?)')->execute([$key]);
+    }
+}
+
 /**
  * ID курсов, купленных в данном заказе (course_enrollments.course_id из позиций).
  * Используется, чтобы не рекомендовать в письме курс, который человек только что
@@ -126,6 +149,15 @@ function sendPaymentSuccessEmail($userId, $orderId) {
                 'user_id'         => $userId,
             ],
         ]);
+
+        // Помечаем доставку после принятия письма. Ошибка отметки не повторяет уже отправленное письмо.
+        try {
+            $db->prepare("UPDATE webinar_registrations wr JOIN webinar_certificates wc ON wc.registration_id=wr.id
+                          JOIN order_items oi ON oi.webinar_certificate_id=wc.id SET wr.certificate_email_sent=1
+                          WHERE oi.order_id=?")->execute([$orderId]);
+        } catch (Throwable $error) {
+            error_log('Не удалось отметить отправку сертификата по заказу ' . (int)$orderId);
+        }
 
         logEmail('SUCCESS', $user['email'], $order['order_number'], 'Payment success email sent via Unisender');
         return true;

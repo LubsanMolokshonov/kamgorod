@@ -163,6 +163,10 @@ function checkoutLegacyOrder(PDO $pdo, int $id, string $status, ?string $payment
 
 try {
     [$pdo, $provider, $bitrix, $checkout] = checkoutFixture();
+    $pdo->exec('UPDATE users SET has_lifetime_discount=1 WHERE id=1');
+    $guest = new CourseCheckout($pdo, $provider, $bitrix, useAccountDiscounts: false);
+    checkoutAssert('Гостевая заявка использует публичную цену', 150000, $guest->quote(10,1)['amount_kopecks']);
+    $pdo->exec('UPDATE users SET has_lifetime_discount=0 WHERE id=1');
     $initial = $checkout->quote(10, 1, true, 77);
     checkoutAssert('Вход по ссылке показывает цену сайта', 150000, $initial['amount_kopecks']);
     checkoutAssert('Просмотр не создаёт заказ', 0, (int)$pdo->query('SELECT COUNT(*) FROM orders')->fetchColumn());

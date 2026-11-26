@@ -8,6 +8,7 @@
 
 session_start();
 header('Content-Type: application/json');
+header('Cache-Control: private, no-store');
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
@@ -16,15 +17,8 @@ require_once __DIR__ . '/../includes/session.php';
 
 $orderNumber = $_GET['order_number'] ?? '';
 
-if (empty($orderNumber)) {
+if (!is_string($orderNumber) || $orderNumber === '') {
     echo json_encode(['success' => false, 'error' => 'Missing order_number']);
-    exit;
-}
-
-// Require logged-in user
-$userId = getUserId();
-if (!$userId) {
-    echo json_encode(['success' => false, 'error' => 'Not authenticated']);
     exit;
 }
 
@@ -32,14 +26,9 @@ try {
     $orderObj = new Order($db);
     $order = $orderObj->getByOrderNumber($orderNumber);
 
-    if (!$order) {
+    if (!$order || !canAccessPurchaseResource($db, 'order', (int)$order['id'], (int)$order['user_id'])) {
+        http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'Order not found']);
-        exit;
-    }
-
-    // Security: order must belong to current user
-    if ((int)$order['user_id'] !== (int)$userId) {
-        echo json_encode(['success' => false, 'error' => 'Access denied']);
         exit;
     }
 

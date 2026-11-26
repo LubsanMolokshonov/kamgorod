@@ -1,34 +1,5 @@
 <?php
-/**
- * Единый «движок выдачи» оплаченного/покрытого подпиской заказа.
- *
- * Зачем: выдача документов (смена статусов → генерация PDF → отмена email-цепочек →
- * проверка готовности) нужна в трёх местах с ИДЕНТИЧНОЙ логикой:
- *   1) api/webhook/yookassa.php — после успешной оплаты Yookassa;
- *   2) ajax/create-payment.php — подписчик оформляет документы за 0 ₽ минуя Yookassa;
- *   3) local-bypass create-payment.php — локальная разработка без реальной оплаты.
- * Дублировать её опасно (разойдётся) — поэтому она здесь.
- *
- * Что функция ДЕЛАЕТ (атомарно, своя транзакция):
- *   - orders.payment_status='succeeded', paid_at;
- *   - registrations/publication_certificates/webinar_certificates/olympiad_registrations/
- *     course_enrollments → 'paid', генерация соответствующих PDF (+ supervisor);
- *   - для source='webhook' атомарно ставит курсовые позиции в очередь задачи
- *     на допуск (только реальный yookassa_payment_id, не bitrix:*);
- *   - снятие зарезервированных позиций корзины (removeCartItemsByOrderId).
- * После коммита (best-effort): отмена email-цепочек, проверка готовности всех документов.
- *
- * Что НЕ делает (специфично для вызывающего, остаётся в нём):
- *   - отправку письма об успехе (caller сам по результату all_docs_ready);
- *   - Bitrix24-сделки, email-атрибуцию, спец-синк, грант лояльности (только вебхук).
- *
- * @param PDO           $pdo
- * @param int           $orderId
- * @param string        $source 'webhook' | 'subscription' | 'local'
- * @param callable|null $log    function(string $level, string $message): void
- * @return array ['all_docs_ready' => bool, 'missing' => string[], 'order_items' => array]
- */
-
+/** Атомарная выдача заказа и постановка подтверждения покупки в очередь. */
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/Registration.php';
@@ -41,9 +12,42 @@ require_once __DIR__ . '/../classes/OlympiadDiploma.php';
 require_once __DIR__ . '/../classes/CourseAccessTaskQueue.php';
 require_once __DIR__ . '/session.php'; // removeCartItemsByOrderId()
 
-if (!function_exists('fulfillOrderItems')) {
+const ORDER_DOCUMENT_TABLES = [
+    'registration_id' => 'registrations',
+    'certificate_id' => 'publication_certificates',
+    'webinar_certificate_id' => 'webinar_certificates',
+    'olympiad_registration_id' => 'olympiad_registrations',
+];
 
-function fulfillOrderItems(PDO $pdo, int $orderId, string $source = 'webhook', ?callable $log = null): array
+function validateCoveredOrder(PDO $pdo, array $order, array $items): void
+{
+    if (!$items || (float)$order['final_amount'] !== 0.0 || !empty($order['subscription_plan_id']) || !empty($order['yookassa_payment_id'])) {
+        throw new DomainException('Некорректный заказ на выдачу по подписке');
+    }
+    foreach ($items as $item) {
+        $documents = array_filter(array_intersect_key($item, ORDER_DOCUMENT_TABLES));
+        if (count($documents) !== 1 || !empty($item['course_enrollment_id']) || (float)$item['price'] !== 0.0
+            || (int)$item['covered_by_subscription'] !== 1) {
+            throw new DomainException('Покрытие подпиской не подтверждено для всех позиций');
+        }
+        $column = array_key_first($documents);
+        $table = ORDER_DOCUMENT_TABLES[$column];
+        $check = $pdo->prepare("SELECT user_id FROM $table WHERE id = ? FOR UPDATE");
+        $check->execute([$item[$column]]);
+        if ((int)$check->fetchColumn() !== (int)$order['user_id']) {
+            throw new DomainException('Владелец документа отличается от владельца покупки');
+        }
+    }
+}
+
+function requireOrderPdf(array $result): void
+{
+    if (empty($result['success']) || empty($result['pdf_path']) || !isIssuedDocumentPdf(BASE_PATH . $result['pdf_path'])) {
+        throw new RuntimeException('Документ не готов к выдаче: ' . ($result['message'] ?? 'файл отсутствует'));
+    }
+}
+
+function fulfillOrderItems(PDO $pdo, int $orderId, string $source = 'webhook', ?callable $log = null, ?string $paymentId = null): array
 {
     $log = $log ?? function (string $level, string $message): void {
         error_log("[order-fulfillment] {$level} | {$message}");
@@ -57,12 +61,27 @@ function fulfillOrderItems(PDO $pdo, int $orderId, string $source = 'webhook', ?
     $olympDiplomaObj = new OlympiadDiploma($pdo);
 
     // ============ Атомарная выдача: статусы + PDF ============
+    $deliveryId = null;
     $pdo->beginTransaction();
     try {
-        $paidAt = date('Y-m-d H:i:s');
-        $orderObj->updatePaymentStatus($orderId, 'succeeded', $paidAt);
-
+        $lock = $pdo->prepare('SELECT * FROM orders WHERE id = ? FOR UPDATE');
+        $lock->execute([$orderId]);
+        $order = $lock->fetch(PDO::FETCH_ASSOC);
+        if (!$order || !in_array($order['payment_status'], ['pending', 'processing'], true)
+            || ($paymentId !== null && $paymentId !== $order['yookassa_payment_id'])) {
+            $pdo->commit();
+            return ['applied' => false, 'all_docs_ready' => false, 'missing' => [], 'order_items' => []];
+        }
         $orderItems = $orderObj->getOrderItems($orderId);
+        if (!$orderItems) {
+            throw new RuntimeException('В заказе отсутствуют позиции');
+        }
+        if ($source === 'subscription') {
+            validateCoveredOrder($pdo, $order, $orderItems);
+        } elseif ($source !== 'local' && $paymentId === null) {
+            throw new LogicException('Требуется подтверждённый идентификатор платежа');
+        }
+        $orderObj->updatePaymentStatus($orderId, 'succeeded', date('Y-m-d H:i:s'));
 
         // Регистрации конкурсов → paid
         $orderObj->markRegistrationsAsPaid($orderId);
@@ -72,8 +91,9 @@ function fulfillOrderItems(PDO $pdo, int $orderId, string $source = 'webhook', ?
             if (!empty($item['certificate_id'])) {
                 $certObj->updateStatus($item['certificate_id'], 'paid');
                 $r = $certObj->generate($item['certificate_id']);
-                $log($r['success'] ? 'INFO' : 'ERROR',
-                    "Publication certificate {$item['certificate_id']} generate=" . ($r['success'] ? 'ok' : ('FAIL: ' . ($r['message'] ?? ''))));
+                requireOrderPdf($r);
+                $certObj->updateStatus($item['certificate_id'], 'ready');
+                $pdo->prepare("UPDATE publications SET certificate_status='ready' WHERE id=?")->execute([$item['publication_id']]);
             }
         }
 
@@ -82,8 +102,8 @@ function fulfillOrderItems(PDO $pdo, int $orderId, string $source = 'webhook', ?
             if (!empty($item['webinar_certificate_id'])) {
                 $webCertObj->updateStatus($item['webinar_certificate_id'], 'paid');
                 $r = $webCertObj->generate($item['webinar_certificate_id']);
-                $log($r['success'] ? 'INFO' : 'ERROR',
-                    "Webinar certificate {$item['webinar_certificate_id']} generate=" . ($r['success'] ? 'ok' : ('FAIL: ' . ($r['message'] ?? ''))));
+                requireOrderPdf($r);
+                $webCertObj->updateStatus($item['webinar_certificate_id'], 'ready');
 
                 try {
                     require_once BASE_PATH . '/classes/AutowebinarEmailChain.php';
@@ -100,10 +120,10 @@ function fulfillOrderItems(PDO $pdo, int $orderId, string $source = 'webhook', ?
         // Дипломы конкурсов (участник + руководитель)
         foreach ($orderItems as $item) {
             if (!empty($item['registration_id'])) {
-                $diplomaObj->generate($item['registration_id'], 'participant');
+                requireOrderPdf($diplomaObj->generate($item['registration_id'], 'participant'));
                 $regData = $diplomaObj->getRegistrationData($item['registration_id']);
                 if ($regData && !empty($regData['has_supervisor']) && !empty($regData['supervisor_name'])) {
-                    $diplomaObj->generate($item['registration_id'], 'supervisor');
+                    requireOrderPdf($diplomaObj->generate($item['registration_id'], 'supervisor'));
                 }
             }
         }
@@ -112,10 +132,10 @@ function fulfillOrderItems(PDO $pdo, int $orderId, string $source = 'webhook', ?
         foreach ($orderItems as $item) {
             if (!empty($item['olympiad_registration_id'])) {
                 $olympRegObj->update($item['olympiad_registration_id'], ['status' => 'paid']);
-                $olympDiplomaObj->generate($item['olympiad_registration_id'], 'participant');
+                requireOrderPdf($olympDiplomaObj->generate($item['olympiad_registration_id'], 'participant'));
                 $olympReg = $olympRegObj->getById($item['olympiad_registration_id']);
                 if ($olympReg && !empty($olympReg['has_supervisor']) && !empty($olympReg['supervisor_name'])) {
-                    $olympDiplomaObj->generate($item['olympiad_registration_id'], 'supervisor');
+                    requireOrderPdf($olympDiplomaObj->generate($item['olympiad_registration_id'], 'supervisor'));
                 }
             }
         }
@@ -137,9 +157,15 @@ function fulfillOrderItems(PDO $pdo, int $orderId, string $source = 'webhook', ?
         }
 
         // Снять зарезервированные позиции корзины (внутри транзакции — откат вместе со всем)
-        removeCartItemsByOrderId($orderId);
+        $pdo->prepare('DELETE FROM cart_items WHERE reserved_in_order_id = ?')->execute([$orderId]);
+        if ($source !== 'local') {
+            $pdo->prepare("INSERT INTO pending_delayed_emails (email_type,user_id,order_id,send_after,max_attempts)
+                           VALUES ('payment_success',?,?,NOW(),3)")->execute([$order['user_id'], $orderId]);
+            $deliveryId = (int)$pdo->lastInsertId();
+        }
 
         $pdo->commit();
+        if (session_status() === PHP_SESSION_ACTIVE) unset($_SESSION['cart_db_loaded']);
         $log('SUCCESS', "Order #{$orderId} fulfilled (source={$source})");
     } catch (\Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -150,8 +176,6 @@ function fulfillOrderItems(PDO $pdo, int $orderId, string $source = 'webhook', ?
     }
 
     // ============ После коммита: отмена email-цепочек (best-effort) ============
-    $orderItems = $orderObj->getOrderItems($orderId);
-
     try {
         require_once BASE_PATH . '/classes/EmailJourney.php';
         $emailJourney = new EmailJourney($pdo);
@@ -205,53 +229,13 @@ function fulfillOrderItems(PDO $pdo, int $orderId, string $source = 'webhook', ?
         $log('WARNING', "Olympiad email chain cancel failed: " . $e->getMessage());
     }
 
-    // ============ Проверка готовности всех документов ============
-    $allDocsReady = true;
-    $missing = [];
-    foreach ($orderItems as $item) {
-        if (!empty($item['certificate_id'])) {
-            $c = $certObj->getById($item['certificate_id']);
-            if (!$c || $c['status'] !== 'ready' || empty($c['pdf_path']) || !file_exists(BASE_PATH . $c['pdf_path'])) {
-                $allDocsReady = false;
-                $missing[] = "pub_cert:{$item['certificate_id']}";
-            }
-        }
-        if (!empty($item['webinar_certificate_id'])) {
-            $wc = $webCertObj->getById($item['webinar_certificate_id']);
-            if (!$wc || $wc['status'] !== 'ready' || empty($wc['pdf_path']) || !file_exists(BASE_PATH . $wc['pdf_path'])) {
-                $allDocsReady = false;
-                $missing[] = "web_cert:{$item['webinar_certificate_id']}";
-            }
-        }
-        if (!empty($item['registration_id'])) {
-            $dStmt = $pdo->prepare("SELECT pdf_path FROM diplomas WHERE registration_id = ? AND recipient_type = 'participant' AND pdf_path IS NOT NULL AND pdf_path != '' LIMIT 1");
-            $dStmt->execute([$item['registration_id']]);
-            $dRow = $dStmt->fetch(PDO::FETCH_ASSOC);
-            if (!$dRow || !file_exists(BASE_PATH . '/uploads/diplomas/' . $dRow['pdf_path'])) {
-                $allDocsReady = false;
-                $missing[] = "diploma:reg_{$item['registration_id']}";
-            }
-        }
-        if (!empty($item['olympiad_registration_id'])) {
-            $odStmt = $pdo->prepare("SELECT pdf_path FROM olympiad_diplomas WHERE olympiad_registration_id = ? AND recipient_type = 'participant' AND pdf_path IS NOT NULL AND pdf_path != '' LIMIT 1");
-            $odStmt->execute([$item['olympiad_registration_id']]);
-            $odRow = $odStmt->fetch(PDO::FETCH_ASSOC);
-            if (!$odRow || !file_exists(BASE_PATH . '/uploads/diplomas/' . $odRow['pdf_path'])) {
-                $allDocsReady = false;
-                $missing[] = "olympiad_diploma:reg_{$item['olympiad_registration_id']}";
-            }
+    if ($deliveryId && defined('EMAIL_SENDING_ENABLED') && EMAIL_SENDING_ENABLED) {
+        try {
+            require_once __DIR__ . '/email-helper.php';
+            deliverQueuedPurchaseEmail($pdo, $deliveryId);
+        } catch (Throwable $error) {
+            $log('WARNING', "Письмо по заказу #{$orderId} ожидает повторной отправки");
         }
     }
-
-    if (!$allDocsReady) {
-        $log('ERROR', "Documents not ready for order #{$orderId}: " . implode(', ', $missing));
-    }
-
-    return [
-        'all_docs_ready' => $allDocsReady,
-        'missing' => $missing,
-        'order_items' => $orderItems,
-    ];
-}
-
+    return ['applied' => true, 'all_docs_ready' => true, 'missing' => [], 'order_items' => $orderItems];
 }

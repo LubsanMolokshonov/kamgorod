@@ -191,6 +191,7 @@ $spFeatureRows = [
 <input type="hidden" id="sub-logged" value="<?= $spUserId ? '1' : '0' ?>">
 
 <script>
+var subscriptionRequestKeys = {};
 var spCartMode = <?= $spCartMode ? 'true' : 'false' ?>;
 var subPeriod = '<?= $spDefaultPeriod ?>';
 function setPeriod(p) {
@@ -228,6 +229,12 @@ document.querySelectorAll('.sub-buy').forEach(function (btn) {
         fd.append('csrf', document.getElementById('sub-csrf').value);
         fd.append('plan_slug', btn.dataset.plan);
         fd.append('period', subPeriod);
+        var choice = btn.dataset.plan + ':' + subPeriod;
+        if (!subscriptionRequestKeys[choice]) {
+            var bytes = window.crypto.getRandomValues(new Uint8Array(16));
+            subscriptionRequestKeys[choice] = Array.from(bytes, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+        }
+        fd.append('request_key', subscriptionRequestKeys[choice]);
         // Чекбокса нет (автопродление выключено глобально) → без автопродления.
         fd.append('auto_renew', (arEl && arEl.checked) ? '1' : '0');
         fetch('/ajax/create-subscription-payment.php', { method: 'POST', body: fd, credentials: 'same-origin' })

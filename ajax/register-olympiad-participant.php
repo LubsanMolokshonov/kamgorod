@@ -150,7 +150,7 @@ try {
                 city         = COALESCE(NULLIF(city, ''), ?)
              WHERE id = ?"
         );
-        $updateStmt->execute([$fio, $school, $city, $userId]);
+        if (verifiedAccountId($db) === (int)$userId) $updateStmt->execute([$fio, $school, $city, $userId]);
     } else {
         // Create new user with all fields
         $insertStmt = $db->prepare(
@@ -161,12 +161,18 @@ try {
         $userId = $db->lastInsertId();
     }
 
-    // Set session
-    $_SESSION['user_id'] = $userId;
-    $_SESSION['user_email'] = $email;
-
-    // Schedule olympiad welcome email + reminder
     $olympiadId = intval($_POST['olympiad_id'] ?? 0);
+    $accountId = verifiedAccountId($db);
+    if ($accountId !== null && $accountId !== (int)$userId) {
+        echo json_encode(['success' => false, 'message' => 'Укажите почту текущего кабинета.']);
+        exit;
+    }
+    if ($accountId === null && $olympiadId > 0) {
+        $_SESSION['guest_quiz'][$olympiadId] = [
+            'owner' => (int)$userId, 'full_name' => $fio, 'organization' => $school, 'city' => $city, 'email' => $email,
+        ];
+    }
+
     if ($olympiadId) {
         try {
             require_once __DIR__ . '/../classes/OlympiadEmailChain.php';

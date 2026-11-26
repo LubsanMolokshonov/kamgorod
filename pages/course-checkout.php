@@ -5,7 +5,7 @@ header('Content-Type: text/html; charset=UTF-8');
 header('Cache-Control: private, no-store');
 header('Referrer-Policy: no-referrer');
 header('X-Robots-Tag: noindex, nofollow');
-header("Content-Security-Policy: default-src 'none'; style-src 'self'; script-src 'self'; form-action 'self' https:; base-uri 'none'; frame-ancestors 'none'");
+header("Content-Security-Policy: default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self' https:; base-uri 'none'; frame-ancestors 'none'");
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/course-payment-link.php';
@@ -42,6 +42,9 @@ if (!$isPost && !$isReturn && $csrf === null) {
 }
 
 $quote = null;
+$installment = null;
+$guestOwner = null;
+$installmentCsrf = null;
 $message = '';
 $conflictingAccount = false;
 $showLogin = false;
@@ -80,16 +83,17 @@ try {
             $claims = null;
         }
 
+        $guestOwner = $accountId === null ? ($_SESSION['guest_resources']['course_enrollment'][$enrollmentId] ?? null) : null;
         if ($claims && $accountId !== null && $accountId !== $claims['user_id']) {
             http_response_code(403);
             $conflictingAccount = true;
-        } elseif (!$claims && $accountId === null) {
+        } elseif (!$claims && $accountId === null && !$guestOwner) {
             http_response_code(403);
             $message = 'Откройте ссылку от менеджера ещё раз или войдите в личный кабинет.';
             $showLogin = true;
         } else {
-            $checkout = new CourseCheckout($db);
-            $userId = $claims['user_id'] ?? $accountId;
+            $checkout = new CourseCheckout($db, useAccountDiscounts: $accountId !== null || $claims !== null);
+            $userId = $claims['user_id'] ?? $accountId ?? $guestOwner;
             $dealId = $claims['deal_id'] ?? null;
             if ($isPost) {
                 $amount = filter_var($_POST['amount'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
@@ -98,6 +102,10 @@ try {
                     $message = 'Проверьте сумму и нажмите «Оплатить» ещё раз.';
                 } else {
                     $result = $checkout->pay($enrollmentId, $userId, $amount, $dealId !== null, $dealId);
+                    if (!empty($result['success']) && ($result['state'] ?? '') === 'paid') {
+                        header('Location: ' . $checkoutPath, true, 303);
+                        exit;
+                    }
                     $redirect = $result['redirect_url'] ?? null;
                     if (!empty($result['success']) && is_string($redirect)
                         && (preg_match('~\Ahttps://[^\s]+\z~i', $redirect)
@@ -112,6 +120,13 @@ try {
             if ($quote['state'] === 'ready'
                 && in_array($result['state'] ?? '', ['other_enrollment', 'deal_unavailable', 'processing', 'review'], true)) {
                 $quote['state'] = $result['state'];
+            }
+            if ($guestOwner && !$claims && $quote['state'] === 'ready' && empty($quote['has_active_payment'])) {
+                require_once __DIR__ . '/../includes/installment-helper.php';
+                require_once __DIR__ . '/../includes/session.php';
+                $row = (new Course($db))->getEnrollmentById($enrollmentId);
+                $installment = courseInstallmentQuote($row);
+                $installmentCsrf = generateCSRFToken();
             }
             $showCabinet = $accountId === $userId
                 && in_array($quote['state'], ['paid', 'cancelled', 'other_enrollment', 'deal_unavailable'], true);
@@ -148,6 +163,10 @@ $bootstrap = !$enrollmentId && !$isPost;
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Оплата курса — ФГОС-Практикум</title>
     <link rel="stylesheet" href="/assets/css/course-checkout.css?v=<?= filemtime(__DIR__ . '/../assets/css/course-checkout.css') ?>">
+    <?php if (!empty($installment['available'])): ?>
+        <meta name="csrf-token" content="<?= htmlspecialchars($installmentCsrf, ENT_QUOTES, 'UTF-8') ?>">
+        <script src="/assets/js/course-cabinet.js?v=<?= filemtime(__DIR__ . '/../assets/js/course-cabinet.js') ?>" defer></script>
+    <?php endif; ?>
     <?php if ($bootstrap || $isReturn): ?>
         <script src="/assets/js/course-checkout.js?v=<?= filemtime(__DIR__ . '/../assets/js/course-checkout.js') ?>" defer></script>
     <?php endif; ?>
@@ -191,6 +210,16 @@ $bootstrap = !$enrollmentId && !$isPost;
                 <input type="hidden" name="amount" value="<?= $amount ?>">
                 <button type="submit" class="checkout-button"><?= $hasActivePayment ? 'Продолжить оплату' : 'Оплатить' ?></button>
             </form>
+            <?php if ($guestOwner && !$claims && !$hasActivePayment): ?>
+                <p><a href="/vhod/?return=<?= rawurlencode($checkoutPath) ?>">Войти для применения личной скидки</a></p>
+            <?php endif; ?>
+            <?php if (!empty($installment['available'])): ?>
+                <button type="button" class="checkout-button btn-request-installment"
+                        data-enrollment-id="<?= $enrollmentId ?>" data-expected-months="<?= $installment['months'] ?>"
+                        data-expected-amount-kopecks="<?= $installment['amount_kopecks'] ?>">
+                    Оформить рассрочку <span class="installment-monthly-hint">≈ <?= formatRub($installment['monthly']) ?>/мес × <?= $installment['months'] ?></span>
+                </button>
+            <?php endif; ?>
             <?php if ($hasActivePayment): ?>
                 <p><a href="<?= $checkoutPath ?>">Проверить статус</a></p>
             <?php endif; ?>

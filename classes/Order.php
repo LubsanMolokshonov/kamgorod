@@ -289,13 +289,34 @@ class Order {
         try {
             $lock = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
             $order = $this->db->queryOne(
-                'SELECT payment_status FROM orders WHERE id = ? AND yookassa_payment_id = ?' . $lock,
+                'SELECT payment_status, user_id FROM orders WHERE id = ? AND yookassa_payment_id = ?' . $lock,
                 [$orderId, $paymentId]
             );
             $canRelease = $order && in_array($order['payment_status'], ['pending', 'processing', 'failed'], true);
             if ($canRelease) {
                 if ($order['payment_status'] !== 'failed') {
                     $this->updateActiveYookassaStatus($orderId, $paymentId, 'failed');
+                    // Старые заказы могли оформляться до сохранения корзины в БД. Восстанавливаем
+                    // только при первом переходе: повтор уведомления после ручного удаления не вернёт товар.
+                    $lines = $this->db->query('SELECT * FROM order_items WHERE order_id = ?', [$orderId]);
+                    $types = [
+                        'registration_id' => ['registration', 'registrations', 'diploma_ready'],
+                        'certificate_id' => ['publication_cert', 'publication_certificates', 'ready'],
+                        'webinar_certificate_id' => ['webinar_cert', 'webinar_certificates', 'ready'],
+                        'olympiad_registration_id' => ['olympiad_reg', 'olympiad_registrations', 'diploma_ready'],
+                    ];
+                    foreach ($types as $column => [$type, $table, $ready]) {
+                        $ids = array_values(array_filter(array_column($lines, $column)));
+                        if (!$ids) continue;
+                        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                        $insert = $lock === '' ? 'INSERT OR IGNORE' : 'INSERT IGNORE';
+                        $this->db->execute("$insert INTO cart_items (user_id, item_type, item_id)
+                            SELECT d.user_id, ?, d.id FROM $table d WHERE d.user_id = ? AND d.id IN ($placeholders)
+                              AND d.status NOT IN ('paid', ?) AND NOT EXISTS (
+                                  SELECT 1 FROM order_items oi JOIN orders o ON o.id = oi.order_id
+                                  WHERE oi.$column = d.id AND o.payment_status IN ('pending','processing','succeeded')
+                              )", [$type, $order['user_id'], ...$ids, $ready]);
+                    }
                 }
                 $this->db->execute(
                     'UPDATE cart_items SET reserved_in_order_id = NULL WHERE reserved_in_order_id = ?',
@@ -405,7 +426,7 @@ class Order {
      * Generate unique order number
      */
     public static function generateOrderNumber() {
-        return 'ORD-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
+        return 'ORD-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(6)));
     }
 
     /**

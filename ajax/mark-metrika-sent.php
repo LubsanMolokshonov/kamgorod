@@ -21,12 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !is_string($_POST['csrf_token'] ?? 
     exit;
 }
 
-$userId = (int)($_SESSION['user_id'] ?? 0);
-if (!$userId) {
-    echo json_encode(['success' => false]);
-    exit;
-}
-
 $orderNumber = trim((string)($_POST['order_number'] ?? ''));
 if ($orderNumber === '' || !preg_match('~^[A-Za-z0-9_\-]{1,64}$~', $orderNumber)) {
     echo json_encode(['success' => false]);
@@ -35,6 +29,13 @@ if ($orderNumber === '' || !preg_match('~^[A-Za-z0-9_\-]{1,64}$~', $orderNumber)
 
 $claimToken = $_POST['claim_token'] ?? '';
 if (!is_string($claimToken) || !preg_match('/^[a-f0-9]{48}$/D', $claimToken)) { http_response_code(400); echo json_encode(['success'=>false]); exit; }
+$authorized = authorizedOrderByNumber($db, $orderNumber);
+if (!$authorized) {
+    http_response_code(404);
+    echo json_encode(['success' => false]);
+    exit;
+}
+$userId = (int)$authorized['user_id'];
 $db = new Database($GLOBALS['db']);
 $updated = $db->execute(
     "UPDATE orders

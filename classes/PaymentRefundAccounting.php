@@ -35,16 +35,7 @@ class PaymentRefundAccounting
         if ($payment->getId() !== $paymentId || $payment->getStatus() !== 'succeeded') {
             throw new RuntimeException('ЮKassa не подтвердила исходный платёж');
         }
-        $refunded = $payment->getRefundedAmount();
-        $currency = $payment->getAmount()->getCurrency();
-        if ($currency !== 'RUB' || ($refunded && $refunded->getCurrency() !== $currency)) {
-            throw new RuntimeException('Несовместимая валюта возврата');
-        }
-        $gross = self::kopecks($payment->getAmount()->getValue());
-        $refund = $refunded ? self::kopecks($refunded->getValue()) : 0;
-        if ($gross <= 0 || $refund > $gross) {
-            throw new RuntimeException('Некорректная сумма возврата ЮKassa');
-        }
+        [$gross, $refund, $currency] = self::amounts($payment);
         if ($apply && $refund > 0) {
             // GREATEST защищает от старого ответа API, завершившегося позже нового.
             // Повтор webhook и несколько возвратов не складывают один возврат дважды.
@@ -122,6 +113,27 @@ class PaymentRefundAccounting
         } while ($cursor);
         $stats['amount'] = round($stats['amount'], 2);
         return $stats;
+    }
+
+    public static function isFullyRefunded(object $payment): bool
+    {
+        [$gross, $refund] = self::amounts($payment);
+        return $gross === $refund;
+    }
+
+    private static function amounts(object $payment): array
+    {
+        $refunded = $payment->getRefundedAmount();
+        $currency = $payment->getAmount()->getCurrency();
+        if ($currency !== 'RUB' || ($refunded && $refunded->getCurrency() !== $currency)) {
+            throw new RuntimeException('Несовместимая валюта возврата');
+        }
+        $gross = self::kopecks($payment->getAmount()->getValue());
+        $refund = $refunded ? self::kopecks($refunded->getValue()) : 0;
+        if ($gross <= 0 || $refund > $gross) {
+            throw new RuntimeException('Некорректная сумма возврата ЮKassa');
+        }
+        return [$gross, $refund, $currency];
     }
 
     private static function kopecks(string $amount): int

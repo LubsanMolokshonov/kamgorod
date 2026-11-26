@@ -63,7 +63,7 @@ class CartRecommendation {
 
         foreach ($allItems as $item) {
             $raw = $item['raw_data'] ?? [];
-            if (isset($item['price'])) {
+            if (isset($item['price']) && empty($raw['group_batch_id'])) {
                 $cartPrices[] = (float)$item['price'];
             }
             if ($item['type'] === 'registration') {
@@ -81,7 +81,7 @@ class CartRecommendation {
             }
         }
 
-        $itemCount    = count($allItems);
+        $itemCount    = count($cartPrices);
         $cartMinPrice = !empty($cartPrices) ? min($cartPrices) : 0.0;
         // Акция 2+1: добавление одного товара завершает тройку, один из трёх станет бесплатным
         $isPromoUpsell = ($itemCount >= 2) && (($itemCount + 1) % 3 === 0);
@@ -335,21 +335,11 @@ class CartRecommendation {
             return null;
         }
 
-        $remaining = 3 - ($itemCount % 3);
-        if ($remaining === 3) {
-            $remaining = 0;
-        }
-
-        if ($remaining === 0) {
-            // Already at a multiple of 3, suggest getting one more set
-            return 'Добавьте ещё 2, чтобы получить ещё одно бесплатно!';
-        }
-
-        if ($remaining === 1) {
-            return 'Добавьте ещё 1 мероприятие и получите его БЕСПЛАТНО!';
-        }
-
-        return 'Добавьте ещё 2 мероприятия — третье бесплатно!';
+        return match ($itemCount % 3) {
+            2 => 'Ещё одно одиночное мероприятие завершит тройку. Скидка зависит от стоимости документов.',
+            1 => 'Ещё два одиночных мероприятия завершат тройку по акции «2+1».',
+            0 => 'Следующая скидка по акции «2+1» — при добавлении ещё трёх одиночных мероприятий.',
+        };
     }
 
     /**

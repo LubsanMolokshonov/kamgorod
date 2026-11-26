@@ -6,6 +6,7 @@
 
 session_start();
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/account-auth.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Webinar.php';
@@ -13,22 +14,6 @@ require_once __DIR__ . '/../classes/WebinarRegistration.php';
 require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../classes/WebinarQuiz.php';
 require_once __DIR__ . '/../includes/session.php';
-
-// Auto-login via cookie
-if (!isset($_SESSION['user_email']) && isset($_COOKIE['session_token'])) {
-    $userObj = new User($db);
-    $user = $userObj->findBySessionToken($_COOKIE['session_token']);
-    if ($user) {
-        $_SESSION['user_email'] = $user['email'];
-        $_SESSION['user_id'] = $user['id'];
-    }
-}
-
-// Auth check
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /vhod');
-    exit;
-}
 
 // Get registration ID
 $registrationId = intval($_GET['registration_id'] ?? 0);
@@ -47,8 +32,8 @@ if (!$registration) {
 }
 
 // Verify ownership
-if ($registration['user_id'] != $_SESSION['user_id']) {
-    header('Location: /kabinet?tab=events');
+if (!canAccessPurchaseResource($db, 'webinar_registration', $registrationId, (int)$registration['user_id'])) {
+    header('Location: /pages/login.php?return=' . rawurlencode('/kabinet/videolektsiya/' . $registrationId));
     exit;
 }
 
@@ -663,6 +648,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('webinar_id', form.querySelector('[name="webinar_id"]').value);
         formData.append('registration_id', form.querySelector('[name="registration_id"]').value);
         formData.append('answers', JSON.stringify(answers));
+        formData.append('csrf_token', <?= json_encode(generateCSRFToken()) ?>);
 
         fetch('/ajax/submit-autowebinar-quiz.php', {
             method: 'POST',

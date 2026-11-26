@@ -275,6 +275,7 @@ PROMPT;
         require_once __DIR__ . '/Publication.php';
         require_once __DIR__ . '/PublicationCertificate.php';
 
+        require_once __DIR__ . '/../includes/account-auth.php';
         $userObj = new User($this->pdo);
         $publicationObj = new Publication($this->pdo);
         $certObj = new PublicationCertificate($this->pdo);
@@ -293,11 +294,13 @@ PROMPT;
                 ]);
             } else {
                 $userId = $user['id'];
-                $userObj->update($userId, [
-                    'full_name' => $session['author_name'],
-                    'organization' => $session['organization'],
-                    'profession' => $session['position'] ?? $user['profession'],
-                ]);
+                if (verifiedAccountId($this->pdo) === (int)$userId) {
+                    $userObj->update($userId, [
+                        'full_name' => $session['author_name'],
+                        'organization' => $session['organization'],
+                        'profession' => $session['position'] ?? $user['profession'],
+                    ]);
+                }
             }
 
             // Определить тип публикации "article"
@@ -346,12 +349,7 @@ PROMPT;
 
             $this->pdo->commit();
 
-            // Установить сессию пользователя
-            $_SESSION['user_id'] = $userId;
-            $_SESSION['user_email'] = $session['email'];
-
-            $sessionTokenUser = $userObj->generateSessionToken($userId);
-            setcookie('session_token', $sessionTokenUser, time() + (30 * 24 * 60 * 60), '/', '', isset($_SERVER['HTTPS']), true);
+            grantGuestResource('publication', (int)$publicationId, (int)$userId);
 
             // Получить slug публикации
             $pub = $publicationObj->getById($publicationId);

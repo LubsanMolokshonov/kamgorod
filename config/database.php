@@ -36,4 +36,12 @@ try {
     }
 }
 
+// Старый код читает user_id напрямую. До чтения защищённых данных проверяем
+// происхождение сессии, включая скрипты, которые откроют её только после require.
+require_once __DIR__ . '/../includes/account-auth.php';
+if (PHP_SAPI !== 'cli' && (session_status() === PHP_SESSION_ACTIVE || isset($_COOKIE[session_name()]) || isset($_COOKIE['fgos_account']))) {
+    $wasOpen = session_status() === PHP_SESSION_ACTIVE;
+    verifiedAccountId($db);
+    if (!$wasOpen) session_write_close();
+}
 return $db;

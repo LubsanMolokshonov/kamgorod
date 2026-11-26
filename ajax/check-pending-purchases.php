@@ -14,6 +14,7 @@
 
 session_start();
 header('Content-Type: application/json');
+header('Cache-Control: private, no-store');
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
@@ -25,8 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$userId = (int)($_SESSION['user_id'] ?? 0);
-if (!$userId) {
+$userId = verifiedAccountId($db);
+$guestIds = array_keys($_SESSION['guest_resources']['order'] ?? []);
+if (!$userId && !$guestIds) {
     echo json_encode(['success' => true, 'orders' => []]);
     exit;
 }
@@ -49,11 +51,17 @@ $db = new Database($GLOBALS['db']);
 
 // Берём только заказы за последние 7 дней — старые не релевантны и могли уже
 // быть учтены руками (в случае ручной правки без metrika_sent_at).
-$params = [$userId];
-$sql = "SELECT id, order_number, final_amount, discount_amount, paid_at, subscription_plan_id,
+if ($userId) {
+    $params = [$userId];
+    $ownerFilter = 'user_id=?';
+} else {
+    $params = $guestIds;
+    $ownerFilter = 'id IN (' . implode(',', array_fill(0, count($guestIds), '?')) . ')';
+}
+$sql = "SELECT id, user_id, order_number, final_amount, discount_amount, paid_at, subscription_plan_id,
                utm_source, utm_medium, utm_campaign, utm_content, utm_term
         FROM orders
-        WHERE user_id = ?
+        WHERE $ownerFilter
           AND payment_status = 'succeeded'
           AND metrika_sent_at IS NULL
           AND paid_at >= NOW() - INTERVAL 7 DAY";
@@ -66,6 +74,9 @@ if (!empty($orderNumbers)) {
 $sql .= " ORDER BY paid_at DESC LIMIT 20";
 
 $rows = $db->query($sql, $params);
+if (!$userId) {
+    $rows = array_filter($rows, static fn(array $row): bool => guestOwnsOrder((int)$row['id'], (int)$row['user_id']));
+}
 if (empty($rows)) {
     echo json_encode(['success' => true, 'orders' => []]);
     exit;

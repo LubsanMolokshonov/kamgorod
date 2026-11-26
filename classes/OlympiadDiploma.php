@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/document-file.php';
 /**
  * OlympiadDiploma Class
  * Generates PDF diplomas for olympiad winners
@@ -115,7 +116,8 @@ class OlympiadDiploma {
 
             // Check existing diploma
             $existingDiploma = $this->findExistingDiploma($olympiadRegistrationId, $recipientType);
-            if ($existingDiploma && file_exists($this->uploadsDir . $existingDiploma['pdf_path'])) {
+            if ($existingDiploma && isIssuedDocumentPdf($this->uploadsDir . $existingDiploma['pdf_path'])) {
+                $this->updateRegistrationStatus($olympiadRegistrationId, 'diploma_ready');
                 return [
                     'success' => true,
                     'pdf_path' => '/uploads/diplomas/' . $existingDiploma['pdf_path'],
@@ -134,7 +136,7 @@ class OlympiadDiploma {
                 return ['success' => false, 'message' => 'Ошибка генерации PDF'];
             }
 
-            $this->saveDiplomaRecord($olympiadRegistrationId, $template['id'], $pdfFilename, $recipientType);
+            $this->saveDiplomaRecord($olympiadRegistrationId, $template['id'], $pdfFilename, $recipientType, (bool)$existingDiploma);
             $this->updateRegistrationStatus($olympiadRegistrationId, 'diploma_ready');
 
             return [
@@ -256,7 +258,8 @@ class OlympiadDiploma {
             ? ($registration['supervisor_organization'] ?? $registration['organization'])
             : $registration['organization'];
 
-        $recipientCity = $registration['city'] ?: $registration['user_city'];
+        $participantCity = $registration['city_from_form'] ? $registration['city'] : ($registration['city'] ?: $registration['user_city']);
+        $recipientCity = $recipientType === 'supervisor' ? ($registration['supervisor_city'] ?? $participantCity) : $participantCity;
 
         $tempDir = '/tmp/mpdf';
         if (!is_dir($tempDir)) {
@@ -431,7 +434,14 @@ HTML;
 HTML;
     }
 
-    private function saveDiplomaRecord($registrationId, $templateId, $pdfFilename, $recipientType) {
+    private function saveDiplomaRecord($registrationId, $templateId, $pdfFilename, $recipientType, bool $replacing) {
+        if ($replacing) {
+            // В старых схемах отсутствует уникальность пары заявка/получатель.
+            $stmt = $this->db->prepare("UPDATE olympiad_diplomas SET template_id=?, pdf_path=?, generated_at=NOW()
+                                       WHERE olympiad_registration_id=? AND recipient_type=?");
+            $stmt->execute([$templateId, $pdfFilename, $registrationId, $recipientType]);
+            return;
+        }
         $stmt = $this->db->prepare("
             INSERT INTO olympiad_diplomas (olympiad_registration_id, template_id, pdf_path, recipient_type, generated_at)
             VALUES (?, ?, ?, ?, NOW())

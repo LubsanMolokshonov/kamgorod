@@ -11,69 +11,32 @@ require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/material-tracking.php';
 require_once __DIR__ . '/../classes/UserTokens.php';
 
-// Безопасный возврат после входа: только относительный URL внутри сайта
-$returnUrl = $_GET['return'] ?? $_POST['return'] ?? '';
-if (!is_string($returnUrl) || $returnUrl === '' || $returnUrl[0] !== '/' || str_starts_with($returnUrl, '//')) {
-    $returnUrl = '/kabinet/';
-}
+require_once __DIR__ . '/../includes/account-login-mail.php';
 
-// If user is already logged in, redirect to cabinet (или return-параметр)
-if (isset($_SESSION['user_email'])) {
+$returnUrl = safeAccountReturnPath($_POST['return'] ?? $_GET['return'] ?? $_GET['redirect'] ?? '/kabinet/');
+if (verifiedAccountId($db)) {
     header('Location: ' . $returnUrl);
     exit;
 }
-
-// Handle form submission
-$error = '';
-$success = '';
-
+$error = $success = '';
+$email = is_string($_POST['email'] ?? null) ? trim($_POST['email']) : '';
+$fullName = is_string($_POST['full_name'] ?? null) ? trim($_POST['full_name']) : '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $fullName = trim($_POST['full_name'] ?? '');
-
-    $agreement = isset($_POST['agreement']);
-
-    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = 'Пожалуйста, введите корректный email';
-    } elseif (empty($fullName)) {
-        $error = 'Пожалуйста, введите ФИО';
-    } elseif (!$agreement) {
-        $error = 'Необходимо принять условия пользовательского соглашения и политики конфиденциальности';
+    if (!is_string($_POST['csrf'] ?? null) || !validateCSRFToken($_POST['csrf'])) {
+        $error = 'Обновите страницу и повторите запрос.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
+        $error = 'Введите корректный email';
+    } elseif (!isset($_POST['agreement'])) {
+        $error = 'Подтвердите согласие с условиями';
     } else {
         try {
-            // Check if user exists
-            $stmt = $db->prepare("SELECT id, email, full_name FROM users WHERE email = ?");
-            $stmt->execute([$email]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($user) {
-                // User exists, log them in
-                $_SESSION['user_email'] = $user['email'];
-                $_SESSION['user_id'] = $user['id'];
-                $success = 'Вход выполнен успешно!';
-
-                // Redirect to cabinet after short delay
-                header('Refresh: 1; URL=' . $returnUrl);
-            } else {
-                // Create new user
-                $stmt = $db->prepare("INSERT INTO users (email, full_name) VALUES (?, ?)");
-                $stmt->execute([$email, $fullName]);
-
-                $_SESSION['user_email'] = $email;
-                $_SESSION['user_id'] = $db->lastInsertId();
-                $success = 'Регистрация успешна! Перенаправление...';
-
-                // Redirect to cabinet after short delay
-                header('Refresh: 1; URL=' . $returnUrl);
-            }
-
-            // Атрибуция привлечения из воронки материалов (COALESCE — только если пусто)
-            persistMaterialUtmToUser($db, (int)$_SESSION['user_id']);
-            // Привязать анонимные превью-материалы к пользователю
-            claimAnonymousMaterials($db, (int)$_SESSION['user_id']);
-        } catch (PDOException $e) {
-            error_log("Login error: " . $e->getMessage());
-            $error = 'Произошла ошибка. Пожалуйста, попробуйте позже.';
+            requestAccountLoginEmail($db, $email, $fullName, $returnUrl);
+            $success = 'Письмо отправлено. Откройте ссылку в письме, чтобы продолжить.';
+        } catch (DomainException $e) {
+            $error = $e->getMessage();
+        } catch (Throwable $e) {
+            error_log('Отправка ссылки входа: ' . get_class($e));
+            $error = 'Не удалось отправить письмо. Попробуйте ещё раз через несколько минут.';
         }
     }
 }
@@ -116,6 +79,7 @@ include __DIR__ . '/../includes/header.php';
             <?php endif; ?>
 
             <form method="POST" class="login-form">
+                <input type="hidden" name="csrf" value="<?= htmlspecialchars(generateCSRFToken(), ENT_QUOTES, 'UTF-8') ?>">
                 <input type="hidden" name="return" value="<?php echo htmlspecialchars($returnUrl, ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="form-group">
                     <label for="email">Email *</label>
@@ -125,19 +89,19 @@ include __DIR__ . '/../includes/header.php';
                         name="email"
                         required
                         placeholder="example@mail.ru"
-                        value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
+                        value="<?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?>"
                     >
                 </div>
 
                 <div class="form-group">
-                    <label for="full_name">ФИО *</label>
+                    <label for="full_name">ФИО</label>
                     <input
                         type="text"
                         id="full_name"
                         name="full_name"
-                        required
+                        autocomplete="name"
                         placeholder="Иванов Иван Иванович"
-                        value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>"
+                        value="<?php echo htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8'); ?>"
                     >
                 </div>
 
@@ -153,7 +117,7 @@ include __DIR__ . '/../includes/header.php';
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-block">
-                    Войти / Зарегистрироваться
+                    <?= $success ? 'Отправить ссылку ещё раз' : 'Получить ссылку на почту' ?>
                 </button>
 
                 <p class="login-note">

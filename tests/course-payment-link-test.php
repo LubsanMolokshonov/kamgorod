@@ -2,6 +2,8 @@
 declare(strict_types=1);
 if (php_sapi_name() !== 'cli') { http_response_code(403); die('CLI only'); }
 
+session_start();
+
 define('PUBLIC_SITE_URL', 'https://example.test');
 define('CRM_COURSE_PAYMENT_LINK_SECRET', str_repeat('test-only:', 4));
 require_once __DIR__ . '/../includes/course-payment-link.php';
@@ -61,7 +63,6 @@ expectCoursePaymentLink(resolveCoursePaymentLinkOwner($pdo, 12, 13) === null, '�
 
 $_SESSION = ['cart' => [21]];
 $_COOKIE = ['session_token' => $rememberToken];
-expectCoursePaymentLink(getCourseCheckoutAccountId($pdo) === 17 && $_SESSION === ['cart' => [21]],
-    'Запомненный аккаунт распознаётся без входа и изменения корзины');
-$_SESSION['user_id'] = 8;
-expectCoursePaymentLink(getCourseCheckoutAccountId($pdo) === 8, 'Активный аккаунт имеет приоритет перед старой cookie');
+expectCoursePaymentLink(getCourseCheckoutAccountId($pdo) === null, 'Старая cookie не подтверждает аккаунт');
+$_SESSION = ['account_auth_version' => 2, 'verified_account_id' => 8, 'user_id' => 8];
+expectCoursePaymentLink(getCourseCheckoutAccountId($pdo) === 8, 'Подтверждённый аккаунт имеет приоритет');

@@ -24,9 +24,15 @@ if (!$resultId) {
 $quizObj = new OlympiadQuiz($db);
 $result = $quizObj->getResultById($resultId);
 
-if (!$result) {
+if (!$result || !canAccessPurchaseResource($db, 'olympiad_result', $resultId, (int)$result['user_id'])) {
     header('Location: /olimpiady');
     exit;
+}
+
+// Гость видит только сведения, которые ввёл в этой заявке.
+if (verifiedAccountId($db) === null) {
+    $submitted = $_SESSION['guest_result_details'][$resultId] ?? [];
+    foreach (['full_name', 'email', 'organization', 'city'] as $key) $result[$key] = $submitted[$key] ?? '';
 }
 
 // Extract result data

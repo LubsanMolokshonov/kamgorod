@@ -33,7 +33,8 @@ ob_start();
         <div style="font-size: 36px; margin-bottom: 8px;">&#10003;</div>
         <strong style="font-size: 18px; color: #16a34a;">Заявка зарегистрирована</strong>
         <p style="margin: 8px 0 0; font-size: 14px; color: #15803d;">
-            Ориентировочно ~<?php echo $formattedMonthly; ?> &#8381;/мес &times; <?php echo (int)$months; ?>
+            <?php if (isset($total_amount)): ?>Стоимость курса <?= number_format($total_amount, fmod($total_amount, 1.0) == 0.0 ? 0 : 2, ',', ' ') ?> ₽.<br><?php endif; ?>
+            Около <?php echo $formattedMonthly; ?> &#8381;/мес &times; <?php echo (int)$months; ?>
         </p>
     </div>
 

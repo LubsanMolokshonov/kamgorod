@@ -110,19 +110,6 @@ function courseCheckoutEnrollmentId(array $order): ?int
 /** Проверка обычного входа без установки user_id, обновления cookie и синхронизации корзины. */
 function getCourseCheckoutAccountId(PDO $pdo): ?int
 {
-    if (session_status() === PHP_SESSION_NONE && isset($_COOKIE[session_name()])) {
-        session_start(['read_and_close' => true, 'use_strict_mode' => true]);
-    }
-    $userId = (int)($_SESSION['user_id'] ?? 0);
-    if ($userId > 0) {
-        return $userId;
-    }
-
-    $token = $_COOKIE['session_token'] ?? null;
-    if (!is_string($token) || !preg_match('~\A[a-f0-9]{64}\z~', $token)) {
-        return null;
-    }
-    $statement = $pdo->prepare('SELECT id FROM users WHERE session_token = ?');
-    $statement->execute([$token]);
-    return (int)$statement->fetchColumn() ?: null;
+    require_once __DIR__ . '/account-auth.php';
+    return verifiedAccountId($pdo);
 }

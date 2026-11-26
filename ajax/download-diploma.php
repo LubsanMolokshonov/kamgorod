@@ -10,11 +10,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Diploma.php';
 require_once __DIR__ . '/../includes/session.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    die('Unauthorized');
-}
+header('Cache-Control: private, no-store');
 
 // Get parameters
 $registrationId = $_GET['registration_id'] ?? null;
@@ -34,10 +30,11 @@ if (!in_array($recipientType, ['participant', 'supervisor'])) {
 try {
     $diploma = new Diploma($db);
 
-    // Verify that user owns this registration
-    if (!$diploma->verifyOwnership($registrationId, $_SESSION['user_id'])) {
+    $owner = $db->prepare("SELECT user_id FROM registrations WHERE id=? AND status IN ('paid','diploma_ready')");
+    $owner->execute([(int)$registrationId]);
+    if (!canAccessPurchaseResource($db, 'registration', (int)$registrationId, (int)$owner->fetchColumn())) {
         http_response_code(403);
-        die('Access denied');
+        exit('Нет доступа к документу');
     }
 
     // Generate or retrieve diploma

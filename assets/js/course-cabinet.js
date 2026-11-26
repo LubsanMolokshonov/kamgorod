@@ -9,7 +9,7 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function() {
-        var csrfToken = window.csrfToken || '';
+        var csrfToken = window.csrfToken || document.querySelector('meta[name="csrf-token"]')?.content || '';
 
         // После возврата из ЮKassa перечитать статус заявки и доступные действия.
         window.addEventListener('pageshow', function(event) {
@@ -91,7 +91,9 @@
 
         document.querySelectorAll('.btn-request-installment').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!confirm('Оформить заявку на рассрочку 0% на 12 месяцев? Менеджер свяжется с вами для оформления.')) {
+                var months = Number(btn.dataset.expectedMonths);
+                var total = Number(btn.dataset.expectedAmountKopecks) / 100;
+                if (!confirm('Оформить рассрочку на ' + total.toLocaleString('ru-RU') + ' ₽ на ' + months + ' мес.?')) {
                     return;
                 }
                 var enrollmentId = btn.dataset.enrollmentId;
@@ -104,20 +106,21 @@
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'csrf_token=' + encodeURIComponent(csrfToken)
                         + '&enrollment_id=' + encodeURIComponent(enrollmentId)
+                        + '&expected_amount_kopecks=' + encodeURIComponent(btn.dataset.expectedAmountKopecks)
+                        + '&expected_months=' + encodeURIComponent(btn.dataset.expectedMonths)
                 })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data && data.success) {
                         var actions = btn.closest('.checkout-item-actions');
-                        if (actions) {
-                            actions.innerHTML =
+                        if (!actions) { window.location.reload(); return; }
+                        actions.innerHTML =
                                 '<div class="installment-requested-badge">' +
                                   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
                                     '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' +
                                   '</svg>' +
                                   'Заявка на рассрочку отправлена. Менеджер свяжется в рабочее время.' +
                                 '</div>';
-                        }
                         // Сразу предложить написать в Max — это ускоряет согласование рассрочки.
                         var maxModal = document.getElementById('maxCtaModal');
                         if (maxModal) {
@@ -127,6 +130,12 @@
                         alert((data && data.error) || 'Не удалось оформить заявку');
                         btn.disabled = false;
                         btn.innerHTML = orig;
+                        if (data && data.code === 'price_changed') {
+                            btn.dataset.expectedAmountKopecks = data.quote.amount_kopecks;
+                            btn.dataset.expectedMonths = data.quote.months;
+                            btn.querySelector('.installment-monthly-hint').textContent =
+                                '~' + data.quote.monthly.toLocaleString('ru-RU') + ' ₽/мес × ' + data.quote.months;
+                        }
                     }
                 })
                 .catch(function() {

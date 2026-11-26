@@ -12,22 +12,7 @@ require_once __DIR__ . '/../classes/WebinarRegistration.php';
 require_once __DIR__ . '/../classes/WebinarCertificate.php';
 require_once __DIR__ . '/../includes/session.php';
 
-// Auto-login via cookie if session doesn't exist
-if (!isset($_SESSION['user_email']) && isset($_COOKIE['session_token'])) {
-    $userObj = new User($db);
-    $user = $userObj->findBySessionToken($_COOKIE['session_token']);
-    if ($user) {
-        $_SESSION['user_email'] = $user['email'];
-        $_SESSION['user_id'] = $user['id'];
-    }
-}
-
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    $redirectUrl = '/pages/webinar-certificate.php?registration_id=' . ($_GET['registration_id'] ?? '');
-    header('Location: /pages/login.php?redirect=' . urlencode($redirectUrl));
-    exit;
-}
+verifiedAccountId($db);
 
 // Get registration ID from URL
 $registrationId = intval($_GET['registration_id'] ?? 0);
@@ -47,8 +32,8 @@ if (!$registration) {
 }
 
 // Verify ownership
-if ($registration['user_id'] != $_SESSION['user_id']) {
-    header('Location: /pages/cabinet.php?tab=events');
+if (!canAccessPurchaseResource($db, 'webinar_registration', $registrationId, (int)$registration['user_id'])) {
+    header('Location: /vhod/?return=' . rawurlencode('/pages/webinar-certificate.php?registration_id=' . $registrationId));
     exit;
 }
 
@@ -81,7 +66,7 @@ $existingCert = $webCertObj->getByRegistrationId($registrationId);
 
 // Get user data for pre-populating form
 $userStmt = $db->prepare("SELECT * FROM users WHERE id = ?");
-$userStmt->execute([$_SESSION['user_id']]);
+$userStmt->execute([verifiedAccountId($db) ?? 0]);
 $userData = $userStmt->fetch(PDO::FETCH_ASSOC);
 
 // Webinar date formatting
@@ -92,7 +77,7 @@ $certificateHours = $registration['certificate_hours'] ?? 2;
 // A/B-тест: в варианте B сертификат выдаётся только по подписке (не-подписчику).
 require_once __DIR__ . '/../classes/SubscriptionService.php';
 require_once __DIR__ . '/../classes/PricingMode.php';
-$pmIsSubscriber     = (new SubscriptionService($db))->coversCertificates((int)$_SESSION['user_id']);
+$pmIsSubscriber     = (new SubscriptionService($db))->coversCertificates((int)verifiedAccountId($db));
 $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
 
 // Get diploma templates for certificate background selection

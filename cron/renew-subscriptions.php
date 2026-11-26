@@ -30,24 +30,13 @@ TelegramNotifier::registerFatalHandler('renew-subscriptions');
 
 $lockFile = '/tmp/renew_subscriptions_cron.lock';
 
-if (file_exists($lockFile)) {
-    $lockAge = time() - filemtime($lockFile);
-    if ($lockAge > 600) {
-        unlink($lockFile);
-        echo date('Y-m-d H:i:s') . " - Removed stale lock file.\n";
-        TelegramNotifier::instance($db)->alert(
-            'cron_stale_lock_renew_subscriptions',
-            '[Cron] Удалён зависший lock: renew-subscriptions',
-            ['lock_file' => $lockFile, 'age_sec' => $lockAge],
-            'warning'
-        );
-    } else {
-        echo date('Y-m-d H:i:s') . " - Another instance is running. Exiting.\n";
-        exit(0);
-    }
+if (!SUBSCRIPTION_AUTORENEW_ENABLED) {
+    exit(0);
 }
-
-file_put_contents($lockFile, getmypid());
+$lock = fopen($lockFile, 'c');
+if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
+    exit(0);
+}
 
 try {
     echo date('Y-m-d H:i:s') . " - Starting subscription renewals...\n";
@@ -73,7 +62,6 @@ try {
     );
 
 } finally {
-    if (file_exists($lockFile)) {
-        unlink($lockFile);
-    }
+    flock($lock, LOCK_UN);
+    fclose($lock);
 }

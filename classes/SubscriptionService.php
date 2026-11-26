@@ -17,6 +17,7 @@
  */
 
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/SubscriptionPeriods.php';
 
 class SubscriptionService
 {
@@ -54,7 +55,7 @@ class SubscriptionService
                   WHERE us.user_id = ?
                     AND us.status = 'active'
                     AND (us.expires_at IS NULL OR us.expires_at > NOW())
-                  ORDER BY us.expires_at DESC, us.id DESC
+                  ORDER BY us.expires_at IS NULL DESC, us.expires_at DESC, us.id DESC
                   LIMIT 1",
                 [$userId]
             );
@@ -116,108 +117,24 @@ class SubscriptionService
      */
     public function activate(int $userId, int $planId, string $period, ?int $orderId = null, ?string $paymentMethodId = null, ?string $cardLast4 = null, ?string $cardType = null): int
     {
-        if (!in_array($period, ['monthly', 'yearly'], true)) {
-            throw new InvalidArgumentException("Недопустимый period='{$period}'");
-        }
+        $result = $this->applyPeriod($userId, $planId, $period, $orderId, [
+            'id' => $paymentMethodId, 'last4' => $cardLast4, 'type' => $cardType,
+        ]);
+        return $result['id'];
+    }
 
-        $this->db->beginTransaction();
-        try {
-            // Идемпотентность: этот заказ уже активирован?
-            if ($orderId) {
-                $exists = $this->db->queryOne(
-                    "SELECT id FROM user_subscriptions WHERE order_id = ? LIMIT 1",
-                    [$orderId]
-                );
-                if ($exists) {
-                    $this->db->commit();
-                    self::$activeCache = [];
-                    return (int)$exists['id'];
-                }
-            }
-
-            $plan = $this->db->queryOne("SELECT * FROM subscription_plans WHERE id = ?", [$planId]);
-            if (!$plan) {
-                throw new RuntimeException("Тариф #{$planId} не найден");
-            }
-
-            $interval = $period === 'yearly' ? 'INTERVAL 1 YEAR' : 'INTERVAL 1 MONTH';
-
-            // Текущая активная подписка пользователя (для продления/апгрейда).
-            $current = $this->db->queryOne(
-                "SELECT * FROM user_subscriptions
-                  WHERE user_id = ? AND status = 'active'
-                    AND (expires_at IS NULL OR expires_at > NOW())
-                  ORDER BY expires_at DESC, id DESC LIMIT 1",
-                [$userId]
-            );
-
-            $subId = 0;
-            if ($current && (int)$current['plan_id'] === $planId) {
-                // Продление того же плана: expires_at от конца текущего периода.
-                // Успешное продление закрывает цикл попыток автосписания (renewal_attempt_count → 0).
-                // Карту обновляем только если пришла новая (COALESCE сохраняет привязанную ранее).
-                $this->db->execute(
-                    "UPDATE user_subscriptions
-                        SET expires_at = DATE_ADD(GREATEST(expires_at, NOW()), {$interval}),
-                            period = ?, order_id = ?, last_renewed_at = NOW(),
-                            yookassa_payment_method_id = COALESCE(?, yookassa_payment_method_id),
-                            card_last4 = COALESCE(?, card_last4),
-                            card_type  = COALESCE(?, card_type),
-                            renewal_attempt_count = 0,
-                            status = 'active'
-                      WHERE id = ?",
-                    [$period, $orderId, $paymentMethodId, $cardLast4, $cardType, $current['id']]
-                );
-                $subId = (int)$current['id'];
-            } else {
-                // Апгрейд/даунгрейд: экспайрим старую (если была), создаём новую.
-                if ($current) {
-                    $this->db->execute(
-                        "UPDATE user_subscriptions SET status = 'expired' WHERE id = ?",
-                        [$current['id']]
-                    );
-                }
-                $subId = (int)$this->db->insert('user_subscriptions', [
-                    'user_id' => $userId,
-                    'plan_id' => $planId,
-                    'order_id' => $orderId,
-                    'period' => $period,
-                    'status' => 'active',
-                    'auto_renew' => $paymentMethodId ? 1 : 0,
-                    'yookassa_payment_method_id' => $paymentMethodId,
-                    'card_last4' => $cardLast4,
-                    'card_type' => $cardType,
-                ]);
-                // started_at/expires_at пишем через MySQL NOW(), а не PHP date() —
-                // чтобы started_at и token_transactions.created_at жили на ОДНИХ часах
-                // (иначе TZ-расхождение PHP/MySQL ломает идемпотентность месячного гранта).
-                $this->db->execute(
-                    "UPDATE user_subscriptions
-                        SET started_at = NOW(), expires_at = DATE_ADD(NOW(), {$interval})
-                      WHERE id = ?",
-                    [$subId]
-                );
-            }
-
-            $this->db->commit();
-            self::$activeCache = []; // сбросить кэш — подписка изменилась
-        } catch (\Throwable $e) {
-            if ($this->pdo->inTransaction()) {
-                $this->db->rollback();
-            }
-            throw $e;
-        }
-
-        // Первая порция токенов для Базового (вне транзакции подписки — грант идемпотентен сам).
-        if ($plan['monthly_generation_tokens'] !== null) {
+    public function applyPeriod(int $userId, int $planId, string $period, ?int $orderId, array $card, bool $renewal = false): array
+    {
+        $result = (new SubscriptionPeriods($this->pdo))->grant($userId, $planId, $period, $orderId, $card, $renewal);
+        self::$activeCache = [];
+        if ($result['applied']) {
             try {
                 $this->grantMonthlyTokensIfDue($userId);
-            } catch (\Throwable $e) {
-                error_log('SubscriptionService::activate grant tokens: ' . $e->getMessage());
+            } catch (Throwable $e) {
+                error_log('Ошибка начисления токенов подписки для заказа #' . (int)$orderId);
             }
         }
-
-        return $subId;
+        return $result;
     }
 
     /**
@@ -291,13 +208,14 @@ class SubscriptionService
      */
     public function cancelAutoRenew(int $userId): bool
     {
-        $affected = $this->db->execute(
+        require_once __DIR__ . '/SubscriptionPayments.php';
+        $affected = SubscriptionPayments::withUserLock($this->pdo, $userId, fn() => $this->db->execute(
             "UPDATE user_subscriptions
                 SET auto_renew = 0, cancelled_at = NOW(),
                     yookassa_payment_method_id = NULL, card_last4 = NULL, card_type = NULL
               WHERE user_id = ? AND status = 'active' AND auto_renew = 1",
             [$userId]
-        );
+        ));
         self::$activeCache = [];
         return $affected > 0;
     }

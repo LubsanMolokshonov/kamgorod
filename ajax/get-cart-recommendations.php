@@ -30,105 +30,38 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit;
 }
 
+require_once __DIR__ . '/../includes/cart-quote.php';
+require_once __DIR__ . '/../classes/CartPaymentRetry.php';
+
 try {
-    // Check if cart is empty
-    if (isCartEmpty()) {
+    $userId = verifiedAccountId($db);
+    refreshCheckoutCart($userId);
+    $documents = loadCartDocuments($db, $userId);
+    $allItems = CartPaymentRetry::unreservedItems($documents, CartPaymentRetry::openOrders($db, $userId));
+    if (!$allItems) {
         echo json_encode(['success' => true, 'recommendations' => [], 'promotionHint' => null]);
-        exit;
+        return;
     }
-
-    // Build allItems array (same logic as cart.php lines 32-85)
-    $allItems = [];
-
-    $registrations = getCart();
-    $registrationObj = new Registration($db);
-    foreach ($registrations as $regId) {
-        $registration = $registrationObj->getById($regId);
-        if ($registration) {
-            $allItems[] = [
-                'type' => 'registration',
-                'id' => $regId,
-                'price' => (float)$registration['competition_price'],
-                'raw_data' => $registration,
-            ];
-        }
-    }
-
-    $certificates = getCartCertificates();
-    $certObj = new PublicationCertificate($db);
-    foreach ($certificates as $certId) {
-        $cert = $certObj->getById($certId);
-        if ($cert) {
-            $allItems[] = [
-                'type' => 'certificate',
-                'id' => $cert['id'],
-                'price' => (float)($cert['price'] ?? PUBLICATION_CERTIFICATE_PRICE),
-                'raw_data' => $cert,
-            ];
-        }
-    }
-
-    $webinarCertificates = getCartWebinarCertificates();
-    $webCertObj = new WebinarCertificate($db);
-    foreach ($webinarCertificates as $webCertId) {
-        $webCert = $webCertObj->getById($webCertId);
-        if ($webCert) {
-            $allItems[] = [
-                'type' => 'webinar_certificate',
-                'id' => $webCert['id'],
-                'price' => (float)($webCert['price'] ?? 200),
-                'raw_data' => $webCert,
-            ];
-        }
-    }
-
-    // Olympiad registrations
-    $olympiadRegistrations = getCartOlympiadRegistrations();
-    $olympRegObj = new OlympiadRegistration($db);
-    foreach ($olympiadRegistrations as $olympRegId) {
-        $olympReg = $olympRegObj->getById($olympRegId);
-        if ($olympReg) {
-            $allItems[] = [
-                'type' => 'olympiad_registration',
-                'id' => $olympReg['id'],
-                'price' => (float)($olympReg['diploma_price'] ?? 229),
-                'raw_data' => $olympReg,
-            ];
-        }
-    }
-
-    if (empty($allItems)) {
-        echo json_encode(['success' => true, 'recommendations' => [], 'promotionHint' => null]);
-        exit;
-    }
-
-    $userId = $_SESSION['user_id'] ?? null;
     $recommendation = new CartRecommendation($db);
-
-    $recommendations = $recommendation->getRecommendationsLegacy($allItems, $userId, 3);
-    $promotionHint = $recommendation->getPromotionHint(count($allItems));
-
-    // Determine if adding 1 item would complete a 2+1 set
-    $remaining = 3 - (count($allItems) % 3);
-    if ($remaining === 3) {
-        $remaining = 0;
+    $cards = $recommendation->getRecommendationsLegacy($allItems, $userId, 3);
+    $subscriber = $userId && (new SubscriptionService($db))->coversCertificates($userId);
+    $existing = applyCartPromotion($allItems);
+    $oneMore = !$subscriber && $existing['eligible_count'] % 3 === 2;
+    if ($oneMore) {
+        foreach ($cards as &$card) {
+            $price = (float)($card['price'] ?? 0);
+            $candidate = ['type' => $card['type'], 'id' => $card['id'], 'price' => $price, 'raw_data' => [], 'is_free' => false];
+            $future = applyCartPromotion([...$allItems, $candidate]);
+            $card['will_be_free'] = in_array($card['type'], ['competition', 'webinar_certificate', 'olympiad', 'publication_certificate'], true) && $price > 0 && (int)round(($future['discount'] - $existing['discount'] - $price) * 100) === 0;
+        }
+        unset($card);
     }
-    $oneMoreForFree = ($remaining === 1);
-
     echo json_encode([
-        'success' => true,
-        'recommendations' => $recommendations,
-        'promotionHint' => $promotionHint,
-        'oneMoreForFree' => $oneMoreForFree,
-        'cartCount' => count($allItems),
-    ]);
-
+        'success' => true, 'recommendations' => $cards,
+        'promotionHint' => $subscriber ? null : $recommendation->getPromotionHint($existing['eligible_count']),
+        'oneMoreForFree' => $oneMore, 'cartCount' => count($allItems),
+    ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
-    error_log("Cart recommendations error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
-    echo json_encode([
-        'success' => false,
-        'message' => 'Ошибка загрузки рекомендаций',
-        'debug_error' => $e->getMessage(),
-        'debug_file' => basename($e->getFile()) . ':' . $e->getLine(),
-    ]);
+    error_log('Ошибка загрузки рекомендаций корзины: ' . get_class($e));
+    echo json_encode(['success' => false, 'message' => 'Не удалось загрузить рекомендации.']);
 }

@@ -8,6 +8,7 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/account-auth.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Publication.php';
@@ -79,6 +80,10 @@ try {
               ORDER BY id DESC LIMIT 1",
             [$dedupUser['id'], trim($_POST['title'])]
         );
+        if ($dup && !canAccessPurchaseResource($db, 'publication', (int)$dup['id'], (int)$dedupUser['id'])) {
+            echo json_encode(['success' => true, 'duplicate' => true, 'redirect_url' => '/pages/login.php?return=%2Fkabinet%2F', 'message' => 'Проверьте публикацию в личном кабинете.']);
+            exit;
+        }
         if ($dup) {
             echo json_encode([
                 'success'        => true,
@@ -117,17 +122,19 @@ try {
         ]);
     } else {
         $userId = $user['id'];
-        // Update user info if needed. Телефон заполняем только если в профиле пусто,
-        // чтобы не затирать ранее сохранённый номер.
-        $updateData = [
-            'full_name' => $_POST['author_name'],
-            'organization' => $_POST['organization'],
-            'profession' => $_POST['position'] ?? $user['profession']
-        ];
-        if (empty($user['phone'])) {
-            $updateData['phone'] = $phone;
+        if (verifiedAccountId($db) === (int)$userId) {
+            // Update user info if needed. Телефон заполняем только если в профиле пусто,
+            // чтобы не затирать ранее сохранённый номер.
+            $updateData = [
+                'full_name' => $_POST['author_name'],
+                'organization' => $_POST['organization'],
+                'profession' => $_POST['position'] ?? $user['profession']
+            ];
+            if (empty($user['phone'])) {
+                $updateData['phone'] = $phone;
+            }
+            $userObj->update($userId, $updateData);
         }
-        $userObj->update($userId, $updateData);
     }
 
     // Upload file
@@ -188,15 +195,8 @@ try {
         'price' => (float)PUBLICATION_CERTIFICATE_PRICE
     ]);
 
-    // Set session
-    $_SESSION['user_id'] = $userId;
-    $_SESSION['user_email'] = $email;
-
-    // Generate session token for auto-login
-    $sessionToken = $userObj->generateSessionToken($userId);
-    setcookie('session_token', $sessionToken, time() + (30 * 24 * 60 * 60), '/', '', isset($_SERVER['HTTPS']), true);
-
     $db->commit();
+    grantGuestResource('publication', (int)$publicationId, (int)$userId);
 
     // === AI Moderation via Yandex GPT ===
     $moderationStatus = 'pending';

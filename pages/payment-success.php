@@ -9,6 +9,7 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/group-pricing.php';
 require_once __DIR__ . '/../includes/course-payment-link.php';
 
 // Get order number from URL
@@ -23,8 +24,11 @@ $orderNumber = $_GET['order_number'];
 $orderObj = new Order($db);
 $order = $orderObj->getByOrderNumber($orderNumber);
 
-if (!$order) {
-    header('Location: /');
+header('Cache-Control: private, no-store');
+header('Referrer-Policy: no-referrer');
+$accountId = verifiedAccountId($db);
+if (!$order || !canAccessPurchaseResource($db, 'order', (int)$order['id'], (int)$order['user_id'])) {
+    header('Location: /vhod/?return=' . rawurlencode('/pages/payment-success.php?order_number=' . rawurlencode($orderNumber)), true, 303);
     exit;
 }
 
@@ -36,39 +40,24 @@ if ($courseEnrollmentId !== null) {
     exit;
 }
 
-session_start();
 $paymentStatus = $order['payment_status'];
-$userId = $order['user_id'];
-
-// Auto-login user
+$userId = (int)$order['user_id'];
+$downloadUrls = [
+    'registration_id' => ['registration', '/ajax/download-diploma.php?registration_id='],
+    'olympiad_registration_id' => ['olympiad_reg', '/ajax/download-olympiad-diploma.php?id='],
+    'webinar_certificate_id' => ['webinar_cert', '/ajax/download-webinar-certificate.php?id='],
+    'certificate_id' => ['publication_cert', '/ajax/download-certificate.php?id='],
+];
 if ($paymentStatus === 'succeeded') {
-    $userObj = new User($db);
-
-    // Generate session token
-    $sessionToken = $userObj->generateSessionToken($userId);
-
-    // Set cookie for 30 days
-    setcookie(
-        'session_token',
-        $sessionToken,
-        time() + (30 * 24 * 60 * 60),
-        '/',
-        '',
-        isset($_SERVER['HTTPS']),
-        true
-    );
-
-    // Set session variables
-    $_SESSION['user_id'] = $userId;
-    $_SESSION['user_email'] = $order['email'];
-
-    // Чистим оплаченные позиции в cart_items (yookassa-webhook делает то же —
-    // но webhook может прийти позже, а юзер уже на success-странице).
-    // Остальные позиции (без резерва за этим заказом) — оставляем: пользователь
-    // мог в другом окне накидать что-то ещё.
-    removeCartItemsByOrderId((int)$order['id']);
-    // Сессионные массивы (все 4) — старая логика чистила только cart, теперь все.
-    clearCart();
+    foreach ($order['items'] as $item) {
+        foreach ($downloadUrls as $column => [$type]) {
+            if (empty($item[$column])) continue;
+            $id = (int)$item[$column];
+            if ($accountId === null) grantGuestResource($type, $id, $userId);
+            $key = CART_TYPES[$type];
+            $_SESSION[$key] = array_values(array_diff($_SESSION[$key] ?? [], [$id]));
+        }
+    }
 }
 
 $cabinetUrl = '/pages/cabinet.php?tab=events';
@@ -224,7 +213,7 @@ include __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Сумма:</span>
-                    <span class="detail-value"><?php echo number_format($order['final_amount'], 0, ',', ' '); ?> ₽</span>
+                    <span class="detail-value"><?php echo groupFormatMoney((float)$order['final_amount']); ?> ₽</span>
                 </div>
             </div>
 
@@ -248,7 +237,7 @@ include __DIR__ . '/../includes/header.php';
                     fetch('/api/check-payment.php?order_number=<?php echo urlencode($orderNumber); ?>')
                         .then(response => response.json())
                         .then(data => {
-                            if (data.status === 'succeeded') {
+                            if (data.status === 'succeeded' || data.status === 'refunded') {
                                 location.reload();
                             } else if (data.status === 'failed' || data.status === 'canceled') {
                                 location.href = '/pages/payment-failure.php?order_number=<?php echo urlencode($orderNumber); ?>';
@@ -278,6 +267,10 @@ include __DIR__ . '/../includes/header.php';
                 setTimeout(checkPaymentStatus, 3000);
             </script>
 
+        <?php elseif ($paymentStatus === 'refunded'): ?>
+            <h1>Оплата возвращена</h1>
+            <p>Статус заказа обновлён после возврата. Подробности доступны в личном кабинете.</p>
+            <a class="btn-cabinet" href="<?= $cabinetUrl ?>">Перейти в кабинет</a>
         <?php elseif ($paymentStatus === 'succeeded'): ?>
             <!-- Success State -->
             <div class="success-icon">✅</div>
@@ -298,12 +291,12 @@ include __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Сумма к оплате:</span>
-                    <span class="detail-value"><?php echo number_format($order['final_amount'], 0, ',', ' '); ?> ₽</span>
+                    <span class="detail-value"><?php echo groupFormatMoney((float)$order['final_amount']); ?> ₽</span>
                 </div>
                 <?php if ($order['discount_amount'] > 0): ?>
                 <div class="detail-row">
                     <span class="detail-label">Скидка (2+1):</span>
-                    <span class="detail-value" style="color: #10b981;">-<?php echo number_format($order['discount_amount'], 0, ',', ' '); ?> ₽</span>
+                    <span class="detail-value" style="color: #10b981;">-<?php echo groupFormatMoney((float)$order['discount_amount']); ?> ₽</span>
                 </div>
                 <?php endif; ?>
 
@@ -328,7 +321,12 @@ include __DIR__ . '/../includes/header.php';
                                     Номинация: <?php echo htmlspecialchars($item['nomination']); ?>
                                 </small>
                             <?php endif; ?>
-                            <?php if ($item['is_free_promotion']): ?>
+                            <?php foreach ($downloadUrls as $column => [$type, $path]): ?>
+                                <?php if (!empty($item[$column])): ?><a href="<?= $path . (int)$item[$column] ?>">Скачать документ</a><?php endif; ?>
+                            <?php endforeach; ?>
+                            <?php if (!empty($item['covered_by_subscription'])): ?>
+                                <small>Входит в подписку</small>
+                            <?php elseif ($item['is_free_promotion']): ?>
                                 <small><span style="color: #10b981; font-weight: 600;"> • БЕСПЛАТНО (акция 2+1)</span></small>
                             <?php endif; ?>
                         </li>
@@ -338,11 +336,14 @@ include __DIR__ . '/../includes/header.php';
 
             <p style="margin-top: 24px;">
                 <strong>Дипломы и сертификаты доступны для скачивания в личном кабинете.</strong>
-                Подтверждение оплаты отправлено на email <strong><?php echo htmlspecialchars($order['email']); ?></strong>
+                <?php if ($accountId !== null): ?>
+                    Адрес для подтверждения оплаты: <strong><?= htmlspecialchars($order['email'], ENT_QUOTES, 'UTF-8') ?></strong>
+                <?php endif; ?>
             </p>
 
             <a href="<?php echo $cabinetUrl; ?>" class="btn-cabinet">Перейти в личный кабинет</a>
 
+            <?php if ($accountId !== null): ?>
             <div class="auto-redirect">
                 Автоматический переход в личный кабинет через <span id="countdown">15</span> секунд...
             </div>
@@ -393,6 +394,7 @@ include __DIR__ . '/../includes/header.php';
             })();
             </script>
 
+            <?php endif; ?>
             <script>
             // Общий отправитель повторно проверяет succeeded, владельца и аренду на сервере.
             window.fgosSuccessOrder = <?= json_encode($order['order_number'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;

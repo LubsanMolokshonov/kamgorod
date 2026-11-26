@@ -19,36 +19,38 @@ require_once __DIR__ . '/../classes/ParticipantGroup.php';
 require_once __DIR__ . '/../includes/group-pricing.php';
 require_once __DIR__ . '/../classes/SubscriptionService.php';
 require_once __DIR__ . '/../classes/PricingMode.php';
-require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/cart-quote.php';
+require_once __DIR__ . '/../classes/CartPaymentRetry.php';
 
-// A/B-тест: в варианте B документы оформляются только по подписке.
-$pmCartUserId      = $_SESSION['user_id'] ?? null;
-$pmIsSubscriber    = $pmCartUserId ? (new SubscriptionService($db))->coversCertificates((int)$pmCartUserId) : false;
+$accountId = verifiedAccountId($db);
+refreshCheckoutCart($accountId);
+$documents = loadCartDocuments($db, $accountId);
+$openOrders = CartPaymentRetry::openOrders($db, $accountId);
+$quote = quoteCart($db, CartPaymentRetry::unreservedItems($documents, $openOrders), $accountId);
+$pmIsSubscriber = $quote['subscriber'];
 $pmSubscriptionOnly = PricingMode::isSubscriptionOnly() && !$pmIsSubscriber;
-
-// Check if cart exists
-$registrations = getCart();
-$certificates = getCartCertificates();
-sort($registrations, SORT_NUMERIC);
-sort($certificates, SORT_NUMERIC);
-
-// Общие дефолты для loyalty (перекрываются ниже при наличии статуса)
-$loyaltyDiscount = 0;
-$hasLoyalty = false;
-$loyaltyRatePercent = (int)round(LoyaltyDiscount::RATE_CART * 100); // дефолт; перезапишется ниже если пользователь авторизован
-// Скидка по email-кампании (10% молчащим пользователям)
-$campaignDiscount = 0;
-$hasCampaignDiscount = false;
-$campaignRatePercent = 0;
-$campaignExpiresAt = null;
-
-if (isCartEmpty()) {
+$allItems = $quote['items'];
+$subtotal = $quote['subtotal'];
+$discount = $quote['discount'];
+$groupDiscount = $quote['group_discount'];
+$grandTotal = $quote['total'];
+$promotionApplied = $discount > 0;
+$eligibleCount = $quote['eligible_count'];
+$loyaltyDiscount = $quote['loyalty'];
+$hasLoyalty = $loyaltyDiscount > 0;
+$loyaltyRatePercent = (int)round($quote['loyalty_rate'] * 100);
+$campaignDiscount = $quote['campaign_amount'];
+$hasCampaignDiscount = $campaignDiscount > 0;
+$campaignRatePercent = (int)round(($quote['campaign']['rate'] ?? 0) * 100);
+$campaignExpiresAt = $quote['campaign']['expires_at'] ?? null;
+$isEmpty = !$allItems;
+if ($isEmpty && !$openOrders) {
     // Smart redirect: если пользователь пришёл по ссылке из устаревшего письма-напоминания
     // («оплатите диплом»), а заказ уже оплачен, не показываем пустую корзину —
     // ведём в кабинет. Это снимает жалобы вида «ссылки не работают / просят оплатить
     // повторно» (см. инциденты май 2026, пользователи 5045/5723).
-    if (!empty($_SESSION['user_id']) && empty($_GET['no_redirect'])) {
-        $uid = (int)$_SESSION['user_id'];
+    if ($accountId !== null && empty($_GET['no_redirect'])) {
+        $uid = $accountId;
         $recentPaid = $db->prepare(
             "SELECT 1 FROM (
                 SELECT created_at FROM registrations
@@ -67,172 +69,6 @@ if (isCartEmpty()) {
         }
     }
 
-    // Show empty cart page
-    $isEmpty = true;
-    $allItems = [];
-    $subtotal = 0;
-    $discount = 0;
-    $groupDiscount = 0;
-    $grandTotal = 0;
-    $promotionApplied = false;
-} else {
-    $isEmpty = false;
-
-    // Collect ALL items into one array for unified promotion calculation
-    $allItems = [];
-
-    // Get registrations
-    $registrationObj = new Registration($db);
-    foreach ($registrations as $regId) {
-        $registration = $registrationObj->getById($regId);
-        if ($registration) {
-            $allItems[] = [
-                'type' => 'registration',
-                'id' => $regId,
-                'name' => $registration['competition_title'],
-                'meta' => 'Номинация: ' . $registration['nomination'],
-                'price' => (float)$registration['competition_price'],
-                'is_free' => false,
-                'raw_data' => $registration
-            ];
-        }
-    }
-
-    // Get certificates
-    $certObj = new PublicationCertificate($db);
-    foreach ($certificates as $certId) {
-        $cert = $certObj->getById($certId);
-        if ($cert) {
-            $allItems[] = [
-                'type' => 'certificate',
-                'id' => $cert['id'],
-                'name' => $cert['publication_title'],
-                'meta' => 'Свидетельство о публикации • ' . $cert['author_name'],
-                'price' => (float)($cert['price'] ?? PUBLICATION_CERTIFICATE_PRICE),
-                'is_free' => false,
-                'raw_data' => $cert
-            ];
-        }
-    }
-
-    // Get webinar certificates
-    $webCertObj = new WebinarCertificate($db);
-    $webinarCertificates = getCartWebinarCertificates();
-    sort($webinarCertificates, SORT_NUMERIC);
-    foreach ($webinarCertificates as $webCertId) {
-        $webCert = $webCertObj->getById($webCertId);
-        if ($webCert) {
-            $allItems[] = [
-                'type' => 'webinar_certificate',
-                'id' => $webCert['id'],
-                'name' => $webCert['webinar_title'],
-                'meta' => 'Сертификат участника вебинара • ' . $webCert['full_name'],
-                'price' => (float)($webCert['price'] ?? 200),
-                'is_free' => false,
-                'raw_data' => $webCert
-            ];
-        }
-    }
-
-    // Get olympiad registrations
-    $olympRegObj = new OlympiadRegistration($db);
-    $olympiadRegistrations = getCartOlympiadRegistrations();
-    sort($olympiadRegistrations, SORT_NUMERIC);
-    foreach ($olympiadRegistrations as $olympRegId) {
-        $olympReg = $olympRegObj->getById($olympRegId);
-        if ($olympReg) {
-            $allItems[] = [
-                'type' => 'olympiad_registration',
-                'id' => $olympReg['id'],
-                'name' => $olympReg['olympiad_title'],
-                'meta' => 'Диплом олимпиады • ' . ($olympReg['placement'] == '1' ? '1 место' : ($olympReg['placement'] == '2' ? '2 место' : '3 место')),
-                'price' => (float)($olympReg['diploma_price'] ?? OLYMPIAD_DIPLOMA_PRICE),
-                'is_free' => false,
-                'raw_data' => $olympReg
-            ];
-        }
-    }
-
-    // Calculate subtotal
-    $subtotal = 0;
-    foreach ($allItems as $item) {
-        $subtotal += $item['price'];
-    }
-
-    // Объёмная скидка по группам (групповое участие). Зеркалит create-payment.php:
-    // тариф зафиксирован в participant_groups, групповые позиции вне акции «2+1».
-    $groupObjCart = new ParticipantGroup($db);
-    $groupPercentCacheCart = [];
-    foreach ($allItems as $cItem) {
-        $bId = $cItem['raw_data']['group_batch_id'] ?? null;
-        if (empty($bId)) {
-            continue;
-        }
-        if (!array_key_exists($bId, $groupPercentCacheCart)) {
-            $g = $groupObjCart->getByBatchId($bId);
-            $groupPercentCacheCart[$bId] = $g ? (int)$g['discount_percent'] : 0;
-        }
-    }
-    $groupPricing = groupApplyDiscounts($allItems, $groupPercentCacheCart);
-    $allItems = $groupPricing['items'];
-    $groupDiscount = $groupPricing['discount'];
-
-    // Акция «2+1»: только для одиночных (негрупповых) позиций.
-    $discount = 0;
-    $promotionApplied = false;
-
-    $singleCartItems = [];
-    foreach ($allItems as $cIdx => $cItem) {
-        if (empty($cItem['in_group'])) {
-            $singleCartItems[] = ['idx' => $cIdx, 'price' => (float)$cItem['price']];
-        }
-    }
-
-    if (count($singleCartItems) >= 3) {
-        usort($singleCartItems, function($a, $b) {
-            return $b['price'] <=> $a['price'];
-        });
-        $freeItemCount = floor(count($singleCartItems) / 3);
-        for ($i = 0; $i < $freeItemCount; $i++) {
-            $freePos = ($i + 1) * 3 - 1;
-            if (isset($singleCartItems[$freePos])) {
-                $origIdx = $singleCartItems[$freePos]['idx'];
-                $allItems[$origIdx]['is_free'] = true;
-                $discount += $allItems[$origIdx]['price'];
-            }
-        }
-        $promotionApplied = true;
-    }
-
-    $grandTotal = $subtotal - $discount - $groupDiscount;
-
-    // Пожизненная скидка 25% для постоянных клиентов — стакается поверх 2+1.
-    $currentUserId = $_SESSION['user_id'] ?? null;
-    if ($currentUserId && LoyaltyDiscount::isEligible($db, (int)$currentUserId)) {
-        $loyaltyRates = LoyaltyDiscount::getEffectiveRates($db, (int)$currentUserId);
-        $loyaltyRatePercent = (int)round($loyaltyRates['cart'] * 100);
-        $calc = LoyaltyDiscount::calculateCartDiscount((float)$grandTotal, $loyaltyRates['cart']);
-        if ($calc['amount'] > 0) {
-            $loyaltyDiscount = $calc['amount'];
-            $grandTotal = $calc['final'];
-            $hasLoyalty = true;
-        }
-    }
-
-    // Скидка email-кампании — только если не действует loyalty (не комбинируется).
-    if ($currentUserId && !$hasLoyalty) {
-        $campaignRow = EmailCampaignDiscount::getActive($db, (int)$currentUserId);
-        if ($campaignRow) {
-            $calc = EmailCampaignDiscount::calculate((float)$grandTotal, (float)$campaignRow['rate']);
-            if ($calc['amount'] > 0) {
-                $campaignDiscount = $calc['amount'];
-                $grandTotal = $calc['final'];
-                $hasCampaignDiscount = true;
-                $campaignRatePercent = (int)round((float)$campaignRow['rate'] * 100);
-                $campaignExpiresAt = $campaignRow['expires_at'];
-            }
-        }
-    }
 }
 
 // Page metadata
@@ -279,7 +115,28 @@ include __DIR__ . '/../includes/header.php';
             <?php endif; ?>
         </div>
 
-        <?php if ($isEmpty): ?>
+        <?php if (isset($_GET['updated'])): ?>
+            <p role="status">Корзина обновилась. Проверьте документы и сумму перед оплатой.</p>
+        <?php endif; ?>
+        <?php foreach ($openOrders as $openOrder): ?>
+            <section class="price-summary">
+                <h2>Заказ <?= htmlspecialchars($openOrder['order_number'], ENT_QUOTES, 'UTF-8') ?></h2>
+                <ul>
+                <?php foreach ($openOrder['items'] as $line): ?>
+                    <li><?= htmlspecialchars($line['competition_title'] ?? $line['publication_title'] ?? $line['webinar_title']
+                        ?? $line['olympiad_title'] ?? 'Документ', ENT_QUOTES, 'UTF-8') ?></li>
+                <?php endforeach; ?>
+                </ul>
+                <form action="/ajax/create-payment.php" method="post" class="cart-checkout-form">
+                    <input type="hidden" name="resume_order_id" value="<?= (int)$openOrder['id'] ?>">
+                    <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                    <button class="btn btn-primary" type="submit"><?= (float)$openOrder['final_amount'] === 0.0
+                        ? 'Получить документы за 0 ₽' : ($openOrder['payment_status'] === 'processing' ? 'Проверить оплату · ' : 'Продолжить оплату · ') . groupFormatMoney((float)$openOrder['final_amount']) . ' ₽' ?></button>
+                    <p role="alert" hidden></p>
+                </form>
+            </section>
+        <?php endforeach; ?>
+        <?php if ($isEmpty && !$openOrders): ?>
             <!-- Empty Cart -->
             <div class="empty-cart">
                 <div class="empty-cart-icon">🛒</div>
@@ -289,7 +146,7 @@ include __DIR__ . '/../includes/header.php';
                     Перейти к конкурсам
                 </a>
             </div>
-        <?php else: ?>
+        <?php elseif (!$isEmpty): ?>
             <?php if ($pmSubscriptionOnly): ?>
             <!-- Вариант B: объяснение «почему по подписке» до списка позиций -->
             <div class="subonly-why" style="display:flex;gap:12px;align-items:flex-start;border:1px solid #e4e7f0;background:#f7f5ff;border-radius:14px;padding:16px 18px;margin:0 0 22px;color:#3a3f54;font-size:15px;line-height:1.5;">
@@ -297,27 +154,27 @@ include __DIR__ . '/../includes/header.php';
                 <span>Дипломы, сертификаты и свидетельства теперь выдаются по подписке, а не поштучно. К аттестации педагогу нужен не один документ, а целое портфолио — одна подписка открывает и эти документы, и все будущие, без оплаты за каждый.</span>
             </div>
             <?php endif; ?>
-            <?php if (!$pmSubscriptionOnly): ?>
+            <?php if (!$pmSubscriptionOnly && !$pmIsSubscriber): ?>
             <!-- Promotion Banner -->
             <?php if ($promotionApplied): ?>
                 <div class="promotion-banner">
                     <div class="promotion-icon">🎁</div>
                     <div class="promotion-content">
                         <h3>Акция применена!</h3>
-                        <p>При оплате 2 мероприятий — третье бесплатно! Вы экономите <?php echo groupFormatMoney($discount); ?> ₽</p>
+                        <p>При оформлении трёх одиночных мероприятий одно бесплатно. Вы экономите <?php echo groupFormatMoney($discount); ?> ₽</p>
                     </div>
                 </div>
-            <?php elseif (count($allItems) < 3): ?>
+            <?php elseif ($eligibleCount > 0 && $eligibleCount < 3): ?>
                 <div class="promotion-banner">
                     <div class="promotion-icon">✨</div>
                     <div class="promotion-content">
                         <h3>Специальное предложение!</h3>
-                        <p>При оплате 2 мероприятий — третье бесплатно!
-                        <?php $remaining = 3 - count($allItems); ?>
+                        <p>При оформлении трёх одиночных мероприятий одно бесплатно.
+                        <?php $remaining = 3 - $eligibleCount; ?>
                         <?php if ($remaining == 2): ?>
                             Добавьте еще 2 мероприятия, чтобы получить скидку.
                         <?php elseif ($remaining == 1): ?>
-                            Добавьте еще 1 мероприятие, чтобы получить его бесплатно!
+                            Добавьте ещё одно одиночное мероприятие. Самое дешёвое из трёх будет бесплатным.
                         <?php endif; ?>
                         </p>
                     </div>
@@ -359,6 +216,8 @@ include __DIR__ . '/../includes/header.php';
                         <div class="item-price">
                             <?php if ($pmSubscriptionOnly): ?>
                                 <span class="sub-included">🔒&nbsp;Откроется по подписке</span>
+                            <?php elseif ($pmIsSubscriber): ?>
+                                <span class="sub-included">0 ₽ по подписке</span>
                             <?php elseif ($item['is_free']): ?>
                                 <span class="original-price"><?php echo groupFormatMoney($item['price']); ?> ₽</span>
                                 <span class="free-label">БЕСПЛАТНО</span>
@@ -408,7 +267,7 @@ include __DIR__ . '/../includes/header.php';
             <!-- Price Summary -->
             <div class="price-summary">
                 <div class="summary-row">
-                    <span>Сумма:</span>
+                    <span><?= $pmIsSubscriber ? 'Покрыто подпиской' : 'Сумма' ?></span>
                     <span><?php echo groupFormatMoney($subtotal); ?> ₽</span>
                 </div>
 
@@ -458,15 +317,16 @@ include __DIR__ . '/../includes/header.php';
                     include __DIR__ . '/../includes/subscription-plans.php';
                     ?>
                 <?php else: ?>
-                    <form action="/ajax/create-payment.php" method="POST" id="paymentForm">
+                    <form action="/ajax/create-payment.php" method="POST" id="paymentForm" class="cart-checkout-form">
                         <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                        <input type="hidden" name="cart_revision" value="<?= $quote['revision'] ?>">
                         <button type="submit" class="btn btn-danger payment-btn">
-                            Перейти к оплате (<?php echo groupFormatMoney($grandTotal); ?> ₽)
+                            <?= $pmIsSubscriber ? 'Получить документы за 0 ₽' : 'Перейти к оплате (' . groupFormatMoney($grandTotal) . ' ₽)' ?>
                         </button>
                         <p id="cart-payment-message" role="alert" hidden></p>
                     </form>
                     <p style="margin-top: 16px; color: var(--text-medium); font-size: 14px;">
-                        Оплата через ЮКасса • Банковские карты, электронные кошельки, СБП
+                        <?= $pmIsSubscriber ? 'Документы входят в вашу подписку.' : 'Оплата через ЮKassa · Банковские карты, электронные кошельки, СБП' ?>
                     </p>
                 <?php endif; ?>
             </div>
@@ -486,7 +346,7 @@ include __DIR__ . '/../includes/header.php';
             <div style="margin-top: 40px; padding: 24px; background: var(--bg-light); border-radius: 16px;">
                 <h3 style="color: var(--primary-purple); margin-bottom: 16px;">Что дальше?</h3>
                 <ol style="padding-left: 20px; color: var(--text-medium);">
-                    <li style="margin-bottom: 8px;">После оплаты вы автоматически попадете в личный кабинет</li>
+                    <li style="margin-bottom: 8px;">После оплаты откроется страница вашего заказа</li>
                     <li style="margin-bottom: 8px;">Дипломы и свидетельства будут доступны для скачивания сразу после оплаты</li>
                     <li style="margin-bottom: 8px;">Документы предоставляются в формате PDF высокого качества</li>
                     <li>На ваш email придет подтверждение оплаты</li>
@@ -501,8 +361,7 @@ include __DIR__ . '/../includes/header.php';
 // Cart page handler
 document.addEventListener('DOMContentLoaded', function() {
     // Payment form handler
-    const form = document.getElementById('paymentForm');
-    if (form) {
+    document.querySelectorAll('.cart-checkout-form').forEach(function(form) {
         window.addEventListener('pageshow', function(event) {
             if (event.persisted) window.location.reload();
         });
@@ -512,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const btn = this.querySelector('button[type="submit"]');
             if (btn.disabled) return;
             const label = btn.textContent;
-            const message = document.getElementById('cart-payment-message');
+            const message = form.querySelector('[role="alert"]');
             const formData = new FormData(this);
 
             // Disable button
@@ -551,6 +410,10 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => response.json())
             .then(data => {
+                if (data.refresh_cart) {
+                    window.location.replace('/korzina/?updated=1');
+                    return;
+                }
                 if (data.requires_subscription && data.redirect_url) {
                     // Вариант B: поштучная оплата запрещена — ведём на подписку.
                     window.location.href = data.redirect_url;
@@ -580,7 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showPaymentError('Не удалось получить ответ сайта. Проверьте соединение и нажмите кнопку ещё раз.');
             });
         });
-    }
+    });
 
     // Remove buttons handler (for both registrations and certificates)
     document.querySelectorAll('.remove-btn').forEach(btn => {
@@ -591,6 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const olympiadRegistrationId = this.dataset.olympiadRegistrationId;
 
             const formData = new FormData();
+            formData.append('csrf_token', <?= json_encode(generateCSRFToken()) ?>);
             if (registrationId) {
                 formData.append('registration_id', registrationId);
             } else if (certificateId) {

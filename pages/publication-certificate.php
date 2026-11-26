@@ -34,8 +34,8 @@ if (!$publication) {
 }
 
 // Check ownership if logged in
-if (isset($_SESSION['user_id']) && $publication['user_id'] != $_SESSION['user_id']) {
-    header('Location: /pages/submit-publication.php');
+if (!canAccessPurchaseResource($db, 'publication', (int)$publicationId, (int)$publication['user_id'])) {
+    header('Location: /vhod/?return=' . rawurlencode('/pages/publication-certificate.php?id=' . (int)$publicationId));
     exit;
 }
 
@@ -64,8 +64,15 @@ $templates = [
 
 // Get user data
 $userStmt = $db->prepare("SELECT * FROM users WHERE id = ?");
-$userStmt->execute([$publication['user_id']]);
-$userData = $userStmt->fetch(PDO::FETCH_ASSOC);
+$userStmt->execute([verifiedAccountId($db) ?? 0]);
+$userData = $userStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+if (verifiedAccountId($db) === null) {
+    $userData = [
+        'full_name' => $existingCert['author_name'] ?? '', 'organization' => $existingCert['organization'] ?? '',
+        'city' => $existingCert['city'] ?? '', 'profession' => $existingCert['position'] ?? '',
+    ];
+    $publication['author_name'] = $userData['full_name'];
+}
 
 // A/B-тест: в варианте B свидетельство выдаётся только по подписке (не-подписчику).
 require_once __DIR__ . '/../classes/SubscriptionService.php';

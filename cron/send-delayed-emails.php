@@ -6,7 +6,7 @@
  * Обрабатывает очередь pending_delayed_emails:
  *   - lifetime_discount_granted — приветственное письмо о скидке лояльности,
  *     отложено на 10 минут после payment_success;
- *   - payment_success           — повтор после временного SMTP-сбоя.
+ *   - payment_success           — подтверждение готовой покупки, включая повтор после ошибки.
  *
  * Логика:
  *   - Берёт до 20 записей за запуск, у которых send_after <= NOW() и не sent_at/failed_at.
@@ -35,18 +35,10 @@ require_once BASE_PATH . '/classes/TelegramNotifier.php';
 
 TelegramNotifier::registerFatalHandler('send-delayed-emails');
 
-$lockFile = '/tmp/delayed_emails_cron.lock';
-if (file_exists($lockFile)) {
-    $age = time() - filemtime($lockFile);
-    if ($age > 600) {
-        unlink($lockFile);
-        echo date('Y-m-d H:i:s') . " - Removed stale lock.\n";
-    } else {
-        echo date('Y-m-d H:i:s') . " - Already running. Exit.\n";
-        exit(0);
-    }
+$lock = fopen(sys_get_temp_dir() . '/delayed_emails_cron.lock', 'c');
+if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
+    exit(0);
 }
-file_put_contents($lockFile, getmypid());
 
 try {
     $stmt = $db->prepare(
@@ -82,12 +74,12 @@ try {
                     $ok = sendLifetimeDiscountGrantedEmail($userId, $orderId);
                     break;
                 case 'payment_success':
-                    $ok = sendPaymentSuccessEmail($userId, $orderId);
-                    break;
+                    deliverQueuedPurchaseEmail($db, $id);
+                    continue 2;
                 default:
                     $err = "Unknown email_type: {$type}";
             }
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $err = $e->getMessage();
         }
 
@@ -145,5 +137,6 @@ try {
         'critical'
     );
 } finally {
-    @unlink($lockFile);
+    flock($lock, LOCK_UN);
+    fclose($lock);
 }

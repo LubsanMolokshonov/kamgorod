@@ -444,7 +444,7 @@ class CourseEmailChain {
      * Отправить письмо-подтверждение подачи заявки на рассрочку.
      * Включает CTA «Написать в Max» для ускорения согласования.
      */
-    public function sendInstallmentRequestedConfirmation($enrollmentId, $monthly, $months) {
+    public function sendInstallmentRequestedConfirmation($enrollmentId, $monthly, $months, ?float $total = null) {
         $enrollment = $this->db->queryOne(
             "SELECT ce.*, COALESCE(NULLIF(ce.course_title_snapshot,''), c.title) AS course_title, c.hours AS course_hours,
                     c.program_type AS course_program_type, c.slug AS course_slug
@@ -484,6 +484,7 @@ class CourseEmailChain {
                 'program_label'       => $programLabel,
                 'document_label'      => $documentLabel,
                 'monthly_payment'     => $monthly,
+                'total_amount'        => $total,
                 'months'              => $months,
                 'course_url'          => SITE_URL . '/kursy/' . $enrollment['course_slug'] . '/',
                 'cabinet_url'         => $cabinetUrl,

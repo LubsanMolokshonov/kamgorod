@@ -46,7 +46,11 @@ function validateRecoveryToken(string $token) {
     list($orderId, $userId, $expiry, $hmac) = $parts;
 
     $payload = $orderId . ':' . $userId . ':' . $expiry;
-    $expected = hash_hmac('sha256', $payload, getMagicLinkSecret());
+    try {
+        $expected = hash_hmac('sha256', $payload, getMagicLinkSecret());
+    } catch (RuntimeException $e) {
+        return false;
+    }
 
     if (!hash_equals($expected, $hmac)) {
         return false;

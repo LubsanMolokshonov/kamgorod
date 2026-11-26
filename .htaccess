@@ -3,6 +3,8 @@
 
 # Enable Rewrite Engine
 RewriteEngine On
+# Документы пользователей выдаются только через обработчик с проверкой оплаты и владельца.
+RewriteRule ^uploads/(?:diplomas|(?:publications|webinars)/certificates)/ - [F,L,NC]
 RewriteBase /
 
 # ================================================

@@ -37,19 +37,6 @@ if (!validateCSRFToken($csrfToken)) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Require authenticated user
-// ---------------------------------------------------------------------------
-
-$userId = getUserId();
-if (!$userId) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Сессия истекла. Пожалуйста, войдите снова.'
-    ]);
-    exit;
-}
-
-// ---------------------------------------------------------------------------
 // 3. Basic input validation
 // ---------------------------------------------------------------------------
 
@@ -57,6 +44,12 @@ $validator = new Validator($_POST);
 $validator->required(['result_id', 'template_id', 'email', 'fio', 'organization', 'participation_date'])
           ->email('email')
           ->maxLength('fio', 55)
+          ->maxLength('organization', 255)
+          ->maxLength('city', 100)
+          ->maxLength('supervisor_organization', 255)
+          ->maxLength('supervisor_tab_city', 255)
+          ->maxLength('supervisor_tab_organization', 255)
+          ->maxLength('supervisor_tab_name', 55)
           ->date('participation_date');
 
 if ($validator->fails()) {
@@ -96,7 +89,8 @@ try {
         exit;
     }
 
-    if ((int)$result['user_id'] !== (int)$userId) {
+    $userId = (int)$result['user_id'];
+    if (!canAccessPurchaseResource($db, 'olympiad_result', (int)$result['id'], $userId)) {
         echo json_encode([
             'success' => false,
             'message' => 'У вас нет доступа к этому результату.'
@@ -141,50 +135,29 @@ try {
     // ------------------------------------------------------------------
 
     $userObj  = new User($db);
-    $userInfo = $userObj->findByEmail($data['email']);
-
-    if (!$userInfo) {
-        // Create new user
-        $newUserId = $userObj->create([
-            'email'        => $data['email'],
-            'full_name'    => $data['fio'],
-            'phone'        => $phone,
-            'city'         => $data['city'] ?? null,
-            'organization' => $data['organization'] ?? null,
-        ]);
-        $userId = $newUserId;
-    } else {
-        // Update existing user with any newly provided fields.
-        // ВАЖНО: full_name НЕ перезаписываем — это ломало дипломы при нескольких заявках
-        // на один olympiad_result_id (alert #90). Имя участника снапшотится в
-        // olympiad_registrations.participant_name ниже. full_name заполняем только если он пуст
-        // (например, у нового аккаунта, который зарегистрирован магиклинком без ФИО).
-        $userId = $userInfo['id'];
-        $updateFields = [];
-
-        if (empty($userInfo['full_name']) && !empty($data['fio'])) {
-            $updateFields['full_name'] = $data['fio'];
-        }
-        if (empty($userInfo['phone'])) {
-            $updateFields['phone'] = $phone;
-        }
-        if (!empty($data['city'])) {
-            $updateFields['city'] = $data['city'];
-        }
-        if (!empty($data['organization'])) {
-            $updateFields['organization'] = $data['organization'];
-        }
-
-        if (!empty($updateFields)) {
-            $userObj->update($userId, $updateFields);
-        }
+    $userInfo = $userObj->getById($userId);
+    if (!$userInfo || strcasecmp($data['email'], $userInfo['email']) !== 0) {
+        echo json_encode(['success' => false, 'message' => 'Укажите почту, использованную для прохождения олимпиады.']);
+        exit;
+    }
+    if (verifiedAccountId($db) === $userId) {
+        $fields = array_filter(['city' => $data['city'] ?? '', 'organization' => $data['organization'] ?? '']);
+        if (empty($userInfo['full_name'])) $fields['full_name'] = $data['fio'];
+        if (empty($userInfo['phone']) && $phone) $fields['phone'] = $phone;
+        if ($fields) $userObj->update($userId, $fields);
     }
 
     // ------------------------------------------------------------------
     // 6. Create olympiad registration (diploma order)
     // ------------------------------------------------------------------
 
-    $hasSupervisor  = !empty($data['has_supervisor']) ? 1 : 0;
+    $supervisorTab = ($data['current_tab'] ?? '') === 'supervisor';
+    if ($supervisorTab) {
+        $data['supervisor_name'] = $data['supervisor_tab_name'] ?? '';
+        $data['supervisor_organization'] = $data['supervisor_tab_organization'] ?? '';
+        $data['supervisor_email'] = $data['supervisor_tab_email'] ?? '';
+    }
+    $hasSupervisor = ($supervisorTab || !empty($data['has_supervisor'])) ? 1 : 0;
     $supervisorName = $hasSupervisor ? trim($data['supervisor_name'] ?? '') : null;
 
     // If supervisor name is empty but checkbox was checked, fall back
@@ -223,6 +196,7 @@ try {
         'participation_date'      => $data['participation_date'],
         'has_supervisor'          => $hasSupervisor,
         'supervisor_name'         => $supervisorName,
+        'supervisor_city'         => $supervisorTab ? ($data['supervisor_tab_city'] ?? '') : null,
         'supervisor_email'        => $hasSupervisor ? ($data['supervisor_email'] ?? null) : null,
         'supervisor_organization' => $hasSupervisor ? ($data['supervisor_organization'] ?? null) : null,
         'utm_source'              => $utmSource,
@@ -236,6 +210,7 @@ try {
     // 7. Add to session cart
     // ------------------------------------------------------------------
 
+    grantGuestResource('olympiad_reg', (int)$registrationId, $userId);
     addOlympiadRegistrationToCart($registrationId);
 
     // Sync specializations to user profile for recommendations
@@ -250,10 +225,6 @@ try {
     } catch (Exception $e) {
         error_log('Olympiad email chain schedule error: ' . $e->getMessage());
     }
-
-    // Keep user_id in session
-    $_SESSION['user_id'] = $userId;
-    $_SESSION['user_email'] = $data['email'];
 
     // ------------------------------------------------------------------
     // 8. Build e-commerce tracking payload and respond

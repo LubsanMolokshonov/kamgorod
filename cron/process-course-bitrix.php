@@ -7,13 +7,15 @@
  * Этот крон — fallback для записей, где первая попытка не удалась:
  * - status = 'paid' → сделка на этапе "Оплаченная сделка" (BITRIX24_COURSE_STAGE_PAID)
  * - status != 'paid' → сделка на этапе "Новая" (BITRIX24_COURSE_STAGE_NEW)
+ * Также обрабатывает задачи допуска и комментарии со ссылками на оплату.
  *
  * Crontab (every 5 min): docker exec pedagogy_web php /var/www/html/cron/process-course-bitrix.php
  */
 
 // Prevent web access
 if (php_sapi_name() !== 'cli') {
-    die('This script can only be run from command line');
+    http_response_code(403);
+    die('CLI only');
 }
 
 set_time_limit(0);
@@ -25,6 +27,7 @@ require_once BASE_PATH . '/config/database.php';
 require_once BASE_PATH . '/classes/Database.php';
 require_once BASE_PATH . '/classes/Course.php';
 require_once BASE_PATH . '/classes/CoursePriceAB.php';
+require_once BASE_PATH . '/includes/installment-helper.php';
 require_once BASE_PATH . '/classes/Bitrix24Integration.php';
 require_once BASE_PATH . '/classes/CourseAccessTaskQueue.php';
 
@@ -109,10 +112,10 @@ try {
             }
 
             // Скорректированная цена (фиксированная скидка / AB-вариант enrollment)
-            $abVariant = $fresh['ab_variant'] ?? 'A';
-            $abPrice = CoursePriceAB::getAdjustedPrice(floatval($course['price']), $abVariant, $course['program_type'] ?? null);
+            $terms = courseDealTerms($db, $fresh, $course);
 
             $dealId = $bitrix->createCourseDeal([
+                'enrollment_id' => (int)$fresh['id'],
                 'user_id' => $fresh['user_id'] ?? null,
                 'full_name' => $fresh['full_name'],
                 'email' => $fresh['email'],
@@ -124,7 +127,7 @@ try {
                 'utm_term' => $fresh['utm_term'] ?? '',
                 'ym_uid' => $fresh['ym_uid'] ?? '',
                 'source_page' => $fresh['source_page'] ?? '',
-            ], $course, $stage, $abPrice);
+            ], $course, $stage, $terms['amount'], $terms['payment']);
 
             if ($dealId) {
                 $dbObj->update('course_enrollments', [
@@ -164,11 +167,29 @@ try {
         }
     }
 
+    $pendingQuotes = $db->query("SELECT q.enrollment_id FROM course_installment_quotes q
+        JOIN course_enrollments ce ON ce.id=q.enrollment_id
+        WHERE q.crm_synced_at IS NULL AND ce.bitrix_lead_id > 0 AND ce.status='installment_requested'
+        ORDER BY q.enrollment_id LIMIT 50")->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($pendingQuotes as $id) {
+        try {
+            syncInstallmentQuote($db, $bitrix, (int)$id);
+        } catch (Throwable $e) {
+            error_log('Синхронизация условий рассрочки: заявка #' . (int)$id . ' (' . get_class($e) . ')');
+        }
+    }
+
     // После создания недостающих сделок обработать автоплатные задачи на допуск.
     // Ручные/синтетические Bitrix-оплаты в эту очередь не ставятся.
     $accessTasks = (new CourseAccessTaskQueue($db, $bitrix))->processPending($BATCH_SIZE);
     echo date('Y-m-d H:i:s') . ' - Course access tasks: '
         . json_encode($accessTasks, JSON_UNESCAPED_UNICODE) . "\n";
+
+    if (BITRIX24_COURSE_PAYMENT_LINKS_ENABLED) {
+        require_once BASE_PATH . '/classes/CoursePaymentLinkSync.php';
+        $paymentLinks = (new CoursePaymentLinkSync($db, $bitrix))->processPending(20, BITRIX24_COURSE_PAYMENT_LINKS_PILOT_DEAL_ID);
+        echo date('Y-m-d H:i:s') . ' - Ссылки на оплату курсов: ' . json_encode($paymentLinks) . "\n";
+    }
 
     echo date('Y-m-d H:i:s') . " - Completed. Sent: {$sent}, Failed: {$failed}, Skipped: {$skipped}\n";
 

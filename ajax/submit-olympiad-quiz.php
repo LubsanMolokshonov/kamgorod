@@ -34,7 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Require authenticated user
-$userId = getUserId();
+$guestDetails = $_SESSION['guest_quiz'][(int)($_POST['olympiad_id'] ?? 0)] ?? [];
+$userId = verifiedAccountId($db) ?? ($guestDetails['owner'] ?? null);
 if (!$userId) {
     echo json_encode([
         'success' => false,
@@ -109,6 +110,11 @@ try {
             'message' => $result['message'] ?? 'Ошибка при сохранении результата'
         ]);
         exit;
+    }
+
+    if (verifiedAccountId($db) === null) {
+        grantGuestResource('olympiad_result', (int)$result['result_id'], (int)$userId);
+        $_SESSION['guest_result_details'][(int)$result['result_id']] = $guestDetails;
     }
 
     // Schedule quiz result emails

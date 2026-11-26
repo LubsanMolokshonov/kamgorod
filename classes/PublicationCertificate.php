@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/document-file.php';
 /**
  * PublicationCertificate Class
  * Generates PDF certificates for publications using mPDF
@@ -163,7 +164,7 @@ class PublicationCertificate {
             }
 
             // Check if already generated
-            if ($certificate['pdf_path'] && file_exists($this->uploadsDir . basename($certificate['pdf_path']))) {
+            if ($certificate['pdf_path'] && isIssuedDocumentPdf($this->uploadsDir . basename($certificate['pdf_path']))) {
                 return [
                     'success' => true,
                     'pdf_path' => $certificate['pdf_path'],

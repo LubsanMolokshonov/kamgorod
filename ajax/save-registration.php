@@ -28,6 +28,10 @@ $validator = new Validator($_POST);
 $validator->required(['fio', 'email', 'competition_id', 'nomination', 'organization', 'participation_date', 'template_id'])
           ->email('email')
           ->maxLength('fio', 55)
+          ->maxLength('organization', 255)
+          ->maxLength('city', 100)
+          ->maxLength('supervisor_organization', 255)
+          ->maxLength('supervisor_city', 255)
           ->date('participation_date');
 
 if ($validator->fails()) {
@@ -66,6 +70,10 @@ try {
 
     // Create or get user
     $userObj = new User($db);
+    if (verifiedAccountId($db) !== null && strcasecmp($_SESSION['user_email'], $data['email']) !== 0) {
+        echo json_encode(['success' => false, 'message' => 'Укажите почту текущего кабинета или выйдите из него.']);
+        exit;
+    }
     $user = $userObj->findByEmail($data['email']);
 
     if (!$user) {
@@ -95,7 +103,7 @@ try {
         if (empty($user['organization']) && !empty($accountOwnerOrg)) {
             $updateFields['organization'] = $accountOwnerOrg;
         }
-        if (!empty($updateFields)) {
+        if (verifiedAccountId($db) === (int)$userId && !empty($updateFields)) {
             $userObj->update($userId, $updateFields);
         }
     }
@@ -120,6 +128,9 @@ try {
     $registrationId = $registrationObj->create([
         'user_id' => $userId,
         'participant_name' => $data['fio'],
+        'organization' => $data['organization'],
+        'city' => $data['city'] ?? '',
+        'supervisor_city' => $data['supervisor_city'] ?? null,
         'phone' => $phone,
         'competition_id' => $data['competition_id'],
         'nomination' => $data['nomination'],
@@ -139,20 +150,8 @@ try {
         'utm_term' => $utmTerm,
     ]);
 
-    // Add to session cart
-    if (!isset($_SESSION['cart'])) {
-        $_SESSION['cart'] = [];
-    }
-
-    // Каст к int: lastInsertId() отдаёт строку, а строгое сравнение типов
-    // в syncSessionCartWithDb() иначе не распознаёт дубль и задваивает позицию.
-    $registrationId = (int)$registrationId;
-    if (!in_array($registrationId, $_SESSION['cart'], true)) {
-        $_SESSION['cart'][] = $registrationId;
-    }
-
-    $_SESSION['user_id'] = $userId;
-    $_SESSION['user_email'] = $data['email'];
+    grantGuestResource('registration', (int)$registrationId, (int)$userId);
+    addToCart((int)$registrationId);
 
     // Sync specializations to user profile for recommendations
     syncUserSpecializations($db, $userId, 'competition_specializations', 'competition_id', $data['competition_id']);

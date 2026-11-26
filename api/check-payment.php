@@ -28,12 +28,9 @@ try {
     $orderObj = new Order($db);
     $order = $orderObj->getByOrderNumber($orderNumber);
 
-    $courseEnrollmentId = $order ? courseCheckoutEnrollmentId($order) : null;
-    if ($courseEnrollmentId !== null) {
-        header('Cache-Control: private, no-store');
-        header('Referrer-Policy: no-referrer');
-    }
-    if (!$order || ($courseEnrollmentId !== null && getCourseCheckoutAccountId($db) !== (int)$order['user_id'])) {
+    header('Cache-Control: private, no-store');
+    header('Referrer-Policy: no-referrer');
+    if (!$order || !canAccessPurchaseResource($db, 'order', (int)$order['id'], (int)$order['user_id'])) {
         http_response_code(404);
         echo json_encode([
             'success' => false,
@@ -42,40 +39,16 @@ try {
         exit;
     }
 
-    // Simple rate limiting: log request and check frequency
-    // This prevents abuse of the polling endpoint
-    $rateLimitKey = 'poll_' . $orderNumber;
-    $cacheFile = sys_get_temp_dir() . '/' . md5($rateLimitKey) . '.txt';
-
-    if (file_exists($cacheFile)) {
-        $data = json_decode(file_get_contents($cacheFile), true);
-        $requestCount = $data['count'] ?? 0;
-        $firstRequest = $data['first'] ?? time();
-
-        // Max 30 requests per order (generous limit)
-        if ($requestCount > 30) {
-            http_response_code(429);
-            echo json_encode([
-                'success' => false,
-                'error' => 'Rate limit exceeded'
-            ]);
-            exit;
-        }
-
-        // Update count
-        file_put_contents($cacheFile, json_encode([
-            'count' => $requestCount + 1,
-            'first' => $firstRequest,
-            'last' => time()
-        ]));
-    } else {
-        // First request
-        file_put_contents($cacheFile, json_encode([
-            'count' => 1,
-            'first' => time(),
-            'last' => time()
-        ]));
+    // Окно счётчика обновляется автоматически: повторный визит после задержки банка работает.
+    $poll = $_SESSION['order_status_poll'][(int)$order['id']] ?? ['start' => 0, 'count' => 0];
+    if (time() - $poll['start'] >= 60) $poll = ['start' => time(), 'count' => 0];
+    if (++$poll['count'] > 30) {
+        http_response_code(429);
+        header('Retry-After: 60');
+        echo json_encode(['success' => false, 'error' => 'Попробуйте через минуту']);
+        exit;
     }
+    $_SESSION['order_status_poll'][(int)$order['id']] = $poll;
 
     // Return order status
     echo json_encode([

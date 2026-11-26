@@ -63,7 +63,7 @@ function retryDatabase(): PDO
             id INTEGER PRIMARY KEY, user_id INTEGER, item_type TEXT, item_id INTEGER, reserved_in_order_id INTEGER,
             UNIQUE(user_id, item_type, item_id)
         );
-        CREATE TABLE cart_payment_attempts (order_id INTEGER PRIMARY KEY, payload_hash CHAR(64) NOT NULL);
+        CREATE TABLE cart_payment_attempts (order_id INTEGER PRIMARY KEY, payload_hash CHAR(64) NOT NULL, payload_json TEXT);
         CREATE TABLE registrations (id INTEGER PRIMARY KEY, user_id INTEGER, status TEXT);
         CREATE TABLE publication_certificates (id INTEGER PRIMARY KEY, user_id INTEGER, status TEXT);
         CREATE TABLE webinar_certificates (id INTEGER PRIMARY KEY, user_id INTEGER, status TEXT);
@@ -194,7 +194,9 @@ retryAssert(!$order->attachVerifiedCartPayment($changed)
 $db = retryDatabase();
 $neverLookup = static function (): void { throw new LogicException('Лишний запрос в ЮKassa'); };
 retryAssert(retryResolve($db, $neverLookup) === null, 'Первичная оплата без резерва должна быть доступна');
-retryAssert(retryResolve($db, $neverLookup, sessionUserId: 0) === null, 'Сохранена первая оплата из гостевой корзины');
+retryMustStop(fn () => retryResolve($db, $neverLookup, sessionUserId: 0), 'Гость подтверждает право на каждый документ');
+grantGuestResource('publication_cert', 11, 1);
+retryAssert(retryResolve($db, $neverLookup, sessionUserId: 0) === null, 'Гость оформляет свой документ без входа');
 retryMustStop(fn () => retryResolve($db, $neverLookup, retryItems(13)),
     'Документ другого пользователя не должен попасть в заказ');
 retrySaveOrder($db, 10, FIRST_PAYMENT);
@@ -329,7 +331,8 @@ retryAssert(retryReservedOrder($db) === 10 && (int)$db->query('SELECT COUNT(*) F
 $db->beginTransaction();
 CartPaymentRetry::rememberPayload($db, 10, $payload, true);
 $hash = $db->query('SELECT payload_hash FROM cart_payment_attempts WHERE order_id = 10')->fetchColumn();
-retryAssert(strlen($hash) === 64 && ctype_xdigit($hash), 'В базе сохраняется только SHA-256 запроса');
+retryAssert(strlen($hash) === 64 && ctype_xdigit($hash), 'Сохранён SHA-256 исходного запроса');
+retryAssert(CartPaymentRetry::savedPayload($db, 10) === $payload, 'При повторе возвращается исходный чек без пересчёта');
 $changedPayload = $payload;
 $changedPayload['description'] = 'Другой состав чека';
 retryMustStop(fn () => CartPaymentRetry::rememberPayload($db, 10, $changedPayload, true),
@@ -338,4 +341,73 @@ retryMustStop(fn () => CartPaymentRetry::rememberPayload($db, 20, $payload, true
     'Чужой отпечаток нельзя использовать для подтверждения другого заказа');
 $db->rollBack();
 
+$db = retryDatabase();
+retrySaveOrder($db, 10, '');
+$db->exec("UPDATE orders SET final_amount = 0;
+    UPDATE order_items SET price=0, covered_by_subscription=1, is_free_promotion=1");
+$covered = retryResolve($db, $neverLookup, total: 0);
+retryAssert(($covered['covered_order_id'] ?? null) === 10, 'Оборванная выдача по подписке продолжается в исходном заказе');
+$db->exec('UPDATE order_items SET covered_by_subscription=0');
+retryMustStop(fn() => retryResolve($db, $neverLookup, total: 0), 'Нулевой заказ требует подтверждения покрытия каждой строки подпиской');
+
+// Возврат к заказу со старой ценой, в том числе при потере ответа первого API-вызова.
+$db = retryDatabase();
+retrySaveOrder($db, 10, FIRST_PAYMENT);
+$client = new class ($db, $payload) {
+    public int $created = 0;
+    public function __construct(private PDO $db, private array $expected) {}
+    public function getPaymentInfo(string $id): object {
+        retryAssert(!$this->db->inTransaction(), 'Опрос банка выполняется после освобождения SQL-блокировок');
+        return new RetryTestPayment($id);
+    }
+    public function createPayment(array $body, string $key): object {
+        retryAssert(!$this->db->inTransaction() && $body === $this->expected && $key === 'TEST-10',
+            'Потерянный ответ повторяется с исходным чеком и тем же ключом вне транзакции');
+        $this->created++;
+        $payment = new RetryTestPayment();
+        $payment->confirmationUrl = 'https://yoomoney.ru/checkout/' . FIRST_PAYMENT;
+        return $payment;
+    }
+};
+retryAssert(CartPaymentRetry::resume($db, 10, 1, $client)['payment_id'] === FIRST_PAYMENT,
+    'Старый заказ возобновляется по сохранённым строкам без расчёта по текущему прайсу');
+grantGuestOrder(10, 1);
+retryAssert(CartPaymentRetry::resume($db, 10, null, $client)['payment_id'] === FIRST_PAYMENT,
+    'Гость продолжает свой заказ без авторизации в кабинете');
+retryMustStop(fn () => CartPaymentRetry::resume($db, 10, 2, $client), 'Явный вход в другой аккаунт не использует прежнее гостевое право');
+$settlingClient = new class($db) {
+    public function __construct(private PDO $db) {}
+    public function getPaymentInfo(string $id): object {
+        $this->db->exec("UPDATE orders SET payment_status='succeeded' WHERE id=10");
+        $this->db->exec("UPDATE publication_certificates SET status='ready' WHERE id=11");
+        return new RetryTestPayment($id, 'succeeded');
+    }
+};
+retryAssert(str_starts_with(CartPaymentRetry::resume($db, 10, 1, $settlingClient)['redirect_url'], '/pages/payment-success.php'),
+    'Если во время опроса банка пришёл вебхук, пользователь видит статус готового заказа');
+$db->exec("UPDATE orders SET payment_status='pending' WHERE id=10");
+$db->exec("UPDATE publication_certificates SET status='pending' WHERE id=11");
+$db->exec('UPDATE orders SET yookassa_payment_id = NULL, yookassa_confirmation_url = NULL');
+$db->beginTransaction();
+CartPaymentRetry::rememberPayload($db, 10, $payload, false);
+$db->commit();
+retryAssert(CartPaymentRetry::resume($db, 10, 1, $client)['payment_id'] === FIRST_PAYMENT && $client->created === 1,
+    'Первый ответ потерян; платёж восстановлен из снимка');
+retryAssert(CartPaymentRetry::resume($db, 10, 1, $client)['payment_id'] === FIRST_PAYMENT && $client->created === 1,
+    'После восстановления следующий клик не создаёт новый платёж');
+
+require_once __DIR__ . '/../includes/cart-quote.php';
+$make = static fn(int $id, int $price, ?string $group = null): array =>
+    ['type'=>'registration','id'=>$id,'price'=>$price,'is_free'=>false,'raw_data'=>['group_batch_id'=>$group]];
+$twoSingles = [$make(1, 400), $make(2, 200), $make(3, 100, 'batch')];
+$promo = applyCartPromotion($twoSingles);
+retryAssert($promo['eligible_count'] === 2 && $promo['discount'] == 0, 'Группа не завершает тройку одиночных документов');
+$promo = applyCartPromotion([...$twoSingles, $make(4, 300)]);
+retryAssert($promo['discount'] == 200 && $promo['items'][1]['is_free'] && !$promo['items'][2]['is_free'],
+    'Полная тройка даёт скидку на самый дешёвый из одиночных документов');
+$old = ['final_amount'=>499, 'items'=>[['certificate_id'=>11,'price'=>499,'is_free_promotion'=>0]]];
+$shown = ['items'=>retryItems(), 'subscriber'=>false, 'total'=>499];
+retryAssert(CartPaymentRetry::matchesShownQuote($old, $shown), 'Продолжение неизменённого заказа');
+$old['items'][0]['certificate_id'] = 12;
+retryAssert(!CartPaymentRetry::matchesShownQuote($old, $shown), 'Замена документа за ту же сумму требует обновления корзины');
 echo "OK: повторная оплата корзины (SQLite и подмена ЮKassa)\n";

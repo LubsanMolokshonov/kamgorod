@@ -58,23 +58,8 @@ function loadRecommendations() {
                 hint.text(data.promotionHint);
             }
 
-            // Find cheapest recommendation price (fallback, если сервер не прислал will_be_free)
-            var cheapestPrice = Infinity;
-            if (data.oneMoreForFree) {
-                data.recommendations.forEach(function(rec) {
-                    if (rec.price < cheapestPrice) {
-                        cheapestPrice = rec.price;
-                    }
-                });
-            }
-
-            // Render recommendation cards
             data.recommendations.forEach(function(rec) {
-                // Сервер присылает точный флаг (учитывает минимум цен корзины).
-                // Фоллбэк — старая клиентская эвристика для обратной совместимости.
-                var willBeFree = (typeof rec.will_be_free === 'boolean')
-                    ? rec.will_be_free
-                    : (data.oneMoreForFree && rec.price <= cheapestPrice);
+                var willBeFree = rec.will_be_free === true;
                 grid.append(buildRecommendationCard(rec, willBeFree));
             });
 

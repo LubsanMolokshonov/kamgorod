@@ -4,7 +4,7 @@
  * Вызывается модалкой перед генерацией материала, чтобы не было регвола.
  *
  * POST: csrf, email, full_name, agreement
- * Ответ: { success: true, user_id } | { success: false, error, code }
+ * Ответ: { success: true, confirmation_required, message } | { success: false, error, code }
  */
 
 session_start();
@@ -45,42 +45,15 @@ if (!$agreement) {
     qrRespond(['success' => false, 'error' => 'Нужно принять условия и политику конфиденциальности', 'code' => 'agreement'], 422);
 }
 
+require_once __DIR__ . '/../includes/account-login-mail.php';
 try {
-    $stmt = $db->prepare("SELECT id, email FROM users WHERE email = ?");
-    $stmt->execute([$email]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($user) {
-        $_SESSION['user_id']    = (int)$user['id'];
-        $_SESSION['user_email'] = $user['email'];
-    } else {
-        $stmt = $db->prepare("INSERT INTO users (email, full_name) VALUES (?, ?)");
-        $stmt->execute([$email, mb_substr($fullName, 0, 255)]);
-        $_SESSION['user_id']    = (int)$db->lastInsertId();
-        $_SESSION['user_email'] = $email;
-    }
-
-    $userId = (int)$_SESSION['user_id'];
-
-    // Атрибуция привлечения из воронки материалов
-    persistMaterialUtmToUser($db, $userId);
-
-    // Привязать анонимные превью-материалы к пользователю
-    claimAnonymousMaterials($db, $userId);
-
-    // Стартовый бонус (идемпотентно)
-    (new UserTokens($db))->grantSignupBonusIfNeeded($userId);
-
-    // Если у пользователя есть непривязанное превью — запланировать дожим preview_abandon
-    try {
-        require_once __DIR__ . '/../classes/MaterialTokenEmailChain.php';
-        (new MaterialTokenEmailChain($db))->schedulePreviewAbandon($userId);
-    } catch (Throwable $e) {
-        error_log('quick-register schedulePreviewAbandon: ' . $e->getMessage());
-    }
-
-    qrRespond(['success' => true, 'user_id' => $userId]);
+    $return = safeAccountReturnPath($_POST['return'] ?? '/kabinet/');
+    requestAccountLoginEmail($db, $email, $fullName, $return);
+    qrRespond(['success' => true, 'confirmation_required' => true,
+        'message' => 'Откройте письмо и подтвердите вход. Вы вернётесь к материалу.']);
+} catch (DomainException $e) {
+    qrRespond(['success' => false, 'error' => $e->getMessage()], 429);
 } catch (Throwable $e) {
-    error_log('quick-register error: ' . $e->getMessage());
-    qrRespond(['success' => false, 'error' => 'Ошибка регистрации, попробуйте позже', 'code' => 'internal'], 500);
+    error_log('Письмо быстрого входа: ' . get_class($e));
+    qrRespond(['success' => false, 'error' => 'Не удалось отправить письмо. Попробуйте позже.'], 503);
 }

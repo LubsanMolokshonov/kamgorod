@@ -12,20 +12,11 @@
 
 session_start();
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/account-auth.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Webinar.php';
 require_once __DIR__ . '/../classes/WebinarRegistration.php';
-
-// Авто-логин по cookie, если сессии нет (на случай прямого захода без magic-auth)
-if (!isset($_SESSION['user_id']) && isset($_COOKIE['session_token'])) {
-    $userObj = new User($db);
-    $user = $userObj->findBySessionToken($_COOKIE['session_token']);
-    if ($user) {
-        $_SESSION['user_id']    = $user['id'];
-        $_SESSION['user_email'] = $user['email'];
-    }
-}
 
 // Целевой вебинар
 $webinarId = (int)($_GET['w'] ?? 0);
@@ -35,13 +26,14 @@ if ($webinarId <= 0) {
 }
 
 // Требуется авторизация (magic-link уже должен был залогинить)
-if (!isset($_SESSION['user_id'])) {
+$userId = verifiedAccountId($db);
+if (!$userId) {
     $redirect = '/pages/autowebinar-claim.php?w=' . $webinarId;
     header('Location: /pages/login.php?redirect=' . urlencode($redirect));
     exit;
 }
 
-$userId = (int)$_SESSION['user_id'];
+
 
 // Проверяем вебинар
 $webinarObj = new Webinar($db);

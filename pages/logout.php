@@ -9,10 +9,8 @@ require_once __DIR__ . '/../includes/session.php';
 // Initialize session
 initSession();
 
-// Clear session token cookie
-if (isset($_COOKIE['session_token'])) {
-    setcookie('session_token', '', time() - 3600, '/');
-}
+require_once __DIR__ . '/../config/database.php';
+forgetRememberedAccount($db);
 
 // Clear all session data
 session_unset();

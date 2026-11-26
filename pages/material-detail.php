@@ -333,12 +333,12 @@ include __DIR__ . '/../includes/header-redesign.php';
               if (!email || !name || !agree) { showErr(regError, 'Заполните email, ФИО и примите условия'); return; }
               regSubmit.disabled = true;
               var fd = new FormData();
-              fd.append('csrf', csrf); fd.append('email', email); fd.append('full_name', name); fd.append('agreement', '1');
+              fd.append('csrf', csrf); fd.append('email', email); fd.append('full_name', name); fd.append('agreement', '1'); fd.append('return', location.pathname + location.search);
               fetch('/ajax/quick-register.php', { method: 'POST', body: fd, credentials: 'same-origin' })
                   .then(function (r) { return r.json(); })
                   .then(function (d) {
                       regSubmit.disabled = false;
-                      if (d && d.success) { isLoggedIn = true; modal.style.display = 'none'; doUnlock(); }
+                      if (d && d.confirmation_required) { regError.textContent = d.message; regError.style.display = 'block'; regError.setAttribute('role', 'status'); }
                       else { showErr(regError, (d && d.error) ? d.error : 'Ошибка регистрации'); }
                   })
                   .catch(function () { regSubmit.disabled = false; showErr(regError, 'Сеть прервалась. Попробуйте ещё раз.'); });

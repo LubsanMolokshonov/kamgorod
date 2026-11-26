@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/account-auth.php';
 /**
  * Session Management Helper Functions
  * Cart and session utilities
@@ -81,7 +82,7 @@ function cartEnsureLoadedFromDb() {
  *    зарезервированные строки и не плодит дубли).
  * 2) Подтянуть позиции из cart_items, в том числе с незавершённой оплатой на другом устройстве.
  */
-function syncSessionCartWithDb(int $userId): void {
+function syncSessionCartWithDb(int $userId, bool $mergeSession = true): void {
     global $db;
     if (!isset($db) || !$userId) {
         return;
@@ -92,26 +93,29 @@ function syncSessionCartWithDb(int $userId): void {
         // могут лежать строками ("123"). Шаг 2 сравнивает дубли строго
         // (in_array(..., true)), и "123" !== 123 — позиция задваивается.
         // Приводим к int (заодно дедуплицируем), чтобы Шаг 2 видел дубли.
-        $insertStmt = $db->prepare(
-            "INSERT IGNORE INTO cart_items (user_id, item_type, item_id) VALUES (?, ?, ?)"
-        );
-        foreach (CART_TYPES as $type => $sessKey) {
-            $items = $_SESSION[$sessKey] ?? [];
-            if (!is_array($items)) continue;
-            $normalized = [];
-            foreach ($items as $itemId) {
-                $id = (int)$itemId;
-                if ($id > 0 && !in_array($id, $normalized, true)) {
-                    $normalized[] = $id;
+        if ($mergeSession) {
+            $insertStmt = $db->prepare(
+                "INSERT IGNORE INTO cart_items (user_id, item_type, item_id) VALUES (?, ?, ?)"
+            );
+            foreach (CART_TYPES as $type => $sessKey) {
+                $items = $_SESSION[$sessKey] ?? [];
+                if (!is_array($items)) continue;
+                $normalized = [];
+                foreach ($items as $itemId) {
+                    $id = (int)$itemId;
+                    if ($id > 0 && !in_array($id, $normalized, true)) {
+                        $normalized[] = $id;
+                    }
                 }
+                // Оплаченные позиции в корзину не пушим (и выкидываем из сессии):
+                // гостевая сессия может пережить оплату и «воскресить» товар.
+                $normalized = filterUnpaidCartIds($type, $normalized, $userId);
+                foreach ($normalized as $id) {
+                    $insertStmt->execute([$userId, $type, $id]);
+                }
+                $_SESSION[$sessKey] = $normalized;
             }
-            // Оплаченные позиции в корзину не пушим (и выкидываем из сессии):
-            // гостевая сессия может пережить оплату и «воскресить» товар.
-            $normalized = filterUnpaidCartIds($type, $normalized, $userId);
-            foreach ($normalized as $id) {
-                $insertStmt->execute([$userId, $type, $id]);
-            }
-            $_SESSION[$sessKey] = $normalized;
+
         }
 
         // Шаг 2: pull DB → session
@@ -129,10 +133,11 @@ function syncSessionCartWithDb(int $userId): void {
         }
         foreach (CART_TYPES as $type => $sessKey) {
             $fromDb = filterUnpaidCartIds($type, $byType[$type] ?? [], $userId);
-            $_SESSION[$sessKey] = array_values(array_unique(array_merge($_SESSION[$sessKey], $fromDb)));
+            $_SESSION[$sessKey] = array_values($fromDb);
         }
     } catch (Exception $e) {
         error_log('syncSessionCartWithDb error: ' . $e->getMessage());
+        if (!$mergeSession) throw $e;
     }
 }
 
@@ -279,9 +284,14 @@ function removeCartItemsByOrderId(int $orderId): void {
     }
 }
 
-/**
- * Get cart items from session
- */
+/** При оформлении перечитать сохранённую корзину, учитывая изменения на другом устройстве. */
+function refreshCheckoutCart(?int $accountId): void {
+    if ($accountId !== null) {
+        syncSessionCartWithDb($accountId, empty($_SESSION['cart_db_loaded']));
+        $_SESSION['cart_db_loaded'] = 1;
+    }
+}
+
 function getCart() {
     initSession();
     return $_SESSION['cart'] ?? [];
@@ -511,63 +521,16 @@ function isCartEmpty() {
     return count(getCart()) === 0 && count(getCartCertificates()) === 0 && count(getCartWebinarCertificates()) === 0 && count(getCartOlympiadRegistrations()) === 0;
 }
 
-/**
- * Get cart total amount
- * Returns total price considering 2+1 promotion for registrations + certificates
- */
+/** Итог тех же доступных позиций и скидок, которые попадут в новый заказ. */
 function getCartTotal() {
     global $db;
-    if (!isset($db)) {
-        return 0;
-    }
-
-    $total = 0;
-
-    // Calculate registrations total with promotion
-    $cart = getCart();
-    if (!empty($cart)) {
-        require_once __DIR__ . '/../classes/Registration.php';
-        $registrationObj = new Registration($db);
-        $cartData = $registrationObj->calculateCartTotal($cart);
-        $total += $cartData['total'];
-    }
-
-    // Add certificates total (no promotion for certificates)
-    $certificates = getCartCertificates();
-    if (!empty($certificates)) {
-        require_once __DIR__ . '/../classes/PublicationCertificate.php';
-        $certObj = new PublicationCertificate($db);
-        foreach ($certificates as $certId) {
-            $cert = $certObj->getById($certId);
-            if ($cert) {
-                $total += (float)($cert['price'] ?? PUBLICATION_CERTIFICATE_PRICE);
-            }
-        }
-    }
-
-    // Add webinar certificates total
-    $webinarCertificates = getCartWebinarCertificates();
-    if (!empty($webinarCertificates)) {
-        require_once __DIR__ . '/../classes/WebinarCertificate.php';
-        $webCertObj = new WebinarCertificate($db);
-        foreach ($webinarCertificates as $webCertId) {
-            $webCert = $webCertObj->getById($webCertId);
-            if ($webCert) {
-                $total += (float)($webCert['price'] ?? 200);
-            }
-        }
-    }
-
-    // Add olympiad registrations total
-    $olympiadRegistrations = getCartOlympiadRegistrations();
-    if (!empty($olympiadRegistrations)) {
-        require_once __DIR__ . '/../classes/OlympiadRegistration.php';
-        $olympRegObj = new OlympiadRegistration($db);
-        $olympCartData = $olympRegObj->calculateCartTotal($olympiadRegistrations);
-        $total += $olympCartData['total'];
-    }
-
-    return $total;
+    if (!isset($db)) return 0;
+    require_once __DIR__ . '/cart-quote.php';
+    require_once __DIR__ . '/../classes/CartPaymentRetry.php';
+    $account = verifiedAccountId($db);
+    refreshCheckoutCart($account);
+    $available = CartPaymentRetry::unreservedItems(loadCartDocuments($db, $account), CartPaymentRetry::openOrders($db, $account));
+    return quoteCart($db, $available, $account)['total'];
 }
 
 /**
@@ -579,18 +542,12 @@ function getUserId() {
 }
 
 /**
- * Set user ID in session
- */
-function setUserId($userId) {
-    initSession();
-    $_SESSION['user_id'] = $userId;
-}
-
-/**
  * Clear user session
  */
 function clearUserSession() {
     initSession();
+    if (($GLOBALS['db'] ?? null) instanceof PDO) forgetRememberedAccount($GLOBALS['db']);
+    unset($_SESSION['verified_account_id'], $_SESSION['guest_resources'], $_SESSION['legacy_cart'], $_SESSION['guest_quiz'], $_SESSION['guest_result_details'], $_SESSION['guest_group_batches']);
     unset($_SESSION['user_id']);
     unset($_SESSION['user_email']);
     unset($_SESSION['cart']);

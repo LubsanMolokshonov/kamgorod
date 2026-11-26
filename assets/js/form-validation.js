@@ -24,7 +24,7 @@ $(document).ready(function() {
         $.ajax({
             url: '/ajax/validate-email.php',
             type: 'GET',
-            data: { email: encodeURIComponent(email) },
+            data: { email: email },
             success: function(response) {
                 $('#email').removeClass('error');
                 $('#email').next('.helper-text').show();

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/document-file.php';
 /**
  * WebinarCertificate Class
  * Generates PDF certificates for webinar participants using mPDF
@@ -157,7 +158,7 @@ class WebinarCertificate {
             }
 
             // Check if already generated
-            if ($certificate['pdf_path'] && file_exists($this->uploadsDir . basename($certificate['pdf_path']))) {
+            if ($certificate['pdf_path'] && isIssuedDocumentPdf($this->uploadsDir . basename($certificate['pdf_path']))) {
                 return [
                     'success' => true,
                     'pdf_path' => $certificate['pdf_path'],

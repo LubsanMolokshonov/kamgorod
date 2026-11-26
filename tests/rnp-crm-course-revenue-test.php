@@ -63,8 +63,12 @@ function rnpChannelRevenue(array $result, string $channel): float
 
 $pdo = new PDO('sqlite::memory:');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-$pdo->exec('CREATE TABLE course_enrollments (
-    id INTEGER PRIMARY KEY, bitrix_lead_id INTEGER, utm_source TEXT
+$pdo->exec("CREATE TABLE course_enrollments (
+    id INTEGER PRIMARY KEY, bitrix_lead_id INTEGER, utm_source TEXT,
+    created_at TEXT DEFAULT '2026-08-01 12:00:00'
+)");
+$pdo->exec('CREATE TABLE course_checkout_payments (
+    enrollment_id INTEGER PRIMARY KEY, order_id INTEGER UNIQUE
 )');
 $pdo->exec('CREATE TABLE course_consultations (
     id INTEGER PRIMARY KEY, bitrix_lead_id INTEGER, utm_source TEXT
@@ -145,6 +149,19 @@ rnpAssertSame('Недоступная курсовая прибыль не ма�
 
 echo "RNP CRM course revenue tests passed\n";
 
+$pdo->exec("UPDATE course_enrollments SET created_at = '2026-07-29 12:00:00' WHERE id = 3");
+$pdo->exec("UPDATE orders SET yookassa_payment_id = 'checkout-transferred' WHERE id = 203");
+$pdo->exec("INSERT INTO course_checkout_payments VALUES (3, 203)");
+$transferred = rnpCrmSplit(new RNPAnalytics($pdo, new RnpFakeBitrix24($deals)), '2026-08-01', '2026-08-31', 'paid');
+rnpAssertSame('Онлайн-оплата перенесённой сделки считается один раз', 6, $transferred['count']);
+rnpAssertFloat('Онлайн-оплата перенесённой сделки входит по сумме заказа', 2024.0, $transferred['revenue']);
+rnpAssertSame('Перенесённая онлайн-оплата не помечается оффлайн', 2, $transferred['offline']['count']);
+$withWon = array_merge($deals, [['id' => 103, 'revenue' => 999.0, 'closedate' => '2026-08-12', 'created' => '2026-07-29']]);
+$deduped = rnpCrmSplit(new RNPAnalytics($pdo, new RnpFakeBitrix24($withWon)), '2026-08-01', '2026-08-31', 'paid');
+rnpAssertFloat('После возврата сделки в WON выручка не удваивается', 2024.0, $deduped['revenue']);
+$pdo->exec("DELETE FROM course_checkout_payments WHERE enrollment_id = 3");
+$pdo->exec("UPDATE orders SET yookassa_payment_id = NULL WHERE id = 203");
+
 // Регрессия: возвраты уменьшают исходный период, включая WON-сделки CRM.
 $pdo->exec("UPDATE orders SET yookassa_payment_id = 'course-full' WHERE id = 202");
 $pdo->exec("UPDATE orders SET payment_status = 'refunded', yookassa_payment_id = 'legacy-full' WHERE id = 201");
@@ -167,7 +184,6 @@ rnpAssertFloat('Возвраты работают в режиме создани
 
 $pdo->sqliteCreateFunction('GREATEST', static fn(...$values) => max($values));
 $pdo->exec("ALTER TABLE orders ADD created_at TEXT DEFAULT '2026-08-01 12:00:00'");
-$pdo->exec("ALTER TABLE course_enrollments ADD created_at TEXT DEFAULT '2026-08-01 12:00:00'");
 $pdo->exec("INSERT INTO orders VALUES
     (206, 'succeeded', '2026-08-26 12:00:00', 'yandex', 100, 'portal-partial', '2026-08-01 12:00:00'),
     (207, 'succeeded', '2026-08-26 12:00:00', 'yandex', 100, 'portal-full', '2026-08-01 12:00:00')");

@@ -9,11 +9,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/PublicationCertificate.php';
 
-// Check authentication
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    die('Необходима авторизация');
-}
+header('Cache-Control: private, no-store');
 
 // Get certificate ID
 $certificateId = intval($_GET['id'] ?? 0);
@@ -25,16 +21,10 @@ if (!$certificateId) {
 
 $certObj = new PublicationCertificate($db);
 
-// Verify ownership
-if (!$certObj->verifyOwnership($certificateId, $_SESSION['user_id'])) {
-    http_response_code(403);
-    die('Доступ запрещён');
-}
-
 // Get certificate
 $certificate = $certObj->getById($certificateId);
 
-if (!$certificate) {
+if (!$certificate || !canAccessPurchaseResource($db, 'publication_cert', $certificateId, (int)$certificate['user_id'])) {
     http_response_code(404);
     die('Свидетельство не найдено');
 }

@@ -1,172 +1,76 @@
 <?php
-/**
- * Remove Item from Cart AJAX Endpoint
- * Removes registration or certificate from session cart
- */
+declare(strict_types=1);
 
 session_start();
-header('Content-Type: application/json');
-
+header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/cart-quote.php';
 
-// Get item IDs
-$registrationId = $_POST['registration_id'] ?? null;
-$certificateId = $_POST['certificate_id'] ?? null;
-$webinarCertificateId = $_POST['webinar_certificate_id'] ?? null;
-$olympiadRegistrationId = $_POST['olympiad_registration_id'] ?? null;
-
-// Handle olympiad registration removal
-if ($olympiadRegistrationId) {
-    $olympEcommerce = null;
-    $stmt = $db->prepare("
-        SELECT r.id, r.olympiad_id, o.title as olympiad_title, o.diploma_price
-        FROM olympiad_registrations r
-        JOIN olympiads o ON r.olympiad_id = o.id
-        WHERE r.id = ?
-    ");
-    $stmt->execute([$olympiadRegistrationId]);
-    $olympData = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($olympData) {
-        $olympEcommerce = [
-            'id' => 'olymp-' . $olympData['olympiad_id'],
-            'name' => $olympData['olympiad_title'],
-            'price' => $olympData['diploma_price'] ?? 229,
-            'category' => 'Олимпиады'
-        ];
+try {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        throw new DomainException('Для удаления требуется запрос формы.');
     }
-
-    if (removeOlympiadRegistrationFromCart($olympiadRegistrationId)) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'Диплом олимпиады удалён из корзины',
-            'cart_count' => getCartCount(),
-            'ecommerce' => $olympEcommerce
-        ]);
-    } else {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Диплом олимпиады не найден в корзине'
-        ]);
+    if (!is_string($_POST['csrf_token'] ?? null) || !validateCSRFToken($_POST['csrf_token'])) {
+        http_response_code(403);
+        throw new DomainException('Сессия истекла. Обновите страницу.');
     }
-    exit;
-}
-
-// Handle webinar certificate removal
-if ($webinarCertificateId) {
-    // Получить данные сертификата для e-commerce перед удалением
-    $webCertEcommerce = null;
-    $stmt = $db->prepare("
-        SELECT wc.id, wc.webinar_id, wc.price, w.title as webinar_title
-        FROM webinar_certificates wc
-        JOIN webinars w ON wc.webinar_id = w.id
-        WHERE wc.id = ?
-    ");
-    $stmt->execute([$webinarCertificateId]);
-    $webCertData = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($webCertData) {
-        $webCertEcommerce = [
-            'id' => 'wc-' . $webCertData['webinar_id'],
-            'name' => $webCertData['webinar_title'],
-            'price' => $webCertData['price'],
-            'category' => 'Вебинары'
-        ];
-    }
-
-    if (removeWebinarCertificateFromCart($webinarCertificateId)) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'Сертификат удален из корзины',
-            'cart_count' => getCartCount(),
-            'ecommerce' => $webCertEcommerce
-        ]);
-    } else {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Сертификат не найден в корзине'
-        ]);
-    }
-    exit;
-}
-
-// Handle certificate removal
-if ($certificateId) {
-    // Получить данные свидетельства для e-commerce перед удалением
-    $certEcommerce = null;
-    $stmt = $db->prepare("
-        SELECT pc.id, pc.publication_id, pc.price, p.title as publication_title
-        FROM publication_certificates pc
-        JOIN publications p ON pc.publication_id = p.id
-        WHERE pc.id = ?
-    ");
-    $stmt->execute([$certificateId]);
-    $certData = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($certData) {
-        $certEcommerce = [
-            'id' => 'pub-' . $certData['publication_id'],
-            'name' => $certData['publication_title'],
-            'price' => $certData['price'] ?? 499,
-            'category' => 'Публикации'
-        ];
-    }
-
-    if (removeCertificateFromCart($certificateId)) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'Свидетельство удалено из корзины',
-            'cart_count' => getCartCount(),
-            'ecommerce' => $certEcommerce
-        ]);
-    } else {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Свидетельство не найдено в корзине'
-        ]);
-    }
-    exit;
-}
-
-// Handle registration removal
-if (!$registrationId) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'ID не указан'
-    ]);
-    exit;
-}
-
-// Получить данные конкурса для e-commerce перед удалением
-$ecommerceData = null;
-$stmt = $db->prepare("
-    SELECT c.id, c.title, c.price, c.category, r.nomination
-    FROM registrations r
-    JOIN competitions c ON r.competition_id = c.id
-    WHERE r.id = ?
-");
-$stmt->execute([$registrationId]);
-$itemData = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if ($itemData) {
-    $ecommerceData = [
-        'id' => $itemData['id'],
-        'name' => $itemData['title'],
-        'price' => $itemData['price'],
-        'category' => 'Конкурсы',
-        'nomination' => $itemData['nomination']
+    $types = [
+        'registration_id' => ['registration', 'registration', 'competition_id', '', 'Конкурсы'],
+        'certificate_id' => ['certificate', 'publication_cert', 'publication_id', 'pub-', 'Публикации'],
+        'webinar_certificate_id' => ['webinar_certificate', 'webinar_cert', 'webinar_id', 'wc-', 'Вебинары'],
+        'olympiad_registration_id' => ['olympiad_registration', 'olympiad_reg', 'olympiad_id', 'olymp-', 'Олимпиады'],
     ];
-}
-
-// Remove from cart
-if (removeFromCart($registrationId)) {
-    echo json_encode([
-        'success' => true,
-        'message' => 'Конкурс удален из корзины',
-        'cart_count' => getCartCount(),
-        'ecommerce' => $ecommerceData
-    ]);
-} else {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Конкурс не найден в корзине'
-    ]);
+    $keys = array_intersect_key($types, $_POST);
+    if (count($keys) !== 1) throw new DomainException('Выберите один документ.');
+    $column = array_key_first($keys);
+    [$type, $cartType, $productId, $prefix, $category] = $keys[$column];
+    $id = filter_var($_POST[$column], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    if (!$id) throw new DomainException('Некорректный документ.');
+    $accountId = verifiedAccountId($db);
+    $db->beginTransaction();
+    if ($accountId !== null) {
+        $lock = $db->prepare('SELECT id FROM cart_items WHERE user_id = ? ORDER BY id FOR UPDATE');
+        $lock->execute([$accountId]);
+        $lock->fetchAll(PDO::FETCH_COLUMN);
+    }
+    $table = CART_PAID_STATUSES[$cartType]['table'];
+    $lock = $db->prepare("SELECT user_id FROM $table WHERE id = ? FOR UPDATE");
+    $lock->execute([$id]);
+    $owner = (int)$lock->fetchColumn();
+    if (!$owner || ($accountId !== null ? $accountId !== $owner : !guestOwnsCartItem($cartType, $id, $owner))) {
+        throw new DomainException('Документ отсутствует в вашей корзине.');
+    }
+    refreshCheckoutCart($accountId);
+    $item = null;
+    foreach (loadCartDocuments($db, $accountId) as $document) {
+        if ($document['type'] === $type && (int)$document['id'] === $id) {
+            $item = $document;
+            break;
+        }
+    }
+    if (!$item) throw new DomainException('Корзина изменилась. Обновите страницу.');
+    $check = $db->prepare("SELECT 1 FROM order_items oi JOIN orders o ON oi.order_id = o.id
+        WHERE oi.$column = ? AND o.payment_status IN ('pending','processing') LIMIT 1");
+    $check->execute([$id]);
+    $reservation = $db->prepare('SELECT reserved_in_order_id FROM cart_items WHERE user_id = ? AND item_type = ? AND item_id = ? FOR UPDATE');
+    $reservation->execute([$owner, $cartType, $id]);
+    if ($check->fetchColumn() || $reservation->fetchColumn()) {
+        throw new DomainException('Документ входит в открытый заказ. Обновите корзину и продолжите оформленную оплату.');
+    }
+    $db->prepare('DELETE FROM cart_items WHERE user_id = ? AND item_type = ? AND item_id = ? AND reserved_in_order_id IS NULL')
+        ->execute([$owner, $cartType, $id]);
+    $db->commit();
+    $key = CART_TYPES[$cartType];
+    $_SESSION[$key] = array_values(array_filter($_SESSION[$key] ?? [], static fn($value) => (int)$value !== $id));
+    $ecommerce = ['id' => $prefix . $item['raw_data'][$productId], 'name' => $item['name'], 'price' => $item['price'], 'category' => $category];
+    if ($type === 'registration') $ecommerce['nomination'] = $item['raw_data']['nomination'];
+    echo json_encode(['success' => true, 'message' => 'Документ удалён из корзины.', 'cart_count' => getCartCount(), 'ecommerce' => $ecommerce], JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    if ($db->inTransaction()) $db->rollBack();
+    if (!($e instanceof DomainException)) {
+        error_log('Ошибка удаления позиции корзины: ' . get_class($e));
+        http_response_code(500);
+    }
+    echo json_encode(['success' => false, 'message' => $e instanceof DomainException ? $e->getMessage() : 'Не удалось удалить документ.'], JSON_UNESCAPED_UNICODE);
 }

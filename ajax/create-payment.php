@@ -18,15 +18,22 @@ require_once __DIR__ . '/../classes/OlympiadRegistration.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Order.php';
 require_once __DIR__ . '/../classes/CartPaymentRetry.php';
+require_once __DIR__ . '/../classes/PricingMode.php';
 require_once __DIR__ . '/../classes/LoyaltyDiscount.php';
 require_once __DIR__ . '/../classes/EmailCampaignDiscount.php';
 require_once __DIR__ . '/../classes/ParticipantGroup.php';
 require_once __DIR__ . '/../includes/group-pricing.php';
-require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/cart-quote.php';
+require_once __DIR__ . '/../includes/order-fulfillment.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use YooKassa\Client;
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Откройте форму оплаты в корзине.']);
+    return;
+}
 // Validate CSRF token
 if (!is_string($_POST['csrf_token'] ?? null) || !validateCSRFToken($_POST['csrf_token'])) {
     echo json_encode([
@@ -36,679 +43,108 @@ if (!is_string($_POST['csrf_token'] ?? null) || !validateCSRFToken($_POST['csrf_
     exit;
 }
 
-// Check if cart exists
-if (isCartEmpty()) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Корзина пуста'
-    ]);
-    exit;
-}
-
 try {
-    // Initialize classes
-    $registrationObj = new Registration($db);
-    $certObj = new PublicationCertificate($db);
-    $webCertObj = new WebinarCertificate($db);
-    $olympRegObj = new OlympiadRegistration($db);
-    $userObj = new User($db);
+    $accountId = verifiedAccountId($db);
     $orderObj = new Order($db);
-
-    // Get registrations and certificates from cart
-    $registrations = getCart();
-    $certificates = getCartCertificates();
-    $webinarCertificates = getCartWebinarCertificates();
-    $olympiadRegistrations = getCartOlympiadRegistrations();
-    // Состав чека и распределение скидок сохраняются при входе с другого устройства.
-    sort($registrations, SORT_NUMERIC);
-    sort($certificates, SORT_NUMERIC);
-    sort($webinarCertificates, SORT_NUMERIC);
-    sort($olympiadRegistrations, SORT_NUMERIC);
-
-    // Collect ALL items into one array for unified promotion calculation
-    $allItems = [];
-
-    // Get registrations
-    foreach ($registrations as $regId) {
-        $registration = $registrationObj->getById($regId);
-        if ($registration) {
-            $allItems[] = [
-                'type' => 'registration',
-                'id' => $regId,
-                'name' => $registration['competition_title'],
-                'price' => (float)$registration['competition_price'],
-                'is_free' => false,
-                'raw_data' => $registration
-            ];
-        }
-    }
-
-    // Get certificates
-    $certificatesData = [];
-    foreach ($certificates as $certId) {
-        $cert = $certObj->getById($certId);
-        if ($cert) {
-            $certificatesData[] = $cert;
-            $allItems[] = [
-                'type' => 'certificate',
-                'id' => $cert['id'],
-                'name' => $cert['publication_title'],
-                'price' => (float)($cert['price'] ?? PUBLICATION_CERTIFICATE_PRICE),
-                'is_free' => false,
-                'raw_data' => $cert
-            ];
-        }
-    }
-
-    // Get webinar certificates
-    $webinarCertificatesData = [];
-    foreach ($webinarCertificates as $webCertId) {
-        $webCert = $webCertObj->getById($webCertId);
-        if ($webCert) {
-            $webinarCertificatesData[] = $webCert;
-            $allItems[] = [
-                'type' => 'webinar_certificate',
-                'id' => $webCert['id'],
-                'name' => $webCert['webinar_title'],
-                'price' => (float)($webCert['price'] ?? 200),
-                'is_free' => false,
-                'raw_data' => $webCert
-            ];
-        }
-    }
-
-    // Get olympiad registrations
-    $olympiadRegsData = [];
-    foreach ($olympiadRegistrations as $olympRegId) {
-        $olympReg = $olympRegObj->getById($olympRegId);
-        if ($olympReg) {
-            $olympiadRegsData[] = $olympReg;
-            $allItems[] = [
-                'type' => 'olympiad_registration',
-                'id' => $olympReg['id'],
-                'name' => $olympReg['olympiad_title'],
-                'price' => (float)($olympReg['diploma_price'] ?? OLYMPIAD_DIPLOMA_PRICE),
-                'is_free' => false,
-                'raw_data' => $olympReg
-            ];
-        }
-    }
-
-    if (empty($allItems)) {
-        throw new DomainException('Корзина пуста или содержит недействительные позиции');
-    }
-
-    // Защита от двойной оплаты: ни одна позиция в корзине не должна быть уже оплачена.
-    // Идемпотентность вебхука Yookassa защищает от повторной обработки одного payment_id,
-    // но не от повторного создания заказа на ту же registration_id.
-    $alreadyPaid = [];
-    foreach ($allItems as $item) {
-        $status = $item['raw_data']['status'] ?? null;
-        if ($status === 'paid' || $status === 'diploma_ready' || $status === 'ready') {
-            $alreadyPaid[] = $item;
-        }
-    }
-    if (!empty($alreadyPaid)) {
-        // Чистим корзину от уже оплаченного через стандартные remove*-функции —
-        // они зеркалят удаление в cart_items (write-through), иначе позиция
-        // вернётся в корзину при следующем logout/login.
-        foreach ($alreadyPaid as $paidItem) {
-            $type = $paidItem['type'];
-            $id = (int)$paidItem['id'];
-            if ($type === 'registration') {
-                removeFromCart($id);
-            } elseif ($type === 'certificate') {
-                removeCertificateFromCart($id);
-            } elseif ($type === 'webinar_certificate') {
-                removeWebinarCertificateFromCart($id);
-            } elseif ($type === 'olympiad_registration') {
-                removeOlympiadRegistrationFromCart($id);
-            }
-        }
-        error_log(sprintf(
-            'create-payment: skipped %d already-paid items for user_id=%s',
-            count($alreadyPaid),
-            $_SESSION['user_id'] ?? 'guest'
-        ));
-        echo json_encode([
-            'success' => false,
-            'message' => 'Часть позиций в корзине уже оплачена. Корзина обновлена, попробуйте ещё раз.'
-        ]);
-        exit;
-    }
-
-    // Calculate subtotal
-    $subtotal = 0;
-    foreach ($allItems as $item) {
-        $subtotal += $item['price'];
-    }
-
-    // Объёмная скидка по группам (групповое участие). Тариф зафиксирован в
-    // participant_groups при создании группы — НЕ пересчитывается по числу позиций
-    // в корзине. Групповые позиции исключаются из акции «2+1».
-    $groupObj = new ParticipantGroup($db);
-    $groupPercentCache = [];
-    foreach ($allItems as $item) {
-        $batchId = $item['raw_data']['group_batch_id'] ?? null;
-        if (empty($batchId)) {
-            continue;
-        }
-        if (!array_key_exists($batchId, $groupPercentCache)) {
-            $grp = $groupObj->getByBatchId($batchId);
-            $groupPercentCache[$batchId] = $grp ? (int)$grp['discount_percent'] : 0;
-        }
-    }
-    $groupPricing = groupApplyDiscounts($allItems, $groupPercentCache);
-    $allItems = $groupPricing['items'];
-    $groupDiscount = $groupPricing['discount'];
-
-    // Акция «2+1»: только для одиночных (негрупповых) позиций — каждая 3-я бесплатно.
-    $discount = 0;
-    $promotionApplied = false;
-
-    $singleItems = [];
-    foreach ($allItems as $idx => $item) {
-        if (empty($item['in_group'])) {
-            $singleItems[] = ['idx' => $idx, 'price' => (float)$item['price']];
-        }
-    }
-
-    if (count($singleItems) >= 3) {
-        // Самые дешёвые делаем бесплатными
-        usort($singleItems, function($a, $b) {
-            return $b['price'] <=> $a['price'];
-        });
-
-        $freeItemCount = floor(count($singleItems) / 3);
-        for ($i = 0; $i < $freeItemCount; $i++) {
-            $freePos = ($i + 1) * 3 - 1; // позиции 2, 5, 8, ... среди одиночных
-            if (isset($singleItems[$freePos])) {
-                $origIdx = $singleItems[$freePos]['idx'];
-                $allItems[$origIdx]['is_free'] = true;
-                $discount += $allItems[$origIdx]['price'];
-            }
-        }
-        $promotionApplied = true;
-    }
-
-    $grandTotal = $subtotal - $discount - $groupDiscount;
-
-    // Пожизненная скидка лояльности (25%) для постоянных клиентов — стакается поверх 2+1.
-    // Определяем userId заранее (из сессии/корзины), чтобы применить скидку до создания заказа.
-    $sessionUserId = $_SESSION['user_id'] ?? null;
-    if (!$sessionUserId) {
-        if (!empty($registrations)) {
-            $stmt = $db->prepare("SELECT user_id FROM registrations WHERE id = ? LIMIT 1");
-            $stmt->execute([$registrations[0]]);
-            $sessionUserId = $stmt->fetchColumn() ?: null;
-        } elseif (!empty($certificatesData)) {
-            $sessionUserId = $certificatesData[0]['user_id'] ?? null;
-        } elseif (!empty($webinarCertificatesData)) {
-            $sessionUserId = $webinarCertificatesData[0]['user_id'] ?? null;
-        } elseif (!empty($olympiadRegsData)) {
-            $sessionUserId = $olympiadRegsData[0]['user_id'] ?? null;
-        }
-    }
-
-    // ============================================================
-    // ПОДПИСЧИК: дипломы/сертификаты/свидетельства за 0 ₽ минуя Yookassa.
-    // Активная подписка (любой тариф) покрывает все позиции корзины этого эндпоинта
-    // (конкурсы/олимпиады/вебинары/публикации). Курсы КПК/ПП сюда не попадают.
-    // Скидки 2+1/loyalty не нужны — всё уже 0. Для НЕ-подписчика код ниже без изменений.
-    // ============================================================
-    require_once __DIR__ . '/../classes/SubscriptionService.php';
-    require_once __DIR__ . '/../classes/PricingMode.php';
-    require_once __DIR__ . '/../includes/order-fulfillment.php';
-    require_once __DIR__ . '/../includes/email-helper.php';
-    if ($sessionUserId && (new SubscriptionService($db))->coversCertificates((int)$sessionUserId)) {
-        $subUserId = (int)$sessionUserId;
-
-        // Все позиции бесплатны. Готовим данные для Order::createFromCart (zero-price).
-        $subCartData = [
-            'items' => [], 'subtotal' => 0, 'discount' => 0, 'group_discount' => 0,
-            'loyalty_discount' => 0, 'total' => 0, 'promotion_applied' => false,
-        ];
-        $subCerts = $subWebCerts = $subOlympRegs = [];
-        foreach ($allItems as $it) {
-            switch ($it['type']) {
-                case 'registration':
-                    $subCartData['items'][] = ['registration_id' => $it['id'], 'price' => 0, 'is_free' => true];
-                    break;
-                case 'certificate':
-                    $cd = $it['raw_data']; $cd['is_free'] = true; $cd['price'] = 0; $subCerts[] = $cd;
-                    break;
-                case 'webinar_certificate':
-                    $wd = $it['raw_data']; $wd['is_free'] = true; $wd['price'] = 0; $subWebCerts[] = $wd;
-                    break;
-                case 'olympiad_registration':
-                    $od = $it['raw_data']; $od['is_free'] = true; $od['price'] = 0; $subOlympRegs[] = $od;
-                    break;
-            }
-        }
-
-        $orderObjSub = new Order($db);
-        try {
-            $db->beginTransaction();
-            $subOrderId = $orderObjSub->createFromCart($subUserId, $subCartData, $subCerts, 0, $subWebCerts, $subOlympRegs);
-            if (!$subOrderId) {
-                throw new Exception('Не удалось создать заказ подписчика');
-            }
-            // Пометить позиции как покрытые подпиской (0 ₽, выдача без оплаты).
-            $stmtCov = $db->prepare("UPDATE order_items SET covered_by_subscription = 1 WHERE order_id = ?");
-            $stmtCov->execute([$subOrderId]);
-            // Зарезервировать позиции за заказом — fulfillOrderItems вычистит их из корзины.
-            if (!reserveCartItemsForOrder($subUserId, CartPaymentRetry::reservationKeys($allItems), (int)$subOrderId)) {
-                throw new DomainException('В корзине осталась незавершённая оплата.');
-            }
-            $db->commit();
-        } catch (Throwable $e) {
-            if ($db->inTransaction()) { $db->rollBack(); }
-            error_log('create-payment subscriber order failed: ' . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Не удалось оформить документы по подписке. Попробуйте ещё раз.']);
-            exit;
-        }
-
-        // A/B-атрибуция: помечаем заказ вариантом модели оплаты.
-        PricingMode::stampOrder($db, (int)$subOrderId);
-
-        // Выдача документов (своя транзакция внутри): статусы → PDF → отмена цепочек.
-        $fulfill = fulfillOrderItems($db, (int)$subOrderId, 'subscription');
-
-        // Очистить корзину (и сессию, и cart_items) — как при оплате.
-        foreach ($allItems as $it) {
-            switch ($it['type']) {
-                case 'registration':          removeFromCart((int)$it['id']); break;
-                case 'certificate':           removeCertificateFromCart((int)$it['id']); break;
-                case 'webinar_certificate':   removeWebinarCertificateFromCart((int)$it['id']); break;
-                case 'olympiad_registration': removeOlympiadRegistrationFromCart((int)$it['id']); break;
-            }
-        }
-
-        if ($fulfill['all_docs_ready']) {
-            try {
-                sendPaymentSuccessEmail($subUserId, (int)$subOrderId);
-            } catch (Throwable $e) {
-                scheduleDelayedEmail('payment_success', $subUserId, (int)$subOrderId, 10);
-            }
-        }
-
-        echo json_encode([
-            'success' => true,
-            'redirect_url' => '/pages/cabinet.php?subscription_fulfilled=1'
-        ]);
-        exit;
-    }
-
-    // ============================================================
-    // ВАРИАНТ B (subscription-only): не-подписчику поштучная оплата документов запрещена.
-    // Подписчик уже обработан веткой 0 ₽ выше. Здесь — только не-подписчик в варианте B:
-    // блокируем создание платежа и ведём на подписку. В варианте A / control — код ниже без изменений.
-    // ============================================================
-    if (PricingMode::isSubscriptionOnly()) {
-        echo json_encode([
-            'success'              => false,
-            'requires_subscription' => true,
-            'redirect_url'         => '/podpiska/?from=cart',
-            'message'              => 'Получить документы можно по подписке — она покрывает все дипломы и сертификаты без доплат.'
-        ]);
-        exit;
-    }
-
-    $loyaltyDiscount = 0;
-    if ($sessionUserId && LoyaltyDiscount::isEligible($db, (int)$sessionUserId)) {
-        $loyaltyRates = LoyaltyDiscount::getEffectiveRates($db, (int)$sessionUserId);
-        $calc = LoyaltyDiscount::calculateCartDiscount((float)$grandTotal, $loyaltyRates['cart']);
-        if ($calc['amount'] > 0) {
-            $loyaltyDiscount = $calc['amount'];
-            $grandTotal = $calc['final'];
-        }
-    }
-
-    // Скидка по email-кампании (10% молчащим пользователям).
-    // Применяется только если не сработала loyalty-скидка — чтобы не комбинировать.
-    $campaignDiscount = 0;
-    if ($sessionUserId && $loyaltyDiscount == 0) {
-        $campaignRate = EmailCampaignDiscount::getActiveRate($db, (int)$sessionUserId);
-        if ($campaignRate > 0) {
-            $calc = EmailCampaignDiscount::calculate((float)$grandTotal, $campaignRate);
-            if ($calc['amount'] > 0) {
-                $campaignDiscount = $calc['amount'];
-                $loyaltyDiscount = $calc['amount']; // пишем в ту же колонку loyalty_discount_amount
-                $grandTotal = $calc['final'];
-            }
-        }
-    }
-
-    // Build cartData for backward compatibility with Order class
-    $cartData = [
-        'items' => [],
-        'subtotal' => $subtotal,
-        'discount' => $discount,
-        'group_discount' => $groupDiscount,
-        'loyalty_discount' => $loyaltyDiscount,
-        'total' => $grandTotal,
-        'promotion_applied' => $promotionApplied
-    ];
-
-    // Populate items for Order class
-    foreach ($allItems as $item) {
-        if ($item['type'] === 'registration') {
-            $cartData['items'][] = [
-                'registration_id' => $item['id'],
-                'competition_name' => $item['name'],
-                'nomination' => $item['raw_data']['nomination'] ?? '',
-                'price' => $item['price'],
-                'is_free' => $item['is_free']
-            ];
-        }
-    }
-
-    // LOCAL DEVELOPMENT BYPASS: Skip payment for local environment
-    if (APP_ENV === 'local') {
-        // Get user info from the first registration or certificate
-        $userId = null;
-        if (!empty($registrations)) {
-            $firstRegId = $registrations[0];
-            $stmt = $db->prepare("
-                SELECT u.id, u.email
-                FROM registrations r
-                JOIN users u ON r.user_id = u.id
-                WHERE r.id = ?
-            ");
-            $stmt->execute([$firstRegId]);
-            $userResult = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($userResult) {
-                $userId = $userResult['id'];
-                $_SESSION['user_email'] = $userResult['email'];
-                $_SESSION['user_id'] = $userId;
-            }
-        } elseif (!empty($certificatesData)) {
-            $userId = $certificatesData[0]['user_id'];
-            $user = $userObj->getById($userId);
-            if ($user) {
-                $_SESSION['user_email'] = $user['email'];
-                $_SESSION['user_id'] = $userId;
-            }
-        } elseif (!empty($webinarCertificatesData)) {
-            $userId = $webinarCertificatesData[0]['user_id'];
-            $user = $userObj->getById($userId);
-            if ($user) {
-                $_SESSION['user_email'] = $user['email'];
-                $_SESSION['user_id'] = $userId;
-            }
-        }
-
-        // Mark all registrations as paid
-        foreach ($registrations as $registrationId) {
-            $stmt = $db->prepare("UPDATE registrations SET status = 'paid' WHERE id = ?");
-            $stmt->execute([$registrationId]);
-        }
-
-        // Generate diplomas for paid registrations
-        require_once __DIR__ . '/../classes/Diploma.php';
-        $diplomaObj = new Diploma($db);
-        foreach ($registrations as $registrationId) {
-            $diplomaObj->generate($registrationId, 'participant');
-            $regData = $diplomaObj->getRegistrationData($registrationId);
-            if ($regData && !empty($regData['has_supervisor']) && !empty($regData['supervisor_name'])) {
-                $diplomaObj->generate($registrationId, 'supervisor');
-            }
-        }
-
-        // Mark all certificates as paid and generate them
-        foreach ($certificatesData as $cert) {
-            $certObj->updateStatus($cert['id'], 'paid');
-            $certObj->generate($cert['id']);
-        }
-
-        // Mark all webinar certificates as paid and generate them
-        foreach ($webinarCertificatesData as $webCert) {
-            $webCertObj->updateStatus($webCert['id'], 'paid');
-            $webCertObj->generate($webCert['id']);
-        }
-
-        // Mark all olympiad registrations as paid and generate diplomas
-        if (!empty($olympiadRegsData)) {
-            require_once __DIR__ . '/../classes/OlympiadDiploma.php';
-            $olympDiplomaObj = new OlympiadDiploma($db);
-            foreach ($olympiadRegsData as $olympReg) {
-                $olympRegObj->update($olympReg['id'], ['status' => 'paid']);
-                $olympDiplomaObj->generate($olympReg['id'], 'participant');
-                if (!empty($olympReg['has_supervisor']) && !empty($olympReg['supervisor_name'])) {
-                    $olympDiplomaObj->generate($olympReg['id'], 'supervisor');
-                }
-            }
-        }
-
-        // Sync user specializations from purchased events (additive)
-        if ($userId) {
-            try {
-                $dbObj = new Database($db);
-                $specIds = [];
-
-                $competitionIds = [];
-                $olympiadIds = [];
-                $webinarIds = [];
-                $publicationIds = [];
-
-                foreach ($allItems as $item) {
-                    $raw = $item['raw_data'] ?? [];
-                    if ($item['type'] === 'registration' && !empty($raw['competition_id'])) {
-                        $competitionIds[] = (int)$raw['competition_id'];
-                    } elseif ($item['type'] === 'olympiad_registration' && !empty($raw['olympiad_id'])) {
-                        $olympiadIds[] = (int)$raw['olympiad_id'];
-                    } elseif ($item['type'] === 'webinar_certificate' && !empty($raw['webinar_id'])) {
-                        $webinarIds[] = (int)$raw['webinar_id'];
-                    } elseif ($item['type'] === 'certificate' && !empty($raw['publication_id'])) {
-                        $publicationIds[] = (int)$raw['publication_id'];
-                    }
-                }
-
-                if (!empty($competitionIds)) {
-                    $ph = implode(',', array_fill(0, count($competitionIds), '?'));
-                    $rows = $dbObj->query("SELECT DISTINCT specialization_id FROM competition_specializations WHERE competition_id IN ($ph)", $competitionIds);
-                    foreach ($rows as $r) $specIds[] = (int)$r['specialization_id'];
-                }
-                if (!empty($olympiadIds)) {
-                    $ph = implode(',', array_fill(0, count($olympiadIds), '?'));
-                    $rows = $dbObj->query("SELECT DISTINCT specialization_id FROM olympiad_specializations WHERE olympiad_id IN ($ph)", $olympiadIds);
-                    foreach ($rows as $r) $specIds[] = (int)$r['specialization_id'];
-                }
-                if (!empty($webinarIds)) {
-                    $ph = implode(',', array_fill(0, count($webinarIds), '?'));
-                    $rows = $dbObj->query("SELECT DISTINCT specialization_id FROM webinar_specializations WHERE webinar_id IN ($ph)", $webinarIds);
-                    foreach ($rows as $r) $specIds[] = (int)$r['specialization_id'];
-                }
-                if (!empty($publicationIds)) {
-                    $ph = implode(',', array_fill(0, count($publicationIds), '?'));
-                    $rows = $dbObj->query("SELECT DISTINCT specialization_id FROM publication_specializations WHERE publication_id IN ($ph)", $publicationIds);
-                    foreach ($rows as $r) $specIds[] = (int)$r['specialization_id'];
-                }
-
-                $specIds = array_unique($specIds);
-                if (!empty($specIds)) {
-                    $userObj->addSpecializations($userId, $specIds);
-                }
-            } catch (Exception $e) {
-                error_log("Specialization sync failed (local): " . $e->getMessage());
-            }
-        }
-
-        // Generate auto-login token and set cookie (30 days)
-        if ($userId) {
-            $sessionToken = $userObj->generateSessionToken($userId);
-
-            setcookie(
-                'session_token',
-                $sessionToken,
-                time() + (30 * 24 * 60 * 60),
-                '/',
-                '',
-                isset($_SERVER['HTTPS']),
-                true
-            );
-        }
-
-        // Очистка корзины: сначала вычистить cart_items (в local-mode заказа в orders нет,
-        // поэтому используем batch-delete по списку позиций), затем сбросить сессионные массивы.
-        if ($userId) {
-            $cartKeys = [];
-            foreach ($allItems as $it) {
-                $cartType = match ($it['type']) {
-                    'registration'          => 'registration',
-                    'certificate'           => 'publication_cert',
-                    'webinar_certificate'   => 'webinar_cert',
-                    'olympiad_registration' => 'olympiad_reg',
-                    default                 => null,
-                };
-                if ($cartType) {
-                    $cartKeys[] = ['type' => $cartType, 'id' => (int)$it['id']];
-                }
-            }
-            removeCartItemsBatch((int)$userId, $cartKeys);
-        }
-        clearCart();
-
-        // Пожизненная скидка лояльности: локальный bypass не проходит через
-        // Yookassa webhook, поэтому выдаём статус здесь. В local-режиме заказ
-        // в таблице orders не создаётся — шлём письмо только если есть хоть
-        // один succeeded-заказ в истории.
-        if ($userId) {
-            try {
-                if ($userObj->grantLifetimeDiscount((int)$userId)) {
-                    $lastOrder = (new Database($db))->queryOne(
-                        "SELECT id FROM orders WHERE user_id = ? AND payment_status = 'succeeded' ORDER BY id DESC LIMIT 1",
-                        [$userId]
-                    );
-                    if ($lastOrder) {
-                        require_once __DIR__ . '/../includes/email-helper.php';
-                        scheduleDelayedEmail('lifetime_discount_granted', (int)$userId, (int)$lastOrder['id'], 10);
-                    }
-                }
-            } catch (Exception $e) {
-                error_log('Local loyalty grant failed: ' . $e->getMessage());
-            }
-        }
-
-        // Return success with redirect to cabinet
-        echo json_encode([
-            'success' => true,
-            'message' => 'Переход в личный кабинет...',
-            'redirect_url' => '/pages/cabinet.php?payment=success'
-        ]);
-        exit;
-    }
-
-    // PRODUCTION: Use YooKassa payment integration
-    // Get user info from the first registration or certificate
-    $userId = null;
-    $userEmail = null;
-    $userName = null;
-
-    if (!empty($registrations)) {
-        $firstRegId = $registrations[0];
-        $stmt = $db->prepare("
-            SELECT u.id, u.email, u.full_name
-            FROM registrations r
-            JOIN users u ON r.user_id = u.id
-            WHERE r.id = ?
-        ");
-        $stmt->execute([$firstRegId]);
-        $userResult = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($userResult) {
-            $userId = $userResult['id'];
-            $userEmail = $userResult['email'];
-            $userName = $userResult['full_name'];
-        }
-    } elseif (!empty($certificatesData)) {
-        $userId = $certificatesData[0]['user_id'];
-        $user = $userObj->getById($userId);
-        if ($user) {
-            $userEmail = $user['email'];
-            $userName = $user['full_name'];
-        }
-    } elseif (!empty($webinarCertificatesData)) {
-        $userId = $webinarCertificatesData[0]['user_id'];
-        $user = $userObj->getById($userId);
-        if ($user) {
-            $userEmail = $user['email'];
-            $userName = $user['full_name'];
-        }
-    } elseif (!empty($olympiadRegsData)) {
-        $userId = $olympiadRegsData[0]['user_id'];
-        $user = $userObj->getById($userId);
-        if ($user) {
-            $userEmail = $user['email'];
-            $userName = $user['full_name'];
-        }
-    }
-
-    if (!$userId || !$userEmail) {
-        throw new DomainException('Пользователь не найден');
-    }
-
-    // BEGIN TRANSACTION
     $client = new Client();
     $client->setAuth(YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY);
+
+    if (isset($_POST['resume_order_id'])) {
+        $resumeId = filter_var($_POST['resume_order_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if (!$resumeId) throw new DomainException('Некорректный заказ.');
+        echo json_encode(CartPaymentRetry::resume($db, $resumeId, $accountId, $client), JSON_UNESCAPED_UNICODE);
+        return;
+    }
+
     $db->beginTransaction();
-    $retry = CartPaymentRetry::resolve(
-        $db, (int)$userId, (int)($_SESSION['user_id'] ?? 0), $allItems, (float)$grandTotal,
-        static fn(string $paymentId) => $client->getPaymentInfo($paymentId)
-    );
+    if ($accountId !== null) {
+        $lock = $db->prepare('SELECT id FROM cart_items WHERE user_id = ? ORDER BY id FOR UPDATE');
+        $lock->execute([$accountId]);
+        $lock->fetchAll(PDO::FETCH_COLUMN);
+    }
+    refreshCheckoutCart($accountId);
+    $documents = loadCartDocuments($db, $accountId);
+    $openOrders = CartPaymentRetry::openOrders($db, $accountId);
+    $available = CartPaymentRetry::unreservedItems($documents, $openOrders);
+    if ($documents && !$available && count($openOrders) === 1 && is_string($_POST['cart_revision'] ?? null)) {
+        $shown = quoteCart($db, $documents, $accountId);
+        if (hash_equals($shown['revision'], $_POST['cart_revision']) && CartPaymentRetry::matchesShownQuote($openOrders[0], $shown)) {
+            $db->commit();
+            echo json_encode(CartPaymentRetry::resume($db, (int)$openOrders[0]['id'], $accountId, $client), JSON_UNESCAPED_UNICODE);
+            return;
+        }
+    }
+    $quote = quoteCart($db, $available, $accountId);
+    if (!is_string($_POST['cart_revision'] ?? null) || !hash_equals($quote['revision'], $_POST['cart_revision'])) {
+        $db->rollBack();
+        echo json_encode(['success' => false, 'refresh_cart' => true,
+            'message' => 'Корзина изменилась. Проверьте обновлённый состав и сумму перед оплатой.'], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+    $allItems = $quote['items'];
+    if (!$allItems) throw new DomainException('Корзина пуста. Обновите страницу.');
+    $grandTotal = $quote['total'];
+    $subscriber = $quote['subscriber'];
+    $userId = (int)$allItems[0]['raw_data']['user_id'];
+    $user = (new User($db))->getById($userId);
+    if (empty($user['email'])) throw new DomainException('Не удалось определить получателя чека.');
+    $userEmail = $user['email'];
+    $retry = CartPaymentRetry::resolve($db, $userId, (int)$accountId, $allItems, $grandTotal,
+        static function (): never {
+            throw new DomainException('В корзине появилась начатая оплата. Обновите страницу.');
+        });
     if (isset($retry['redirect_url'])) {
         $db->commit();
         echo json_encode($retry, JSON_UNESCAPED_UNICODE);
         return;
     }
+    if (!$subscriber && !$retry && PricingMode::isSubscriptionOnly()) {
+        $db->rollBack();
+        echo json_encode(['success' => false, 'requires_subscription' => true,
+            'redirect_url' => '/podpiska/?from=cart', 'message' => 'Получить документы можно по подписке.'], JSON_UNESCAPED_UNICODE);
+        return;
+    }
 
-    // Create order with all items (certificates with promotion info)
-    $certificatesWithPromotion = [];
+    $loyaltyDiscount = $quote['loyalty'] + $quote['campaign_amount'];
+    $cartData = ['items' => [], 'subtotal' => $subscriber ? 0 : $quote['subtotal'], 'discount' => $quote['discount'],
+        'group_discount' => $quote['group_discount'], 'loyalty_discount' => $loyaltyDiscount, 'total' => $grandTotal,
+        'promotion_applied' => $quote['discount'] > 0];
+    $grouped = ['registration' => [], 'certificate' => [], 'webinar_certificate' => [], 'olympiad_registration' => []];
     foreach ($allItems as $item) {
-        if ($item['type'] === 'certificate') {
-            $certData = $item['raw_data'];
-            $certData['is_free'] = $item['is_free'];
-            $certData['price'] = $item['price'];
-            $certificatesWithPromotion[] = $certData;
+        $row = $item['raw_data'];
+        $row['is_free'] = $subscriber || $item['is_free'];
+        $row['price'] = $subscriber ? 0 : $item['price'];
+        $grouped[$item['type']][] = $row;
+        if ($item['type'] === 'registration') {
+            $cartData['items'][] = ['registration_id' => $item['id'], 'price' => $row['price'], 'is_free' => $row['is_free']];
         }
     }
-    // Collect webinar certificates with promotion info
-    $webinarCertsWithPromotion = [];
-    foreach ($allItems as $item) {
-        if ($item['type'] === 'webinar_certificate') {
-            $wcData = $item['raw_data'];
-            $wcData['is_free'] = $item['is_free'];
-            $wcData['price'] = $item['price'];
-            $webinarCertsWithPromotion[] = $wcData;
+    $certificatesData = $grouped['certificate'];
+    $registrations = array_column($grouped['registration'], 'id');
+    $certificates = array_column($certificatesData, 'id');
+    $webinarCertificates = array_column($grouped['webinar_certificate'], 'id');
+    $olympiadRegistrations = array_column($grouped['olympiad_registration'], 'id');
+    $orderId = $retry['covered_order_id'] ?? $retry['retry_order_id'] ?? $orderObj->createFromCart($userId, $cartData,
+        $certificatesData, $grandTotal, $grouped['webinar_certificate'], $grouped['olympiad_registration']);
+    if (!$orderId) throw new DomainException('Не удалось создать заказ.');
+    if (!$retry) {
+        PricingMode::stampOrder($db, (int)$orderId);
+        if (!reserveCartItemsForOrder($userId, CartPaymentRetry::reservationKeys($allItems), (int)$orderId)) {
+            throw new DomainException('В корзине есть незавершённая оплата. Обновите страницу.');
+        }
+        if ($subscriber) {
+            $db->prepare('UPDATE order_items SET covered_by_subscription = 1 WHERE order_id = ?')->execute([$orderId]);
         }
     }
-    // Collect olympiad registrations with promotion info
-    $olympiadRegsWithPromotion = [];
-    foreach ($allItems as $item) {
-        if ($item['type'] === 'olympiad_registration') {
-            $oData = $item['raw_data'];
-            $oData['is_free'] = $item['is_free'];
-            // Цена со скидкой группы (если применялась) — для order_items.price.
-            $oData['price'] = $item['price'];
-            $olympiadRegsWithPromotion[] = $oData;
-        }
-    }
-    $orderId = $retry['retry_order_id'] ?? $orderObj->createFromCart($userId, $cartData, $certificatesWithPromotion, $grandTotal, $webinarCertsWithPromotion, $olympiadRegsWithPromotion);
-
-    if (!$orderId) {
-        throw new DomainException('Не удалось создать заказ');
-    }
-
-    // A/B-атрибуция: помечаем заказ вариантом модели оплаты (control в этой ветке).
-    if (!$retry) PricingMode::stampOrder($db, (int)$orderId);
-
-    // Зарезервировать позиции корзины за этим заказом. При cancel/failed-вебхуке
-    // резерв снимется (releaseCartItemsReservation), при succeeded — удалятся
-    // ровно эти строки (removeCartItemsByOrderId). Внутри той же транзакции,
-    // что и createFromCart, чтобы не возникло «полу-зарезервированного» состояния.
-    if (!$retry && !reserveCartItemsForOrder((int)$userId, CartPaymentRetry::reservationKeys($allItems), (int)$orderId)) {
-        throw new DomainException('Корзина изменилась. Обновите страницу и повторите оплату.');
+    $order = $orderObj->getById($orderId);
+    $orderNumber = $order['order_number'];
+    // Право гостя записываем до фиксации заказа. При откате автоинкрементный ID не используется повторно.
+    if ($accountId === null) grantGuestOrder((int)$orderId, $userId);
+    if ($subscriber || isset($retry['covered_order_id']) || APP_ENV === 'local') {
+        $db->commit();
+        fulfillOrderItems($db, (int)$orderId, ($subscriber || isset($retry['covered_order_id'])) ? 'subscription' : 'local');
+        echo json_encode(CartPaymentRetry::statusPage($order), JSON_UNESCAPED_UNICODE);
+        return;
     }
 
     // Сохраняем UTM-атрибуцию на заказе (first-click attribution)
@@ -827,9 +263,6 @@ try {
         (new Database($db))->update('orders', ['email_message_id' => $emailMid], 'id = ?', [$orderId]);
     }
 
-    // Get order details
-    $order = $orderObj->getById($orderId);
-    $orderNumber = $order['order_number'];
 
     // Prepare receipt items for 54-ФЗ compliance (with unified 2+1 promotion)
     $receiptItems = [];
@@ -907,78 +340,14 @@ try {
             'olympiad_registration_ids' => !empty($olympiadRegistrations) ? implode(',', $olympiadRegistrations) : null,
         ],
     ];
-    // Валидируем чек библиотекой до фиксации резерва, пока откат ещё безопасен.
+    if ($retry) $payload = CartPaymentRetry::savedPayload($db, (int)$orderId) ?? $payload;
     \YooKassa\Request\Payments\CreatePaymentRequest::builder()->build($payload);
-    // Записываем неизменный ключ заказа, резерв и отпечаток исходного запроса до
-    // обращения к ЮKassa. Обрыв соединения больше не порождает второй заказ.
     CartPaymentRetry::rememberPayload($db, (int)$orderId, $payload, $retry !== null);
-    $_SESSION['user_email'] = $userEmail;
-    $_SESSION['user_id'] = $userId;
-    if (!session_write_close()) {
-        throw new DomainException('Не удалось сохранить сессию оплаты. Обновите страницу и попробуйте ещё раз.');
-    }
+    if (!session_write_close()) throw new DomainException('Не удалось сохранить сессию оплаты.');
     $db->commit();
-    $db->beginTransaction();
-    $stmt = $db->prepare('SELECT payment_status, yookassa_payment_id FROM orders WHERE id = ? AND user_id = ? FOR UPDATE');
-    $stmt->execute([$orderId, $userId]);
-    $saved = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$saved || !in_array($saved['payment_status'], ['pending', 'processing'], true)) {
-        throw new DomainException('Предыдущая попытка завершена. Обновите корзину и проверьте заказ в личном кабинете.');
-    }
-    if (!empty($saved['yookassa_payment_id'])) {
-        // Другой запрос уже получил ответ или уведомление пришло до ответа API.
-        $payment = $client->getPaymentInfo($saved['yookassa_payment_id']);
-    } else {
-        try {
-            $payment = $client->createPayment($payload, $orderNumber);
-        } catch (\YooKassa\Common\Exceptions\BadApiRequestException $e) {
-            $error = json_decode((string)$e->getResponseBody(), true);
-            // Освобождаем только после явного отклонения параметра первого запроса.
-            // Ошибка ключа или повтор после обрыва не доказывает отмену платежа.
-            if (!$retry && ($error['code'] ?? '') === 'invalid_request'
-                && preg_match('/^(amount|receipt|confirmation|description|metadata)(?:$|[.\[])/D', $error['parameter'] ?? '')) {
-                $db->prepare("UPDATE orders SET payment_status = 'failed' WHERE id = ?")->execute([$orderId]);
-                $db->prepare('UPDATE cart_items SET reserved_in_order_id = NULL WHERE reserved_in_order_id = ?')->execute([$orderId]);
-                $db->commit();
-                logPayment('ERROR', $orderNumber, null, 'ЮKassa отклонила параметры нового заказа', 0);
-                throw new DomainException('ЮKassa отклонила данные заказа. Проверьте данные в корзине или обратитесь в поддержку.');
-            }
-            throw $e;
-        }
-    }
-
-    $paymentId = $payment->getId();
-    $confirmationUrl = $payment->getConfirmation()?->getConfirmationUrl();
-    $attach = $db->prepare(
-        'UPDATE orders SET yookassa_payment_id = ?, yookassa_confirmation_url = COALESCE(?, yookassa_confirmation_url)
-         WHERE id = ? AND user_id = ? AND (yookassa_payment_id IS NULL OR yookassa_payment_id = ?)'
-    );
-    $attach->execute([$paymentId, $confirmationUrl, $orderId, $userId, $paymentId]);
-    $current = $db->prepare('SELECT payment_status FROM orders WHERE id = ? AND user_id = ? AND yookassa_payment_id = ?');
-    $current->execute([$orderId, $userId, $paymentId]);
-    $currentStatus = $current->fetchColumn();
-    if ($currentStatus === false) throw new DomainException('Не удалось сверить платёж с заказом. Обратитесь в поддержку.');
-    $gatewayStatus = $payment->getStatus();
-    if ($gatewayStatus === 'canceled') $orderObj->cancelYookassaPayment((int)$orderId, $paymentId);
-    $db->commit();
-    if ($gatewayStatus === 'canceled' || $currentStatus === 'failed') {
-        throw new DomainException('Предыдущий платёж отменён. Нажмите «Перейти к оплате» для новой попытки.');
-    }
-    if ($gatewayStatus !== 'pending' || $currentStatus !== 'pending') {
-        $confirmationUrl = '/pages/payment-success.php?order_number=' . rawurlencode($orderNumber);
-    } elseif (!$confirmationUrl) {
-        throw new DomainException('ЮKassa уточняет статус оплаты. Попробуйте через несколько минут.');
-    }
-    logPayment('CREATE', $orderNumber, $paymentId, 'Payment created successfully', $cartData['total']);
-
-    // Return success with redirect URL
-    echo json_encode([
-        'success' => true,
-        'message' => 'Перенаправление на страницу оплаты...',
-        'redirect_url' => $confirmationUrl,
-        'order_number' => $orderNumber,
-        'payment_id' => $paymentId
-    ]);
+    $response = CartPaymentRetry::dispatch($db, $client, $order, $payload, $retry !== null);
+    logPayment('CREATE', $orderNumber, $response['payment_id'] ?? null, 'Оформление заказа', $grandTotal);
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
 } catch (DomainException $e) {
     if ($db->inTransaction()) $db->rollBack();

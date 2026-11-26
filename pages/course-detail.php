@@ -1064,7 +1064,9 @@ function submitEnrollment(e) {
             }
         })
         .catch(function() {
-            window.location.href = '/kabinet/?tab=courses&enrolled=success';
+            btn.disabled = false;
+            btn.textContent = 'Перейти к оплате';
+            alert('Не удалось получить ответ. Повторите отправку заявки.');
         });
 }
 
